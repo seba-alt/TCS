@@ -15,7 +15,8 @@ provides:
   - Frontend public assets (favicon.png, icon.png, logo.png) committed for Vercel build
   - why_them field added to Expert dataclass and response_experts DB payload
   - UI polish: thinking skeleton loader, rotating quotes, brand-purple user messages
-  - Railway and Vercel platform setup (human-action checkpoint — awaiting user)
+  - Railway service live at https://web-production-fdbf9.up.railway.app (530 experts indexed)
+  - Vercel frontend live at https://tcs-three-sigma.vercel.app
 affects: [live-production, railway-service, vercel-frontend]
 
 # Tech tracking
@@ -50,6 +51,7 @@ key-decisions:
   - "why_them field added to Expert dataclass — LLM now returns per-expert explanation, stored in response_experts DB column"
   - "LLM prompt hardened with strict name-only rule and bio included in candidate lines for better match quality"
   - "Frontend public assets committed (favicon.png, icon.png, logo.png) — Vercel build needs these files present in frontend/"
+  - "Live URLs: Railway https://web-production-fdbf9.up.railway.app | Vercel https://tcs-three-sigma.vercel.app"
 
 patterns-established:
   - "Deployment order enforced: Railway first (URL) -> Vercel (domain) -> ALLOWED_ORIGINS update -> Railway redeploy"
@@ -57,40 +59,58 @@ patterns-established:
 requirements-completed: [DEPL-01]
 
 # Metrics
-duration: partial — awaiting GitHub push and platform setup
+duration: partial — CORS must-have outstanding; see Issues Encountered
 completed: 2026-02-20
 ---
 
 # Phase 4 Plan 03: Railway + Vercel Production Deployment Summary
 
-**FAISS data files and UI polish committed; Railway and Vercel platform setup awaiting GitHub repo creation and push from user**
+**FastAPI backend live on Railway (530 experts indexed, health OK) and React frontend live on Vercel — CORS configuration required to complete end-to-end wiring**
 
 ## Performance
 
-- **Duration:** Partial — Task 1 committed locally, awaiting GitHub push for CI and Task 2 platform setup
+- **Duration:** Multi-session (Task 1 local commit + human platform setup + verification)
 - **Started:** 2026-02-20T00:00:00Z
-- **Completed:** In progress (checkpoint returned)
-- **Tasks:** 1/2 complete (Task 2 is checkpoint:human-verify)
+- **Completed:** 2026-02-20 (partial — see Issues Encountered for outstanding CORS item)
+- **Tasks:** 1/2 complete (Task 2 checkpoint human-verify returned; deployment confirmed by user)
 - **Files modified:** 15
 
 ## Accomplishments
 
-- Committed FAISS index, metadata.json, and experts.csv (2.6 MB total) so Railway clone has data at deploy time — no build-time ingest.py needed
-- Added frontend public assets (favicon.png, icon.png, logo.png) for Vercel build and correct browser favicon
+- Committed FAISS index, metadata.json, and experts.csv (2.6 MB total) so Railway clone has data at deploy time
+- Added frontend public assets (favicon.png, icon.png, logo.png) for Vercel build and browser favicon
 - Added `why_them` field to Expert dataclass in llm.py, propagated to chat.py DB logging and SSE events
 - Hardened LLM prompt with strict name-only rule and bio excerpts in candidate lines
 - UI polish: thinking skeleton loader with rotating quotes, brand-purple user message bubbles, EmptyState redesign, ExpertCard conditional link handling
-- ruff check passes — all checks passed locally
-- tsc --noEmit passes — zero TypeScript errors locally
+- User deployed both services: Railway health returns `{"status":"ok","index_size":530}` and Vercel frontend loads at public URL
+- Verified no secrets (`GOOGLE_API_KEY`) in committed source files
 
 ## Task Commits
 
 1. **Task 1: Commit and push all deployment prep to main** - `ad38715` (feat)
-   - Note: Local commit complete; push to GitHub required (no remote configured yet)
+2. **Task 2: Platform setup and end-to-end production verification** - Human action (platform setup completed by user; checkpoint commit `27134bc`)
+
+**Plan metadata:** Pending final commit (see state updates below)
+
+## Live URLs
+
+| Service | URL | Status |
+|---------|-----|--------|
+| Railway (backend) | https://web-production-fdbf9.up.railway.app | Live — health OK, index_size=530 |
+| Vercel (frontend) | https://tcs-three-sigma.vercel.app | Live — HTTP 200, frontend loads |
+
+## Verification Results
+
+| Check | Status | Detail |
+|-------|--------|--------|
+| Railway `/api/health` returns 200 with non-zero index_size | PASSED | `{"status":"ok","index_size":530}` |
+| Vercel frontend loads (HTTP 200) | PASSED | HTML loads correctly |
+| `GOOGLE_API_KEY` not in committed source files | PASSED | Only in comments, .env.example, and .planning/ docs |
+| CORS locked to exact Vercel domain | FAILED | `ALLOWED_ORIGINS` on Railway not set to Vercel URL — see Issues Encountered |
 
 ## Files Created/Modified
 
-- `data/faiss.index` - FAISS vector index for 1,600+ expert profiles (committed for Railway clone)
+- `data/faiss.index` - FAISS vector index for 530 expert profiles (committed for Railway clone)
 - `data/metadata.json` - Expert metadata parallel to FAISS index
 - `data/experts.csv` - Source expert data CSV
 - `frontend/public/favicon.png` - Browser favicon
@@ -103,7 +123,7 @@ completed: 2026-02-20
 - `frontend/src/components/ChatMessage.tsx` - Skeleton loading state, conditional cursor, thinkingQuote prop
 - `frontend/src/components/EmptyState.tsx` - Redesigned with bolder headline and read-only example cards
 - `frontend/src/components/ExpertCard.tsx` - Conditional link wrapper (null-safe profile_url)
-- `frontend/src/components/Header.tsx` - (updated as part of UI polish)
+- `frontend/src/components/Header.tsx` - Updated as part of UI polish
 - `frontend/src/types.ts` - Added why_them?: string to Expert interface
 
 ## Decisions Made
@@ -139,47 +159,55 @@ completed: 2026-02-20
 
 ## Issues Encountered
 
-**No git remote configured** — The repository has no GitHub remote set up. Task 1 requires `git push origin main` to trigger CI. The user must:
-1. Create a GitHub repository
-2. `git remote add origin https://github.com/{username}/{repo}.git`
-3. `git push -u origin main`
-4. Verify GitHub Actions CI passes (ruff + tsc)
+### Outstanding: CORS Not Configured (Must-Have)
 
-Local pre-validation shows both checks pass:
-- `ruff check .` — All checks passed
-- `npx tsc --noEmit` — No errors
+**Symptom:** CORS preflight OPTIONS request to Railway returns `400 Disallowed CORS origin` for `https://tcs-three-sigma.vercel.app`.
+
+**Root cause:** `ALLOWED_ORIGINS` environment variable on Railway is not set to the Vercel URL. The FastAPI CORS middleware falls back to the default (`http://localhost:5173`) or the variable is absent/empty.
+
+**Impact:** The Vercel frontend cannot make API calls to the Railway backend in production — the chatbot UI loads but queries will fail with a CORS error in the browser.
+
+**Fix required (user must do this in Railway dashboard):**
+1. Go to railway.com -> your project -> service -> Variables
+2. Add or update: `ALLOWED_ORIGINS` = `https://tcs-three-sigma.vercel.app` (no trailing slash)
+3. Railway will auto-redeploy to apply the change
+4. Verify: `curl -s -D - -X OPTIONS -H "Origin: https://tcs-three-sigma.vercel.app" -H "Access-Control-Request-Method: POST" -H "Access-Control-Request-Headers: Content-Type" https://web-production-fdbf9.up.railway.app/api/chat`
+   - Expected: `access-control-allow-origin: https://tcs-three-sigma.vercel.app` in response headers
+
+**Verification command once fixed:**
+```bash
+curl -s -D - -X OPTIONS \
+  -H "Origin: https://tcs-three-sigma.vercel.app" \
+  -H "Access-Control-Request-Method: POST" \
+  -H "Access-Control-Request-Headers: Content-Type" \
+  https://web-production-fdbf9.up.railway.app/api/chat
+```
+Expected response includes: `access-control-allow-origin: https://tcs-three-sigma.vercel.app`
 
 ## User Setup Required
 
-**External services require manual configuration.** See the checkpoint details below.
+**One remaining step:** Set `ALLOWED_ORIGINS` on Railway to complete CORS wiring.
 
-### Platform Setup Order
+### Environment Variables Status
 
-1. **GitHub** — Create repo, add remote, push. CI must pass before Railway deploys.
-2. **Sentry** — Create Python and React projects, get DSNs.
-3. **Railway** — Connect GitHub repo, set env vars, add Volume at /app/var.
-4. **Vercel** — Import repo (Root Directory: frontend), set env vars.
-5. **Railway ALLOWED_ORIGINS** — Set to Vercel URL after Vercel deploy completes.
+**Railway (must verify/update):**
+- `GOOGLE_API_KEY` — Set (backend is running and returning results)
+- `VAR_DIR` — Set to `/app/var` (SQLite volume mounted)
+- `SENTRY_DSN` — Optional (backend starts without it)
+- `ALLOWED_ORIGINS` — **NOT SET TO VERCEL URL** — set to `https://tcs-three-sigma.vercel.app`
 
-### Environment Variables Checklist
-
-**Railway:**
-- `GOOGLE_API_KEY` — Google AI Studio API key
-- `VAR_DIR` — `/app/var` (literal, not secret)
-- `SENTRY_DSN` — Python FastAPI project DSN from Sentry
-- `ALLOWED_ORIGINS` — Exact Vercel URL after Vercel deploy (no trailing slash)
-
-**Vercel:**
-- `VITE_API_URL` — Railway public URL (no trailing slash), Production scope only
-- `VITE_SENTRY_DSN` — React project DSN from Sentry, Production scope only
+**Vercel (configured):**
+- `VITE_API_URL` — Set to Railway URL (frontend deployed successfully)
+- `VITE_SENTRY_DSN` — Optional (frontend loads without it)
 
 ## Next Phase Readiness
 
-- All code committed locally — ready to push once GitHub repo is created
-- CI (ruff + tsc) pre-validated locally — expected to pass on GitHub Actions
-- Platform setup checklist fully specified in Task 2 checkpoint
-- Once user confirms deployment with Vercel URL + Railway URL, plan is complete
+- Both services are live and individually healthy
+- Once `ALLOWED_ORIGINS` is set on Railway, the app is fully end-to-end functional
+- SQLite volume at /app/var persists conversations across Railway redeployments
+- CI gates (GitHub Actions ruff + tsc) are live and guard future pushes to main
+- This is the final phase — no subsequent phases planned
 
 ---
 *Phase: 04-deployment*
-*Completed: 2026-02-20 (partial — awaiting push and platform setup)*
+*Completed: 2026-02-20 (CORS configuration pending — see Issues Encountered)*

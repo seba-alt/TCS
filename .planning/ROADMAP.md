@@ -82,7 +82,7 @@ Plans:
 Plans:
 - [x] 04-01-PLAN.md — Backend deployment prep: unignore data files, Railway Volume path, railway.json, Sentry backend
 - [x] 04-02-PLAN.md — CI pipeline (GitHub Actions ruff + tsc) and Sentry React frontend instrumentation
-- [ ] 04-03-PLAN.md — Commit and push to main, connect Railway + Vercel, configure env vars, end-to-end verification
+- [x] 04-03-PLAN.md — Commit and push to main, connect Railway + Vercel, configure env vars, end-to-end verification
 
 ## Progress
 

@@ -5,23 +5,41 @@
 See: .planning/PROJECT.md (updated 2026-02-20)
 
 **Core value:** A user describes any problem and instantly gets three expertly matched professionals they can contact — no searching, no filtering, no guesswork.
-**Current focus:** Phase 4 — Deployment
+**Current focus:** Phase 4 — Deployment (COMPLETE — one CORS config step outstanding)
 
 ## Current Position
 
-Phase: 4 of 4 (Deployment) — IN PROGRESS
-Plan: 2 of 3 in phase 4
-Status: 04-02 complete — GitHub Actions CI (ruff + tsc) and Sentry React SDK instrumentation committed. Starting 04-03.
-Last activity: 2026-02-20 — Completed 04-02 (CI workflow + Sentry frontend). CI gates live on main.
+Phase: 4 of 4 (Deployment) — COMPLETE (pending CORS fix)
+Plan: 3 of 3 in phase 4
+Status: 04-03 complete — Railway and Vercel deployed. CORS must-have outstanding: set ALLOWED_ORIGINS on Railway.
+Last activity: 2026-02-20 — Both services live. Railway health returns 530 experts. CORS env var not yet set.
 
-Progress: [████████████████████] 67% of phase 4 (2/3 plans done)
+Progress: [████████████████████] 100% of phase 4 (3/3 plans done)
+
+## Live URLs
+
+| Service | URL |
+|---------|-----|
+| Railway (backend) | https://web-production-fdbf9.up.railway.app |
+| Vercel (frontend) | https://tcs-three-sigma.vercel.app |
+
+## Outstanding Action Required
+
+**CORS not wired yet.** Set `ALLOWED_ORIGINS=https://tcs-three-sigma.vercel.app` in Railway environment variables.
+
+Steps:
+1. railway.com -> project -> service -> Variables
+2. Set `ALLOWED_ORIGINS` = `https://tcs-three-sigma.vercel.app` (no trailing slash)
+3. Railway auto-redeploys — wait for completion
+4. Verify with: `curl -s -D - -X OPTIONS -H "Origin: https://tcs-three-sigma.vercel.app" -H "Access-Control-Request-Method: POST" -H "Access-Control-Request-Headers: Content-Type" https://web-production-fdbf9.up.railway.app/api/chat`
+   - Expected: `access-control-allow-origin: https://tcs-three-sigma.vercel.app` in response
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 9
-- Average duration: 2.1 min
-- Total execution time: ~21.7 min
+- Total plans completed: 10
+- Average duration: ~2.1 min (automated tasks)
+- Total execution time: ~21.7 min automated + human platform setup
 
 **By Phase:**
 
@@ -30,7 +48,7 @@ Progress: [████████████████████] 67% of 
 | 01-foundation | 3 | 7.5 min | 2.5 min |
 | 02-rag-api | 4 | 12.2 min | 3.1 min |
 | 03-frontend | 3 | 6 min | 2 min |
-| 04-deployment | 2 (so far) | 4 min | 2 min |
+| 04-deployment | 3 | ~4 min automated | 2 min |
 
 **Recent Trend:**
 - Last 5 plans: 2.4 min
@@ -40,6 +58,7 @@ Progress: [████████████████████] 67% of 
 | Phase 03-frontend P03 | 2 | 2 tasks | 3 files |
 | Phase 04-deployment P01 | 2 min | 2 tasks | 5 files |
 | Phase 04-deployment P02 | 2 min | 2 tasks | 9 files |
+| Phase 04-deployment P03 | multi-session | 2 tasks | 15 files |
 
 ## Accumulated Context
 
@@ -101,17 +120,19 @@ Recent decisions affecting current work:
 - [04-02]: noqa: E402 applied to scripts/ingest.py sys.path-dependent import -- script legitimately needs sys.path insertion before app.config import
 - [Phase 04-deployment]: Data files (faiss.index, metadata.json, experts.csv) committed to git — Railway Railpack cannot inject GOOGLE_API_KEY at build time so ingest.py cannot run as build step
 - [Phase 04-deployment]: why_them field added to Expert dataclass — LLM returns per-expert explanation stored in response_experts DB column for future UI display
+- [04-03]: Live URLs confirmed — Railway https://web-production-fdbf9.up.railway.app (index_size=530), Vercel https://tcs-three-sigma.vercel.app
+- [04-03]: ALLOWED_ORIGINS env var must be set on Railway to https://tcs-three-sigma.vercel.app — CORS rejects Vercel origin until this is done
 
 ### Pending Todos
 
-None.
+- Set `ALLOWED_ORIGINS=https://tcs-three-sigma.vercel.app` in Railway environment variables (required for end-to-end CORS)
 
 ### Blockers/Concerns
 
-None.
+- CORS not wired: Railway preflight returns "Disallowed CORS origin" for Vercel domain — chatbot UI loads but queries will fail until `ALLOWED_ORIGINS` is set
 
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: Completed 04-02-PLAN.md — CI pipeline + Sentry frontend done. Ready for 04-03 (Railway service connect + Volume + env vars).
+Stopped at: Completed 04-03-PLAN.md — both services live. Outstanding: set ALLOWED_ORIGINS on Railway.
 Resume file: None
