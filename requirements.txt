@@ -9,6 +9,7 @@ numpy==2.2.*
 python-dotenv==1.0.*
 tenacity==8.4.*
 structlog==24.2.*
+sqlalchemy==2.0.*
 
 # Dev / testing
 pytest==8.2.*

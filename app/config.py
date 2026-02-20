@@ -22,3 +22,9 @@ INGEST_BATCH_SIZE = 100
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 FAISS_INDEX_PATH = DATA_DIR / "faiss.index"
 METADATA_PATH = DATA_DIR / "metadata.json"
+
+# SQLite database for conversation logging.
+# NOTE: SQLite writes to the container's ephemeral filesystem on Railway.
+# For production persistence, replace with DATABASE_URL env var pointing to Postgres.
+# For v1, SQLite is sufficient for lead capture and analytics.
+DATABASE_URL = f"sqlite:///{DATA_DIR / 'conversations.db'}"
