@@ -1,10 +1,20 @@
 import { useState, useEffect, useCallback } from 'react'
-import type { AdminStats, SearchesResponse, GapsResponse, SearchFilters } from '../types'
+import type {
+  AdminStats,
+  SearchesResponse,
+  GapsResponse,
+  SearchFilters,
+  LeadsResponse,
+  ExpertsResponse,
+} from '../types'
 
-const ADMIN_KEY = import.meta.env.VITE_ADMIN_KEY ?? ''
+const getAdminKey = () => sessionStorage.getItem('admin_key') ?? ''
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
 
-export async function adminFetch<T>(path: string, params?: Record<string, string | number | boolean | undefined>): Promise<T> {
+export async function adminFetch<T>(
+  path: string,
+  params?: Record<string, string | number | boolean | undefined>,
+): Promise<T> {
   const url = new URL(`${API_URL}/api/admin${path}`)
   if (params) {
     Object.entries(params).forEach(([k, v]) => {
@@ -14,7 +24,21 @@ export async function adminFetch<T>(path: string, params?: Record<string, string
     })
   }
   const res = await fetch(url.toString(), {
-    headers: { 'X-Admin-Key': ADMIN_KEY },
+    headers: { 'X-Admin-Key': getAdminKey() },
+  })
+  if (!res.ok) throw new Error(`Admin API error ${res.status}: ${await res.text()}`)
+  return res.json() as Promise<T>
+}
+
+export async function adminPost<T>(path: string, body: unknown): Promise<T> {
+  const url = new URL(`${API_URL}/api/admin${path}`)
+  const res = await fetch(url.toString(), {
+    method: 'POST',
+    headers: {
+      'X-Admin-Key': getAdminKey(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
   })
   if (!res.ok) throw new Error(`Admin API error ${res.status}: ${await res.text()}`)
   return res.json() as Promise<T>
@@ -63,6 +87,42 @@ export function useAdminGaps() {
   const fetchData = useCallback(() => {
     setLoading(true)
     adminFetch<GapsResponse>('/gaps')
+      .then(setData)
+      .catch(e => setError(e.message))
+      .finally(() => setLoading(false))
+  }, [])
+
+  useEffect(() => { fetchData() }, [fetchData])
+
+  return { data, loading, error, refetch: fetchData }
+}
+
+export function useAdminLeads() {
+  const [data, setData] = useState<LeadsResponse | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const fetchData = useCallback(() => {
+    setLoading(true)
+    adminFetch<LeadsResponse>('/leads')
+      .then(setData)
+      .catch(e => setError(e.message))
+      .finally(() => setLoading(false))
+  }, [])
+
+  useEffect(() => { fetchData() }, [fetchData])
+
+  return { data, loading, error, refetch: fetchData }
+}
+
+export function useAdminExperts() {
+  const [data, setData] = useState<ExpertsResponse | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const fetchData = useCallback(() => {
+    setLoading(true)
+    adminFetch<ExpertsResponse>('/experts')
       .then(setData)
       .catch(e => setError(e.message))
       .finally(() => setLoading(false))

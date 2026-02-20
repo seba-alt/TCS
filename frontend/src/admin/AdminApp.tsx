@@ -1,11 +1,18 @@
-import { Outlet } from 'react-router-dom'
+import { Outlet, useNavigate } from 'react-router-dom'
 import AdminSidebar from './components/AdminSidebar'
 
 export default function AdminApp() {
+  const navigate = useNavigate()
+
+  function handleLogout() {
+    sessionStorage.removeItem('admin_key')
+    navigate('/admin/login', { replace: true })
+  }
+
   return (
-    <div className="flex h-screen bg-gray-50">
-      <AdminSidebar />
-      <main className="flex-1 overflow-y-auto p-8">
+    <div className="flex h-screen bg-slate-950">
+      <AdminSidebar onLogout={handleLogout} />
+      <main className="flex-1 overflow-y-auto bg-slate-950">
         <Outlet />
       </main>
     </div>

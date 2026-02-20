@@ -6,6 +6,8 @@ export interface AdminStats {
   match_count: number
   match_rate: number
   gap_count: number
+  top_queries: { query: string; count: number }[]
+  top_feedback: { query: string; vote: string; count: number }[]
 }
 
 export interface SearchRow {
@@ -50,4 +52,32 @@ export interface SearchFilters {
   date_to?: string     // ISO date string YYYY-MM-DD
   page?: number
   page_size?: number
+}
+
+export interface LeadRow {
+  email: string
+  total_searches: number
+  last_search_at: string | null
+  gap_count: number
+  recent_queries: string[]
+}
+
+export interface LeadsResponse {
+  leads: LeadRow[]
+}
+
+export interface ExpertRow {
+  username: string
+  first_name: string
+  last_name: string
+  job_title: string
+  company: string
+  bio: string
+  hourly_rate: number
+  profile_url: string
+  category: string | null
+}
+
+export interface ExpertsResponse {
+  experts: ExpertRow[]
 }
