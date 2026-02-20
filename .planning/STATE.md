@@ -10,27 +10,28 @@ See: .planning/PROJECT.md (updated 2026-02-20)
 ## Current Position
 
 Phase: 2 of 4 (RAG API) — IN PROGRESS
-Plan: 1 of 4 in phase 2 — COMPLETE
-Status: Phase 2 in progress — 02-01 DB layer complete, ready for 02-02 (Pydantic schemas)
-Last activity: 2026-02-20 — Completed 02-01 (DB layer: SQLAlchemy, Conversation model, get_db dependency)
+Plan: 2 of 4 in phase 2 — COMPLETE
+Status: Phase 2 in progress — 02-02 retriever + LLM services complete, ready for 02-03 (chat endpoint)
+Last activity: 2026-02-20 — Completed 02-02 (retriever.py + llm.py: FAISS retrieval and Gemini JSON-mode generation services)
 
-Progress: [████░░░░░░] 40%
+Progress: [█████░░░░░] 50%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
-- Average duration: 2.5 min
-- Total execution time: 7.5 min
+- Total plans completed: 5
+- Average duration: 2.1 min
+- Total execution time: 10.5 min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-foundation | 3 | 7.5 min | 2.5 min |
+| 02-rag-api | 2 | 3 min | 1.5 min |
 
 **Recent Trend:**
-- Last 5 plans: 2.5 min
+- Last 5 plans: 2.1 min
 - Trend: stable
 
 *Updated after each plan completion*
@@ -60,6 +61,11 @@ Recent decisions affecting current work:
 - [02-01]: No Alembic — Base.metadata.create_all() at startup is idempotent and sufficient for v1 schema stability
 - [02-01]: history and response_experts stored as JSON-serialized Text columns to avoid SQLite JSON type compatibility issues
 - [02-01]: get_db() FastAPI dependency pattern established — always use Depends(get_db) in route handlers, never create sessions directly
+- [02-02]: GENERATION_MODEL=gemini-2.5-flash (not deprecated gemini-2.0-flash which shuts down June 2026)
+- [02-02]: SIMILARITY_THRESHOLD=0.65 — dual-check (score threshold + LLM judgment) prevents over-triggering clarification path
+- [02-02]: TOP_K=5 retrieval gives LLM room to skip low-quality matches while always providing 3 recommendations
+- [02-02]: Lazy genai.Client() pattern applied to LLM service — consistent with embedder.py; no GOOGLE_API_KEY at import time
+- [02-02]: Defensive _get() column normalization in retriever handles snake_case/space/TitleCase CSV column variants
 
 ### Pending Todos
 
@@ -67,11 +73,10 @@ None.
 
 ### Blockers/Concerns
 
-- [Phase 2]: Verify Gemini JSON mode parameters (`response_mime_type`, `response_schema`) against current Google GenAI Python SDK docs before implementing LLM service
-- [Phase 2]: Confirm `gemini-2.0-flash` is available on the project API key tier; fall back to `gemini-1.5-flash` if not
+None — prior Phase 2 blockers resolved: Gemini JSON mode confirmed via response_mime_type="application/json"; gemini-2.5-flash used (not deprecated 2.0-flash).
 
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: 02-01-PLAN.md complete — SQLite DB layer with Conversation model and get_db dependency. Ready for 02-02.
+Stopped at: 02-02-PLAN.md complete — retriever.py and llm.py services built and verified. Ready for 02-03 (chat endpoint).
 Resume file: None
