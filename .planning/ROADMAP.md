@@ -31,7 +31,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 3 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — Project scaffold: .gitignore, requirements.txt, scripts/validate_csv.py
+- [x] 01-01-PLAN.md — Project scaffold: .gitignore, requirements.txt, scripts/validate_csv.py
 - [ ] 01-02-PLAN.md — Embedder service and offline ingestion pipeline (CSV → FAISS index)
 - [ ] 01-03-PLAN.md — FastAPI server with lifespan FAISS loading, CORS, and health endpoint
 
@@ -75,7 +75,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 0/3 | Not started | - |
+| 1. Foundation | 1/3 | In progress | - |
 | 2. RAG API | 0/TBD | Not started | - |
 | 3. Frontend | 0/TBD | Not started | - |
 | 4. Deployment | 0/TBD | Not started | - |

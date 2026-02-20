@@ -64,7 +64,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | CHAT-01 | Phase 3 | Pending |
 | CHAT-02 | Phase 3 | Pending |
-| REC-01 | Phase 1 | Pending |
+| REC-01 | Phase 1 | In progress (scaffold done; embedding pipeline in 01-02) |
 | REC-02 | Phase 2 | Pending |
 | REC-03 | Phase 3 | Pending |
 | REC-04 | Phase 3 | Pending |
@@ -77,4 +77,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-02-20*
-*Last updated: 2026-02-20 after roadmap creation*
+*Last updated: 2026-02-20 after 01-01 execution (scaffold plan)*
