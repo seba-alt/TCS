@@ -1,12 +1,22 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Header from './components/Header'
 import ChatInput from './components/ChatInput'
 import ChatMessage from './components/ChatMessage'
 import EmptyState from './components/EmptyState'
 import { useChat } from './hooks/useChat'
 
-// v1: email is a fixed placeholder — user auth is out of scope (see REQUIREMENTS.md)
 const PLACEHOLDER_EMAIL = 'user@tinrate.com'
+
+const THINKING_QUOTES = [
+  "Consulting my Rolodex… (it's digital, relax)",
+  "Cross-referencing expertise, rates, and vibes…",
+  "Running the match algorithm. No pressure.",
+  "Asking around. Discretely.",
+  "Teaching AI to network so you don't have to.",
+  "Scanning 900+ experts for your perfect match…",
+  "Finding someone who's actually solved this before…",
+  "Almost there — quality takes a second.",
+]
 
 export default function App() {
   const { messages, status, sendMessage, retryLast } = useChat({
@@ -14,51 +24,56 @@ export default function App() {
   })
   const bottomRef = useRef<HTMLDivElement>(null)
   const isLoading = status === 'thinking' || status === 'streaming'
+  const [quoteIndex, setQuoteIndex] = useState(0)
 
-  // Auto-scroll to bottom on new messages
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
+  useEffect(() => {
+    if (status !== 'thinking') return
+    setQuoteIndex(0)
+    const interval = setInterval(() => {
+      setQuoteIndex((i) => (i + 1) % THINKING_QUOTES.length)
+    }, 2800)
+    return () => clearInterval(interval)
+  }, [status])
+
   return (
     <div className="flex flex-col h-screen bg-white">
-      {/* Fixed top header */}
       <Header />
 
-      {/* Scrollable message area — padded so content clears fixed header (pt-16) and fixed input (pb-24) */}
       <main
-        className="flex-1 overflow-y-auto pt-16 pb-24 px-4"
+        className="flex-1 overflow-y-auto pt-20 pb-24 px-4"
         aria-live="polite"
         aria-label="Conversation"
       >
         <div className="max-w-3xl mx-auto">
           {messages.length === 0 ? (
-            <EmptyState
-              onPromptSelect={(prompt) => sendMessage(prompt)}
-            />
+            <EmptyState />
           ) : (
             <>
-              {messages.map((message) => (
-                <ChatMessage key={message.id} message={message} />
-              ))}
+              {messages.map((message, i) => {
+                const isLastAssistant =
+                  message.role === 'assistant' && i === messages.length - 1
+                return (
+                  <ChatMessage
+                    key={message.id}
+                    message={message}
+                    thinkingQuote={
+                      isLastAssistant && status === 'thinking'
+                        ? THINKING_QUOTES[quoteIndex]
+                        : undefined
+                    }
+                  />
+                )
+              })}
 
-              {/* Status message during loading — shown below last user message */}
-              {isLoading && messages[messages.length - 1]?.role === 'user' && (
-                <div className="flex items-center gap-2 text-sm text-neutral-500 mb-3 pl-1">
-                  <svg className="animate-spin w-4 h-4 text-brand-purple" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                  </svg>
-                  Finding experts...
-                </div>
-              )}
-
-              {/* Error retry button */}
               {status === 'error' && (
                 <div className="flex justify-center mb-3">
                   <button
                     onClick={retryLast}
-                    className="text-sm text-brand-purple underline hover:text-purple-700"
+                    className="text-sm px-4 py-2 rounded-xl bg-brand-purple text-white hover:bg-purple-700 transition-colors"
                   >
                     Retry
                   </button>
@@ -70,7 +85,6 @@ export default function App() {
         </div>
       </main>
 
-      {/* Fixed bottom input */}
       <ChatInput onSubmit={sendMessage} disabled={isLoading} />
     </div>
   )

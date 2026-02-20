@@ -92,31 +92,7 @@ async def _stream_chat(body: ChatRequest, request: Request, db: Session):
         )
         log.info("chat.generated", type=llm_response.type, expert_count=len(llm_response.experts))
 
-        # Log conversation to DB
-        conversation = Conversation(
-            email=str(body.email),
-            query=body.query,
-            history=json.dumps(history_dicts),
-            response_type=llm_response.type,
-            response_narrative=llm_response.narrative,
-            response_experts=json.dumps(
-                [
-                    {
-                        "name": e.name,
-                        "title": e.title,
-                        "company": e.company,
-                        "hourly_rate": e.hourly_rate,
-                        "profile_url": e.profile_url,
-                    }
-                    for e in llm_response.experts
-                ]
-            ),
-        )
-        db.add(conversation)
-        db.commit()
-        log.info("chat.logged", conversation_id=conversation.id)
-
-        # Event 2: result — complete recommendation payload
+        # Build experts payload (shared for DB log and SSE event)
         experts_payload = [
             {
                 "name": e.name,
@@ -124,9 +100,23 @@ async def _stream_chat(body: ChatRequest, request: Request, db: Session):
                 "company": e.company,
                 "hourly_rate": e.hourly_rate,
                 "profile_url": e.profile_url,
+                "why_them": e.why_them,
             }
             for e in llm_response.experts
         ]
+
+        # Log conversation to DB
+        conversation = Conversation(
+            email=str(body.email),
+            query=body.query,
+            history=json.dumps(history_dicts),
+            response_type=llm_response.type,
+            response_narrative=llm_response.narrative,
+            response_experts=json.dumps(experts_payload),
+        )
+        db.add(conversation)
+        db.commit()
+        log.info("chat.logged", conversation_id=conversation.id)
         yield _sse({
             "event": "result",
             "type": llm_response.type,

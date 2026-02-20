@@ -1,9 +1,10 @@
 export interface Expert {
   name: string
-  title: string
-  company: string
+  title: string | null
+  company: string | null
   hourly_rate: string
-  profile_url: string
+  profile_url: string | null
+  why_them: string
 }
 
 export type MessageRole = 'user' | 'assistant'

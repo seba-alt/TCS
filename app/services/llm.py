@@ -41,6 +41,7 @@ class Expert:
     company: str
     hourly_rate: str
     profile_url: str | None
+    why_them: str = ""
 
 
 @dataclass
@@ -77,11 +78,20 @@ def _build_prompt(
         )
         history_text = f"\n\nConversation history (most recent {HISTORY_WINDOW} turns):\n{history_text}"
 
-    candidates_text = "\n".join(
-        f"- {c.name} | {c.title} at {c.company} | Rate: {c.hourly_rate} | "
-        f"URL: {c.profile_url or 'N/A'} | Similarity: {c.score:.3f}"
-        for c in candidates
-    )
+    def _candidate_line(c: "RetrievedExpert") -> str:
+        role = c.title or ""
+        at_company = f" at {c.company}" if c.company else ""
+        role_part = f"{role}{at_company}" if role else (c.company or "Independent")
+        bio = str(c.raw.get("Bio") or "").strip()
+        bio_part = f" | Bio: {bio[:400]}" if bio else ""
+        return (
+            f"- {c.name} | {role_part} | Rate: {c.hourly_rate} | "
+            f"URL: {c.profile_url or 'N/A'} | Similarity: {c.score:.3f}{bio_part}"
+        )
+
+    candidates_text = "\n".join(_candidate_line(c) for c in candidates)
+
+    allowed_names = "\n".join(f"  - {c.name}" for c in candidates) if candidates else "  (none)"
 
     if is_low_confidence or not candidates:
         return f"""You are a professional concierge matching users with expert consultants.
@@ -92,32 +102,38 @@ Query: "{query}"{history_text}
 Retrieved candidates (low confidence — scores below {SIMILARITY_THRESHOLD}):
 {candidates_text if candidates else "(none)"}
 
-First, evaluate whether these candidates actually address the user's problem. If the match quality is poor, respond with type="clarification" and ask one targeted follow-up question to better understand their need. If candidates are usable despite low scores, respond with type="match" and recommend the best 3.
+STRICT RULE: You may ONLY recommend experts from the list above. Never invent or suggest anyone not listed.
 
-Return a JSON object with exactly these fields:
+Evaluate whether these candidates actually address the user's problem.
+- If match quality is poor → type="clarification", ask one targeted follow-up question, experts=[]
+- If candidates are usable → type="match", pick the best available (up to 3)
+
+Return JSON:
 - "type": "clarification" or "match"
-- "narrative": your response text (for clarification: a single follow-up question; for match: 1-2 sentence intro then 3 expert recommendations)
-- "experts": for "match" — array of exactly 3 objects; for "clarification" — empty array []
+- "narrative": clarification question OR 1-2 sentence intro (no expert explanations in narrative)
+- "experts": array of matched experts (empty for clarification); each must be a name from the allowed list above
 
-Each expert object: {{"name": str, "title": str, "company": str, "hourly_rate": str, "profile_url": str or null}}
-
-For match responses: each "Why them" explanation must be 1-2 sentences, reference the expert's specific title/company/domain, and tie directly to what the user asked. No hallucinated details — only use the data provided above."""
+Each expert object: {{"name": str, "title": str, "company": str, "hourly_rate": str, "profile_url": str or null, "why_them": str}}
+Copy name, title, company, hourly_rate, profile_url exactly as shown above — do not alter them."""
 
     return f"""You are a professional concierge matching users with expert consultants.
 
 User query: "{query}"{history_text}
 
-Top candidate experts from our database:
+Candidate experts retrieved from the database:
 {candidates_text}
 
-Select the 3 best-matched experts from this list. Write a response with:
-1. A brief 1-2 sentence intro acknowledging the user's need
-2. For each of the 3 experts: a "Why them:" explanation of 1-2 sentences that references their specific title, company, or domain and explains why they fit this exact query. No hallucinated details — only use the data provided above.
+STRICT RULE: You may ONLY select from these exact candidates:
+{allowed_names}
+Never suggest anyone not on this list. Copy their name, title, company, hourly_rate, and profile_url exactly as shown.
 
-Return a JSON object with exactly these fields:
+Select the 3 best-matched experts and return JSON:
 - "type": "match"
-- "narrative": the full combined text (intro + all 3 expert explanations as one prose block)
-- "experts": array of exactly 3 objects: {{"name": str, "title": str, "company": str, "hourly_rate": str, "profile_url": str or null}}"""
+- "narrative": 1-2 sentence intro acknowledging the user's need (no expert explanations here)
+- "experts": exactly 3 objects, each from the allowed list above
+
+Each expert object: {{"name": str, "title": str, "company": str, "hourly_rate": str, "profile_url": str or null, "why_them": str}}
+"why_them": 1-2 sentences referencing their specific role/domain and why they fit this query. Use only data shown above."""
 
 
 def generate_response(
@@ -166,21 +182,38 @@ def generate_response(
             narrative = data.get("narrative", "")
             experts_raw = data.get("experts", [])
 
-            experts = [
-                Expert(
-                    name=e.get("name", ""),
-                    title=e.get("title", ""),
-                    company=e.get("company", ""),
-                    hourly_rate=e.get("hourly_rate", ""),
-                    profile_url=e.get("profile_url") or None,
-                )
-                for e in experts_raw
-            ]
+            # Build lookup by normalized name to validate LLM output against candidates
+            candidate_lookup = {
+                c.name.strip().lower(): c for c in candidates
+            }
+
+            experts: list[Expert] = []
+            for e in experts_raw:
+                llm_name = str(e.get("name", "")).strip()
+                canonical = candidate_lookup.get(llm_name.lower())
+                if canonical is None:
+                    # LLM hallucinated a name not in candidates — drop it
+                    log.warning(
+                        "llm.hallucinated_expert",
+                        name=llm_name,
+                        allowed=[c.name for c in candidates],
+                    )
+                    continue
+                # Use candidate's own fields for name/title/company/rate/url to prevent drift
+                experts.append(Expert(
+                    name=canonical.name,
+                    title=canonical.title or e.get("title", ""),
+                    company=canonical.company or e.get("company", ""),
+                    hourly_rate=canonical.hourly_rate,
+                    profile_url=canonical.profile_url,
+                    why_them=e.get("why_them", ""),
+                ))
 
             log.info(
                 "llm.generate_response",
                 type=response_type,
                 expert_count=len(experts),
+                hallucinated=len(experts_raw) - len(experts),
                 attempt=attempt + 1,
             )
             return ChatResponse(type=response_type, narrative=narrative, experts=experts)

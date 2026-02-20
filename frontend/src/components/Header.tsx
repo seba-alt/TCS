@@ -1,20 +1,15 @@
-// Persistent top header — always visible, sticks to top of viewport.
-// Logo: served from /logo.png (user places PNG at frontend/public/logo.png).
-// If logo.png is missing, the alt text "Tinrate" renders as fallback.
-
 export default function Header() {
   return (
-    <header className="fixed top-0 left-0 right-0 z-10 bg-brand-black px-4 py-3 flex items-center gap-3 border-b border-neutral-800">
+    <header className="fixed top-0 left-0 right-0 z-10 bg-white px-6 py-4 flex items-end gap-3 border-b border-neutral-100 shadow-sm">
       <img
         src="/logo.png"
         alt="Tinrate"
-        className="h-8 w-auto"
+        className="h-10 w-auto"
         onError={(e) => {
-          // Hide broken image icon if logo.png is not yet placed
           (e.target as HTMLImageElement).style.display = 'none'
         }}
       />
-      <p className="text-sm text-neutral-400 hidden sm:block">
+      <p className="text-xs text-neutral-400 hidden sm:block leading-none mb-0.5">
         Find the right expert, instantly
       </p>
     </header>
