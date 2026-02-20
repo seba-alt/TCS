@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-20)
 
 **Core value:** A user describes any problem and instantly gets three expertly matched professionals they can contact — no searching, no filtering, no guesswork.
-**Current focus:** Phase 5 — Email Gate UX (Plan 2 of 3 complete)
+**Current focus:** Phase 5 — Email Gate UX (Plan 3 of 3 — awaiting human verification checkpoint)
 
 ## Current Position
 
 Phase: 5 of 8 (Email Gate UX)
-Plan: 2 of 3 in phase 5 — COMPLETE
-Status: 05-02 complete — Email gate UX shipped: locked ExpertCards, inline EmailGate form, instant unlock on submission, returning-user bypass via localStorage.
-Last activity: 2026-02-20 — Frontend email gate complete. TypeScript zero errors, vite build clean. Awaiting 05-03 (final plan if any, or deploy).
+Plan: 3 of 3 in phase 5 — CHECKPOINT (Task 2: human-verify)
+Status: 05-03 Task 1 complete — dev servers confirmed running (backend :8000 index_size=530, frontend :5173 HTTP 200). Awaiting human browser verification of 6 email gate test scenarios.
+Last activity: 2026-02-20 — Task 1 complete. Both dev servers verified. Checkpoint returned for human UX verification.
 
-Progress: [████████░░░░░░░░░░░░] 67% of phase 5 (2/3 plans done)
+Progress: [████████████████████] 100% of phase 5 tasks automated (3/3 plans started, 05-03 awaiting checkpoint approval)
 
 ## Live URLs
 
@@ -61,6 +61,7 @@ Steps:
 | Phase 04-deployment P03 | multi-session | 2 tasks | 15 files |
 | Phase 05-email-gate P01 | 1 min | 2 tasks | 3 files |
 | Phase 05 P02 | 3min | 2 tasks | 5 files |
+| Phase 05 P03 | 1 | 1 tasks | 0 files |
 
 ## Accumulated Context
 
@@ -150,5 +151,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: Completed 05-02-PLAN.md — email gate UX complete. Locked ExpertCards on first visit, EmailGate form on last expert message, instant unlock, returning-user bypass via localStorage.
+Stopped at: 05-03 checkpoint:human-verify — Task 1 complete (dev servers running), Task 2 awaiting human verification of full email gate UX flow at http://localhost:5173.
 Resume file: None
