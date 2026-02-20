@@ -111,12 +111,12 @@ Plans:
 
 **Goal:** Users can rate expert results with thumbs up/down below the most recent result set — downvote immediately records the vote and opens a lightweight modal for optional detail; all feedback is stored in the DB linked to the conversation.
 **Depends on:** Phase 5
-**Plans:** 3/3 plans complete
+**Plans:** 3/3 plans complete (completed 2026-02-20)
 
 Plans:
-- [ ] 06-01-PLAN.md — Backend: Feedback model, POST /api/feedback endpoint, conversation_id in SSE result event
-- [ ] 06-02-PLAN.md — Frontend data layer: types extension, useFeedback hook, FeedbackBar, DownvoteModal
-- [ ] 06-03-PLAN.md — Wiring + human verification: thread email prop, render FeedbackBar in ChatMessage
+- [x] 06-01-PLAN.md — Backend: Feedback model, POST /api/feedback endpoint, conversation_id in SSE result event
+- [x] 06-02-PLAN.md — Frontend data layer: types extension, useFeedback hook, FeedbackBar, DownvoteModal
+- [x] 06-03-PLAN.md — Wiring + human verification: thread email prop, render FeedbackBar in ChatMessage
 
 ### Phase 7: Analytics dashboard — Admin view of searches, expert matches, gap tracking, CSV export
 
