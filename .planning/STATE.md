@@ -5,33 +5,33 @@
 See: .planning/PROJECT.md (updated 2026-02-20)
 
 **Core value:** A user describes any problem and instantly gets three expertly matched professionals they can contact — no searching, no filtering, no guesswork.
-**Current focus:** Phase 2 — RAG API
+**Current focus:** Phase 3 — Frontend
 
 ## Current Position
 
-Phase: 2 of 4 (RAG API) — IN PROGRESS
-Plan: 3 of 4 in phase 2 — COMPLETE
-Status: Phase 2 in progress — 02-03 chat endpoint complete, ready for 02-04 (SSE streaming upgrade)
-Last activity: 2026-02-20 — Completed 02-03 (POST /api/chat endpoint: Pydantic validation, FAISS retrieval, Gemini generation, SQLite logging)
+Phase: 2 of 4 (RAG API) — COMPLETE
+Plan: 4 of 4 in phase 2 — COMPLETE
+Status: Phase 2 complete — all 4 plans executed, SSE streaming verified end-to-end. Ready for Phase 3 (Frontend).
+Last activity: 2026-02-20 — Completed 02-04 (SSE streaming upgrade: status:thinking event, StreamingResponse, human-verified with 7 DB conversations and 10+ domain queries)
 
-Progress: [██████░░░░] 62%
+Progress: [███████░░░] 75%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 6
+- Total plans completed: 7
 - Average duration: 2.1 min
-- Total execution time: 12.7 min
+- Total execution time: ~19.7 min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-foundation | 3 | 7.5 min | 2.5 min |
-| 02-rag-api | 3 | 5.2 min | 1.7 min |
+| 02-rag-api | 4 | 12.2 min | 3.1 min |
 
 **Recent Trend:**
-- Last 5 plans: 2.1 min
+- Last 5 plans: 2.3 min
 - Trend: stable
 
 *Updated after each plan completion*
@@ -62,13 +62,18 @@ Recent decisions affecting current work:
 - [02-01]: history and response_experts stored as JSON-serialized Text columns to avoid SQLite JSON type compatibility issues
 - [02-01]: get_db() FastAPI dependency pattern established — always use Depends(get_db) in route handlers, never create sessions directly
 - [02-02]: GENERATION_MODEL=gemini-2.5-flash (not deprecated gemini-2.0-flash which shuts down June 2026)
-- [02-02]: SIMILARITY_THRESHOLD=0.65 — dual-check (score threshold + LLM judgment) prevents over-triggering clarification path
+- [02-02]: SIMILARITY_THRESHOLD=0.60 (lowered from 0.65) — threshold was too strict; 0.60 returns results across diverse domain queries
 - [02-02]: TOP_K=5 retrieval gives LLM room to skip low-quality matches while always providing 3 recommendations
 - [02-02]: Lazy genai.Client() pattern applied to LLM service — consistent with embedder.py; no GOOGLE_API_KEY at import time
 - [02-02]: Defensive _get() column normalization in retriever handles snake_case/space/TitleCase CSV column variants
 - [02-03]: EmailStr enforces email format at Pydantic validation — no manual regex; returns 422 automatically
 - [02-03]: history stored as JSON-serialized Text in Conversation — consistent with 02-01 schema decisions
 - [02-03]: Non-streaming endpoint validates full RAG pipeline before streaming upgrade in 02-04
+- [02-04]: StreamingResponse with media_type='text/event-stream' replaces JSONResponse — response_model removed from @router.post decorator
+- [02-04]: Sync services (embed_query, generate_content) offloaded via run_in_executor() to avoid blocking asyncio event loop during SSE streaming
+- [02-04]: Cache-Control: no-cache and X-Accel-Buffering: no headers prevent Railway/nginx proxy buffering of SSE stream
+- [02-04]: thinking event emitted before any thread pool work begins — guarantees sub-100ms first event latency
+- [02-04]: Phase 2 fully verified by human — SSE streaming confirmed, DB logging confirmed (7 conversations), 10+ domain queries verified, clarification path working
 
 ### Pending Todos
 
@@ -76,10 +81,10 @@ None.
 
 ### Blockers/Concerns
 
-None — prior Phase 2 blockers resolved: Gemini JSON mode confirmed via response_mime_type="application/json"; gemini-2.5-flash used (not deprecated 2.0-flash).
+None.
 
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: 02-03-PLAN.md complete — POST /api/chat endpoint built, registered, and verified. Ready for 02-04 (SSE streaming upgrade).
+Stopped at: 02-04-PLAN.md complete — Phase 2 (RAG API) fully complete. POST /api/chat streams SSE with thinking/result/done events, human-verified end-to-end. Ready for Phase 3 (Frontend).
 Resume file: None

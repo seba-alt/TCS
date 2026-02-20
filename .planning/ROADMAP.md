@@ -13,7 +13,7 @@ Four phases that follow the hard dependency chain of this RAG system: pre-comput
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Foundation** - Project scaffold, CSV data pipeline, FAISS index, FastAPI skeleton with CORS and health endpoint
-- [ ] **Phase 2: RAG API** - Embedding-based retrieval, Gemini generation with JSON mode, streaming SSE endpoint
+- [x] **Phase 2: RAG API** - Embedding-based retrieval, Gemini generation with JSON mode, streaming SSE endpoint
 - [ ] **Phase 3: Frontend** - React chat UI, Expert Cards, mobile-responsive layout, connected to streaming API
 - [ ] **Phase 4: Deployment** - Vercel + Railway production deploy, environment variables, keep-alive, production CORS
 
@@ -50,7 +50,7 @@ Plans:
 - [x] 02-01-PLAN.md — SQLite database setup, SQLAlchemy ORM, Conversation model, DB wired into lifespan
 - [x] 02-02-PLAN.md — Retriever service (FAISS search + expert filtering) and LLM service (Gemini JSON mode)
 - [x] 02-03-PLAN.md — POST /api/chat non-streaming endpoint with email validation, retrieval, generation, DB logging
-- [ ] 02-04-PLAN.md — SSE streaming upgrade: status:thinking event, streamed result, human verification
+- [x] 02-04-PLAN.md — SSE streaming upgrade: status:thinking event, streamed result, human verification
 
 ### Phase 3: Frontend
 **Goal**: A user can open the chatbot in a browser, describe their problem, and see three clickable Expert Cards appear below the AI response — on both desktop and mobile
@@ -82,6 +82,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation | 3/3 | Complete | 2026-02-20 |
-| 2. RAG API | 3/4 | In progress | - |
+| 2. RAG API | 4/4 | Complete | 2026-02-20 |
 | 3. Frontend | 0/TBD | Not started | - |
 | 4. Deployment | 0/TBD | Not started | - |
