@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-20)
 ## Current Position
 
 Phase: 1 of 4 (Foundation)
-Plan: 2 of 3 in current phase
-Status: In progress
-Last activity: 2026-02-20 — Completed 01-02: embedder service + FAISS ingestion pipeline
+Plan: 3 of 3 in current phase
+Status: Awaiting human verification (checkpoint:human-verify — Task 3 of 01-03)
+Last activity: 2026-02-20 — Completed 01-03 Tasks 1 and 2; paused at Task 3 checkpoint (human-verify)
 
-Progress: [██░░░░░░░░] 20%
+Progress: [███░░░░░░░] 30%
 
 ## Performance Metrics
 
@@ -52,6 +52,9 @@ Recent decisions affecting current work:
 - [01-02]: Lazy genai.Client() initialization in embedder.py — deferred to first call so module imports without GOOGLE_API_KEY (critical for CI and testability)
 - [01-02]: L2 normalization required in both ingest.py and embedder.py — 768-dim truncated vectors are NOT pre-normalized by Google API
 - [01-02]: Task type asymmetry enforced — RETRIEVAL_DOCUMENT for ingest, RETRIEVAL_QUERY for runtime embed_query()
+- [01-03]: asynccontextmanager lifespan (not deprecated @app.on_event) used for FAISS loading — FastAPI 0.90+ pattern
+- [01-03]: CORS never uses ['*'] — ALLOWED_ORIGINS env var with explicit origin list; Railway injects Vercel URL at deploy time
+- [01-03]: .gitignore fixed — added !.env.example negation to allow safe committed example file despite .env.* wildcard rule
 
 ### Pending Todos
 
@@ -67,5 +70,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: Completed 01-02-PLAN.md — embedder service (app/services/embedder.py), config (app/config.py), ingest pipeline (scripts/ingest.py) committed
+Stopped at: 01-03-PLAN.md Task 3 checkpoint (human-verify) — awaiting user to provide experts.csv + GOOGLE_API_KEY, run ingest.py, start server, and verify GET /api/health returns index_size > 0
 Resume file: None
