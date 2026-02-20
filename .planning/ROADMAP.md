@@ -77,7 +77,12 @@ Plans:
   2. The Railway backend responds to `GET /api/health` from the public internet and does not cold-start-drop requests during normal use
   3. Production CORS is locked to the exact Vercel domain — no wildcard origins
   4. `GOOGLE_API_KEY` and `VITE_API_URL` are set as environment variables in Railway and Vercel respectively and are not present in any committed file
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 04-01-PLAN.md — Backend deployment prep: unignore data files, Railway Volume path, railway.json, Sentry backend
+- [ ] 04-02-PLAN.md — CI pipeline (GitHub Actions ruff + tsc) and Sentry React frontend instrumentation
+- [ ] 04-03-PLAN.md — Commit and push to main, connect Railway + Vercel, configure env vars, end-to-end verification
 
 ## Progress
 
@@ -89,4 +94,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | 1. Foundation | 3/3 | Complete | 2026-02-20 |
 | 2. RAG API | 4/4 | Complete | 2026-02-20 |
 | 3. Frontend | 3/3 | Complete   | 2026-02-20 |
-| 4. Deployment | 0/TBD | Not started | - |
+| 4. Deployment | 0/3 | Not started | - |
