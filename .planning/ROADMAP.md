@@ -95,3 +95,41 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | 2. RAG API | 4/4 | Complete | 2026-02-20 |
 | 3. Frontend | 3/3 | Complete   | 2026-02-20 |
 | 4. Deployment | 3/3 | Complete   | 2026-02-20 |
+
+### Phase 5: Email gate UX — Show expert results immediately but require email before clicking through to a profile
+
+**Goal:** Expert cards appear immediately after a chat response, greyed-out and non-clickable, with an inline email capture form below them — submitting a valid email instantly unlocks all cards and stores the lead; returning users (same browser) see fully unlocked cards with no gate.
+**Depends on:** Phase 4
+**Plans:** 3 plans
+
+Plans:
+- [ ] 05-01-PLAN.md — Backend lead capture: EmailLead model + POST /api/email-capture endpoint (idempotent)
+- [ ] 05-02-PLAN.md — Frontend email gate: useEmailGate hook + EmailGate component + ExpertCard locked mode + App.tsx wiring
+- [ ] 05-03-PLAN.md — Human verification of full gate flow (new visitor, returning visitor, backend capture)
+
+### Phase 6: Thumbs up/down feedback — Rate results, downvote opens suggestion sheet, feedback stored in DB
+
+**Goal:** [To be planned]
+**Depends on:** Phase 5
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 6 to break down)
+
+### Phase 7: Analytics dashboard — Admin view of searches, expert matches, gap tracking, CSV export
+
+**Goal:** [To be planned]
+**Depends on:** Phase 6
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 7 to break down)
+
+### Phase 8: Test lab — Run queries against search engine, evaluate results, iterate on retrieval quality
+
+**Goal:** [To be planned]
+**Depends on:** Phase 7
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 8 to break down)
