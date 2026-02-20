@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-20)
 ## Current Position
 
 Phase: 3 of 4 (Frontend) — IN PROGRESS
-Plan: 1 of 3 in phase 3 — COMPLETE
-Status: Phase 3 underway — Plan 03-01 (Vite+React+TS+Tailwind scaffold) complete. Ready for 03-02 (presentational components).
-Last activity: 2026-02-20 — Completed 03-01 (Vite scaffold with Tailwind brand colors and shared TypeScript types)
+Plan: 2 of 3 in phase 3 — COMPLETE
+Status: Phase 3 underway — Plan 03-02 (presentational components) complete. Ready for 03-03 (SSE hook + chat state).
+Last activity: 2026-02-20 — Completed 03-02 (Header, ChatMessage, ExpertCard, ChatInput, EmptyState components)
 
 Progress: [████████░░] 80%
 
@@ -78,6 +78,10 @@ Recent decisions affecting current work:
 - [03-01]: Tailwind CSS v3 (not v4) installed — stable, plan-specified version; brand colors as theme.extend.colors.brand.* tokens
 - [03-01]: VITE_API_URL typed in ImportMetaEnv interface for TypeScript-safe import.meta.env access
 - [03-01]: Named exports only in types.ts — no default export; all consuming components import { Expert, Message } from './types'
+- [03-02]: import type syntax required for interface imports — verbatimModuleSyntax in tsconfig.app.json; all components use `import type { Expert }` not `import { Expert }`
+- [03-02]: ExpertCard uses anchor tag (not button) with target=_blank and rel=noopener noreferrer for native link semantics
+- [03-02]: iOS safe-area padding applied via inline style prop on ChatInput — simpler than Tailwind plugin for env(safe-area-inset-bottom)
+- [03-02]: Initials avatar (2-letter) as fallback — Expert type has no photo URL field, consistent with backend schema
 
 ### Pending Todos
 
@@ -90,5 +94,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: Completed 03-01-PLAN.md — Vite+React+TS+Tailwind scaffold with brand colors and shared TypeScript types. Ready for 03-02 (presentational components).
+Stopped at: Completed 03-02-PLAN.md — Five presentational components (Header, ChatMessage, ExpertCard, ChatInput, EmptyState) with Tailwind brand styling and TypeScript types. Ready for 03-03 (SSE hook + chat state management).
 Resume file: None
