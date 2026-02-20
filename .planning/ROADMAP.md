@@ -65,8 +65,8 @@ Plans:
 
 Plans:
 - [x] 03-01-PLAN.md — Vite+React+TS+Tailwind scaffold with Tinrate brand colors and shared TypeScript types
-- [ ] 03-02-PLAN.md — Presentational components: Header, ChatMessage, ExpertCard, ChatInput, EmptyState
-- [ ] 03-03-PLAN.md — useChat SSE hook + App.tsx integration + human verification
+- [x] 03-02-PLAN.md — Presentational components: Header, ChatMessage, ExpertCard, ChatInput, EmptyState
+- [x] 03-03-PLAN.md — useChat SSE hook + App.tsx integration + human verification
 
 ### Phase 4: Deployment
 **Goal**: The application is live at a public URL — anyone can open it, ask a question, and receive expert recommendations without any local setup
