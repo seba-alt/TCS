@@ -170,6 +170,7 @@ def get_searches(
             "top_match_score": row.top_match_score,
             "is_gap": _is_gap(row),
             "gap_resolved": row.gap_resolved,
+            "response_experts": row.response_experts or "[]",
         }
 
     return {

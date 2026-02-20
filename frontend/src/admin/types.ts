@@ -18,6 +18,7 @@ export interface SearchRow {
   top_match_score: number | null
   is_gap: boolean
   gap_resolved: boolean
+  response_experts: string // Raw JSON string — parsed by ExpandedExpertRow component
 }
 
 export interface SearchesResponse {

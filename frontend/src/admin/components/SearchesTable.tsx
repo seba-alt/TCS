@@ -1,0 +1,182 @@
+import { useState } from 'react'
+import {
+  useReactTable,
+  getCoreRowModel,
+  getPaginationRowModel,
+  getFilteredRowModel,
+  flexRender,
+  type ColumnDef,
+} from '@tanstack/react-table'
+import type { SearchRow } from '../types'
+import ExpandedExpertRow from './ExpandedExpertRow'
+
+interface SearchesTableProps {
+  data: SearchRow[]
+  pageSize: number
+  onPageSizeChange: (size: number) => void
+}
+
+export default function SearchesTable({ data, pageSize, onPageSizeChange }: SearchesTableProps) {
+  const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set())
+
+  function toggleRow(id: number) {
+    setExpandedRows(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+
+  const columns: ColumnDef<SearchRow>[] = [
+    {
+      accessorKey: 'query',
+      header: 'Query',
+      cell: ({ getValue }) => (
+        <span className="block max-w-xs truncate text-sm text-gray-900" title={getValue<string>()}>
+          {getValue<string>()}
+        </span>
+      ),
+    },
+    {
+      accessorKey: 'created_at',
+      header: 'Timestamp',
+      cell: ({ getValue }) => (
+        <span className="text-xs text-gray-500 whitespace-nowrap">
+          {new Date(getValue<string>()).toLocaleString()}
+        </span>
+      ),
+    },
+    {
+      accessorKey: 'email',
+      header: 'User',
+      cell: ({ getValue }) => <span className="text-xs text-gray-600">{getValue<string>()}</span>,
+    },
+    {
+      accessorKey: 'match_count',
+      header: 'Matches',
+      cell: ({ getValue }) => <span className="text-sm text-gray-700">{getValue<number>()}</span>,
+    },
+    {
+      accessorKey: 'top_match_score',
+      header: 'Top Score',
+      cell: ({ getValue }) => {
+        const v = getValue<number | null>()
+        return <span className="text-sm text-gray-700">{v != null ? v.toFixed(3) : '—'}</span>
+      },
+    },
+    {
+      accessorKey: 'is_gap',
+      header: 'Gap',
+      cell: ({ getValue }) =>
+        getValue<boolean>() ? (
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700">Gap</span>
+        ) : null,
+    },
+  ]
+
+  const table = useReactTable({
+    data,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    initialState: { pagination: { pageSize } },
+    autoResetPageIndex: true,
+  })
+
+  // Keep pageSize in sync when parent changes it
+  if (table.getState().pagination.pageSize !== pageSize) {
+    table.setPageSize(pageSize)
+  }
+
+  const allRows = table.getRowModel().rows
+  const COLS = columns.length
+
+  return (
+    <div>
+      <div className="overflow-x-auto rounded-lg border border-gray-200">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            {table.getHeaderGroups().map(hg => (
+              <tr key={hg.id}>
+                {hg.headers.map(h => (
+                  <th key={h.id} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    {flexRender(h.column.columnDef.header, h.getContext())}
+                  </th>
+                ))}
+              </tr>
+            ))}
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {allRows.length === 0 ? (
+              <tr>
+                <td colSpan={COLS} className="px-6 py-10 text-center text-sm text-gray-400">
+                  No searches found.
+                </td>
+              </tr>
+            ) : (
+              allRows.map(row => {
+                const original = row.original
+                const isExpanded = expandedRows.has(original.id)
+                return [
+                  <tr
+                    key={row.id}
+                    onClick={() => toggleRow(original.id)}
+                    className="hover:bg-gray-50 cursor-pointer transition-colors"
+                  >
+                    {row.getVisibleCells().map(cell => (
+                      <td key={cell.id} className="px-6 py-3 whitespace-nowrap">
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </td>
+                    ))}
+                  </tr>,
+                  isExpanded && (
+                    <ExpandedExpertRow
+                      key={`exp-${row.id}`}
+                      responseExperts={original.response_experts ?? '[]'}
+                      colSpan={COLS}
+                    />
+                  ),
+                ]
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Pagination controls */}
+      <div className="mt-4 flex items-center justify-between text-sm text-gray-600">
+        <div className="flex items-center gap-2">
+          <span>Rows per page:</span>
+          <select
+            value={pageSize}
+            onChange={e => onPageSizeChange(Number(e.target.value))}
+            className="border border-gray-300 rounded px-2 py-1 text-sm"
+          >
+            <option value={25}>25</option>
+            <option value={50}>50</option>
+          </select>
+        </div>
+        <div className="flex items-center gap-2">
+          <span>
+            Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
+          </span>
+          <button
+            onClick={() => table.previousPage()}
+            disabled={!table.getCanPreviousPage()}
+            className="px-3 py-1 rounded border border-gray-300 disabled:opacity-40 hover:bg-gray-100"
+          >
+            ←
+          </button>
+          <button
+            onClick={() => table.nextPage()}
+            disabled={!table.getCanNextPage()}
+            className="px-3 py-1 rounded border border-gray-300 disabled:opacity-40 hover:bg-gray-100"
+          >
+            →
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
