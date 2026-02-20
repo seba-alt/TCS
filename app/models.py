@@ -6,7 +6,7 @@ Email is required — the chat endpoint enforces this at request validation time
 """
 import datetime
 
-from sqlalchemy import DateTime, String, Text
+from sqlalchemy import Boolean, DateTime, Float, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -29,6 +29,8 @@ class Conversation(Base):
     created_at: Mapped[datetime.datetime] = mapped_column(
         DateTime, default=datetime.datetime.utcnow, nullable=False
     )
+    top_match_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    gap_resolved: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="0")
 
 
 class EmailLead(Base):

@@ -53,6 +53,21 @@ async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
     log.info("startup: database tables created/verified")
 
+    # One-time column migrations for analytics schema — safe to leave in permanently.
+    # SQLite raises OperationalError if the column already exists; we catch and ignore.
+    from sqlalchemy import text as _text  # noqa: PLC0415
+    with engine.connect() as _conn:
+        for _col_ddl in [
+            "ALTER TABLE conversations ADD COLUMN top_match_score REAL",
+            "ALTER TABLE conversations ADD COLUMN gap_resolved INTEGER NOT NULL DEFAULT 0",
+        ]:
+            try:
+                _conn.execute(_text(_col_ddl))
+                _conn.commit()
+            except Exception:
+                pass  # Column already exists — idempotent
+    log.info("startup: analytics columns migrated/verified")
+
     log.info("startup: loading FAISS index", path=str(FAISS_INDEX_PATH))
 
     if not FAISS_INDEX_PATH.exists():

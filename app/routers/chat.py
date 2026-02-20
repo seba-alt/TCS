@@ -81,6 +81,9 @@ async def _stream_chat(body: ChatRequest, request: Request, db: Session):
         )
         log.info("chat.retrieved", candidate_count=len(candidates))
 
+        # Capture top FAISS score for gap analytics (None if no candidates)
+        top_score = candidates[0].score if candidates else None
+
         # Generate response (sync — run in thread pool; has internal retry logic)
         llm_response = await loop.run_in_executor(
             None,
@@ -113,6 +116,7 @@ async def _stream_chat(body: ChatRequest, request: Request, db: Session):
             response_type=llm_response.type,
             response_narrative=llm_response.narrative,
             response_experts=json.dumps(experts_payload),
+            top_match_score=top_score,
         )
         db.add(conversation)
         db.commit()
