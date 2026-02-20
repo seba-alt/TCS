@@ -23,7 +23,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Deployment
 
-- [ ] **DEPL-01**: Application is publicly hosted and accessible via URL — React frontend on Vercel, FastAPI backend on Railway or Render
+- [x] **DEPL-01**: Application is publicly hosted and accessible via URL — React frontend on Vercel, FastAPI backend on Railway or Render
 
 ## v2 Requirements
 
@@ -70,7 +70,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | REC-02 | Phase 2 | Complete (human-verified 2026-02-20 — SSE streaming, 10+ domain queries, clarification path working) |
 | REC-03 | Phase 3 | Complete |
 | REC-04 | Phase 3 | Complete |
-| DEPL-01 | Phase 4 | Pending |
+| DEPL-01 | Phase 4 | Complete |
 
 **Coverage:**
 - v1 requirements: 7 total

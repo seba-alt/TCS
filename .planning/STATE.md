@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-02-20)
 
 ## Current Position
 
-Phase: 4 of 4 (Deployment) — NOT STARTED
-Plan: 0 of TBD in phase 4
-Status: Phase 3 complete — all 3 frontend plans done, human-verified end-to-end chat flow (desktop + mobile + error state + multi-turn). Ready for Phase 4 (Deployment).
-Last activity: 2026-02-20 — Completed 03-03 (useChat hook + App.tsx integration, human browser verification approved). Phase 3 fully done.
+Phase: 4 of 4 (Deployment) — IN PROGRESS
+Plan: 1 of 3 in phase 4
+Status: 04-01 complete — backend codebase ready for Railway deploy (railway.json, VAR_DIR SQLite, Sentry init, data files unignored). Starting 04-02.
+Last activity: 2026-02-20 — Completed 04-01 (railway.json + VAR_DIR config + Sentry). Backend deploy prep done.
 
-Progress: [██████████] 100% (Phase 3 complete; Phase 4 not started)
+Progress: [██████████] 33% of phase 4 (1/3 plans done)
 
 ## Performance Metrics
 
@@ -30,6 +30,7 @@ Progress: [██████████] 100% (Phase 3 complete; Phase 4 not s
 | 01-foundation | 3 | 7.5 min | 2.5 min |
 | 02-rag-api | 4 | 12.2 min | 3.1 min |
 | 03-frontend | 3 | 6 min | 2 min |
+| 04-deployment | 1 (so far) | 2 min | 2 min |
 
 **Recent Trend:**
 - Last 5 plans: 2.4 min
@@ -37,6 +38,7 @@ Progress: [██████████] 100% (Phase 3 complete; Phase 4 not s
 
 *Updated after each plan completion*
 | Phase 03-frontend P03 | 2 | 2 tasks | 3 files |
+| Phase 04-deployment P01 | 2 min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -88,6 +90,10 @@ Recent decisions affecting current work:
 - [03-03]: Phase 3 fully verified by human — desktop chat flow confirmed, mobile 375px layout verified, error state + Retry working, multi-turn history visible and scrollable
 - [Phase 03-frontend]: fetch ReadableStream SSE parsing instead of EventSource — POST body required for /api/chat; EventSource is GET-only
 - [Phase 03-frontend]: Phase 3 fully verified by human — desktop chat flow, mobile 375px layout, error state + Retry, multi-turn history all confirmed
+- [04-01]: Railway Volume mounted at /app/var (not /app/data) — mounting at /app/data shadows committed FAISS index; set VAR_DIR=/app/var on Railway dashboard
+- [04-01]: FAISS index, metadata.json, and experts.csv committed to git — Railway clones repo at deploy time so data files must be tracked
+- [04-01]: sentry-sdk added without version pin — stable and backward-compatible; walrus-operator guard skips init silently when SENTRY_DSN absent
+- [04-01]: railway.json declares healthcheckPath=/api/health with 300s timeout for FAISS lifespan startup
 
 ### Pending Todos
 
@@ -100,5 +106,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: Phase 3 complete. All 3 frontend plans done. Ready to begin Phase 4 (Deployment: Vercel + Railway).
+Stopped at: Completed 04-01-PLAN.md — backend deployment prep done. Ready for 04-02 (Railway service connect + Volume + env vars).
 Resume file: None
