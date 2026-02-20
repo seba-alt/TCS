@@ -111,7 +111,7 @@ Plans:
 
 **Goal:** Users can rate expert results with thumbs up/down below the most recent result set — downvote immediately records the vote and opens a lightweight modal for optional detail; all feedback is stored in the DB linked to the conversation.
 **Depends on:** Phase 5
-**Plans:** 3 plans
+**Plans:** 2/3 plans executed
 
 Plans:
 - [ ] 06-01-PLAN.md — Backend: Feedback model, POST /api/feedback endpoint, conversation_id in SSE result event

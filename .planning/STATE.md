@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-02-20)
 
 ## Current Position
 
-Phase: 5 of 8 (Email Gate UX) — COMPLETE
-Plan: 3 of 3 in phase 5 — COMPLETE (human-verified 2026-02-20)
-Status: Phase 5 fully complete. All 6 email gate UX scenarios verified by human in real browser. Ready to begin Phase 6 (thumbs up/down feedback).
-Last activity: 2026-02-20 — 05-03 complete. Human approved all 6 gate scenarios (greyed cards, inline form, instant unlock, localStorage persistence, backend lead capture, multi-turn single gate).
+Phase: 6 of 8 (Thumbs up/down feedback) — IN PROGRESS
+Plan: 1 of 3 in phase 6 — COMPLETE (06-01 done 2026-02-20)
+Status: Phase 6 Plan 1 complete. Backend feedback infrastructure ready. Ready for Phase 6 Plan 2 (frontend thumbs up/down UI).
+Last activity: 2026-02-20 — 06-01 complete. Feedback model, POST /api/feedback endpoint, and conversation_id in SSE result event all done and verified.
 
-Progress: [████████████████████] 100% phase 5 complete (3/3 plans done, all human-verified)
+Progress: [█████████░░░░░░░░░░░] 1/3 plans done in phase 6
 
 ## Live URLs
 
@@ -62,6 +62,7 @@ Steps:
 | Phase 05-email-gate P01 | 1 min | 2 tasks | 3 files |
 | Phase 05 P02 | 3min | 2 tasks | 5 files |
 | Phase 05 P03 | ~30min | 2 tasks | 0 files (verification-only) |
+| Phase 06 P01 | 107 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -140,6 +141,10 @@ Recent decisions affecting current work:
 - [Phase 05]: locked renders as div not anchor — keyboard users cannot tab-activate a locked link; aria-hidden on locked cards
 - [Phase 05]: EmailGate only on last expert message (lastExpertMsgIndex reduce) — prevents duplicate forms in multi-turn chat
 - [05-03]: All 6 email gate UX scenarios human-verified in real browser — greyed cards, inline gate, instant unlock, localStorage persistence, SQLite lead capture, multi-turn single-gate all confirmed working
+- [Phase 06]: [06-01]: No FK on conversation_id in Feedback — consistent with existing schema style (no FK relationships in project)
+- [Phase 06]: [06-01]: Vote switch inserts new row (not upsert) — preserves vote history; latest row per conversation_id is authoritative for analytics
+- [Phase 06]: [06-01]: FeedbackRequest uses Literal['up', 'down'] — Pydantic enforces valid values, returns 422 for invalid votes automatically
+- [Phase 06]: [06-01]: expert_ids and reasons stored as JSON-serialized Text — consistent with history/response_experts pattern in Conversation model
 
 ### Pending Todos
 
@@ -152,5 +157,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: 05-03 complete — human approved all 6 verification scenarios. Phase 5 fully done.
+Stopped at: 06-01 complete — backend feedback infrastructure (Feedback model, POST /api/feedback, conversation_id in SSE).
 Resume file: None
