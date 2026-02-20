@@ -4,6 +4,7 @@ Shared configuration constants.
 OUTPUT_DIM must match between ingest.py (build-time) and embedder.py (runtime).
 Changing OUTPUT_DIM requires re-running ingest.py to rebuild the FAISS index.
 """
+import os
 from pathlib import Path
 
 # Embedding model — text-embedding-004 is SHUT DOWN (Jan 14, 2026). Do not use.
@@ -23,8 +24,9 @@ DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 FAISS_INDEX_PATH = DATA_DIR / "faiss.index"
 METADATA_PATH = DATA_DIR / "metadata.json"
 
-# SQLite database for conversation logging.
-# NOTE: SQLite writes to the container's ephemeral filesystem on Railway.
-# For production persistence, replace with DATABASE_URL env var pointing to Postgres.
-# For v1, SQLite is sufficient for lead capture and analytics.
-DATABASE_URL = f"sqlite:///{DATA_DIR / 'conversations.db'}"
+# SQLite on persistent Railway Volume (mounted at /app/var in production).
+# Falls back to DATA_DIR for local development — no env var change needed locally.
+# CRITICAL: Do NOT mount Volume at /app/data — that shadows the committed FAISS index.
+# Set VAR_DIR=/app/var in Railway dashboard environment variables.
+_VAR_DIR = Path(os.getenv("VAR_DIR", str(DATA_DIR)))
+DATABASE_URL = f"sqlite:///{_VAR_DIR / 'conversations.db'}"

@@ -6,10 +6,8 @@
 # Allow the example file — it contains no real secrets, only placeholder values
 !.env.example
 
-# Generated data files — gitignored because they are large and regenerable
-data/faiss.index
-data/metadata.json
-data/*.csv
+# Generated data files — conversations.db lives on Railway Volume; never commit it.
+# FAISS index, metadata, and CSV are committed so Railway can clone them at deploy.
 data/conversations.db
 
 # Python
