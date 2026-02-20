@@ -71,3 +71,30 @@ class Feedback(Base):
     created_at: Mapped[datetime.datetime] = mapped_column(
         DateTime, default=datetime.datetime.utcnow, nullable=False
     )
+
+
+class Expert(Base):
+    """
+    Expert profiles — seeded from experts.csv on first startup, then managed via admin API.
+    The experts.csv is also appended when new experts are added via POST /api/admin/experts,
+    so the FAISS ingestion pipeline (scripts/ingest.py) can pick up new entries.
+    """
+
+    __tablename__ = "experts"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    username: Mapped[str] = mapped_column(String(100), unique=True, nullable=False, index=True)
+    email: Mapped[str] = mapped_column(String(320), nullable=False, default="")
+    first_name: Mapped[str] = mapped_column(String(100), nullable=False, default="")
+    last_name: Mapped[str] = mapped_column(String(100), nullable=False, default="")
+    job_title: Mapped[str] = mapped_column(String(200), nullable=False, default="")
+    company: Mapped[str] = mapped_column(String(200), nullable=False, default="")
+    bio: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    hourly_rate: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    currency: Mapped[str] = mapped_column(String(10), nullable=False, default="EUR")
+    profile_url: Mapped[str] = mapped_column(String(500), nullable=False, default="")
+    profile_url_utm: Mapped[str] = mapped_column(String(600), nullable=False, default="")
+    category: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime, default=datetime.datetime.utcnow, nullable=False
+    )

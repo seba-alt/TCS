@@ -25,7 +25,7 @@ import os
 from datetime import date, datetime
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Security, status
+from fastapi import APIRouter, Depends, HTTPException, Security, status
 from fastapi.responses import StreamingResponse
 from fastapi.security import APIKeyHeader
 from pydantic import BaseModel
@@ -34,7 +34,7 @@ from sqlalchemy.orm import Session
 
 from app.config import METADATA_PATH
 from app.database import get_db
-from app.models import Conversation, Feedback
+from app.models import Conversation, Expert, Feedback
 
 # ── Auth ─────────────────────────────────────────────────────────────────────
 
@@ -95,28 +95,18 @@ def _auto_categorize(job_title: str) -> Optional[str]:
     return None
 
 
-def _serialize_expert(e: dict) -> dict:
+def _serialize_expert(e: Expert) -> dict:
     return {
-        "username": e.get("Username", ""),
-        "first_name": e.get("First Name", ""),
-        "last_name": e.get("Last Name", ""),
-        "job_title": e.get("Job Title", ""),
-        "company": e.get("Company", ""),
-        "bio": e.get("Bio", ""),
-        "hourly_rate": e.get("Hourly Rate", 0),
-        "profile_url": e.get("Profile URL", ""),
-        "category": e.get("category"),
+        "username": e.username,
+        "first_name": e.first_name,
+        "last_name": e.last_name,
+        "job_title": e.job_title,
+        "company": e.company,
+        "bio": e.bio,
+        "hourly_rate": e.hourly_rate,
+        "profile_url": e.profile_url,
+        "category": e.category,
     }
-
-
-def _load_metadata() -> list:
-    with open(METADATA_PATH, "r", encoding="utf-8") as f:
-        return json.load(f)
-
-
-def _save_metadata(metadata: list) -> None:
-    with open(METADATA_PATH, "w", encoding="utf-8") as f:
-        json.dump(metadata, f, ensure_ascii=False, indent=2)
 
 
 # ── Auth endpoint (no auth required) ─────────────────────────────────────────
@@ -415,19 +405,18 @@ def get_leads(db: Session = Depends(get_db)):
 # ── Experts ───────────────────────────────────────────────────────────────────
 
 @router.get("/experts")
-def get_experts(request: Request):
+def get_experts(db: Session = Depends(get_db)):
     """
-    Return all experts from in-memory metadata (loaded at startup).
+    Return all experts from the experts DB table.
 
     Response shape:
         {experts: [{username, first_name, last_name, job_title, company, bio,
                     hourly_rate, profile_url, category}]}
     """
-    try:
-        metadata: list = getattr(request.app.state, "metadata", None) or _load_metadata()
-        return {"experts": [_serialize_expert(e) for e in metadata]}
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Failed to load experts: {exc!r}") from exc
+    experts = db.scalars(
+        select(Expert).order_by(Expert.last_name, Expert.first_name)
+    ).all()
+    return {"experts": [_serialize_expert(e) for e in experts]}
 
 
 class ClassifyBody(BaseModel):
@@ -435,47 +424,44 @@ class ClassifyBody(BaseModel):
 
 
 @router.post("/experts/{username}/classify")
-def classify_expert(username: str, body: ClassifyBody, request: Request):
+def classify_expert(username: str, body: ClassifyBody, db: Session = Depends(get_db)):
     """
-    Set the category field on a single expert in metadata.json.
+    Set the category on a single expert in the DB.
 
     Response: {"ok": True}
     """
-    metadata = _load_metadata()
-    for expert in metadata:
-        if expert.get("Username") == username:
-            expert["category"] = body.category
-            _save_metadata(metadata)
-            request.app.state.metadata = metadata
-            return {"ok": True}
-    raise HTTPException(status_code=404, detail=f"Expert '{username}' not found")
+    expert = db.scalar(select(Expert).where(Expert.username == username))
+    if not expert:
+        raise HTTPException(status_code=404, detail=f"Expert '{username}' not found")
+    expert.category = body.category
+    db.commit()
+    return {"ok": True}
 
 
 @router.post("/experts/auto-classify")
-def auto_classify_experts(request: Request):
+def auto_classify_experts(db: Session = Depends(get_db)):
     """
-    Keyword-match job_title against CATEGORY_KEYWORDS for all experts without a category.
+    Keyword-match job_title against CATEGORY_KEYWORDS for all unclassified experts.
     Sets category only where not already set.
 
     Response: {"classified": int, "categories": {username: category}}
     """
-    metadata = _load_metadata()
+    unclassified = db.scalars(
+        select(Expert).where(Expert.category.is_(None))
+    ).all()
+
     classified = 0
     categories: dict[str, str] = {}
 
-    for expert in metadata:
-        if expert.get("category"):
-            continue  # Already classified
-        jt = expert.get("Job Title", "")
-        cat = _auto_categorize(jt)
+    for expert in unclassified:
+        cat = _auto_categorize(expert.job_title)
         if cat:
-            expert["category"] = cat
+            expert.category = cat
             classified += 1
-            categories[expert.get("Username", "")] = cat
+            categories[expert.username] = cat
 
     if classified:
-        _save_metadata(metadata)
-        request.app.state.metadata = metadata
+        db.commit()
 
     return {"classified": classified, "categories": categories}
 
@@ -492,15 +478,14 @@ class AddExpertBody(BaseModel):
 
 
 @router.post("/experts")
-def add_expert(body: AddExpertBody, request: Request):
+def add_expert(body: AddExpertBody, db: Session = Depends(get_db)):
     """
-    Append a new expert to metadata.json and experts.csv.
+    Add a new expert to the DB and append to experts.csv for FAISS ingestion.
 
     Response: {"ok": True, "username": str}
     """
-    metadata = _load_metadata()
-
-    if any(e.get("Username") == body.username for e in metadata):
+    existing = db.scalar(select(Expert).where(Expert.username == body.username))
+    if existing:
         raise HTTPException(status_code=400, detail="Username already exists")
 
     profile_url = body.profile_url or f"https://tinrate.com/u/{body.username}"
@@ -509,27 +494,24 @@ def add_expert(body: AddExpertBody, request: Request):
         "?utm_source=chat&utm_medium=search&utm_campaign=chat"
     )
 
-    new_expert: dict = {
-        "Email": "",
-        "Username": body.username,
-        "First Name": body.first_name,
-        "Last Name": body.last_name,
-        "Job Title": body.job_title,
-        "Company": body.company,
-        "Bio": body.bio,
-        "Hourly Rate": body.hourly_rate,
-        "Currency": "EUR",
-        "Profile URL": profile_url,
-        "Profile URL with UTM": profile_url_utm,
-        "Created At": datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S"),
-    }
+    new_expert = Expert(
+        username=body.username,
+        email="",
+        first_name=body.first_name,
+        last_name=body.last_name,
+        job_title=body.job_title,
+        company=body.company,
+        bio=body.bio,
+        hourly_rate=body.hourly_rate,
+        currency="EUR",
+        profile_url=profile_url,
+        profile_url_utm=profile_url_utm,
+        category=_auto_categorize(body.job_title),
+    )
+    db.add(new_expert)
+    db.commit()
 
-    # Append to metadata.json and update in-memory state
-    metadata.append(new_expert)
-    _save_metadata(metadata)
-    request.app.state.metadata = metadata
-
-    # Append to experts.csv
+    # Also append to experts.csv so the FAISS pipeline can pick it up
     csv_exists = EXPERTS_CSV_PATH.exists()
     with open(EXPERTS_CSV_PATH, "a", newline="", encoding="utf-8") as f:
         fieldnames = [
@@ -540,7 +522,20 @@ def add_expert(body: AddExpertBody, request: Request):
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         if not csv_exists:
             writer.writeheader()
-        writer.writerow({k: new_expert.get(k, "") for k in fieldnames})
+        writer.writerow({
+            "Email": "",
+            "Username": body.username,
+            "First Name": body.first_name,
+            "Last Name": body.last_name,
+            "Job Title": body.job_title,
+            "Company": body.company,
+            "Bio": body.bio,
+            "Hourly Rate": body.hourly_rate,
+            "Currency": "EUR",
+            "Profile URL": profile_url,
+            "Profile URL with UTM": profile_url_utm,
+            "Created At": datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S"),
+        })
 
     return {"ok": True, "username": body.username}
 

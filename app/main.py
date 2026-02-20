@@ -2,16 +2,19 @@
 FastAPI application entry point.
 
 Startup sequence (lifespan):
-1. Load FAISS index from disk → app.state.faiss_index
-2. Load metadata JSON → app.state.metadata
-3. Yield (server is ready)
-4. Shutdown: nothing to clean up for in-memory FAISS
+1. Create/migrate DB tables
+2. Seed Expert table from experts.csv if empty
+3. Load FAISS index from disk → app.state.faiss_index
+4. Load metadata JSON → app.state.metadata
+5. Yield (server is ready)
+6. Shutdown: nothing to clean up for in-memory FAISS
 
 CORS: configured before route registration.
 Uses ALLOWED_ORIGINS env var (comma-separated).
 Default: localhost:5173 (Vite dev server).
 Production: Railway injects the actual Vercel URL.
 """
+import csv
 import json
 import os
 from contextlib import asynccontextmanager
@@ -23,9 +26,11 @@ import structlog
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import func, select
 
 from app.config import FAISS_INDEX_PATH, METADATA_PATH
-from app.database import Base, engine
+from app.database import Base, SessionLocal, engine
+from app.models import Expert
 from app.routers import admin, chat, email_capture, feedback, health
 
 # Load .env for local development — no-op in production (Railway injects env vars)
@@ -41,6 +46,57 @@ if dsn := os.getenv("SENTRY_DSN"):
     )
 
 log = structlog.get_logger()
+
+EXPERTS_CSV_PATH = METADATA_PATH.parent / "experts.csv"
+
+
+def _seed_experts_from_csv() -> int:
+    """
+    Import experts.csv into the Expert DB table on first run.
+    Skips if the table already has rows.
+    Returns the number of rows inserted (0 if already seeded or CSV not found).
+    """
+    with SessionLocal() as db:
+        count = db.execute(select(func.count()).select_from(Expert)).scalar() or 0
+        if count > 0:
+            return 0  # Already seeded
+
+        if not EXPERTS_CSV_PATH.exists():
+            log.warning("startup: experts.csv not found, skipping expert seed", path=str(EXPERTS_CSV_PATH))
+            return 0
+
+        experts: list[Expert] = []
+        with open(EXPERTS_CSV_PATH, "r", encoding="utf-8") as f:
+            for row in csv.DictReader(f):
+                username = (row.get("Username") or "").strip()
+                if not username:
+                    continue  # Skip rows with no username
+
+                try:
+                    hourly_rate = float(row.get("Hourly Rate") or 0)
+                except (ValueError, TypeError):
+                    hourly_rate = 0.0
+
+                experts.append(Expert(
+                    username=username,
+                    email=(row.get("Email") or "").strip(),
+                    first_name=(row.get("First Name") or "").strip(),
+                    last_name=(row.get("Last Name") or "").strip(),
+                    job_title=(row.get("Job Title") or "").strip(),
+                    company=(row.get("Company") or "").strip(),
+                    bio=(row.get("Bio") or "").strip(),
+                    hourly_rate=hourly_rate,
+                    currency=(row.get("Currency") or "EUR").strip(),
+                    profile_url=(row.get("Profile URL") or "").strip(),
+                    profile_url_utm=(row.get("Profile URL with UTM") or "").strip(),
+                    category=None,
+                ))
+
+        if experts:
+            db.bulk_save_objects(experts)
+            db.commit()
+
+        return len(experts)
 
 
 @asynccontextmanager
@@ -67,6 +123,13 @@ async def lifespan(app: FastAPI):
             except Exception:
                 pass  # Column already exists — idempotent
     log.info("startup: analytics columns migrated/verified")
+
+    # Seed Expert table from experts.csv on first run
+    seeded = _seed_experts_from_csv()
+    if seeded:
+        log.info("startup: experts seeded from CSV", count=seeded)
+    else:
+        log.info("startup: experts table already populated or CSV not found")
 
     log.info("startup: loading FAISS index", path=str(FAISS_INDEX_PATH))
 
