@@ -1,243 +1,229 @@
-# Domain Pitfalls
+# Pitfalls Research
 
-**Project:** Tinrate AI Concierge Chatbot
-**Domain:** RAG-based expert-matching chatbot (Google GenAI + Gemini, FastAPI, React, Vercel + Railway)
-**Researched:** 2026-02-20
-**Confidence:** MEDIUM — based on training knowledge (cutoff Aug 2025) covering this exact stack combination; external verification was unavailable in this session. Flag for validation before Phase 1 starts.
+**Project:** Tinrate AI Concierge Chatbot — v1.1 Expert Intelligence & Search Quality
+**Domain:** Batch AI tagging + FAISS hot-swap + query expansion + sparse feedback learning on existing RAG system
+**Researched:** 2026-02-21
+**Confidence:** MEDIUM-HIGH — rate limit and FAISS thread-safety claims verified against official Google and FAISS documentation; feedback cold-start claims are well-established in recommender systems literature; Railway volume constraints verified against Railway docs.
 
 ---
 
 ## Critical Pitfalls
 
-Mistakes that cause rewrites, broken deployments, or fundamentally wrong outputs.
+Mistakes that cause broken data pipelines, production downtime, or permanently degraded retrieval quality.
 
 ---
 
-### Pitfall 1: API Key Leaked to Frontend or Version Control
+### Pitfall 1: Embedding API Silently Throttled During 1,558-Expert Re-ingest
 
-**What goes wrong:** The `GOOGLE_API_KEY` ends up in the React bundle (committed to `.env` at repo root without `.gitignore`, or passed to the frontend via an unguarded API response) and becomes publicly extractable. This allows unlimited third-party usage billed to the project owner.
+**What goes wrong:**
+The `google-genai` SDK's `embed_content()` call routes exclusively through the `batchEmbedContents` endpoint, which has a 150-request rate limit. When embedding all 1,558 experts sequentially in a tight loop (even with chunked batches), the process hits 429 errors mid-run. If errors are not caught and retried, the run silently produces a partial FAISS index — fewer than 1,558 vectors — with no warning. The index appears complete and loads successfully, but search quality is permanently degraded because a third of the expert pool is missing.
 
-**Why it happens:** Developers add `.env` files for local dev and forget that Vite/CRA will embed any variable prefixed `VITE_` directly into the compiled JS bundle. Or the FastAPI backend logs/echoes the key in a debug endpoint left open in production.
+**Why it happens:**
+Developers call `embed_content()` for each expert record in a loop without rate-limit handling, expecting the SDK to manage throttling. The SDK does not transparently handle 429s in embedding calls. The FAISS index write succeeds with however many vectors were generated before the quota error, so there is no crash to alert the developer.
 
-**Consequences:**
-- Google API key abuse and unexpected billing spikes
-- Key revocation forces emergency redeploy
-- If committed to git history, rotation alone is insufficient — history must be purged
+**How to avoid:**
+- Implement exponential backoff with jitter using `tenacity` around every embedding call:
+  ```python
+  from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+  import google.api_core.exceptions
 
-**Prevention:**
-- Keep `GOOGLE_API_KEY` only on the FastAPI backend (Railway env vars panel), never in the Vite/React build
-- Never prefix it with `VITE_` — that prefix means "embed in bundle"
-- Add `.env` and `.env.*` to `.gitignore` before the first commit
-- Add a pre-commit hook or secret-scanning CI step (e.g., `detect-secrets` or GitHub secret scanning)
-- Audit Railway environment variable settings — use Railway's encrypted secrets, not hardcoded values in `railway.toml`
+  @retry(
+      retry=retry_if_exception_type(Exception),
+      wait=wait_exponential(multiplier=1, min=2, max=60),
+      stop=stop_after_attempt(6)
+  )
+  def embed_one(client, text: str) -> list[float]:
+      result = client.models.embed_content(model="text-embedding-004", contents=text)
+      return result.embeddings[0].values
+  ```
+- Add a sleep between batches: `time.sleep(0.5)` between every 10 embeddings is safe for free tier; `time.sleep(0.2)` for paid.
+- After generating all embeddings, assert `len(embeddings) == 1558` before writing the FAISS index. Abort and log if the count is wrong.
+- Run re-ingest as an offline script (`scripts/reindex_experts.py`) not in-process. Write the index to a temp file first, then replace the live file only after the count assertion passes.
+- If the SDK consistently throttles, bypass `embed_content()` and call `embedContent` (singular) via direct HTTP POST — this avoids the batch endpoint's tighter quota.
 
-**Detection (warning signs):**
-- `VITE_GOOGLE_API_KEY` appears anywhere in the codebase
-- `.env` file shows up in `git status` without being gitignored
-- Network tab in browser DevTools shows the API key in any request or response payload
+**Warning signs:**
+- Script finishes in less than 3 minutes for 1,558 experts (embeddings take ~0.3s each; a full run should take at least 8 minutes)
+- FAISS index file is smaller than the v1.0 index that held 530 vectors
+- `faiss.read_index(path).ntotal` returns a value below 1,558 after the run
 
-**Phase to address:** Phase 1 (project setup) — configure `.gitignore`, environment variable strategy, and Railway secrets before writing any API-calling code.
-
----
-
-### Pitfall 2: CORS Misconfiguration Blocking the React Frontend
-
-**What goes wrong:** FastAPI runs on Railway (e.g., `https://tinrate-backend.up.railway.app`) and the React app on Vercel (e.g., `https://tinrate.vercel.app`). Without explicit CORS middleware configuration, the browser blocks every API request with a CORS error — the app appears broken with zero useful error messages in the UI.
-
-**Why it happens:** FastAPI does not enable CORS by default. `CORSMiddleware` must be added explicitly. Developers often test locally where frontend and backend share `localhost` and never encounter the issue, then ship to production and discover it immediately.
-
-**Consequences:**
-- The deployed app is completely non-functional — 100% of API calls fail
-- The error appears in the browser console, not the backend logs, making it hard to diagnose without DevTools knowledge
-
-**Prevention:**
-```python
-# main.py — add before route definitions
-from fastapi.middleware.cors import CORSMiddleware
-
-ALLOWED_ORIGINS = [
-    "https://tinrate.vercel.app",        # production Vercel URL
-    "https://*.vercel.app",              # preview deployments
-    "http://localhost:5173",             # Vite dev server
-    "http://localhost:3000",             # CRA dev server fallback
-]
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,       # never use ["*"] in production
-    allow_credentials=False,
-    allow_methods=["POST", "GET"],
-    allow_headers=["Content-Type"],
-)
-```
-- Do NOT use `allow_origins=["*"]` in production — it defeats CSRF protections
-- Add the exact Vercel URL after first deployment; update if the project URL changes
-
-**Detection (warning signs):**
-- Browser console shows: `Access to fetch at '...' from origin '...' has been blocked by CORS policy`
-- API calls return `200` in Postman but fail in the browser
-- Preflight `OPTIONS` requests return `403` or `404`
-
-**Phase to address:** Phase 1 (backend scaffold) — add `CORSMiddleware` before writing any routes, with a placeholder for the Vercel URL.
+**Phase to address:** Phase 1 (batch tagging) — validate count before writing index. This check costs 1 line and saves debugging a silent data quality regression.
 
 ---
 
-### Pitfall 3: Embedding All 1,600 Experts on Every Cold Start
+### Pitfall 2: Gemini LLM Produces Inconsistent Tags Across the Batch (Schema Drift)
 
-**What goes wrong:** The FastAPI startup routine calls the Google GenAI embedding API for all 1,600+ CSV rows every time the Railway container starts. With ~500ms per embedding batch call and rate limits, startup takes 3-10 minutes and often hits API quota limits before the service becomes ready.
+**What goes wrong:**
+When tagging 1,558 experts with a single LLM call per expert (or small batch), temperature > 0 and CUDA batch-size variation cause the same prompt to produce structurally different outputs across the run. Some experts get 3 tags, others get 7. Some tags are capitalized, others lowercase. Some are comma-separated strings, others are JSON arrays. The tag schema drifts across the run without any single call failing. The resulting `metadata.json` is inconsistent, FAISS embedding text varies in structure, and the admin tab displays garbled tag data.
 
-**Why it happens:** Developers embed at startup for simplicity ("just compute them fresh each time") without realising cold starts happen frequently on Railway's free/hobby plans, and that 1,600 API calls consume a significant portion of daily free-tier quota.
+**Why it happens:**
+LLMs are non-deterministic. Research confirms that even `temperature=0` with identical prompts yields structurally different outputs when CUDA batch sizes vary (batch-sensitive nondeterminism). Long batch runs accumulate these structural variations silently. Without output validation after each call, bad tags are written to disk alongside good ones.
 
-**Consequences:**
-- Service is unavailable for minutes after every deploy or container restart
-- Embedding API quota exhausted before users can query
-- Railway health checks time out, causing repeated restart loops
+**How to avoid:**
+- Use `response_mime_type="application/json"` and a `response_schema` with Gemini to enforce structured output:
+  ```python
+  from google.genai import types
 
-**Prevention:**
-- Pre-compute embeddings once offline and persist them (two options, choose one):
-  - **Option A (recommended for v1):** Embed all 1,600 rows locally, save as `experts_embedded.pkl` (pickle of numpy array + metadata), commit to repo or upload to Railway's persistent volume. Load from file at startup — takes ~2 seconds, zero API calls.
-  - **Option B:** Store embeddings in a hosted vector DB (Supabase pgvector free tier). Query at runtime. More infra, better for v1 if data will grow.
-- If re-embedding is needed (data update), make it a one-off management script (`scripts/embed_experts.py`), not part of application startup
-- Cache the in-memory numpy array as a module-level singleton after first load
+  schema = types.Schema(
+      type=types.Type.OBJECT,
+      properties={
+          "tags": types.Schema(
+              type=types.Type.ARRAY,
+              items=types.Schema(type=types.Type.STRING),
+              min_items=3,
+              max_items=6
+          )
+      },
+      required=["tags"]
+  )
+  ```
+- Set `temperature=0` to minimize variation (does not eliminate it, but reduces frequency).
+- After each LLM response, validate: assert `isinstance(tags, list)`, assert `3 <= len(tags) <= 6`, assert all tags are non-empty strings. Retry once on validation failure before logging and skipping.
+- Write tags to a staging file (`data/tags_staging.json`) rather than directly overwriting `metadata.json`. Review a sample (20–30 experts) before promoting to production.
+- Run a post-processing normalization step: lowercase all tags, strip whitespace, deduplicate.
 
-**Detection (warning signs):**
-- Startup logs show 1,600+ embedding API calls
-- Railway deploy takes more than 60 seconds to become healthy
-- Google AI Studio dashboard shows embedding quota spike on every deploy
+**Warning signs:**
+- Sample of 10 tagged experts shows tags in mixed case and varying counts
+- `metadata.json` has entries where `tags` is a string rather than a list
+- Admin Expert tab shows some experts with 1 tag, others with 10+
 
-**Phase to address:** Phase 1 (data pipeline) — decide on embedding persistence strategy before writing the FastAPI startup handler.
-
----
-
-### Pitfall 4: Gemini Prompt Engineering Fails to Produce Exactly 3 Experts Consistently
-
-**What goes wrong:** The Gemini LLM is instructed to "recommend 3 experts" but sometimes returns 2, sometimes 4, sometimes a conversational response with no structured expert list, and sometimes hallucinates expert names not present in the retrieved context.
-
-**Why it happens:** Gemini is a generative model — it does not follow format constraints reliably without explicit, rigid prompting. Without structured output enforcement, response format drifts based on phrasing of the user query.
-
-**Consequences:**
-- Frontend card rendering breaks when the response doesn't contain exactly 3 parseable expert entries
-- Hallucinated experts link to non-existent profile URLs, destroying user trust
-- Inconsistent UX — some queries produce cards, others produce plain text
-
-**Prevention:**
-- Use a strict system prompt that states the exact output format as a schema, not a description:
-```
-You are an expert-matching assistant. You MUST respond with exactly this JSON structure and nothing else:
-{
-  "message": "<conversational intro sentence>",
-  "experts": [
-    {
-      "name": "<exact name from context>",
-      "title": "<exact title from context>",
-      "company": "<exact company from context>",
-      "rate": "<exact rate from context>",
-      "profile_url": "<exact URL from context>",
-      "why": "<1-2 sentence explanation tailored to the user's query>"
-    }
-  ]
-}
-Return exactly 3 experts. Use only names, titles, companies, rates, and URLs that appear verbatim in the provided context. Do not invent any expert details.
-```
-- Use `response_mime_type="application/json"` in the Gemini API call to enforce JSON output mode (available in `gemini-1.5-flash` and `gemini-2.0-flash`)
-- Add server-side validation: parse the JSON, assert `len(experts) == 3`, assert all URLs match known profile URL patterns before returning to frontend
-- If validation fails, retry the generation once with a stricter prompt before returning an error
-
-**Detection (warning signs):**
-- Frontend console errors about undefined properties on expert cards
-- Response text contains "Here are some experts..." instead of JSON
-- Expert names in the response do not match any row in the CSV
-
-**Phase to address:** Phase 2 (RAG pipeline) — define and test prompt schema before building frontend card rendering; frontend should never render without validation passing.
+**Phase to address:** Phase 1 (batch tagging) — enforce JSON schema and validate output before writing. Never write raw LLM output directly to the source-of-truth file.
 
 ---
 
-### Pitfall 5: Semantic Search Returns Irrelevant Experts Due to Poor Context Construction
+### Pitfall 3: FAISS Index Hot-Swap Corrupts In-Flight Search Requests
 
-**What goes wrong:** The top-K nearest-neighbor results from the embedding search include experts who are semantically adjacent but contextually wrong (e.g., a query for "machine learning engineer" returns "data entry specialist" because both appear in "technology" contexts). The Gemini response then recommends these irrelevant experts confidently.
+**What goes wrong:**
+The re-ingest script writes a new `faiss.index` file to the Railway volume and the FastAPI app detects this and reloads the global index variable in-process. However, FAISS is thread-safe for concurrent reads but NOT for write operations. If a user search request reads the global index at the same moment the reload writes to it, the behavior is undefined — the app may return garbage results, raise a segfault-style error, or silently return zero results. This is a race condition that is difficult to reproduce locally (single-threaded dev) but occurs in production under any real user load.
 
-**Why it happens:** The embedding is computed on the full CSV row concatenated naively (e.g., `f"{name} {title} {company} {bio}"`). If bio text is long and noisy, it dominates the embedding and dilutes the signal from title/specialisation.
+**Why it happens:**
+Python global variables are shared across all request handler threads in FastAPI. Reassigning a global FAISS index object (`app.state.index = new_index`) is not an atomic operation. The old index object is not safely garbage-collected while search threads hold a reference to it.
 
-**Consequences:**
-- Users receive confidently-worded recommendations for wrong experts
-- Trust in the product is immediately damaged — first impressions matter for a discovery tool
+**How to avoid:**
+- Use a `threading.Lock` around the index replacement:
+  ```python
+  import threading
+  import faiss
 
-**Prevention:**
-- Structure the embedding text deliberately, weighting important fields:
-```python
-def build_embedding_text(row):
-    # Title and specialization carry more signal than bio length
-    return f"{row['title']} at {row['company']}. {row['bio'][:300]}"
-```
-- Test retrieval quality manually before shipping: run 10 representative queries against the embedded CSV and inspect top-5 results
-- Set K=8 (retrieve 8 candidates, pass all to Gemini, let LLM select best 3) rather than K=3 (retrieve exactly 3 and force the LLM's hand)
-- Add a diversity filter: if top-3 results all have cosine similarity < 0.70, trigger the clarifying-question flow instead of forcing a match
+  _index_lock = threading.Lock()
+  _current_index = None  # module-level global
 
-**Detection (warning signs):**
-- Manual test queries return experts with unrelated titles in top-3
-- Users asking specific technical questions get generalist consultants
-- Gemini response includes hedging language ("this expert may be relevant if...") despite confident prompt instructions
+  def get_index():
+      return _current_index  # safe for reads (Python GIL protects reference reads)
 
-**Phase to address:** Phase 2 (RAG pipeline) — build embedding text constructor and validate retrieval quality before wiring to Gemini.
+  def replace_index(new_index_path: str):
+      global _current_index
+      new_index = faiss.read_index(new_index_path)
+      with _index_lock:
+          old = _current_index
+          _current_index = new_index
+          del old  # explicit release
+  ```
+- FAISS CPU index search is thread-safe for concurrent reads. Only the replacement itself needs the lock, and it is fast (microseconds for a 1,558-vector index).
+- Write the new index to a temp file first (`faiss.index.tmp`), then use `os.replace()` (atomic on POSIX) to swap the file on disk: `os.replace("faiss.index.tmp", "faiss.index")`. This ensures the file on disk is never in a half-written state if the process restarts mid-write.
+- The simplest safe approach for 1,558 vectors: trigger a Railway redeploy after re-indexing. Cold-start takes ~5 seconds at this scale, which is acceptable for a planned maintenance event. This avoids all in-process hot-swap complexity.
 
----
+**Warning signs:**
+- Search requests return 0 results immediately after index reload triggers
+- FastAPI logs show AttributeError or segfault-adjacent errors during index reload
+- Railway logs show simultaneous "reloading index" and "search request" log lines
 
-### Pitfall 6: Railway / Render Cold Starts Make the App Feel Broken
-
-**What goes wrong:** Railway (hobby plan) and Render (free plan) spin down containers after ~15 minutes of inactivity. The first user request after a sleep period waits 20-60 seconds for the container to wake up. The React frontend shows a loading spinner for a minute then times out — users assume the app is broken.
-
-**Why it happens:** Free/hobby tier serverless-style hosting uses aggressive container sleep policies to save resources. FastAPI has no built-in "warm-up" mechanism.
-
-**Consequences:**
-- First user of the day gets a terrible experience
-- Product demonstrations fail if the backend is cold ("let me reload the page" moments)
-- If the health check timeout is shorter than cold start time, Railway enters a restart loop
-
-**Prevention:**
-- **Short-term (v1):** Add a `/health` endpoint that returns `{"status": "ok"}` immediately. Use an external free uptime monitor (UptimeRobot, Better Stack free tier) to ping it every 14 minutes — prevents sleep on Railway.
-- **Frontend UX:** Show a "Connecting..." state with a friendly message if the API takes >3 seconds to respond (not just a spinner)
-- **Railway-specific:** Set `START_COMMAND` and ensure health check path is `/health` with a 60-second timeout in `railway.toml`
-- **Medium-term:** Upgrade to Railway's $5/month "always-on" mode once the product is validated
-
-**Detection (warning signs):**
-- First request of the day takes 30-60 seconds
-- Railway logs show container starting from cold on requests that should be instant
-- Uptime monitor shows brief (30-60s) downtime windows
-
-**Phase to address:** Phase 3 (deployment) — configure health endpoint and uptime pinger as part of the initial Railway deploy, not as an afterthought.
+**Phase to address:** Phase 2 (FAISS re-ingest) — decide on hot-swap vs. redeploy strategy before writing index reload code. At 1,558 vectors, redeploy is the safer default.
 
 ---
 
-### Pitfall 7: Vercel Environment Variables Not Available at Runtime
+### Pitfall 4: Railway Volume Not Accessible During the Build/Pre-Deploy Phase
 
-**What goes wrong:** The React frontend needs to know the FastAPI backend URL (e.g., `VITE_API_URL=https://tinrate-backend.up.railway.app`). This variable is set in Vercel's dashboard but the deployed build still shows `undefined` for the API URL, causing all fetch calls to fail silently.
+**What goes wrong:**
+The re-ingest script is added as a Railway pre-deploy command to run before the server starts. The script attempts to write the new FAISS index to the persistent volume path. The command fails silently or with a permissions error because Railway does not mount persistent volumes during pre-deploy — volumes are only mounted during the start command (runtime).
 
-**Why it happens:** Vite requires env vars to be prefixed `VITE_` to be injected into the browser bundle at build time. Vercel must have the variable configured before the build runs — adding it after deployment does not retroactively update the static bundle. A redeploy is required after every environment variable change.
+**Why it happens:**
+Railway's pre-deploy command executes in a separate container from the application, specifically without volume mounts. This is documented but easy to miss when setting up automated re-indexing workflows.
 
-**Consequences:**
-- All API calls go to `undefined/api/query` which returns a 404 or net::ERR_FAILED
-- The bug is invisible in local dev (where `.env.local` is present) and only appears in production
+**How to avoid:**
+- Run re-ingest as part of the application start sequence, not pre-deploy:
+  ```python
+  # In FastAPI lifespan or startup handler:
+  @asynccontextmanager
+  async def lifespan(app: FastAPI):
+      # Volume IS mounted here — safe to read/write FAISS index
+      load_or_rebuild_index()
+      yield
+  ```
+- Alternatively, run re-ingest manually from a local script that uploads the index to the volume via Railway's volume UI or SSH, then redeploy the app (which reads the updated index from the volume at startup).
+- Never put index write operations in Railway's `nixpacks.toml` build command or pre-deploy field.
 
-**Prevention:**
-- Set `VITE_API_URL` in Vercel dashboard → Settings → Environment Variables before the first deploy
-- Add a runtime check at app startup:
-```typescript
-// src/lib/config.ts
-const API_URL = import.meta.env.VITE_API_URL;
-if (!API_URL) {
-  console.error("VITE_API_URL is not set — API calls will fail");
-}
-export { API_URL };
-```
-- Document in the repo's `README.md` that a redeploy is required after changing Vercel env vars
-- Use Vercel's preview environment to test env var changes before promoting to production
+**Warning signs:**
+- Pre-deploy logs show `FileNotFoundError` or `PermissionError` on the volume path
+- The FAISS index on the volume is not updated despite the pre-deploy script "succeeding" (it ran against a temp filesystem, not the volume)
+- Railway deploy completes but the app starts with the old index
 
-**Detection (warning signs):**
-- Network tab shows requests to `undefined/...` or `/undefined/...`
-- `import.meta.env.VITE_API_URL` logs as `undefined` in browser console
-- API calls work locally but fail in production Vercel deployment
+**Phase to address:** Phase 2 (FAISS re-ingest) — test index write in Railway's start command context, not pre-deploy, before building any automation around it.
 
-**Phase to address:** Phase 3 (deployment) — set all Vercel env vars and verify them in a preview deployment before promoting to production domain.
+---
+
+### Pitfall 5: Query Expansion Causes Query Drift — Worse Results Than No Expansion
+
+**What goes wrong:**
+Query expansion is implemented by asking Gemini to generate 2–3 synonymous reformulations of the user's query, then running FAISS search for each and merging results. Gemini introduces semantically adjacent but domain-wrong terms. A user query "I need a UX designer for a mobile app" expands to include "product designer," "user researcher," and "app developer." The expansion retrieves mobile developers and market researchers who dominate the merged result set, pushing the UX specialists the user actually wanted further down. The Gemini response confidently recommends wrong experts.
+
+**Why it happens:**
+LLMs expand queries based on general language patterns, not domain-specific retrieval logic. They do not know which expansions will retrieve better-matching experts from THIS specific corpus. Over-expansion introduces hard negatives — semantically adjacent but contextually wrong passages — that dilute the retrieval signal. Research confirms this: "increasing retrieved passages does not consistently improve performance; hard negatives can mislead LLMs even when relevant passages are available."
+
+**How to avoid:**
+- Weight the original query more heavily than expansions. Run FAISS search with original query and get top-K. Only use expansion results to break ties or fill gaps when original query returns fewer than K results above the similarity threshold.
+  ```python
+  # Conservative expansion pattern:
+  original_results = search(original_query, k=8)
+  if len([r for r in original_results if r.score > THRESHOLD]) >= 3:
+      return original_results  # original was good enough
+  # Only expand if original retrieval is weak:
+  expanded_results = [search(q, k=4) for q in expand_query(original_query)]
+  ```
+- Limit expansions to 2 maximum. More than 2 expansions dramatically increases noise.
+- Test expansion on 20 representative queries BEFORE shipping. Compare results with and without expansion. If expansion reduces precision on more than 25% of test queries, disable it for that query type.
+- Add a similarity ceiling: discard any expansion result with cosine similarity lower than the worst original result. Expansion should only add, not replace.
+- Measure impact using the existing feedback signals: track thumbs-up rate per query, compare pre/post expansion.
+
+**Warning signs:**
+- Queries that returned accurate experts in v1.0 now return adjacent-but-wrong experts
+- Gemini response includes hedging language about expert relevance
+- Admin test lab shows lower thumbs-up rate after expansion is enabled
+
+**Phase to address:** Phase 3 (search intelligence) — run A/B comparison on test set before enabling expansion in production. Have an env var flag to disable expansion independently: `QUERY_EXPANSION_ENABLED=true`.
+
+---
+
+### Pitfall 6: Sparse Feedback Signals Applied Too Early Create a Feedback Loop (Popularity Bias)
+
+**What goes wrong:**
+The system has collected thumbs feedback for a few weeks. A few popular experts (those with clear, well-written bios, prominent job titles, or who happen to match common query types) accumulate thumbs-up signals faster than niche experts. When feedback signals are used to boost expert ranking, the popular experts get promoted further, receive even more exposure, accumulate more thumbs-up, and get boosted further still. Niche experts who are legitimately best-matched for specific queries never get shown — they cannot accumulate feedback because they never rank high enough to receive impressions. The retrieval system degrades to a popularity contest.
+
+**Why it happens:**
+This is the classic cold-start / popularity bias problem in recommender systems. Feedback signals are inherently biased by position: experts shown in position 1 receive more clicks and thumbs-up than identical experts shown in position 3, purely due to presentation order, not quality.
+
+**How to avoid:**
+- Apply a minimum feedback threshold before promoting any expert based on signals: require at least 10 thumbs-up interactions (not just positive rate) before the feedback signal influences ranking. Below this threshold, fall back to pure semantic similarity.
+  ```python
+  MIN_FEEDBACK_INTERACTIONS = 10
+
+  def get_score_boost(expert_id: int) -> float:
+      stats = db.query(ExpertFeedback).filter_by(expert_id=expert_id).first()
+      if not stats or stats.total_interactions < MIN_FEEDBACK_INTERACTIONS:
+          return 0.0  # no boost — insufficient data
+      positive_rate = stats.thumbs_up / stats.total_interactions
+      return (positive_rate - 0.5) * 0.2  # max ±0.1 boost on similarity score
+  ```
+- Cap the maximum boost to a small fraction of the similarity score (10–20%). Feedback should refine retrieval, not override it.
+- Separate feedback learning from retrieval so they can be toggled independently: `FEEDBACK_LEARNING_ENABLED=true`.
+- Log which experts receive impressions vs. thumbs per query type. If impression distribution becomes highly concentrated (top 20 experts receiving 80% of all impressions), that's a signal of runaway popularity bias.
+- Consider exploration: occasionally surface a lower-ranked expert (position 3 swap) to allow niche experts to collect feedback. A/B this carefully.
+
+**Warning signs:**
+- The same 20–30 experts appear in nearly all recommendations regardless of query content
+- Niche experts with specific skills (e.g., "blockchain auditor," "marine biologist consultant") never appear despite existing in the database
+- Thumbs-up rate initially improves then plateaus — the system is optimizing for a narrow popular slice
+
+**Phase to address:** Phase 3 (search intelligence) — set the minimum threshold constraint and the boost cap BEFORE writing any feedback-weighting code. These are policy decisions, not implementation details.
 
 ---
 
@@ -245,172 +231,229 @@ export { API_URL };
 
 ---
 
-### Pitfall 8: CSV Data Quality Breaks Embedding and Card Rendering
+### Pitfall 7: Findability Score Used as a Ranking Signal Introduces Circular Bias
 
-**What goes wrong:** The 1,600-row CSV contains inconsistent data: missing bios, malformed profile URLs (no `https://` prefix, trailing spaces), rate fields with mixed formats (`$150/hr` vs `150` vs `$150 per hour`), and special characters in names that break JSON serialization.
+**What goes wrong:**
+The findability score (0–100, based on bio quality, tags, profile completeness) is computed and then used both for admin visibility AND as a retrieval ranking signal. Experts with high findability scores get recommended more often. Those recommendations generate thumbs-up feedback. The feedback further boosts those experts. Meanwhile, experts with low findability scores (incomplete bios, missing tags) get recommended less, never accumulate feedback, and their findability score never improves because the score depends on profile completeness — which only the platform owner can fix, not the algorithm.
 
-**Why it happens:** CSVs exported from databases or assembled manually accumulate inconsistencies over time. The expert CSV is the single source of truth — garbage in means garbage recommendations and broken card links out.
+**Why it happens:**
+Conflating a data quality metric (findability) with a retrieval ranking signal creates a self-reinforcing loop. The score was designed to flag profiles that need improvement, not to function as a quality signal in retrieval.
 
-**Consequences:**
-- Embedding a row with an empty bio produces a near-zero embedding that matches everything weakly
-- A card with a malformed URL opens a broken link — users cannot contact experts
-- Rate display inconsistency looks unprofessional
+**How to avoid:**
+- Keep findability score as an admin-facing diagnostic only. Do not use it as a retrieval ranking signal in v1.1.
+- Use findability scores to prioritize which expert profiles to enrich (admin workflow: worst-first queue), not to penalize those experts in search results.
+- If findability must influence retrieval, apply it only as a soft filter (e.g., experts below score 20 are excluded from recommendations until their profile is fixed), never as a continuous ranking modifier.
 
-**Prevention:**
-- Write a CSV validation script (`scripts/validate_csv.py`) that runs before embedding:
-  - Assert required columns exist: `name`, `title`, `company`, `bio`, `hourly_rate`, `profile_url`
-  - Flag rows with empty `bio` (< 20 characters)
-  - Validate `profile_url` starts with `https://tinrate.com/`
-  - Normalize `hourly_rate` to integer or `"$X/hr"` format
-- Run this script as part of the data pipeline, not as an afterthought
-- Do not embed rows that fail validation — log them and skip
-
-**Detection (warning signs):**
-- `pandas.read_csv()` throws encoding errors on load
-- Expert cards in the UI show `$NaN/hr` or empty rate fields
-- Profile URL links return 404
-
-**Phase to address:** Phase 1 (data pipeline) — validate and clean CSV before embedding. Never embed raw, unvalidated data.
+**Phase to address:** Phase 1 (findability scoring) — document explicitly that findability score is an admin data quality metric, not a retrieval ranking signal.
 
 ---
 
-### Pitfall 9: No Request Timeout Causes Frontend Hanging Indefinitely
+### Pitfall 8: Re-ingest Script Overwrites Metadata.json Partially on Crash
 
-**What goes wrong:** The React frontend calls the FastAPI `/query` endpoint. If the backend is slow (embedding lookup, Gemini generation), the fetch call hangs indefinitely with no timeout. Users stare at a spinner. If the backend is unreachable, the browser waits the full TCP timeout (90+ seconds) before showing any error.
+**What goes wrong:**
+The batch tagging script writes tags back to `metadata.json` as it processes experts, updating the file record-by-record. If the script crashes at expert #800, the file contains 800 tagged experts and 758 untagged experts in a mixed state. The FAISS re-ingest then runs against this partial file, producing an index where half the experts have enriched embeddings and half have impoverished ones. This split-quality index is worse than either the fully-tagged or fully-untagged version because the embedding space is incoherent.
 
-**Why it happens:** The native `fetch` API has no built-in timeout. Developers don't add one because it "works fine" in local dev where latency is near-zero.
+**Why it happens:**
+In-place file updates without transactional semantics mean any crash leaves the file in an intermediate state. The script is not idempotent — re-running it from the beginning may double-tag already-processed experts.
 
-**Prevention:**
-```typescript
-// Use AbortController for fetch timeout
-const controller = new AbortController();
-const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
+**How to avoid:**
+- Write a separate staging file during the batch run: `data/tags_staging.json`. Only copy it to `metadata.json` after all 1,558 experts are processed and the count assertion passes.
+- Make the script idempotent: check if each expert already has a valid `tags` field before calling the LLM. Skip if already tagged.
+- Track progress: write a `data/tagging_progress.json` with `{"last_processed_index": 800}` after each expert. On restart, resume from `last_processed_index`.
+- Command pattern:
+  ```bash
+  # Safe run:
+  python scripts/tag_experts.py --resume --output data/tags_staging.json
+  # After verification:
+  python scripts/promote_tags.py  # copies staging → metadata.json
+  ```
 
-try {
-  const response = await fetch(`${API_URL}/query`, {
-    method: "POST",
-    signal: controller.signal,
-    body: JSON.stringify({ query: userMessage }),
-    headers: { "Content-Type": "application/json" },
-  });
-  clearTimeout(timeoutId);
-} catch (err) {
-  if (err.name === "AbortError") {
-    // Show timeout message to user
-  }
-}
-```
-- Display a user-friendly message: "This is taking longer than expected — try again in a moment"
-
-**Phase to address:** Phase 2 (frontend integration) — add timeout handling when wiring the chat UI to the API.
+**Phase to address:** Phase 1 (batch tagging) — implement resume/idempotent pattern before starting the batch run on the full 1,558-expert set.
 
 ---
 
-### Pitfall 10: Gemini API Rate Limits on Free Tier Cause Silent Failures
+### Pitfall 9: Gemini Rate Limits Block Both Tagging AND User Queries Simultaneously
 
-**What goes wrong:** Gemini's free tier (`gemini-2.0-flash`) has rate limits: 15 requests per minute (RPM) and 1,500 RPD (requests per day) as of early 2025. If multiple users query simultaneously, or a test loop hammers the API, requests silently fail with a 429 error that the backend doesn't handle gracefully.
+**What goes wrong:**
+The batch tagging script runs on Railway (or locally with the same API key) while the production chatbot is receiving user queries. Both the tagging script and the user query handler share the same Google API project quota. The tagging script exhausts RPM or daily quota, causing user-facing queries to return 429 errors and the chatbot to appear broken — during a planned maintenance task.
 
-**Why it happens:** Free tier limits are generous enough for solo testing but break under simultaneous user load. Error handling for 429 is often omitted in early development.
+**Why it happens:**
+Google API rate limits are enforced per project, not per API key. Running a heavy batch job with the same credentials as the production service consumes shared quota.
 
-**Prevention:**
-- Add explicit 429 error handling in FastAPI:
-```python
-import google.generativeai as genai
-from fastapi import HTTPException
+**How to avoid:**
+- Run the batch tagging script at a time of low user traffic (night/weekend) to minimize overlap.
+- Add explicit rate limiting in the tagging script: never exceed 8 RPM for LLM calls (conservative for free tier), regardless of how fast the API accepts requests.
+- Handle quota errors in the user-facing query handler independently of tagging errors:
+  ```python
+  # In query handler:
+  except Exception as e:
+      if "429" in str(e) or "quota" in str(e).lower():
+          raise HTTPException(503, "Busy — please try again in a moment.")
+  ```
+- Consider using the Gemini Batch API for tagging: batch jobs run asynchronously, have separate rate limits from the interactive API, and cost 50% less. The 24-hour turnaround is acceptable for a one-time tagging job.
 
-try:
-    response = model.generate_content(prompt)
-except Exception as e:
-    if "429" in str(e) or "quota" in str(e).lower():
-        raise HTTPException(status_code=503, detail="Service temporarily busy. Please try again.")
-    raise
-```
-- Return a user-friendly 503 with `Retry-After` header
-- Log quota errors separately so they're visible in Railway logs
-- Consider upgrading to pay-as-you-go tier once validated (cost per query is very low at this scale)
-
-**Phase to address:** Phase 2 (RAG pipeline) — add rate limit error handling before any load testing or sharing the URL publicly.
+**Phase to address:** Phase 1 (batch tagging) — set the RPM cap in the tagging script before running it against the production API key. Run during off-peak hours.
 
 ---
 
-## Minor Pitfalls
+### Pitfall 10: Query Expansion Adds Latency That Breaks the UX Contract
+
+**What goes wrong:**
+Each query expansion round-trips to Gemini to generate reformulations, then runs 2–3 additional FAISS searches, then merges and deduplicates results. Total added latency: 800ms–2s per query. The existing query handler already takes 2–4 seconds (embedding + FAISS + generation). With expansion enabled, queries take 4–6 seconds. Users experience the chatbot as "slow" or "frozen" — especially on mobile. The product's core UX value ("instant match") is compromised.
+
+**Why it happens:**
+Query expansion is implemented naively as a synchronous pre-step before the main retrieval, adding serial latency without parallelism.
+
+**How to avoid:**
+- Run expansion and original query in parallel using `asyncio.gather()`:
+  ```python
+  async def search_with_expansion(query: str) -> list:
+      original_task = asyncio.create_task(search(query, k=8))
+      expansion_task = asyncio.create_task(expand_and_search(query, k=4))
+      original_results, expanded_results = await asyncio.gather(
+          original_task, expansion_task
+      )
+      return merge_results(original_results, expanded_results)
+  ```
+- Set a timeout on expansion: if the expansion LLM call takes more than 1 second, skip it and use original results.
+- Log per-query latency before and after enabling expansion. If p95 latency exceeds 5 seconds, disable expansion.
+
+**Phase to address:** Phase 3 (search intelligence) — benchmark latency with and without expansion before enabling in production.
 
 ---
 
-### Pitfall 11: Hardcoded Backend URL in React Code
+## Technical Debt Patterns
 
-**What goes wrong:** The Railway backend URL is hardcoded as a string literal in the React fetch call. When the Railway project is recreated or the URL changes, the frontend breaks and requires a code change + redeploy.
+Shortcuts that seem reasonable but create long-term problems.
 
-**Prevention:** Always read the backend URL from `import.meta.env.VITE_API_URL`. Never hardcode `https://tinrate-backend.up.railway.app` in source code.
-
-**Phase to address:** Phase 2 (frontend) — enforce via code review before first commit of fetch logic.
-
----
-
-### Pitfall 12: Missing `Content-Type: application/json` Header on Frontend Requests
-
-**What goes wrong:** FastAPI's JSON body parsing fails silently or returns a `422 Unprocessable Entity` when the React frontend sends a `POST` without `Content-Type: application/json`. FastAPI's Pydantic models cannot parse the body.
-
-**Prevention:** Always set `headers: { "Content-Type": "application/json" }` in every `fetch` POST call. Validate with a Postman or curl test before building the UI.
-
-**Phase to address:** Phase 2 (API integration).
+| Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
+|----------|-------------------|----------------|-----------------|
+| Write tags directly to `metadata.json` in-place | Simpler code | Partial corruption on crash; non-idempotent | Never — always use staging file |
+| Use same API key for batch tagging and production queries | No extra setup | Batch job exhausts production quota | Never — run batch at low-traffic time or use Batch API |
+| Apply feedback boosts without a minimum interaction threshold | Faster "learning" | Popularity bias, niche expert suppression | Never — always require minimum 10 interactions |
+| Skip FAISS index count assertion after re-ingest | Saves one line | Silent partial index — impossible to detect | Never — costs 1 line of code, prevents major data regression |
+| Hot-swap FAISS index in-process without a lock | Simpler than redeploy | Race condition, undefined behavior under load | Acceptable only with proper threading.Lock — otherwise trigger redeploy |
+| Enable query expansion for all queries regardless of original result quality | Simpler logic | Drift degrades queries that were already accurate | Never — gate expansion on weak original results only |
+| Build findability score as retrieval signal (not just admin diagnostic) | More signals = better? | Circular bias, popular experts dominate niche queries | Never in v1.1 — keep as admin-only diagnostic |
 
 ---
 
-### Pitfall 13: CSV Encoding Issues (Non-UTF-8 Characters in Expert Names/Bios)
+## Integration Gotchas
 
-**What goes wrong:** Expert names with accented characters (é, ü, ñ) or bios with smart quotes cause `pandas.read_csv()` to raise `UnicodeDecodeError` if the CSV was saved in Windows-1252 encoding.
+Common mistakes when connecting to external services.
 
-**Prevention:**
-```python
-df = pd.read_csv("experts.csv", encoding="utf-8-sig")  # handles BOM + UTF-8
-# Or detect encoding:
-import chardet
-with open("experts.csv", "rb") as f:
-    enc = chardet.detect(f.read())["encoding"]
-df = pd.read_csv("experts.csv", encoding=enc)
-```
-
-**Phase to address:** Phase 1 (data pipeline) — test CSV load with the actual file before any other work.
+| Integration | Common Mistake | Correct Approach |
+|-------------|----------------|------------------|
+| Google GenAI embeddings | Calling `embed_content()` in tight loop, hitting 150-req batch limit | Add `tenacity` retry with exponential backoff; sleep 0.2s between calls; validate count before writing index |
+| Google Gemini LLM (tagging) | No output schema enforcement — tags arrive in mixed formats | Use `response_mime_type="application/json"` + `response_schema` with `min_items`/`max_items` constraints |
+| Railway persistent volume | Writing index in pre-deploy command — volume not mounted there | Write index only in startup/lifespan handler (runtime), not pre-deploy |
+| FAISS in-memory index | Replacing global index variable without a lock during live traffic | Use `threading.Lock` around reassignment, or trigger a redeploy instead |
+| Gemini Batch API | Running two separate identical job submissions (non-idempotent) | Track job ID in a local file; check if job already exists before submitting |
 
 ---
 
-### Pitfall 14: Vercel Serverless Function Timeout for Slow Gemini Responses
+## Performance Traps
 
-**What goes wrong:** If the React app is ever set up with a Vercel API route (not the Railway backend), Vercel's default function timeout is 10 seconds. Gemini generation can take 5-12 seconds under load. This is a non-issue if the backend is on Railway (no timeout), but becomes critical if someone moves API logic to Vercel functions.
+Patterns that work at small scale but fail as usage grows.
 
-**Prevention:** Keep all AI logic on Railway/Render backend. Do not move Gemini calls to Vercel API routes. Document this constraint explicitly in `ARCHITECTURE.md`.
-
-**Phase to address:** Phase 1 (architecture decision) — document and enforce the Railway-for-AI-logic constraint.
+| Trap | Symptoms | Prevention | When It Breaks |
+|------|----------|------------|----------------|
+| Synchronous query expansion as serial pre-step | p95 latency 5–8s; users abandon | Parallelize with `asyncio.gather`; timeout after 1s | At any traffic level — latency is additive |
+| Feedback-weighted ranking without impression normalization | Top 20 experts receive 80% of recommendations | Cap boost to 10–20% of similarity score; require minimum 10 interactions | After ~100 feedback events accumulate |
+| Full FAISS re-ingest at container startup | 5–10 minute startup on rebuild | Pre-compute index offline; write to volume; startup reads from volume | At 1,558 vectors: ~30s acceptable. At 10k+: unacceptable |
+| Expanding all queries regardless of original retrieval quality | Retrieval precision drops 20–30% | Gate expansion on weak original results (below similarity threshold) | From day 1 — drift affects even low-traffic systems |
+| Writing tags to metadata.json record-by-record during batch run | Partial corruption on crash; half-enriched embeddings | Write to staging file; promote atomically after full run | At ~800th record if crash occurs |
 
 ---
 
-## Phase-Specific Warnings
+## Security Mistakes
 
-| Phase Topic | Likely Pitfall | Mitigation |
-|-------------|---------------|------------|
-| Project setup | API key in `.env` committed to git | Add `.gitignore` and secret scanning before first commit |
-| CSV data pipeline | Encoding errors, empty bios, malformed URLs | Run `validate_csv.py` before embedding; fix data first |
-| Embedding generation | 1,600 API calls on every startup | Pre-compute embeddings to `.pkl` file; load from disk at startup |
-| FastAPI CORS setup | Browser blocks all cross-origin requests | Add `CORSMiddleware` with explicit Vercel domain before any routes |
-| Gemini integration | Non-JSON or wrong-count responses | Use JSON mode, strict schema prompt, server-side validation |
-| Semantic retrieval | Irrelevant experts in top-K | Test retrieval manually with 10 queries; retrieve K=8, select 3 |
-| Frontend fetch | Hanging requests on cold starts | Add 15-second `AbortController` timeout; show user-friendly message |
-| Railway deployment | Cold start delays | Add `/health` endpoint; configure UptimeRobot ping every 14 minutes |
-| Vercel deployment | Env vars not in bundle | Set `VITE_API_URL` in Vercel dashboard before first build; redeploy after changes |
-| Rate limits | Silent 429 failures under load | Handle 429 explicitly; return 503 to frontend; log quota errors |
+Domain-specific security issues beyond general web security.
+
+| Mistake | Risk | Prevention |
+|---------|------|------------|
+| Using production GOOGLE_API_KEY for local batch tagging runs | Batch script exhausts production daily quota | Use a separate Google Cloud project or API key for batch jobs; or run via Railway environment |
+| Storing raw user thumbs feedback without rate-limiting the feedback endpoint | Feedback poisoning — malicious actor repeatedly thumbs-down an expert to suppress them | Rate-limit feedback endpoint: 1 feedback per session per expert per query; validate session token |
+| Exposing admin Expert tab with tags and findability scores to unauthenticated users | Competitive intelligence leak; exposes data quality weaknesses | Ensure all Expert tab endpoints require `X-Admin-Key` header — verify CORS + auth middleware order |
+
+---
+
+## "Looks Done But Isn't" Checklist
+
+Things that appear complete but are missing critical pieces.
+
+- [ ] **Batch tagging complete:** Tags in `metadata.json` — verify `len(experts_with_tags) == 1558` before marking done. Check 20 random experts for tag format consistency.
+- [ ] **FAISS re-ingest complete:** New index loaded — verify `faiss.read_index(path).ntotal == 1558`. Check that `metadata.json` expert order matches index vector order exactly (ID alignment is critical).
+- [ ] **Findability scores computed:** Scores visible in admin — verify score distribution is not all 100s (a bug in the scoring function that defaults to max is easy to miss).
+- [ ] **Query expansion enabled:** Expansion logic merged — verify that queries that worked correctly in v1.0 still return the same top-3 experts. Run the 10-query regression test from Phase 2 research.
+- [ ] **Feedback learning live:** Boost code merged — verify that an expert with zero feedback receives the same ranking as in v1.0 (no regression). Verify an expert with 20 thumbs-up receives a measurably higher ranking on relevant queries.
+- [ ] **Admin Expert tab enriched:** Tag and score columns visible — verify that clicking "sort by findability score worst-first" works correctly for scores of 0.
+
+---
+
+## Recovery Strategies
+
+When pitfalls occur despite prevention, how to recover.
+
+| Pitfall | Recovery Cost | Recovery Steps |
+|---------|---------------|----------------|
+| Partial FAISS index (silent embedding failure) | MEDIUM | Re-run `scripts/reindex_experts.py` with resume flag; assert count before promoting; redeploy |
+| Schema-drifted tags in `metadata.json` | LOW | Run tag normalization script: lowercase, deduplicate, validate schema; re-run tagging for experts with invalid format |
+| FAISS hot-swap race condition caused bad results | LOW | Trigger Railway redeploy — app restarts with clean index load; race condition resolves on restart |
+| Railway volume write failed (pre-deploy) | LOW | Move write operation to startup lifespan handler; redeploy |
+| Query expansion degraded retrieval quality | LOW | Set `QUERY_EXPANSION_ENABLED=false` env var; redeploy; retrieval reverts to v1.0 behavior immediately |
+| Feedback popularity bias locked in | HIGH | Reset all feedback boost weights to 0; rebuild scoring with higher minimum threshold and lower boost cap; manually audit top-20 most-recommended experts for quality |
+| Gemini daily quota exhausted by batch job | MEDIUM | Wait for quota reset at midnight Pacific; run remaining batch during off-peak hours with tighter RPM cap; upgrade to paid tier if recurring |
+
+---
+
+## Pitfall-to-Phase Mapping
+
+How roadmap phases should address these pitfalls.
+
+| Pitfall | Prevention Phase | Verification |
+|---------|------------------|--------------|
+| Embedding API throttling → partial FAISS index | Phase 1: batch tagging | Assert `ntotal == 1558` before promoting index |
+| LLM schema drift in tags | Phase 1: batch tagging | Validate tag format on every LLM response; sample 30 random experts before promoting |
+| Crash leaves metadata.json partially updated | Phase 1: batch tagging | Use staging file + idempotent resume logic |
+| Batch tagging exhausts production quota | Phase 1: batch tagging | Set 8 RPM cap; schedule for off-peak; handle 429 in query handler independently |
+| Railway volume not mounted in pre-deploy | Phase 2: FAISS re-ingest | Test index write in lifespan startup handler before automating |
+| FAISS hot-swap race condition | Phase 2: FAISS re-ingest | Use threading.Lock or trigger redeploy; verify no errors under concurrent load after index reload |
+| Findability score misused as retrieval signal | Phase 2: findability scoring | Document as admin-only diagnostic; no retrieval weight assigned in v1.1 |
+| ID alignment between metadata.json and FAISS index | Phase 2: FAISS re-ingest | Assert expert order before embedding; log `(index_position, expert_id)` pairs |
+| Query expansion causing drift | Phase 3: search intelligence | Gate on weak original results; run 10-query regression before enabling; A/B with thumbs rate |
+| Query expansion latency degradation | Phase 3: search intelligence | Parallelize with asyncio.gather; benchmark p95 latency before and after |
+| Feedback cold-start / popularity bias | Phase 3: search intelligence | Require minimum 10 interactions before applying boost; cap boost at 20% of similarity score |
+| Feedback loop suppresses niche experts | Phase 3: search intelligence | Monitor impression distribution; log if top-20 experts receive >70% of impressions |
 
 ---
 
 ## Sources
 
-**Note:** External web search and documentation fetch were unavailable in this session. The following sources informed this document through training knowledge (cutoff August 2025). Each claim should be verified against current official documentation before implementation.
+- Google Gemini API rate limits: https://ai.google.dev/gemini-api/docs/rate-limits
+- Google Gemini Batch API documentation: https://ai.google.dev/gemini-api/docs/batch-api
+- google-genai SDK batch embedding rate limit issue (GitHub #427): https://github.com/googleapis/python-genai/issues/427
+- FAISS thread safety documentation: https://github.com/facebookresearch/faiss/wiki/Threads-and-asynchronous-calls
+- FAISS write_index persistence (GitHub issue #2078): https://github.com/facebookresearch/faiss/issues/2078
+- Railway volumes documentation (volumes not mounted during pre-deploy): https://docs.railway.com/volumes
+- Railway pre-deploy command documentation: https://docs.railway.com/guides/pre-deploy-command
+- FastAPI concurrent global variable race conditions: https://datasciocean.com/en/other/fastapi-race-condition/
+- Google Cloud 429 error handling guide: https://cloud.google.com/blog/products/ai-machine-learning/learn-how-to-handle-429-resource-exhausted-errors-in-your-llms
+- LLM batch-sensitive nondeterminism research (Thinking Machines Lab): https://superintelligencenews.com/research/thinking-machines-llm-nondeterminism-inference/
+- Query expansion pitfalls in RAG (query drift): https://medium.com/@sahin.samia/query-expansion-in-enhancing-retrieval-augmented-generation-rag-d41153317383
+- Query expansion challenges (Haystack): https://haystack.deepset.ai/blog/query-expansion
+- Hard negatives degrading RAG performance: https://arxiv.org/html/2506.00054v1
+- Cold start and sparse signals in recommender systems: https://medium.com/data-scientists-handbook/cracking-the-cold-start-problem-in-recommender-systems-a-practitioners-guide-069bfda2b800
+- LLM consistency and output drift 2025: https://www.keywordsai.co/blog/llm_consistency_2025
+- tenacity retry library for Python: https://pypi.org/project/tenacity/
 
-- Google AI Developer documentation: https://ai.google.dev/gemini-api/docs
-- Google GenAI Python SDK: https://github.com/google-gemini/generative-ai-python
-- FastAPI CORS documentation: https://fastapi.tiangolo.com/tutorial/cors/
-- Vite environment variables: https://vitejs.dev/guide/env-and-mode
-- Railway deployment documentation: https://docs.railway.app
-- Vercel environment variables: https://vercel.com/docs/environment-variables
-- Gemini API rate limits (verify current): https://ai.google.dev/gemini-api/docs/rate-limits
-- Confidence level: MEDIUM — all pitfalls are grounded in well-established patterns for this stack; specific rate limit numbers and API behaviors should be verified against current Google AI documentation before Phase 1 begins
+**Confidence assessment by area:**
+- LLM rate limiting and batch tagging: HIGH — verified against Google official docs and confirmed SDK bug (GitHub issue)
+- FAISS thread safety and hot-swap: HIGH — verified against FAISS official wiki
+- Railway volume constraints: HIGH — verified against Railway official documentation
+- Query expansion drift: MEDIUM — verified against multiple RAG research papers and practitioner guides
+- Sparse feedback cold-start: MEDIUM — well-established recommender systems literature; specific thresholds (10 interactions, 20% cap) are informed heuristics, not empirically proven for this exact system
+
+---
+*Pitfalls research for: v1.1 Expert Intelligence & Search Quality (Tinrate AI Concierge)*
+*Researched: 2026-02-21*
