@@ -65,7 +65,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CHAT-01 | Phase 3 | Pending |
 | CHAT-02 | Phase 3 | Pending |
 | REC-01 | Phase 1 | Complete (human-verified 2026-02-20) |
-| REC-02 | Phase 2 | In progress (02-02 retriever + LLM services complete; endpoint wiring in 02-03) |
+| REC-02 | Phase 2 | In progress (02-03 non-streaming endpoint complete and verified; streaming upgrade in 02-04) |
 | REC-03 | Phase 3 | Pending |
 | REC-04 | Phase 3 | Pending |
 | DEPL-01 | Phase 4 | Pending |
@@ -77,4 +77,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-02-20*
-*Last updated: 2026-02-20 after 02-02 execution (Phase 2 Plan 2 — retriever + LLM services complete)*
+*Last updated: 2026-02-20 after 02-03 execution (Phase 2 Plan 3 — POST /api/chat endpoint complete, verified end-to-end)*

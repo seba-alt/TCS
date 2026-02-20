@@ -49,7 +49,7 @@ Plans:
 Plans:
 - [x] 02-01-PLAN.md — SQLite database setup, SQLAlchemy ORM, Conversation model, DB wired into lifespan
 - [x] 02-02-PLAN.md — Retriever service (FAISS search + expert filtering) and LLM service (Gemini JSON mode)
-- [ ] 02-03-PLAN.md — POST /api/chat non-streaming endpoint with email validation, retrieval, generation, DB logging
+- [x] 02-03-PLAN.md — POST /api/chat non-streaming endpoint with email validation, retrieval, generation, DB logging
 - [ ] 02-04-PLAN.md — SSE streaming upgrade: status:thinking event, streamed result, human verification
 
 ### Phase 3: Frontend
@@ -82,6 +82,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation | 3/3 | Complete | 2026-02-20 |
-| 2. RAG API | 2/4 | In progress | - |
+| 2. RAG API | 3/4 | In progress | - |
 | 3. Frontend | 0/TBD | Not started | - |
 | 4. Deployment | 0/TBD | Not started | - |
