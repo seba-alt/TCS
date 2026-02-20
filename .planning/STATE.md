@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-20)
 
 **Core value:** A user describes any problem and instantly gets three expertly matched professionals they can contact — no searching, no filtering, no guesswork.
-**Current focus:** Phase 4 — Deployment (COMPLETE — one CORS config step outstanding)
+**Current focus:** Phase 5 — Email Gate UX (Plan 1 of 3 complete)
 
 ## Current Position
 
-Phase: 4 of 4 (Deployment) — COMPLETE (pending CORS fix)
-Plan: 3 of 3 in phase 4
-Status: 04-03 complete — Railway and Vercel deployed. CORS must-have outstanding: set ALLOWED_ORIGINS on Railway.
-Last activity: 2026-02-20 — Both services live. Railway health returns 530 experts. CORS env var not yet set.
+Phase: 5 of 8 (Email Gate UX)
+Plan: 1 of 3 in phase 5 — COMPLETE
+Status: 05-01 complete — EmailLead model + POST /api/email-capture endpoint shipped and verified.
+Last activity: 2026-02-20 — Backend lead capture endpoint live locally. Awaiting 05-02 (frontend email gate).
 
-Progress: [████████████████████] 100% of phase 4 (3/3 plans done)
+Progress: [████░░░░░░░░░░░░░░░░] 33% of phase 5 (1/3 plans done)
 
 ## Live URLs
 
@@ -59,6 +59,7 @@ Steps:
 | Phase 04-deployment P01 | 2 min | 2 tasks | 5 files |
 | Phase 04-deployment P02 | 2 min | 2 tasks | 9 files |
 | Phase 04-deployment P03 | multi-session | 2 tasks | 15 files |
+| Phase 05-email-gate P01 | 1 min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -129,6 +130,9 @@ Recent decisions affecting current work:
 - [Phase 04-deployment]: why_them field added to Expert dataclass — LLM returns per-expert explanation stored in response_experts DB column for future UI display
 - [04-03]: Live URLs confirmed — Railway https://web-production-fdbf9.up.railway.app (index_size=530), Vercel https://tcs-three-sigma.vercel.app
 - [04-03]: ALLOWED_ORIGINS env var must be set on Railway to https://tcs-three-sigma.vercel.app — CORS rejects Vercel origin until this is done
+- [05-01]: sqlalchemy.dialects.sqlite.insert used (not sqlalchemy.insert) for on_conflict_do_nothing — API is identical to postgresql dialect for future migration
+- [05-01]: Endpoint returns {status: ok} for both new and duplicate emails — frontend never sees a failure from re-submission
+- [05-01]: email_leads table auto-created via existing Base.metadata.create_all in lifespan — no additional startup code needed
 
 ### Pending Todos
 
@@ -141,5 +145,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: Completed 04-03-PLAN.md — both services live. Outstanding: set ALLOWED_ORIGINS on Railway.
+Stopped at: Completed 05-01-PLAN.md — EmailLead model + POST /api/email-capture endpoint shipped. Ready for 05-02 (frontend email gate).
 Resume file: None

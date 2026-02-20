@@ -103,7 +103,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 **Plans:** 3 plans
 
 Plans:
-- [ ] 05-01-PLAN.md — Backend lead capture: EmailLead model + POST /api/email-capture endpoint (idempotent)
+- [x] 05-01-PLAN.md — Backend lead capture: EmailLead model + POST /api/email-capture endpoint (idempotent)
 - [ ] 05-02-PLAN.md — Frontend email gate: useEmailGate hook + EmailGate component + ExpertCard locked mode + App.tsx wiring
 - [ ] 05-03-PLAN.md — Human verification of full gate flow (new visitor, returning visitor, backend capture)
 
