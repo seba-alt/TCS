@@ -47,3 +47,25 @@ class EmailLead(Base):
     created_at: Mapped[datetime.datetime] = mapped_column(
         DateTime, default=datetime.datetime.utcnow, nullable=False
     )
+
+
+class Feedback(Base):
+    """
+    Records thumbs up/down votes on expert result sets.
+    Linked to a Conversation via conversation_id (no FK — consistent with schema style).
+    Switching votes creates a new record (latest wins for analytics; history preserved).
+    Auto-created by Base.metadata.create_all at startup — no migration script needed.
+    """
+
+    __tablename__ = "feedback"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    conversation_id: Mapped[int] = mapped_column(index=True, nullable=False)
+    vote: Mapped[str] = mapped_column(String(4), nullable=False)           # "up" | "down"
+    email: Mapped[str | None] = mapped_column(String(320), nullable=True)  # from email gate if provided
+    expert_ids: Mapped[str] = mapped_column(Text, nullable=False, default="[]")  # JSON list of profile_url|name
+    reasons: Mapped[str | None] = mapped_column(Text, nullable=True)       # JSON list of checkbox labels
+    comment: Mapped[str | None] = mapped_column(Text, nullable=True)       # free-text from modal
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime, default=datetime.datetime.utcnow, nullable=False
+    )

@@ -122,6 +122,7 @@ async def _stream_chat(body: ChatRequest, request: Request, db: Session):
             "type": llm_response.type,
             "narrative": llm_response.narrative,
             "experts": experts_payload,
+            "conversation_id": conversation.id,
         })
 
     except Exception as exc:
