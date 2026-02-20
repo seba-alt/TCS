@@ -10,10 +10,14 @@ Task type asymmetry (IMPORTANT):
 Using the wrong task_type degrades retrieval quality.
 """
 import numpy as np
+from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 
 from app.config import EMBEDDING_MODEL, OUTPUT_DIM
+
+# Load .env for local development — no-op in production and when already loaded
+load_dotenv()
 
 # Lazy client — initialized on first use so that importing this module
 # does not require GOOGLE_API_KEY to be set at import time.

@@ -9,7 +9,7 @@
 # Generated data files — gitignored because they are large and regenerable
 data/faiss.index
 data/metadata.json
-data/experts.csv
+data/*.csv
 
 # Python
 __pycache__/
