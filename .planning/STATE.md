@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-20)
 ## Current Position
 
 Phase: 3 of 4 (Frontend) — IN PROGRESS
-Plan: 2 of 3 in phase 3 — COMPLETE
-Status: Phase 3 underway — Plan 03-02 (presentational components) complete. Ready for 03-03 (SSE hook + chat state).
-Last activity: 2026-02-20 — Completed 03-02 (Header, ChatMessage, ExpertCard, ChatInput, EmptyState components)
+Plan: 3 of 3 in phase 3 — AWAITING CHECKPOINT
+Status: Phase 3 underway — Plan 03-03 Task 1 (useChat SSE hook + App.tsx) complete. Awaiting checkpoint:human-verify at Task 2 before Phase 3 is fully done.
+Last activity: 2026-02-20 — Completed 03-03 Task 1 (useChat hook + App.tsx integration). Build exits 0. Awaiting human browser verification.
 
-Progress: [████████░░] 80%
+Progress: [█████████░] 90%
 
 ## Performance Metrics
 
@@ -36,6 +36,8 @@ Progress: [████████░░] 80%
 - Trend: stable
 
 *Updated after each plan completion*
+
+| Phase 03-03 | 03 | 2 min | 1 task | 3 files |
 
 ## Accumulated Context
 
@@ -82,6 +84,8 @@ Recent decisions affecting current work:
 - [03-02]: ExpertCard uses anchor tag (not button) with target=_blank and rel=noopener noreferrer for native link semantics
 - [03-02]: iOS safe-area padding applied via inline style prop on ChatInput — simpler than Tailwind plugin for env(safe-area-inset-bottom)
 - [03-02]: Initials avatar (2-letter) as fallback — Expert type has no photo URL field, consistent with backend schema
+- [Phase 03-frontend]: fetch ReadableStream SSE parsing instead of EventSource — POST body required for /api/chat; EventSource is GET-only
+- [Phase 03-frontend]: Fixed placeholder email user@tinrate.com — user auth out of scope for v1; API requires email for DB lead capture
 
 ### Pending Todos
 
@@ -94,5 +98,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: Completed 03-02-PLAN.md — Five presentational components (Header, ChatMessage, ExpertCard, ChatInput, EmptyState) with Tailwind brand styling and TypeScript types. Ready for 03-03 (SSE hook + chat state management).
+Stopped at: 03-03 Task 2 checkpoint:human-verify — useChat hook and App.tsx built and compiled. Awaiting human browser verification of full chat flow (desktop + mobile + error state).
 Resume file: None
