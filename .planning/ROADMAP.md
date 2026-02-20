@@ -122,7 +122,7 @@ Plans:
 
 **Goal:** An admin-only dashboard at /admin shows aggregate platform stats, a filterable/paginated searches table with expandable expert rows, a frequency-ranked gap tracking table with resolve action, and CSV export for both sections — all guarded by X-Admin-Key header auth.
 **Depends on:** Phase 6
-**Plans:** 4 plans
+**Plans:** 2/4 plans executed
 
 Plans:
 - [x] 07-01-PLAN.md — Backend schema migration (top_match_score + gap_resolved) + all /api/admin/* endpoints

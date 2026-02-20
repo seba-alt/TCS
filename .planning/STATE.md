@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-20)
 ## Current Position
 
 Phase: 7 of 8 (Analytics dashboard) — IN PROGRESS
-Plan: 1 of 2 in phase 7 — COMPLETE (07-01 done 2026-02-20)
-Status: 07-01 complete. Admin analytics API built — top_match_score/gap_resolved on Conversation model, 6 /api/admin/* endpoints with X-Admin-Key auth verified (401 without key, 200 with key). Ready for 07-02 (admin dashboard frontend).
-Last activity: 2026-02-20 — 07-01 complete. Admin API endpoints live, stats/searches/gaps/resolve/CSV export all functional. Ruff clean.
+Plan: 2 of 2 in phase 7 — COMPLETE (07-02 done 2026-02-20)
+Status: 07-02 complete. Admin frontend foundation built — react-router-dom BrowserRouter, AdminApp layout + sidebar, TypeScript admin types, useAdminData/useAdminExport hooks with X-Admin-Key auth. Ready for 07-03 (admin pages — if planned) or Phase 8.
+Last activity: 2026-02-20 — 07-02 complete. Admin dashboard routing, layout, types, and data hooks all built. tsc and Vite build clean.
 
-Progress: [████████████] 1/2 plans done in phase 7
+Progress: [████████████████████████] 2/2 plans done in phase 7
 
 ## Live URLs
 
@@ -66,6 +66,7 @@ Steps:
 | Phase 06 P02 | 2min | 2 tasks | 5 files |
 | Phase 06 P03 | ~5min | 2 tasks | 2 files |
 | Phase 07 P01 | 5min | 2 tasks | 4 files |
+| Phase 07 P02 | 3min | 2 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -158,6 +159,10 @@ Recent decisions affecting current work:
 - [07-01]: X-Admin-Key added to CORS allow_headers so browser preflight requests from Vercel do not fail
 - [07-01]: func.min(gap_resolved.cast(Integer)) for resolved aggregation — AND semantics: resolved only if every row with that query is resolved
 - [07-01]: Router-level Depends(_require_admin) on the APIRouter applies auth to all /api/admin/* endpoints without repeating per endpoint
+- [07-02]: react-router-dom v7 installed (^7.13.0) — createBrowserRouter API unchanged from v6; / → App, /admin/* → AdminApp
+- [07-02]: JSON.stringify(filters) as useCallback dep — simplest value-equality for plain filter objects without deep-equal library; acceptable for admin tool
+- [07-02]: Blob URL download pattern in useAdminExport — native anchor href cannot inject X-Admin-Key header; fetch + createObjectURL is required for authenticated CSV exports
+- [07-02]: Stub pages (OverviewPage, SearchesPage, GapsPage) created immediately — TypeScript build requires all imports to resolve at compile time; stubs replaced by Plan 03
 
 ### Pending Todos
 
@@ -170,5 +175,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: 07-01 complete — Admin analytics API built and verified. top_match_score/gap_resolved on Conversation, 6 /api/admin/* endpoints with X-Admin-Key auth. Ready for 07-02 frontend.
+Stopped at: 07-02 complete — Admin frontend foundation built. react-router-dom BrowserRouter, AdminApp layout + sidebar, TypeScript admin types, useAdminData/useAdminExport hooks. Phase 7 complete (2/2 plans).
 Resume file: None
