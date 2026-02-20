@@ -15,7 +15,6 @@ Production: Railway injects the actual Vercel URL.
 import json
 import os
 from contextlib import asynccontextmanager
-from pathlib import Path
 
 import app.models  # noqa: F401 — registers ORM models with Base metadata
 import faiss

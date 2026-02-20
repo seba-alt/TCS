@@ -30,7 +30,7 @@ load_dotenv()
 
 # Import shared constants — OUTPUT_DIM must match embedder.py
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from app.config import (
+from app.config import (  # noqa: E402
     EMBEDDING_MODEL,
     FAISS_INDEX_PATH,
     INGEST_BATCH_SIZE,
@@ -45,31 +45,30 @@ def expert_to_text(row: dict) -> str:
     """
     Construct semantically rich embedding text from a CSV row.
 
-    IMPORTANT: Adjust field names below to match your actual CSV columns.
-    Run scripts/validate_csv.py first to see the exact column names.
-
-    Field weight rationale:
-    - title/role carries the most retrieval signal
-    - company provides industry/context signal
-    - bio is truncated to 300 chars to prevent long bios dominating the vector
+    Columns (actual CSV): First Name, Last Name, Job Title, Company, Bio, Hourly Rate, Link.
+    Bio is the primary semantic signal — use it in full, not truncated.
+    Name + title + company provide context anchoring.
     """
-    # Common column name candidates — update after running validate_csv.py
-    title = row.get("title") or row.get("job_title") or row.get("role") or ""
-    company = row.get("company") or row.get("organization") or row.get("employer") or ""
-    industry = row.get("industry") or row.get("sector") or row.get("category") or ""
-    bio = row.get("bio") or row.get("description") or row.get("about") or row.get("summary") or ""
-
-    bio_truncated = str(bio)[:300] if bio else ""
+    first = str(row.get("First Name") or "").strip()
+    last = str(row.get("Last Name") or "").strip()
+    name = f"{first} {last}".strip()
+    title = str(row.get("Job Title") or "").strip()
+    company = str(row.get("Company") or "").strip()
+    bio = str(row.get("Bio") or "").strip()
 
     parts = []
-    if title:
-        parts.append(f"{title} at {company}." if company else title + ".")
-    if industry:
-        parts.append(f"Industry: {industry}.")
-    if bio_truncated:
-        parts.append(bio_truncated)
+    if name:
+        parts.append(f"{name}.")
+    if title and company:
+        parts.append(f"{title} at {company}.")
+    elif title:
+        parts.append(f"{title}.")
+    elif company:
+        parts.append(f"Works at {company}.")
+    if bio:
+        parts.append(bio)
 
-    return " ".join(parts) if parts else str(row)
+    return " ".join(parts) if parts else name or "Unknown expert"
 
 
 @retry(
@@ -150,6 +149,13 @@ def main() -> None:
 
     print(f"  {len(df)} experts loaded, {len(df.columns)} columns")
     print(f"  Columns: {list(df.columns)}")
+
+    # Filter: require Hourly Rate AND Bio — without both we can't match or verify relevance
+    before = len(df)
+    has_rate = df["Hourly Rate"].notna() & (df["Hourly Rate"].astype(str).str.strip() != "")
+    has_bio = df["Bio"].notna() & (df["Bio"].astype(str).str.strip() != "")
+    df = df[has_rate & has_bio]
+    print(f"  Filtered to {len(df)} experts with Hourly Rate + Bio (dropped {before - len(df)} incomplete)")
     print()
 
     print(f"Embedding {len(df)} experts in batches of {INGEST_BATCH_SIZE}...")

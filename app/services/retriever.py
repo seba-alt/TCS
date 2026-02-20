@@ -11,14 +11,12 @@ Key design decisions (from CONTEXT.md):
 """
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 import faiss
 import numpy as np
 
-from app.config import OUTPUT_DIM
 from app.services.embedder import embed_query
 
 if TYPE_CHECKING:
@@ -100,11 +98,14 @@ def retrieve(query: str, faiss_index: faiss.IndexFlatIP, metadata: list[dict]) -
         company = _get(row, "company", "Company", "organization", "employer")
         hourly_rate = _get(row, "Hourly Rate", "hourly_rate", "hourly rate", "rate", "Rate", "price")
 
-        if not all([name, title, company, hourly_rate]):
-            continue  # Skip experts missing required fields
+        bio = _get(row, "Bio", "bio", "description", "about", "summary")
 
-        # CONTEXT.md rule: include expert even if profile_url is missing; just omit the link
-        profile_url = _get(row, "Link", "profile_url", "profile url", "url", "URL", "link")
+        # Require name, hourly_rate, and bio — without a bio we can't verify the match
+        if not name or not hourly_rate or not bio:
+            continue
+
+        # Use pre-tagged UTM URL from CSV; fall back to plain profile URL or Link column
+        profile_url = _get(row, "Profile URL with UTM", "profile_url_with_utm", "Link", "profile_url", "url", "URL")
 
         candidates.append(RetrievedExpert(
             name=name,
