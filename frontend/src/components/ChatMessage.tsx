@@ -1,12 +1,16 @@
 import type { Message } from '../types'
 import ExpertCard from './ExpertCard'
+import EmailGate from './EmailGate'
 
 interface Props {
   message: Message
   thinkingQuote?: string
+  isUnlocked: boolean
+  onSubmitEmail: (email: string) => Promise<void>
+  isLastExpertMessage: boolean
 }
 
-export default function ChatMessage({ message, thinkingQuote }: Props) {
+export default function ChatMessage({ message, thinkingQuote, isUnlocked, onSubmitEmail, isLastExpertMessage }: Props) {
   const isUser = message.role === 'user'
   const isThinking = !isUser && message.isStreaming && !message.content
 
@@ -45,12 +49,19 @@ export default function ChatMessage({ message, thinkingQuote }: Props) {
           </p>
         )}
 
-        {/* Expert Cards — stacked vertically, rendered below assistant message */}
+        {/* Expert Cards — locked (greyed) until email submitted; gate appears on last expert message only */}
         {!isUser && message.experts && message.experts.length > 0 && (
           <div className="mt-3 space-y-3">
             {message.experts.map((expert, i) => (
-              <ExpertCard key={expert.profile_url ?? `${expert.name}-${i}`} expert={expert} />
+              <ExpertCard
+                key={expert.profile_url ?? `${expert.name}-${i}`}
+                expert={expert}
+                locked={!isUnlocked}
+              />
             ))}
+            {!isUnlocked && isLastExpertMessage && (
+              <EmailGate onSubmit={onSubmitEmail} />
+            )}
           </div>
         )}
       </div>

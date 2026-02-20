@@ -4,6 +4,7 @@ import ChatInput from './components/ChatInput'
 import ChatMessage from './components/ChatMessage'
 import EmptyState from './components/EmptyState'
 import { useChat } from './hooks/useChat'
+import { useEmailGate } from './hooks/useEmailGate'
 
 const PLACEHOLDER_EMAIL = 'user@tinrate.com'
 
@@ -19,8 +20,9 @@ const THINKING_QUOTES = [
 ]
 
 export default function App() {
+  const { isUnlocked, email, submitEmail } = useEmailGate()
   const { messages, status, sendMessage, retryLast } = useChat({
-    email: PLACEHOLDER_EMAIL,
+    email: email ?? PLACEHOLDER_EMAIL,
   })
   const bottomRef = useRef<HTMLDivElement>(null)
   const isLoading = status === 'thinking' || status === 'streaming'
@@ -56,6 +58,13 @@ export default function App() {
               {messages.map((message, i) => {
                 const isLastAssistant =
                   message.role === 'assistant' && i === messages.length - 1
+                // Find index of the last message with experts for gate placement
+                const lastExpertMsgIndex = messages.reduce(
+                  (last, m, idx) =>
+                    m.role === 'assistant' && m.experts && m.experts.length > 0 ? idx : last,
+                  -1
+                )
+                const isLastExpertMessage = i === lastExpertMsgIndex
                 return (
                   <ChatMessage
                     key={message.id}
@@ -65,6 +74,9 @@ export default function App() {
                         ? THINKING_QUOTES[quoteIndex]
                         : undefined
                     }
+                    isUnlocked={isUnlocked}
+                    onSubmitEmail={submitEmail}
+                    isLastExpertMessage={isLastExpertMessage}
                   />
                 )
               })}

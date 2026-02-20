@@ -2,9 +2,10 @@ import type { Expert } from '../types'
 
 interface Props {
   expert: Expert
+  locked?: boolean
 }
 
-export default function ExpertCard({ expert }: Props) {
+export default function ExpertCard({ expert, locked = false }: Props) {
   const initials = expert.name
     .split(' ')
     .map((n) => n[0])
@@ -70,6 +71,17 @@ export default function ExpertCard({ expert }: Props) {
       </div>
     </div>
   )
+
+  if (locked) {
+    return (
+      <div
+        className="block w-full rounded-2xl border border-neutral-200 bg-white p-4 grayscale opacity-60 pointer-events-none select-none"
+        aria-hidden="true"
+      >
+        {inner}
+      </div>
+    )
+  }
 
   if (profileUrl) {
     return (
