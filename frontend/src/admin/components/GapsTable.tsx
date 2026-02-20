@@ -1,4 +1,8 @@
+import { useNavigate } from 'react-router-dom'
 import type { GapRow } from '../types'
+
+const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
+const getAdminKey = () => sessionStorage.getItem('admin_key') ?? ''
 
 interface GapsTableProps {
   data: GapRow[]
@@ -6,14 +10,13 @@ interface GapsTableProps {
 }
 
 export default function GapsTable({ data, onResolved }: GapsTableProps) {
-  const ADMIN_KEY = import.meta.env.VITE_ADMIN_KEY ?? ''
-  const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
+  const navigate = useNavigate()
 
   async function handleResolve(gap: GapRow) {
     try {
       await fetch(`${API_URL}/api/admin/gaps/${encodeURIComponent(gap.query)}/resolve`, {
         method: 'POST',
-        headers: { 'X-Admin-Key': ADMIN_KEY, 'Content-Type': 'application/json' },
+        headers: { 'X-Admin-Key': getAdminKey(), 'Content-Type': 'application/json' },
         body: JSON.stringify({ resolved: true }),
       })
       onResolved()
@@ -27,7 +30,7 @@ export default function GapsTable({ data, onResolved }: GapsTableProps) {
       <table className="min-w-full divide-y divide-gray-200">
         <thead className="bg-gray-50">
           <tr>
-            {['Query', 'Occurrences', 'Best Score', 'Status', ''].map(h => (
+            {['Query', 'Occurrences', 'Best Score', 'Status', 'Actions'].map(h => (
               <th key={h} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 {h}
               </th>
@@ -59,14 +62,22 @@ export default function GapsTable({ data, onResolved }: GapsTableProps) {
                   )}
                 </td>
                 <td className="px-6 py-3 text-right">
-                  {!gap.resolved && (
+                  <div className="flex items-center justify-end gap-3">
                     <button
-                      onClick={() => handleResolve(gap)}
-                      className="text-xs font-medium text-brand-purple hover:underline"
+                      onClick={() => navigate('/admin/searches', { state: { query: gap.query } })}
+                      className="text-xs font-medium text-blue-600 hover:underline"
                     >
-                      Mark Resolved
+                      View Searches →
                     </button>
-                  )}
+                    {!gap.resolved && (
+                      <button
+                        onClick={() => handleResolve(gap)}
+                        className="text-xs font-medium text-brand-purple hover:underline"
+                      >
+                        Mark Resolved
+                      </button>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))

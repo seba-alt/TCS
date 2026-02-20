@@ -25,7 +25,7 @@ import os
 from datetime import date, datetime
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Security, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Security, status
 from fastapi.responses import StreamingResponse
 from fastapi.security import APIKeyHeader
 from pydantic import BaseModel
@@ -415,15 +415,15 @@ def get_leads(db: Session = Depends(get_db)):
 # ── Experts ───────────────────────────────────────────────────────────────────
 
 @router.get("/experts")
-def get_experts():
+def get_experts(request: Request):
     """
-    Return all experts from metadata.json.
+    Return all experts from in-memory metadata (loaded at startup).
 
     Response shape:
         {experts: [{username, first_name, last_name, job_title, company, bio,
                     hourly_rate, profile_url, category}]}
     """
-    metadata = _load_metadata()
+    metadata: list = request.app.state.metadata
     return {"experts": [_serialize_expert(e) for e in metadata]}
 
 
@@ -432,7 +432,7 @@ class ClassifyBody(BaseModel):
 
 
 @router.post("/experts/{username}/classify")
-def classify_expert(username: str, body: ClassifyBody):
+def classify_expert(username: str, body: ClassifyBody, request: Request):
     """
     Set the category field on a single expert in metadata.json.
 
@@ -443,12 +443,13 @@ def classify_expert(username: str, body: ClassifyBody):
         if expert.get("Username") == username:
             expert["category"] = body.category
             _save_metadata(metadata)
+            request.app.state.metadata = metadata
             return {"ok": True}
     raise HTTPException(status_code=404, detail=f"Expert '{username}' not found")
 
 
 @router.post("/experts/auto-classify")
-def auto_classify_experts():
+def auto_classify_experts(request: Request):
     """
     Keyword-match job_title against CATEGORY_KEYWORDS for all experts without a category.
     Sets category only where not already set.
@@ -471,6 +472,7 @@ def auto_classify_experts():
 
     if classified:
         _save_metadata(metadata)
+        request.app.state.metadata = metadata
 
     return {"classified": classified, "categories": categories}
 
@@ -487,7 +489,7 @@ class AddExpertBody(BaseModel):
 
 
 @router.post("/experts")
-def add_expert(body: AddExpertBody):
+def add_expert(body: AddExpertBody, request: Request):
     """
     Append a new expert to metadata.json and experts.csv.
 
@@ -519,9 +521,10 @@ def add_expert(body: AddExpertBody):
         "Created At": datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S"),
     }
 
-    # Append to metadata.json
+    # Append to metadata.json and update in-memory state
     metadata.append(new_expert)
     _save_metadata(metadata)
+    request.app.state.metadata = metadata
 
     # Append to experts.csv
     csv_exists = EXPERTS_CSV_PATH.exists()

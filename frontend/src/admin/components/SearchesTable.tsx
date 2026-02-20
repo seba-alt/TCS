@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   useReactTable,
   getCoreRowModel,
@@ -18,6 +19,7 @@ interface SearchesTableProps {
 
 export default function SearchesTable({ data, pageSize, onPageSizeChange }: SearchesTableProps) {
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set())
+  const navigate = useNavigate()
 
   function toggleRow(id: number) {
     setExpandedRows(prev => {
@@ -49,7 +51,15 @@ export default function SearchesTable({ data, pageSize, onPageSizeChange }: Sear
     {
       accessorKey: 'email',
       header: 'User',
-      cell: ({ getValue }) => <span className="text-xs text-gray-600">{getValue<string>()}</span>,
+      cell: ({ getValue }) => (
+        <button
+          onClick={e => { e.stopPropagation(); navigate('/admin/leads', { state: { email: getValue<string>() } }) }}
+          className="text-xs text-blue-600 hover:underline hover:text-blue-800 text-left"
+          title="View lead profile"
+        >
+          {getValue<string>()}
+        </button>
+      ),
     },
     {
       accessorKey: 'match_count',

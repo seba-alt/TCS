@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import { useAdminSearches } from '../hooks/useAdminData'
 import { useAdminExport } from '../hooks/useAdminExport'
 import SearchesTable from '../components/SearchesTable'
@@ -6,14 +7,20 @@ import ExportDialog from '../components/ExportDialog'
 import type { SearchFilters } from '../types'
 
 export default function SearchesPage() {
-  const [filters, setFilters] = useState<SearchFilters>({ page: 0, page_size: 25 })
+  const location = useLocation()
+  const navEmail: string = location.state?.email ?? ''
+
+  const [filters, setFilters] = useState<SearchFilters>({
+    page: 0, page_size: 25,
+    email: navEmail || undefined,
+  })
   const [pageSize, setPageSize] = useState(25)
   const [showExport, setShowExport] = useState(false)
   const { data, loading, error } = useAdminSearches(filters)
   const { downloadCsv, exporting } = useAdminExport()
 
   // Filter panel state
-  const [emailFilter, setEmailFilter] = useState('')
+  const [emailFilter, setEmailFilter] = useState(navEmail)
   const [gapFilter, setGapFilter] = useState<'' | 'true' | 'false'>('')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
