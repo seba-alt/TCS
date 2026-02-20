@@ -149,6 +149,7 @@ Recent decisions affecting current work:
 - [06-02]: Fire-and-forget feedback POST — setVote and openModal before await so UI is instant regardless of backend latency
 - [06-02]: Clicking already-selected thumb is a no-op — prevents double-submitting same vote (idempotent guard in submitVote)
 - [06-02]: brand-purple for thumbs-up, red-500 for thumbs-down — intentional color asymmetry to match positive/negative sentiment
+- [Phase 06]: [06-03]: FeedbackBar placed after EmailGate in ChatMessage expert cards section; both isLastExpertMessage and conversationId !== undefined required as rendering conditions
 
 ### Pending Todos
 
