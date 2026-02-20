@@ -125,7 +125,7 @@ Plans:
 **Plans:** 4 plans
 
 Plans:
-- [ ] 07-01-PLAN.md — Backend schema migration (top_match_score + gap_resolved) + all /api/admin/* endpoints
+- [x] 07-01-PLAN.md — Backend schema migration (top_match_score + gap_resolved) + all /api/admin/* endpoints
 - [ ] 07-02-PLAN.md — Frontend routing (react-router-dom), admin layout, hooks, and types
 - [ ] 07-03-PLAN.md — Admin pages and table components (Overview, Searches, Gaps, ExportDialog)
 - [ ] 07-04-PLAN.md — Deploy, set env vars, and human verification of full dashboard

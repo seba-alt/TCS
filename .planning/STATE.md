@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-02-20)
 
 ## Current Position
 
-Phase: 6 of 8 (Thumbs up/down feedback) — COMPLETE (2026-02-20)
-Plan: 3 of 3 in phase 6 — COMPLETE (06-03 done 2026-02-20)
-Status: Phase 6 complete. Full thumbs up/down feedback feature verified end-to-end — all 6 human verification tests passed, DB confirmed feedback rows with correct vote/reasons/comment/conversation_id/email. Ready for Phase 7 (Analytics Dashboard).
-Last activity: 2026-02-20 — 06-03 complete. FeedbackBar wired into ChatMessage, email prop threaded from App.tsx, end-to-end human verification passed.
+Phase: 7 of 8 (Analytics dashboard) — IN PROGRESS
+Plan: 1 of 2 in phase 7 — COMPLETE (07-01 done 2026-02-20)
+Status: 07-01 complete. Admin analytics API built — top_match_score/gap_resolved on Conversation model, 6 /api/admin/* endpoints with X-Admin-Key auth verified (401 without key, 200 with key). Ready for 07-02 (admin dashboard frontend).
+Last activity: 2026-02-20 — 07-01 complete. Admin API endpoints live, stats/searches/gaps/resolve/CSV export all functional. Ruff clean.
 
-Progress: [█████████████████████] 3/3 plans done in phase 6
+Progress: [████████████] 1/2 plans done in phase 7
 
 ## Live URLs
 
@@ -65,6 +65,7 @@ Steps:
 | Phase 06 P01 | 107 | 2 tasks | 4 files |
 | Phase 06 P02 | 2min | 2 tasks | 5 files |
 | Phase 06 P03 | ~5min | 2 tasks | 2 files |
+| Phase 07 P01 | 5min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -152,6 +153,11 @@ Recent decisions affecting current work:
 - [06-02]: brand-purple for thumbs-up, red-500 for thumbs-down — intentional color asymmetry to match positive/negative sentiment
 - [Phase 06]: [06-03]: FeedbackBar placed after EmailGate in ChatMessage expert cards section; both isLastExpertMessage and conversationId !== undefined required as rendering conditions
 - [Phase 06]: [06-03]: End-to-end verification passed — all 6 human tests confirmed: thumbs appear, thumbs-up fills purple, thumbs-down fills red + opens modal, modal closes on backdrop/Escape, only last result set gets thumbs, vote state resets on reload
+- [07-01]: GAP_THRESHOLD=0.60 matches SIMILARITY_THRESHOLD in retriever.py — conversation is a gap if top_match_score < 0.60 OR response_type == "clarification"
+- [07-01]: ALTER TABLE migrations caught via bare except in lifespan — idempotent, safe on existing Railway DB where columns already exist after first deploy
+- [07-01]: X-Admin-Key added to CORS allow_headers so browser preflight requests from Vercel do not fail
+- [07-01]: func.min(gap_resolved.cast(Integer)) for resolved aggregation — AND semantics: resolved only if every row with that query is resolved
+- [07-01]: Router-level Depends(_require_admin) on the APIRouter applies auth to all /api/admin/* endpoints without repeating per endpoint
 
 ### Pending Todos
 
@@ -164,5 +170,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: 06-03 complete — FeedbackBar wired end-to-end, human verification passed (all 6 tests). Phase 6 complete.
+Stopped at: 07-01 complete — Admin analytics API built and verified. top_match_score/gap_resolved on Conversation, 6 /api/admin/* endpoints with X-Admin-Key auth. Ready for 07-02 frontend.
 Resume file: None
