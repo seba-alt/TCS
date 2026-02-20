@@ -62,6 +62,13 @@ Steps:
 
 ## Accumulated Context
 
+### Roadmap Evolution
+
+- Phase 5 added: Email gate UX — Show expert results immediately but require email before clicking through to a profile
+- Phase 6 added: Thumbs up/down feedback — Rate results, downvote opens suggestion sheet, feedback stored in DB
+- Phase 7 added: Analytics dashboard — Admin view of searches, expert matches, gap tracking, CSV export
+- Phase 8 added: Test lab — Run queries against search engine, evaluate results, iterate on retrieval quality
+
 ### Decisions
 
 Decisions are logged in PROJECT.md Key Decisions table.
