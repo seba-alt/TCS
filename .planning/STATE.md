@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-20)
 
 **Core value:** A user describes any problem and instantly gets three expertly matched professionals they can contact — no searching, no filtering, no guesswork.
-**Current focus:** Phase 5 — Email Gate UX (Plan 3 of 3 — awaiting human verification checkpoint)
+**Current focus:** Phase 6 — Thumbs up/down feedback (Phase 5 complete)
 
 ## Current Position
 
-Phase: 5 of 8 (Email Gate UX)
-Plan: 3 of 3 in phase 5 — CHECKPOINT (Task 2: human-verify)
-Status: 05-03 Task 1 complete — dev servers confirmed running (backend :8000 index_size=530, frontend :5173 HTTP 200). Awaiting human browser verification of 6 email gate test scenarios.
-Last activity: 2026-02-20 — Task 1 complete. Both dev servers verified. Checkpoint returned for human UX verification.
+Phase: 5 of 8 (Email Gate UX) — COMPLETE
+Plan: 3 of 3 in phase 5 — COMPLETE (human-verified 2026-02-20)
+Status: Phase 5 fully complete. All 6 email gate UX scenarios verified by human in real browser. Ready to begin Phase 6 (thumbs up/down feedback).
+Last activity: 2026-02-20 — 05-03 complete. Human approved all 6 gate scenarios (greyed cards, inline form, instant unlock, localStorage persistence, backend lead capture, multi-turn single gate).
 
-Progress: [████████████████████] 100% of phase 5 tasks automated (3/3 plans started, 05-03 awaiting checkpoint approval)
+Progress: [████████████████████] 100% phase 5 complete (3/3 plans done, all human-verified)
 
 ## Live URLs
 
@@ -61,7 +61,7 @@ Steps:
 | Phase 04-deployment P03 | multi-session | 2 tasks | 15 files |
 | Phase 05-email-gate P01 | 1 min | 2 tasks | 3 files |
 | Phase 05 P02 | 3min | 2 tasks | 5 files |
-| Phase 05 P03 | 1 | 1 tasks | 0 files |
+| Phase 05 P03 | ~30min | 2 tasks | 0 files (verification-only) |
 
 ## Accumulated Context
 
@@ -139,6 +139,7 @@ Recent decisions affecting current work:
 - [Phase 05]: localStorage write before backend POST — backend failure is silent, UX unlock is immediate
 - [Phase 05]: locked renders as div not anchor — keyboard users cannot tab-activate a locked link; aria-hidden on locked cards
 - [Phase 05]: EmailGate only on last expert message (lastExpertMsgIndex reduce) — prevents duplicate forms in multi-turn chat
+- [05-03]: All 6 email gate UX scenarios human-verified in real browser — greyed cards, inline gate, instant unlock, localStorage persistence, SQLite lead capture, multi-turn single-gate all confirmed working
 
 ### Pending Todos
 
@@ -151,5 +152,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: 05-03 checkpoint:human-verify — Task 1 complete (dev servers running), Task 2 awaiting human verification of full email gate UX flow at http://localhost:5173.
+Stopped at: 05-03 complete — human approved all 6 verification scenarios. Phase 5 fully done.
 Resume file: None
