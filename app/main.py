@@ -19,6 +19,7 @@ from pathlib import Path
 
 import app.models  # noqa: F401 — registers ORM models with Base metadata
 import faiss
+import sentry_sdk
 import structlog
 from dotenv import load_dotenv
 from fastapi import FastAPI
@@ -30,6 +31,15 @@ from app.routers import chat, health
 
 # Load .env for local development — no-op in production (Railway injects env vars)
 load_dotenv()
+
+# Sentry error monitoring — silently skipped when SENTRY_DSN is absent (local dev).
+# Set SENTRY_DSN env var in Railway dashboard to enable production monitoring.
+if dsn := os.getenv("SENTRY_DSN"):
+    sentry_sdk.init(
+        dsn=dsn,
+        traces_sample_rate=0.1,
+        environment="production",
+    )
 
 log = structlog.get_logger()
 
