@@ -2,19 +2,18 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-20)
+See: .planning/PROJECT.md (updated 2026-02-20 after v1.0 milestone)
 
 **Core value:** A user describes any problem and instantly gets three expertly matched professionals they can contact — no searching, no filtering, no guesswork.
-**Current focus:** Phase 7 — Analytics dashboard (Phase 6 complete)
+**Current focus:** v1.0 shipped ✅ — Next: v1.1 Phase 8 (Test Lab) + CORS fix + FAISS re-ingest
 
 ## Current Position
 
-Phase: 7 of 8 (Analytics dashboard) — COMPLETE
-Plan: 3 of 3 in phase 7 — COMPLETE (07-03 done 2026-02-20)
-Status: 07-03 complete. Full admin dashboard UI built — Overview (4 StatCards), Searches (TanStack Table + filters + expand + CSV export), Gaps (frequency table + resolve + CSV export). Vite build and tsc clean. Ready for Phase 8.
-Last activity: 2026-02-20 — 07-03 complete. Admin pages (OverviewPage, SearchesPage, GapsPage) and components (StatCard, ExportDialog, ExpandedExpertRow, SearchesTable, GapsTable) all implemented.
+Phase: v1.0 milestone COMPLETE — 7 phases, 23 plans archived
+Status: v1.0 MVP shipped 2026-02-20. All phases 1-7 complete. Milestone archived to .planning/milestones/v1.0-ROADMAP.md
+Last activity: 2026-02-20 — v1.0 milestone archived. Admin dashboard v2 deployed (login, leads, experts, score explainer, settings, dark theme, Expert SQLite DB).
 
-Progress: [████████████████████████████] 3/3 plans done in phase 7
+Progress: [████████████████████████████] v1.0 complete — 7/7 phases
 
 ## Live URLs
 
@@ -178,5 +177,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: 07-03 complete — Full admin dashboard UI implemented. OverviewPage (4 StatCards), SearchesPage (TanStack Table + filter panel + expand + CSV export), GapsPage (frequency table + resolve + CSV export). Phase 7 complete (3/3 plans).
+Stopped at: v1.0 milestone archived. All 7 phases complete. MILESTONES.md, PROJECT.md, ROADMAP.md updated. Ready for `/gsd:new-milestone` to plan v1.1.
 Resume file: None
