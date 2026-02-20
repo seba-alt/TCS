@@ -28,7 +28,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. FastAPI server starts, loads the FAISS index into memory, and responds to `GET /api/health` with 200
   3. No secrets exist in source files or git history — `GOOGLE_API_KEY` lives only in `.env` which is gitignored
   4. A direct Python call to the embedder service returns a 768-dim vector for a test query string
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Project scaffold: .gitignore, requirements.txt, scripts/validate_csv.py
+- [ ] 01-02-PLAN.md — Embedder service and offline ingestion pipeline (CSV → FAISS index)
+- [ ] 01-03-PLAN.md — FastAPI server with lifespan FAISS loading, CORS, and health endpoint
 
 ### Phase 2: RAG API
 **Goal**: An API endpoint accepts a natural language query and returns exactly 3 matched experts with "why them" explanations — verified correct before any frontend work begins
@@ -70,7 +75,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 0/TBD | Not started | - |
+| 1. Foundation | 0/3 | Not started | - |
 | 2. RAG API | 0/TBD | Not started | - |
 | 3. Frontend | 0/TBD | Not started | - |
 | 4. Deployment | 0/TBD | Not started | - |
