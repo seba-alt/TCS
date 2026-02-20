@@ -14,6 +14,7 @@ Requirements for this milestone. Each maps to roadmap phases.
 - [ ] **TAGS-02**: Tags are stored per expert in the SQLite Expert table as a JSON text column, validated against a structured schema on every LLM response
 - [ ] **TAGS-03**: The FAISS ingest script reads from the Expert DB table (not experts.csv) and includes tag text in each expert's embedding input
 - [ ] **TAGS-04**: FAISS index is rebuilt with all 1,558 experts (up from 530 currently indexed), validated by count assertion before promotion to production
+- [ ] **TAGS-05**: When an admin adds a new expert via the admin dashboard, the system automatically generates domain tags and computes a findability score for that expert immediately (no manual batch run required)
 
 ### Findability Scoring
 
@@ -77,32 +78,34 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| TAGS-01 | — | Pending |
-| TAGS-02 | — | Pending |
-| TAGS-03 | — | Pending |
-| TAGS-04 | — | Pending |
-| FIND-01 | — | Pending |
-| FIND-02 | — | Pending |
-| FIND-03 | — | Pending |
-| ADMIN-01 | — | Pending |
-| ADMIN-02 | — | Pending |
-| ADMIN-03 | — | Pending |
-| ADMIN-04 | — | Pending |
-| ADMIN-05 | — | Pending |
-| ADMIN-06 | — | Pending |
-| SEARCH-01 | — | Pending |
-| SEARCH-02 | — | Pending |
-| SEARCH-03 | — | Pending |
-| SEARCH-04 | — | Pending |
-| SEARCH-05 | — | Pending |
-| SEARCH-06 | — | Pending |
-| SEARCH-07 | — | Pending |
+| TAGS-01 | Phase 8 | Pending |
+| TAGS-02 | Phase 8 | Pending |
+| TAGS-03 | Phase 8 | Pending |
+| TAGS-04 | Phase 8 | Pending |
+| TAGS-05 | Phase 8 | Pending |
+| FIND-01 | Phase 8 | Pending |
+| FIND-02 | Phase 8 | Pending |
+| FIND-03 | Phase 8 | Pending |
+| ADMIN-01 | Phase 9 | Pending |
+| ADMIN-02 | Phase 9 | Pending |
+| ADMIN-03 | Phase 9 | Pending |
+| ADMIN-04 | Phase 9 | Pending |
+| ADMIN-05 | Phase 9 | Pending |
+| ADMIN-06 | Phase 9 | Pending |
+| SEARCH-07 | Phase 9 | Pending |
+| SEARCH-01 | Phase 10 | Pending |
+| SEARCH-02 | Phase 10 | Pending |
+| SEARCH-03 | Phase 10 | Pending |
+| SEARCH-04 | Phase 10 | Pending |
+| SEARCH-05 | Phase 10 | Pending |
+| SEARCH-06 | Phase 10 | Pending |
 
 **Coverage:**
-- v1.1 requirements: 20 total
-- Mapped to phases: 0
-- Unmapped: 20 ⚠️ (to be filled by roadmapper)
+- v1.1 requirements: 21 total
+- Mapped to phases: 20
+- Mapped to phases: 21
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-02-21*
-*Last updated: 2026-02-21 after initial definition*
+*Last updated: 2026-02-21 — traceability filled by roadmapper (Phases 8–10)*

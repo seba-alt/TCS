@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-21 after v1.1 milestone started)
 
 **Core value:** A user describes any problem and instantly gets three expertly matched professionals they can contact — no searching, no filtering, no guesswork.
-**Current focus:** v1.1 — Expert Intelligence & Search Quality
+**Current focus:** v1.1 — Phase 8: Data Enrichment Pipeline
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-02-21 — Milestone v1.1 started (Expert Intelligence & Search Quality)
+Phase: 8 of 10 (Data Enrichment Pipeline)
+Plan: — (not yet planned)
+Status: Ready to plan
+Last activity: 2026-02-21 — v1.1 roadmap created (Phases 8–10 defined)
 
-Progress: [████████████████████████████] v1.0 complete — 7/7 phases
+Progress: [████████████████████░░░░░░░░░░] v1.0 complete (7/7 phases) — v1.1 starting Phase 8
 
 ## Live URLs
 
@@ -23,160 +23,48 @@ Progress: [███████████████████████
 | Railway (backend) | https://web-production-fdbf9.up.railway.app |
 | Vercel (frontend) | https://tcs-three-sigma.vercel.app |
 
-## Outstanding Action Required
-
-**CORS not wired yet.** Set `ALLOWED_ORIGINS=https://tcs-three-sigma.vercel.app` in Railway environment variables.
-
-Steps:
-1. railway.com -> project -> service -> Variables
-2. Set `ALLOWED_ORIGINS` = `https://tcs-three-sigma.vercel.app` (no trailing slash)
-3. Railway auto-redeploys — wait for completion
-4. Verify with: `curl -s -D - -X OPTIONS -H "Origin: https://tcs-three-sigma.vercel.app" -H "Access-Control-Request-Method: POST" -H "Access-Control-Request-Headers: Content-Type" https://web-production-fdbf9.up.railway.app/api/chat`
-   - Expected: `access-control-allow-origin: https://tcs-three-sigma.vercel.app` in response
-
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 10
-- Average duration: ~2.1 min (automated tasks)
-- Total execution time: ~21.7 min automated + human platform setup
+- Total plans completed: 23 (v1.0)
+- Average duration: ~2.1 min/plan (automated tasks)
+- Total execution time: ~48 min automated
 
-**By Phase:**
+**By Phase (v1.0 summary):**
 
-| Phase | Plans | Total | Avg/Plan |
-|-------|-------|-------|----------|
-| 01-foundation | 3 | 7.5 min | 2.5 min |
-| 02-rag-api | 4 | 12.2 min | 3.1 min |
-| 03-frontend | 3 | 6 min | 2 min |
-| 04-deployment | 3 | ~4 min automated | 2 min |
-
-**Recent Trend:**
-- Last 5 plans: 2.4 min
-- Trend: stable
-
-*Updated after each plan completion*
-| Phase 03-frontend P03 | 2 | 2 tasks | 3 files |
-| Phase 04-deployment P01 | 2 min | 2 tasks | 5 files |
-| Phase 04-deployment P02 | 2 min | 2 tasks | 9 files |
-| Phase 04-deployment P03 | multi-session | 2 tasks | 15 files |
-| Phase 05-email-gate P01 | 1 min | 2 tasks | 3 files |
-| Phase 05 P02 | 3min | 2 tasks | 5 files |
-| Phase 05 P03 | ~30min | 2 tasks | 0 files (verification-only) |
-| Phase 06 P01 | 107 | 2 tasks | 4 files |
-| Phase 06 P02 | 2min | 2 tasks | 5 files |
-| Phase 06 P03 | ~5min | 2 tasks | 2 files |
-| Phase 07 P01 | 5min | 2 tasks | 4 files |
-| Phase 07 P02 | 3min | 2 tasks | 11 files |
-| Phase 07 P03 | 3min | 2 tasks | 10 files |
+| Phase | Plans | Status |
+|-------|-------|--------|
+| 01–07 (v1.0) | 23 total | Complete |
+| 08 (v1.1) | TBD | Not started |
+| 09 (v1.1) | TBD | Not started |
+| 10 (v1.1) | TBD | Not started |
 
 ## Accumulated Context
-
-### Roadmap Evolution
-
-- Phase 5 added: Email gate UX — Show expert results immediately but require email before clicking through to a profile
-- Phase 6 added: Thumbs up/down feedback — Rate results, downvote opens suggestion sheet, feedback stored in DB
-- Phase 7 added: Analytics dashboard — Admin view of searches, expert matches, gap tracking, CSV export
-- Phase 8 added: Test lab — Run queries against search engine, evaluate results, iterate on retrieval quality
 
 ### Decisions
 
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
-- [Roadmap]: RAG over fine-tuning — CSV data changes; retrieval is more maintainable
-- [Roadmap]: CSV as vector source — 1,600 profiles fits in-memory FAISS; no vector DB for v1
-- [Roadmap]: Streaming upgrade folded into Phase 2 (not a separate phase) — quick depth + same delivery boundary
-- [Roadmap]: Non-streaming validation first, streaming upgrade second within Phase 2
-- [01-01]: google-genai==1.64.* confirmed as active SDK on PyPI (not deprecated google-generativeai); import path is `from google import genai`
-- [01-01]: CSV column names treated as unknown until validate_csv.py runs against real data — ingest.py field names must be set after first run
-- [01-01]: utf-8-sig encoding used for CSV loads to handle Excel BOM characters; chardet as fallback
-- [01-02]: Lazy genai.Client() initialization in embedder.py — deferred to first call so module imports without GOOGLE_API_KEY (critical for CI and testability)
-- [01-02]: L2 normalization required in both ingest.py and embedder.py — 768-dim truncated vectors are NOT pre-normalized by Google API
-- [01-02]: Task type asymmetry enforced — RETRIEVAL_DOCUMENT for ingest, RETRIEVAL_QUERY for runtime embed_query()
-- [01-03]: asynccontextmanager lifespan (not deprecated @app.on_event) used for FAISS loading — FastAPI 0.90+ pattern
-- [01-03]: CORS never uses ['*'] — ALLOWED_ORIGINS env var with explicit origin list; Railway injects Vercel URL at deploy time
-- [01-03]: .gitignore fixed — added !.env.example negation to allow safe committed example file despite .env.* wildcard rule
-- [01-03]: Phase 1 fully verified by human — server starts, health returns non-zero index_size, CORS headers present, embed_query returns 768-dim vector, .env gitignored
-- [02-01]: SQLite for v1 — zero-config; replace DATABASE_URL with Postgres URL for production persistence in Phase 4
-- [02-01]: No Alembic — Base.metadata.create_all() at startup is idempotent and sufficient for v1 schema stability
-- [02-01]: history and response_experts stored as JSON-serialized Text columns to avoid SQLite JSON type compatibility issues
-- [02-01]: get_db() FastAPI dependency pattern established — always use Depends(get_db) in route handlers, never create sessions directly
-- [02-02]: GENERATION_MODEL=gemini-2.5-flash (not deprecated gemini-2.0-flash which shuts down June 2026)
-- [02-02]: SIMILARITY_THRESHOLD=0.60 (lowered from 0.65) — threshold was too strict; 0.60 returns results across diverse domain queries
-- [02-02]: TOP_K=5 retrieval gives LLM room to skip low-quality matches while always providing 3 recommendations
-- [02-02]: Lazy genai.Client() pattern applied to LLM service — consistent with embedder.py; no GOOGLE_API_KEY at import time
-- [02-02]: Defensive _get() column normalization in retriever handles snake_case/space/TitleCase CSV column variants
-- [02-03]: EmailStr enforces email format at Pydantic validation — no manual regex; returns 422 automatically
-- [02-03]: history stored as JSON-serialized Text in Conversation — consistent with 02-01 schema decisions
-- [02-03]: Non-streaming endpoint validates full RAG pipeline before streaming upgrade in 02-04
-- [02-04]: StreamingResponse with media_type='text/event-stream' replaces JSONResponse — response_model removed from @router.post decorator
-- [02-04]: Sync services (embed_query, generate_content) offloaded via run_in_executor() to avoid blocking asyncio event loop during SSE streaming
-- [02-04]: Cache-Control: no-cache and X-Accel-Buffering: no headers prevent Railway/nginx proxy buffering of SSE stream
-- [02-04]: thinking event emitted before any thread pool work begins — guarantees sub-100ms first event latency
-- [02-04]: Phase 2 fully verified by human — SSE streaming confirmed, DB logging confirmed (7 conversations), 10+ domain queries verified, clarification path working
-- [03-01]: Tailwind CSS v3 (not v4) installed — stable, plan-specified version; brand colors as theme.extend.colors.brand.* tokens
-- [03-01]: VITE_API_URL typed in ImportMetaEnv interface for TypeScript-safe import.meta.env access
-- [03-01]: Named exports only in types.ts — no default export; all consuming components import { Expert, Message } from './types'
-- [03-02]: import type syntax required for interface imports — verbatimModuleSyntax in tsconfig.app.json; all components use `import type { Expert }` not `import { Expert }`
-- [03-02]: ExpertCard uses anchor tag (not button) with target=_blank and rel=noopener noreferrer for native link semantics
-- [03-02]: iOS safe-area padding applied via inline style prop on ChatInput — simpler than Tailwind plugin for env(safe-area-inset-bottom)
-- [03-02]: Initials avatar (2-letter) as fallback — Expert type has no photo URL field, consistent with backend schema
-- [03-03]: fetch ReadableStream SSE parsing instead of EventSource — POST body required for /api/chat; EventSource is GET-only
-- [03-03]: Fixed placeholder email user@tinrate.com — user auth out of scope for v1; API requires email for DB lead capture
-- [03-03]: Phase 3 fully verified by human — desktop chat flow confirmed, mobile 375px layout verified, error state + Retry working, multi-turn history visible and scrollable
-- [Phase 03-frontend]: fetch ReadableStream SSE parsing instead of EventSource — POST body required for /api/chat; EventSource is GET-only
-- [Phase 03-frontend]: Phase 3 fully verified by human — desktop chat flow, mobile 375px layout, error state + Retry, multi-turn history all confirmed
-- [04-01]: Railway Volume mounted at /app/var (not /app/data) — mounting at /app/data shadows committed FAISS index; set VAR_DIR=/app/var on Railway dashboard
-- [04-01]: FAISS index, metadata.json, and experts.csv committed to git — Railway clones repo at deploy time so data files must be tracked
-- [04-01]: sentry-sdk added without version pin — stable and backward-compatible; walrus-operator guard skips init silently when SENTRY_DSN absent
-- [04-01]: railway.json declares healthcheckPath=/api/health with 300s timeout for FAISS lifespan startup
-- [04-02]: CI workflow gates Railway deploys via ruff check and tsc -- both must pass before merge to main
-- [04-02]: Sentry enabled only in PROD builds (import.meta.env.PROD) -- local dev never sends errors to Sentry
-- [04-02]: sentryVitePlugin disabled when SENTRY_AUTH_TOKEN absent -- local builds never fail due to missing Sentry credentials
-- [04-02]: noqa: E402 applied to scripts/ingest.py sys.path-dependent import -- script legitimately needs sys.path insertion before app.config import
-- [Phase 04-deployment]: Data files (faiss.index, metadata.json, experts.csv) committed to git — Railway Railpack cannot inject GOOGLE_API_KEY at build time so ingest.py cannot run as build step
-- [Phase 04-deployment]: why_them field added to Expert dataclass — LLM returns per-expert explanation stored in response_experts DB column for future UI display
-- [04-03]: Live URLs confirmed — Railway https://web-production-fdbf9.up.railway.app (index_size=530), Vercel https://tcs-three-sigma.vercel.app
-- [04-03]: ALLOWED_ORIGINS env var must be set on Railway to https://tcs-three-sigma.vercel.app — CORS rejects Vercel origin until this is done
-- [05-01]: sqlalchemy.dialects.sqlite.insert used (not sqlalchemy.insert) for on_conflict_do_nothing — API is identical to postgresql dialect for future migration
-- [05-01]: Endpoint returns {status: ok} for both new and duplicate emails — frontend never sees a failure from re-submission
-- [05-01]: email_leads table auto-created via existing Base.metadata.create_all in lifespan — no additional startup code needed
-- [Phase 05]: Lazy useState initializer (not useEffect) for localStorage — prevents flash of locked state for returning users
-- [Phase 05]: localStorage write before backend POST — backend failure is silent, UX unlock is immediate
-- [Phase 05]: locked renders as div not anchor — keyboard users cannot tab-activate a locked link; aria-hidden on locked cards
-- [Phase 05]: EmailGate only on last expert message (lastExpertMsgIndex reduce) — prevents duplicate forms in multi-turn chat
-- [05-03]: All 6 email gate UX scenarios human-verified in real browser — greyed cards, inline gate, instant unlock, localStorage persistence, SQLite lead capture, multi-turn single-gate all confirmed working
-- [Phase 06]: [06-01]: No FK on conversation_id in Feedback — consistent with existing schema style (no FK relationships in project)
-- [Phase 06]: [06-01]: Vote switch inserts new row (not upsert) — preserves vote history; latest row per conversation_id is authoritative for analytics
-- [Phase 06]: [06-01]: FeedbackRequest uses Literal['up', 'down'] — Pydantic enforces valid values, returns 422 for invalid votes automatically
-- [Phase 06]: [06-01]: expert_ids and reasons stored as JSON-serialized Text — consistent with history/response_experts pattern in Conversation model
-- [06-02]: Fire-and-forget feedback POST — setVote and openModal before await so UI is instant regardless of backend latency
-- [06-02]: Clicking already-selected thumb is a no-op — prevents double-submitting same vote (idempotent guard in submitVote)
-- [06-02]: brand-purple for thumbs-up, red-500 for thumbs-down — intentional color asymmetry to match positive/negative sentiment
-- [Phase 06]: [06-03]: FeedbackBar placed after EmailGate in ChatMessage expert cards section; both isLastExpertMessage and conversationId !== undefined required as rendering conditions
-- [Phase 06]: [06-03]: End-to-end verification passed — all 6 human tests confirmed: thumbs appear, thumbs-up fills purple, thumbs-down fills red + opens modal, modal closes on backdrop/Escape, only last result set gets thumbs, vote state resets on reload
-- [07-01]: GAP_THRESHOLD=0.60 matches SIMILARITY_THRESHOLD in retriever.py — conversation is a gap if top_match_score < 0.60 OR response_type == "clarification"
-- [07-01]: ALTER TABLE migrations caught via bare except in lifespan — idempotent, safe on existing Railway DB where columns already exist after first deploy
-- [07-01]: X-Admin-Key added to CORS allow_headers so browser preflight requests from Vercel do not fail
-- [07-01]: func.min(gap_resolved.cast(Integer)) for resolved aggregation — AND semantics: resolved only if every row with that query is resolved
-- [07-01]: Router-level Depends(_require_admin) on the APIRouter applies auth to all /api/admin/* endpoints without repeating per endpoint
-- [07-02]: react-router-dom v7 installed (^7.13.0) — createBrowserRouter API unchanged from v6; / → App, /admin/* → AdminApp
-- [07-02]: JSON.stringify(filters) as useCallback dep — simplest value-equality for plain filter objects without deep-equal library; acceptable for admin tool
-- [07-02]: Blob URL download pattern in useAdminExport — native anchor href cannot inject X-Admin-Key header; fetch + createObjectURL is required for authenticated CSV exports
-- [07-02]: Stub pages (OverviewPage, SearchesPage, GapsPage) created immediately — TypeScript build requires all imports to resolve at compile time; stubs replaced by Plan 03
-- [Phase 07]: [07-03]: response_experts returned from /api/admin/searches as raw JSON string — ExpandedExpertRow parses locally, keeping serializer simple with graceful fallback
-- [Phase 07]: [07-03]: Direct fetch() in GapsTable for POST resolve instead of extending adminFetch — adminFetch is GET-only by design; single POST call doesn't justify refactoring shared utility
+- [v1.1 research]: gemini-embedding-001 already in production — do NOT reference text-embedding-004 (shut down Jan 14 2026)
+- [v1.1 research]: ingest.py must switch source from experts.csv to Expert SQLAlchemy table so tags written by tag_experts.py are included in FAISS embedding text
+- [v1.1 research]: All FAISS index writes must happen in FastAPI lifespan handler only — Railway volume not mounted during pre-deploy
+- [v1.1 research]: tag_experts.py must write to staging file first, promote only after count assertion passes — crash safety
+- [v1.1 research]: Feedback re-ranking: minimum 10 interactions before boost; max 20% of similarity score — prevents cold-start bias
 
 ### Pending Todos
 
-- Set `ALLOWED_ORIGINS=https://tcs-three-sigma.vercel.app` in Railway environment variables (required for end-to-end CORS)
+- Set `ALLOWED_ORIGINS=https://tcs-three-sigma.vercel.app` in Railway environment variables (required for CORS)
+- Check `SELECT COUNT(*) FROM feedback` before planning Phase 10 — if under 50 rows, ship `FEEDBACK_LEARNING_ENABLED=false`
+- Verify exact Gemini paid-tier RPM limits at ai.google.dev before setting CONCURRENCY in tag_experts.py
 
 ### Blockers/Concerns
 
-- CORS not wired: Railway preflight returns "Disallowed CORS origin" for Vercel domain — chatbot UI loads but queries will fail until `ALLOWED_ORIGINS` is set
+- CORS not wired: Railway preflight returns "Disallowed CORS origin" for Vercel domain — fix before running any Phase 8 validation that calls the live API
+- Phase 10 feedback threshold depends on real feedback corpus size — check DB before planning Phase 10
 
 ## Session Continuity
 
-Last session: 2026-02-20
-Stopped at: v1.0 milestone archived. All 7 phases complete. MILESTONES.md, PROJECT.md, ROADMAP.md updated. Ready for `/gsd:new-milestone` to plan v1.1.
+Last session: 2026-02-21
+Stopped at: v1.1 roadmap created. ROADMAP.md updated with Phases 8–10. STATE.md and REQUIREMENTS.md traceability updated. Ready for `/gsd:plan-phase 8`.
 Resume file: None
