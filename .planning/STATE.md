@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-20)
 ## Current Position
 
 Phase: 6 of 8 (Thumbs up/down feedback) — IN PROGRESS
-Plan: 1 of 3 in phase 6 — COMPLETE (06-01 done 2026-02-20)
-Status: Phase 6 Plan 1 complete. Backend feedback infrastructure ready. Ready for Phase 6 Plan 2 (frontend thumbs up/down UI).
-Last activity: 2026-02-20 — 06-01 complete. Feedback model, POST /api/feedback endpoint, and conversation_id in SSE result event all done and verified.
+Plan: 2 of 3 in phase 6 — COMPLETE (06-02 done 2026-02-20)
+Status: Phase 6 Plan 2 complete. Frontend feedback data layer built. Ready for Phase 6 Plan 3 (wire FeedbackBar into ChatMessage, end-to-end verification).
+Last activity: 2026-02-20 — 06-02 complete. Types extended with conversationId and FeedbackVote; useFeedback hook, FeedbackBar, DownvoteModal created and TypeScript build passing.
 
-Progress: [█████████░░░░░░░░░░░] 1/3 plans done in phase 6
+Progress: [█████████████░░░░░░░] 2/3 plans done in phase 6
 
 ## Live URLs
 
@@ -63,6 +63,7 @@ Steps:
 | Phase 05 P02 | 3min | 2 tasks | 5 files |
 | Phase 05 P03 | ~30min | 2 tasks | 0 files (verification-only) |
 | Phase 06 P01 | 107 | 2 tasks | 4 files |
+| Phase 06 P02 | 2min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -145,6 +146,9 @@ Recent decisions affecting current work:
 - [Phase 06]: [06-01]: Vote switch inserts new row (not upsert) — preserves vote history; latest row per conversation_id is authoritative for analytics
 - [Phase 06]: [06-01]: FeedbackRequest uses Literal['up', 'down'] — Pydantic enforces valid values, returns 422 for invalid votes automatically
 - [Phase 06]: [06-01]: expert_ids and reasons stored as JSON-serialized Text — consistent with history/response_experts pattern in Conversation model
+- [06-02]: Fire-and-forget feedback POST — setVote and openModal before await so UI is instant regardless of backend latency
+- [06-02]: Clicking already-selected thumb is a no-op — prevents double-submitting same vote (idempotent guard in submitVote)
+- [06-02]: brand-purple for thumbs-up, red-500 for thumbs-down — intentional color asymmetry to match positive/negative sentiment
 
 ### Pending Todos
 
@@ -157,5 +161,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: 06-01 complete — backend feedback infrastructure (Feedback model, POST /api/feedback, conversation_id in SSE).
+Stopped at: 06-02 complete — frontend feedback data layer (types.ts, useChat.ts, useFeedback hook, FeedbackBar, DownvoteModal).
 Resume file: None
