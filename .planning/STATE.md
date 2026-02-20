@@ -2,16 +2,17 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-20 after v1.0 milestone)
+See: .planning/PROJECT.md (updated 2026-02-21 after v1.1 milestone started)
 
 **Core value:** A user describes any problem and instantly gets three expertly matched professionals they can contact — no searching, no filtering, no guesswork.
-**Current focus:** v1.0 shipped ✅ — Next: v1.1 Phase 8 (Test Lab) + CORS fix + FAISS re-ingest
+**Current focus:** v1.1 — Expert Intelligence & Search Quality
 
 ## Current Position
 
-Phase: v1.0 milestone COMPLETE — 7 phases, 23 plans archived
-Status: v1.0 MVP shipped 2026-02-20. All phases 1-7 complete. Milestone archived to .planning/milestones/v1.0-ROADMAP.md
-Last activity: 2026-02-20 — v1.0 milestone archived. Admin dashboard v2 deployed (login, leads, experts, score explainer, settings, dark theme, Expert SQLite DB).
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-02-21 — Milestone v1.1 started (Expert Intelligence & Search Quality)
 
 Progress: [████████████████████████████] v1.0 complete — 7/7 phases
 

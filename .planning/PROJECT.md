@@ -22,11 +22,25 @@ A user describes any problem and instantly gets three expertly matched professio
 - ✓ Admin dashboard with login, search analytics, lead tracking, expert management — v1.0
 - ✓ Application deployed publicly — Railway backend, Vercel frontend — v1.0
 
+## Current Milestone: v1.1 Expert Intelligence & Search Quality
+
+**Goal:** Transform the expert layer — auto-tag all 1,558 experts, score findability, enhance the admin Expert tab — then systematically improve retrieval using feedback signals, domain mapping, and query expansion.
+
+**Target features:**
+- Multi-tag system: AI auto-generates domain tags for all 1,558 experts (covering all domains); tags feed into FAISS search
+- Enhanced admin Expert tab: first + last name, bio, profile URL, tags, findability score (color-coded, sorted worst-first)
+- Findability score (0–100): based on bio presence/quality, profile link, tags, topic description
+- FAISS re-ingest: all 1,558 experts with enhanced data (tags included in embedding text)
+- Search intelligence: feedback learning from thumbs up/down, expert pool domain mapping, query expansion, test lab
+
 ### Active
 
 - [ ] CORS fully wired: set `ALLOWED_ORIGINS=https://tcs-three-sigma.vercel.app` in Railway env vars
-- [ ] Test lab: run queries against search engine, evaluate retrieval quality, iterate on FAISS threshold and expert categorization
-- [ ] Re-ingest FAISS index with Expert SQLite data (1,558 experts vs 530 currently indexed)
+- [ ] Auto-generate domain tags for all 1,558 experts using AI
+- [ ] Compute findability scores for all experts; surface worst profiles in admin Expert tab
+- [ ] Enhance admin Expert tab: first+last name, bio, profile URL, tags, findability score
+- [ ] Re-ingest FAISS with all 1,558 experts + tags in embedding text
+- [ ] Search intelligence: feedback learning, domain mapping, query expansion, test lab evaluation
 
 ### Out of Scope
 
@@ -69,4 +83,4 @@ A user describes any problem and instantly gets three expertly matched professio
 | CORS allow_headers: X-Admin-Key | Added to CORSMiddleware to allow Vercel preflight for admin requests | ✓ Good — admin works from browser |
 
 ---
-*Last updated: 2026-02-20 after v1.0 MVP milestone*
+*Last updated: 2026-02-21 after v1.1 milestone started*
