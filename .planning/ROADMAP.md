@@ -44,7 +44,13 @@ Plans:
   2. The same endpoint streams its response as SSE — the browser receives tokens progressively rather than waiting for the full response
   3. Ten manual test queries covering different problem domains each return 3 plausible, non-hallucinated experts whose data matches the source CSV
   4. A vague or zero-match query triggers a clarifying question response rather than a forced low-confidence match
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+- [ ] 02-01-PLAN.md — SQLite database setup, SQLAlchemy ORM, Conversation model, DB wired into lifespan
+- [ ] 02-02-PLAN.md — Retriever service (FAISS search + expert filtering) and LLM service (Gemini JSON mode)
+- [ ] 02-03-PLAN.md — POST /api/chat non-streaming endpoint with email validation, retrieval, generation, DB logging
+- [ ] 02-04-PLAN.md — SSE streaming upgrade: status:thinking event, streamed result, human verification
 
 ### Phase 3: Frontend
 **Goal**: A user can open the chatbot in a browser, describe their problem, and see three clickable Expert Cards appear below the AI response — on both desktop and mobile
@@ -76,6 +82,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation | 3/3 | Complete | 2026-02-20 |
-| 2. RAG API | 0/TBD | Not started | - |
+| 2. RAG API | 0/4 | Not started | - |
 | 3. Frontend | 0/TBD | Not started | - |
 | 4. Deployment | 0/TBD | Not started | - |
