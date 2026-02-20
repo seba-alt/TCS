@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-02-20)
 
 ## Current Position
 
-Phase: 1 of 4 (Foundation) — COMPLETE
-Plan: 3 of 3 in phase 1 — COMPLETE
-Status: Phase 1 complete — ready to begin Phase 2 (RAG API)
-Last activity: 2026-02-20 — Completed 01-03 Task 3 (human-verify); all Phase 1 success criteria verified
+Phase: 2 of 4 (RAG API) — IN PROGRESS
+Plan: 1 of 4 in phase 2 — COMPLETE
+Status: Phase 2 in progress — 02-01 DB layer complete, ready for 02-02 (Pydantic schemas)
+Last activity: 2026-02-20 — Completed 02-01 (DB layer: SQLAlchemy, Conversation model, get_db dependency)
 
-Progress: [███░░░░░░░] 30%
+Progress: [████░░░░░░] 40%
 
 ## Performance Metrics
 
@@ -56,6 +56,10 @@ Recent decisions affecting current work:
 - [01-03]: CORS never uses ['*'] — ALLOWED_ORIGINS env var with explicit origin list; Railway injects Vercel URL at deploy time
 - [01-03]: .gitignore fixed — added !.env.example negation to allow safe committed example file despite .env.* wildcard rule
 - [01-03]: Phase 1 fully verified by human — server starts, health returns non-zero index_size, CORS headers present, embed_query returns 768-dim vector, .env gitignored
+- [02-01]: SQLite for v1 — zero-config; replace DATABASE_URL with Postgres URL for production persistence in Phase 4
+- [02-01]: No Alembic — Base.metadata.create_all() at startup is idempotent and sufficient for v1 schema stability
+- [02-01]: history and response_experts stored as JSON-serialized Text columns to avoid SQLite JSON type compatibility issues
+- [02-01]: get_db() FastAPI dependency pattern established — always use Depends(get_db) in route handlers, never create sessions directly
 
 ### Pending Todos
 
@@ -69,5 +73,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: 01-03-PLAN.md complete — Phase 1 Foundation fully verified. Ready to begin Phase 2 (RAG API).
+Stopped at: 02-01-PLAN.md complete — SQLite DB layer with Conversation model and get_db dependency. Ready for 02-02.
 Resume file: None

@@ -65,7 +65,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CHAT-01 | Phase 3 | Pending |
 | CHAT-02 | Phase 3 | Pending |
 | REC-01 | Phase 1 | Complete (human-verified 2026-02-20) |
-| REC-02 | Phase 2 | Pending |
+| REC-02 | Phase 2 | In progress (02-01 DB layer complete) |
 | REC-03 | Phase 3 | Pending |
 | REC-04 | Phase 3 | Pending |
 | DEPL-01 | Phase 4 | Pending |
@@ -77,4 +77,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-02-20*
-*Last updated: 2026-02-20 after 01-03 execution (Phase 1 Foundation complete — human verified)*
+*Last updated: 2026-02-20 after 02-01 execution (Phase 2 Plan 1 — SQLite DB layer complete)*
