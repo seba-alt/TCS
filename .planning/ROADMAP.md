@@ -120,12 +120,15 @@ Plans:
 
 ### Phase 7: Analytics dashboard — Admin view of searches, expert matches, gap tracking, CSV export
 
-**Goal:** [To be planned]
+**Goal:** An admin-only dashboard at /admin shows aggregate platform stats, a filterable/paginated searches table with expandable expert rows, a frequency-ranked gap tracking table with resolve action, and CSV export for both sections — all guarded by X-Admin-Key header auth.
 **Depends on:** Phase 6
-**Plans:** 0 plans
+**Plans:** 4 plans
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 7 to break down)
+- [ ] 07-01-PLAN.md — Backend schema migration (top_match_score + gap_resolved) + all /api/admin/* endpoints
+- [ ] 07-02-PLAN.md — Frontend routing (react-router-dom), admin layout, hooks, and types
+- [ ] 07-03-PLAN.md — Admin pages and table components (Overview, Searches, Gaps, ExportDialog)
+- [ ] 07-04-PLAN.md — Deploy, set env vars, and human verification of full dashboard
 
 ### Phase 8: Test lab — Run queries against search engine, evaluate results, iterate on retrieval quality
 
