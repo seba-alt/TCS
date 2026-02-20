@@ -12,6 +12,8 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **CHAT-01**: User can type a natural language problem description into an input field and submit it to the chatbot
 - [ ] **CHAT-02**: Frontend is mobile-responsive with stacked expert cards and a touch-friendly input area
 
+*Note: CHAT-01 and CHAT-02 scaffold foundation established in 03-01 (Vite+React+Tailwind+types). Full implementation in 03-02 (components) and 03-03 (useChat hook + integration).*
+
 ### Expert Recommendations
 
 - [x] **REC-01**: Backend embeds the user's query using Google GenAI (`text-embedding-004`) and semantically searches the expert CSV database
@@ -77,4 +79,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-02-20*
-*Last updated: 2026-02-20 after 02-04 execution (Phase 2 Plan 4 — SSE streaming upgrade complete, Phase 2 fully verified by human)*
+*Last updated: 2026-02-20 after 03-01 execution (Phase 3 Plan 1 — Vite+React+TS+Tailwind scaffold complete, CHAT-01/CHAT-02 scaffold foundation in place)*
