@@ -5,29 +5,29 @@
 See: .planning/PROJECT.md (updated 2026-02-20)
 
 **Core value:** A user describes any problem and instantly gets three expertly matched professionals they can contact — no searching, no filtering, no guesswork.
-**Current focus:** Phase 1 — Foundation
+**Current focus:** Phase 2 — RAG API
 
 ## Current Position
 
-Phase: 1 of 4 (Foundation)
-Plan: 3 of 3 in current phase
-Status: Awaiting human verification (checkpoint:human-verify — Task 3 of 01-03)
-Last activity: 2026-02-20 — Completed 01-03 Tasks 1 and 2; paused at Task 3 checkpoint (human-verify)
+Phase: 1 of 4 (Foundation) — COMPLETE
+Plan: 3 of 3 in phase 1 — COMPLETE
+Status: Phase 1 complete — ready to begin Phase 2 (RAG API)
+Last activity: 2026-02-20 — Completed 01-03 Task 3 (human-verify); all Phase 1 success criteria verified
 
 Progress: [███░░░░░░░] 30%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 2
+- Total plans completed: 3
 - Average duration: 2.5 min
-- Total execution time: 5 min
+- Total execution time: 7.5 min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01-foundation | 2 | 5 min | 2.5 min |
+| 01-foundation | 3 | 7.5 min | 2.5 min |
 
 **Recent Trend:**
 - Last 5 plans: 2.5 min
@@ -55,20 +55,19 @@ Recent decisions affecting current work:
 - [01-03]: asynccontextmanager lifespan (not deprecated @app.on_event) used for FAISS loading — FastAPI 0.90+ pattern
 - [01-03]: CORS never uses ['*'] — ALLOWED_ORIGINS env var with explicit origin list; Railway injects Vercel URL at deploy time
 - [01-03]: .gitignore fixed — added !.env.example negation to allow safe committed example file despite .env.* wildcard rule
+- [01-03]: Phase 1 fully verified by human — server starts, health returns non-zero index_size, CORS headers present, embed_query returns 768-dim vector, .env gitignored
 
 ### Pending Todos
 
-None yet.
+None.
 
 ### Blockers/Concerns
 
-- [Phase 1 - RESOLVED]: google-genai confirmed as active SDK — locked in requirements.txt as google-genai==1.64.*
 - [Phase 2]: Verify Gemini JSON mode parameters (`response_mime_type`, `response_schema`) against current Google GenAI Python SDK docs before implementing LLM service
 - [Phase 2]: Confirm `gemini-2.0-flash` is available on the project API key tier; fall back to `gemini-1.5-flash` if not
-- [Phase 1 - PENDING]: CSV not yet available — run scripts/validate_csv.py then ingest.py when experts.csv and GOOGLE_API_KEY are provided to build faiss.index and metadata.json
 
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: 01-03-PLAN.md Task 3 checkpoint (human-verify) — awaiting user to provide experts.csv + GOOGLE_API_KEY, run ingest.py, start server, and verify GET /api/health returns index_size > 0
+Stopped at: 01-03-PLAN.md complete — Phase 1 Foundation fully verified. Ready to begin Phase 2 (RAG API).
 Resume file: None

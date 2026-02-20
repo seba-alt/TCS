@@ -14,7 +14,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Expert Recommendations
 
-- [ ] **REC-01**: Backend embeds the user's query using Google GenAI (`text-embedding-004`) and semantically searches the expert CSV database
+- [x] **REC-01**: Backend embeds the user's query using Google GenAI (`text-embedding-004`) and semantically searches the expert CSV database
 - [ ] **REC-02**: Gemini LLM generates a conversational response recommending exactly 3 experts, each formatted as "Name — Job Title @ Company" followed by a "Why them:" explanation tailored to the user's problem
 - [ ] **REC-03**: Frontend renders 3 visual Expert Cards below the AI text response, displaying each expert's name, job title, company, and hourly rate
 - [ ] **REC-04**: Each Expert Card is a fully clickable link that routes the user directly to that expert's profile page on the Tinrate platform
@@ -64,7 +64,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | CHAT-01 | Phase 3 | Pending |
 | CHAT-02 | Phase 3 | Pending |
-| REC-01 | Phase 1 | In progress (scaffold done; embedding pipeline in 01-02) |
+| REC-01 | Phase 1 | Complete (human-verified 2026-02-20) |
 | REC-02 | Phase 2 | Pending |
 | REC-03 | Phase 3 | Pending |
 | REC-04 | Phase 3 | Pending |
@@ -77,4 +77,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-02-20*
-*Last updated: 2026-02-20 after 01-01 execution (scaffold plan)*
+*Last updated: 2026-02-20 after 01-03 execution (Phase 1 Foundation complete — human verified)*

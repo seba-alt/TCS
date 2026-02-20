@@ -12,7 +12,7 @@ Four phases that follow the hard dependency chain of this RAG system: pre-comput
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Foundation** - Project scaffold, CSV data pipeline, FAISS index, FastAPI skeleton with CORS and health endpoint
+- [x] **Phase 1: Foundation** - Project scaffold, CSV data pipeline, FAISS index, FastAPI skeleton with CORS and health endpoint
 - [ ] **Phase 2: RAG API** - Embedding-based retrieval, Gemini generation with JSON mode, streaming SSE endpoint
 - [ ] **Phase 3: Frontend** - React chat UI, Expert Cards, mobile-responsive layout, connected to streaming API
 - [ ] **Phase 4: Deployment** - Vercel + Railway production deploy, environment variables, keep-alive, production CORS
@@ -32,8 +32,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 Plans:
 - [x] 01-01-PLAN.md — Project scaffold: .gitignore, requirements.txt, scripts/validate_csv.py
-- [ ] 01-02-PLAN.md — Embedder service and offline ingestion pipeline (CSV → FAISS index)
-- [ ] 01-03-PLAN.md — FastAPI server with lifespan FAISS loading, CORS, and health endpoint
+- [x] 01-02-PLAN.md — Embedder service and offline ingestion pipeline (CSV → FAISS index)
+- [x] 01-03-PLAN.md — FastAPI server with lifespan FAISS loading, CORS, and health endpoint
 
 ### Phase 2: RAG API
 **Goal**: An API endpoint accepts a natural language query and returns exactly 3 matched experts with "why them" explanations — verified correct before any frontend work begins
@@ -75,7 +75,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 1/3 | In progress | - |
+| 1. Foundation | 3/3 | Complete | 2026-02-20 |
 | 2. RAG API | 0/TBD | Not started | - |
 | 3. Frontend | 0/TBD | Not started | - |
 | 4. Deployment | 0/TBD | Not started | - |
