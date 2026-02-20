@@ -26,7 +26,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import FAISS_INDEX_PATH, METADATA_PATH
 from app.database import Base, engine
-from app.routers import chat, health
+from app.routers import chat, email_capture, health
 
 # Load .env for local development — no-op in production (Railway injects env vars)
 load_dotenv()
@@ -100,3 +100,4 @@ app.add_middleware(
 # --- Routes ---
 app.include_router(health.router)
 app.include_router(chat.router)
+app.include_router(email_capture.router)
