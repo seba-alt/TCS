@@ -29,3 +29,21 @@ class Conversation(Base):
     created_at: Mapped[datetime.datetime] = mapped_column(
         DateTime, default=datetime.datetime.utcnow, nullable=False
     )
+
+
+class EmailLead(Base):
+    """
+    Stores email addresses submitted via the email gate for lead capture.
+    Unique constraint on email prevents duplicates — use INSERT OR IGNORE (on_conflict_do_nothing)
+    at the query layer for idempotency.
+
+    # Migration note: if moving to Postgres, switch to sqlalchemy.dialects.postgresql.insert
+    """
+
+    __tablename__ = "email_leads"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    email: Mapped[str] = mapped_column(String(320), unique=True, nullable=False, index=True)
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime, default=datetime.datetime.utcnow, nullable=False
+    )
