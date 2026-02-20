@@ -31,7 +31,7 @@ TOP_K = 5
 # Cosine similarity threshold (inner product on L2-normalized vectors = cosine similarity).
 # Candidates below this score trigger the dual low-confidence check path in the LLM service.
 # 0.65 is conservative — tune down if too many valid queries are flagged as low-confidence.
-SIMILARITY_THRESHOLD = 0.65
+SIMILARITY_THRESHOLD = 0.60
 
 
 @dataclass
@@ -78,21 +78,33 @@ def retrieve(query: str, faiss_index: faiss.IndexFlatIP, metadata: list[dict]) -
         # CONTEXT.md rule: omit experts missing name, title, company, or hourly_rate
         def _get(row: dict, *keys: str) -> str | None:
             for k in keys:
-                v = row.get(k) or row.get(k.replace("_", " "))
-                if v and str(v).strip() and str(v).strip().lower() not in ("nan", "none", ""):
-                    return str(v).strip()
+                # Try exact key, then underscore→space, then case-insensitive scan
+                for candidate in (k, k.replace("_", " ")):
+                    v = row.get(candidate)
+                    if v is None:
+                        # Case-insensitive fallback
+                        v = next((row[rk] for rk in row if rk.lower() == candidate.lower()), None)
+                    if v and str(v).strip() and str(v).strip().lower() not in ("nan", "none", ""):
+                        return str(v).strip()
             return None
 
-        name = _get(row, "name", "Name", "expert_name")
-        title = _get(row, "title", "Title", "job_title", "position")
+        # Handle split first/last name fields
+        first = _get(row, "First Name", "first_name", "first name")
+        last = _get(row, "Last Name", "last_name", "last name")
+        if first and last:
+            name = f"{first} {last}"
+        else:
+            name = _get(row, "name", "Name", "expert_name", "Full Name", "full_name")
+
+        title = _get(row, "Job Title", "job_title", "title", "Title", "position", "Role")
         company = _get(row, "company", "Company", "organization", "employer")
-        hourly_rate = _get(row, "hourly_rate", "hourly rate", "rate", "Rate", "price")
+        hourly_rate = _get(row, "Hourly Rate", "hourly_rate", "hourly rate", "rate", "Rate", "price")
 
         if not all([name, title, company, hourly_rate]):
             continue  # Skip experts missing required fields
 
         # CONTEXT.md rule: include expert even if profile_url is missing; just omit the link
-        profile_url = _get(row, "profile_url", "profile url", "url", "URL", "link")
+        profile_url = _get(row, "Link", "profile_url", "profile url", "url", "URL", "link")
 
         candidates.append(RetrievedExpert(
             name=name,
