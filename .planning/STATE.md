@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-02-20)
 
 ## Current Position
 
-Phase: 7 of 8 (Analytics dashboard) — IN PROGRESS
-Plan: 2 of 2 in phase 7 — COMPLETE (07-02 done 2026-02-20)
-Status: 07-02 complete. Admin frontend foundation built — react-router-dom BrowserRouter, AdminApp layout + sidebar, TypeScript admin types, useAdminData/useAdminExport hooks with X-Admin-Key auth. Ready for 07-03 (admin pages — if planned) or Phase 8.
-Last activity: 2026-02-20 — 07-02 complete. Admin dashboard routing, layout, types, and data hooks all built. tsc and Vite build clean.
+Phase: 7 of 8 (Analytics dashboard) — COMPLETE
+Plan: 3 of 3 in phase 7 — COMPLETE (07-03 done 2026-02-20)
+Status: 07-03 complete. Full admin dashboard UI built — Overview (4 StatCards), Searches (TanStack Table + filters + expand + CSV export), Gaps (frequency table + resolve + CSV export). Vite build and tsc clean. Ready for Phase 8.
+Last activity: 2026-02-20 — 07-03 complete. Admin pages (OverviewPage, SearchesPage, GapsPage) and components (StatCard, ExportDialog, ExpandedExpertRow, SearchesTable, GapsTable) all implemented.
 
-Progress: [████████████████████████] 2/2 plans done in phase 7
+Progress: [████████████████████████████] 3/3 plans done in phase 7
 
 ## Live URLs
 
@@ -67,6 +67,7 @@ Steps:
 | Phase 06 P03 | ~5min | 2 tasks | 2 files |
 | Phase 07 P01 | 5min | 2 tasks | 4 files |
 | Phase 07 P02 | 3min | 2 tasks | 11 files |
+| Phase 07 P03 | 3min | 2 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -163,6 +164,8 @@ Recent decisions affecting current work:
 - [07-02]: JSON.stringify(filters) as useCallback dep — simplest value-equality for plain filter objects without deep-equal library; acceptable for admin tool
 - [07-02]: Blob URL download pattern in useAdminExport — native anchor href cannot inject X-Admin-Key header; fetch + createObjectURL is required for authenticated CSV exports
 - [07-02]: Stub pages (OverviewPage, SearchesPage, GapsPage) created immediately — TypeScript build requires all imports to resolve at compile time; stubs replaced by Plan 03
+- [Phase 07]: [07-03]: response_experts returned from /api/admin/searches as raw JSON string — ExpandedExpertRow parses locally, keeping serializer simple with graceful fallback
+- [Phase 07]: [07-03]: Direct fetch() in GapsTable for POST resolve instead of extending adminFetch — adminFetch is GET-only by design; single POST call doesn't justify refactoring shared utility
 
 ### Pending Todos
 
@@ -175,5 +178,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: 07-02 complete — Admin frontend foundation built. react-router-dom BrowserRouter, AdminApp layout + sidebar, TypeScript admin types, useAdminData/useAdminExport hooks. Phase 7 complete (2/2 plans).
+Stopped at: 07-03 complete — Full admin dashboard UI implemented. OverviewPage (4 StatCards), SearchesPage (TanStack Table + filter panel + expand + CSV export), GapsPage (frequency table + resolve + CSV export). Phase 7 complete (3/3 plans).
 Resume file: None
