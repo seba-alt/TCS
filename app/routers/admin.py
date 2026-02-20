@@ -423,8 +423,11 @@ def get_experts(request: Request):
         {experts: [{username, first_name, last_name, job_title, company, bio,
                     hourly_rate, profile_url, category}]}
     """
-    metadata: list = request.app.state.metadata
-    return {"experts": [_serialize_expert(e) for e in metadata]}
+    try:
+        metadata: list = getattr(request.app.state, "metadata", None) or _load_metadata()
+        return {"experts": [_serialize_expert(e) for e in metadata]}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to load experts: {exc!r}") from exc
 
 
 class ClassifyBody(BaseModel):

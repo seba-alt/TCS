@@ -10,23 +10,25 @@ export default function GapsPage() {
   const { downloadCsv, exporting } = useAdminExport()
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
+    <div className="p-8 space-y-6">
+      <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Gaps</h1>
-          <p className="text-sm text-gray-500 mt-1">Queries where the system couldn't find a confident match — ranked by frequency.</p>
+          <h1 className="text-2xl font-bold text-white">Gaps</h1>
+          <p className="text-slate-500 text-sm mt-1">
+            Queries where the system couldn't find a confident match — ranked by frequency.
+          </p>
         </div>
         <button
           onClick={() => setShowExport(true)}
           disabled={exporting}
-          className="px-4 py-2 text-sm font-medium text-white bg-brand-purple rounded-lg hover:bg-brand-purple/90 disabled:opacity-50"
+          className="px-4 py-2 text-sm font-semibold text-white bg-purple-600 hover:bg-purple-700 disabled:opacity-50 rounded-lg transition-colors"
         >
           {exporting ? 'Exporting…' : 'Export CSV'}
         </button>
       </div>
 
-      {loading && <div className="text-gray-400 text-sm">Loading gaps…</div>}
-      {error && <div className="text-red-500 text-sm">Error: {error}</div>}
+      {loading && <p className="text-slate-500 text-sm animate-pulse">Loading gaps…</p>}
+      {error && <p className="text-red-400 text-sm">Error: {error}</p>}
       {data && <GapsTable data={data.gaps} onResolved={refetch} />}
 
       {showExport && (

@@ -6,7 +6,7 @@ const getAdminKey = () => sessionStorage.getItem('admin_key') ?? ''
 
 interface GapsTableProps {
   data: GapRow[]
-  onResolved: () => void  // refetch callback after resolve action
+  onResolved: () => void
 }
 
 export default function GapsTable({ data, onResolved }: GapsTableProps) {
@@ -26,64 +26,75 @@ export default function GapsTable({ data, onResolved }: GapsTableProps) {
   }
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-gray-200">
-      <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
-          <tr>
-            {['Query', 'Occurrences', 'Best Score', 'Status', 'Actions'].map(h => (
-              <th key={h} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                {h}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
-          {data.length === 0 ? (
-            <tr>
-              <td colSpan={5} className="px-6 py-10 text-center text-sm text-gray-400">
-                No gaps detected.
-              </td>
+    <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl overflow-hidden">
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-slate-700/60">
+              {['Query', 'Occurrences', 'Best Score', 'Status', 'Actions'].map(h => (
+                <th
+                  key={h}
+                  className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider"
+                >
+                  {h}
+                </th>
+              ))}
             </tr>
-          ) : (
-            data.map((gap, i) => (
-              <tr key={i} className="hover:bg-gray-50">
-                <td className="px-6 py-3 max-w-xs">
-                  <span className="block truncate text-sm text-gray-900" title={gap.query}>{gap.query}</span>
-                </td>
-                <td className="px-6 py-3 text-sm text-gray-700">{gap.frequency}</td>
-                <td className="px-6 py-3 text-sm text-gray-700">
-                  {gap.best_score != null ? gap.best_score.toFixed(3) : '—'}
-                </td>
-                <td className="px-6 py-3">
-                  {gap.resolved ? (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700">Resolved</span>
-                  ) : (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700">Open</span>
-                  )}
-                </td>
-                <td className="px-6 py-3 text-right">
-                  <div className="flex items-center justify-end gap-3">
-                    <button
-                      onClick={() => navigate('/admin/searches', { state: { query: gap.query } })}
-                      className="text-xs font-medium text-blue-600 hover:underline"
-                    >
-                      View Searches →
-                    </button>
-                    {!gap.resolved && (
-                      <button
-                        onClick={() => handleResolve(gap)}
-                        className="text-xs font-medium text-brand-purple hover:underline"
-                      >
-                        Mark Resolved
-                      </button>
-                    )}
-                  </div>
+          </thead>
+          <tbody>
+            {data.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="px-5 py-10 text-center text-slate-500">
+                  No gaps detected.
                 </td>
               </tr>
-            ))
-          )}
-        </tbody>
-      </table>
+            ) : (
+              data.map((gap, i) => (
+                <tr key={i} className="border-b border-slate-700/40 hover:bg-slate-700/20 transition-colors">
+                  <td className="px-5 py-3 max-w-xs">
+                    <span className="block truncate text-white" title={gap.query}>
+                      {gap.query}
+                    </span>
+                  </td>
+                  <td className="px-5 py-3 text-slate-300">{gap.frequency}</td>
+                  <td className="px-5 py-3 font-mono text-slate-400">
+                    {gap.best_score != null ? gap.best_score.toFixed(3) : '—'}
+                  </td>
+                  <td className="px-5 py-3">
+                    {gap.resolved ? (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-900/50 text-emerald-400 border border-emerald-800/50">
+                        Resolved
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-900/50 text-red-400 border border-red-800/50">
+                        Open
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-5 py-3">
+                    <div className="flex items-center gap-4">
+                      <button
+                        onClick={() => navigate('/admin/searches', { state: { query: gap.query } })}
+                        className="text-xs text-blue-400 hover:text-blue-300 hover:underline whitespace-nowrap"
+                      >
+                        View Searches →
+                      </button>
+                      {!gap.resolved && (
+                        <button
+                          onClick={() => handleResolve(gap)}
+                          className="text-xs text-purple-400 hover:text-purple-300 hover:underline whitespace-nowrap"
+                        >
+                          Mark Resolved
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   )
 }
