@@ -1,0 +1,80 @@
+# Requirements: Tinrate AI Concierge Chatbot
+
+**Defined:** 2026-02-20
+**Core Value:** A user describes any problem and instantly gets three expertly matched professionals they can contact — no searching, no filtering, no guesswork.
+
+## v1 Requirements
+
+Requirements for initial release. Each maps to roadmap phases.
+
+### Chat Interface
+
+- [ ] **CHAT-01**: User can type a natural language problem description into an input field and submit it to the chatbot
+- [ ] **CHAT-02**: Frontend is mobile-responsive with stacked expert cards and a touch-friendly input area
+
+### Expert Recommendations
+
+- [ ] **REC-01**: Backend embeds the user's query using Google GenAI (`text-embedding-004`) and semantically searches the expert CSV database
+- [ ] **REC-02**: Gemini LLM generates a conversational response recommending exactly 3 experts, each formatted as "Name — Job Title @ Company" followed by a "Why them:" explanation tailored to the user's problem
+- [ ] **REC-03**: Frontend renders 3 visual Expert Cards below the AI text response, displaying each expert's name, job title, company, and hourly rate
+- [ ] **REC-04**: Each Expert Card is a fully clickable link that routes the user directly to that expert's profile page on the Tinrate platform
+
+### Deployment
+
+- [ ] **DEPL-01**: Application is publicly hosted and accessible via URL — React frontend on Vercel, FastAPI backend on Railway or Render
+
+## v2 Requirements
+
+Deferred to future release. Tracked but not in current roadmap.
+
+### Chat UX
+
+- **UX-01**: Visible loading / thinking state while the AI processes the query (2–8 second calls)
+- **UX-02**: Clarifying question flow — if query is too vague or narrow, chatbot asks one targeted follow-up before recommending
+- **UX-03**: Example prompts displayed on empty state to reduce activation friction for new visitors
+- **UX-04**: Error state messaging for API failures
+- **UX-05**: Empty / no-match state when no experts meet minimum confidence threshold
+
+### Differentiators
+
+- **DIFF-01**: Multi-turn conversation history carryover across queries
+- **DIFF-02**: Suggested follow-up prompt chips from Gemini
+- **DIFF-03**: "Searching for: X" semantic query reformulation feedback
+
+## Out of Scope
+
+Explicitly excluded. Documented to prevent scope creep.
+
+| Feature | Reason |
+|---------|--------|
+| User authentication / accounts | Zero v1 value; weeks of auth infrastructure |
+| Expert profile management (CRUD) | CSV is static for v1; no admin UI needed |
+| In-widget booking / scheduling | Booking happens on Tinrate profiles; no duplication |
+| Mobile native app | Web-first; native app is a separate project |
+| Filters sidebar | Defeats the concierge premise; natural language carries filter intent |
+| Pagination / "show more" | Exactly 3 results is a deliberate product decision |
+| In-widget feedback / ratings | No training loop or storage pipeline in v1 |
+| OAuth / social login | Anonymous usage only for v1 |
+
+## Traceability
+
+Which phases cover which requirements. Updated during roadmap creation.
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| CHAT-01 | — | Pending |
+| CHAT-02 | — | Pending |
+| REC-01 | — | Pending |
+| REC-02 | — | Pending |
+| REC-03 | — | Pending |
+| REC-04 | — | Pending |
+| DEPL-01 | — | Pending |
+
+**Coverage:**
+- v1 requirements: 7 total
+- Mapped to phases: 0 (roadmap pending)
+- Unmapped: 7 ⚠️
+
+---
+*Requirements defined: 2026-02-20*
+*Last updated: 2026-02-20 after initial definition*
