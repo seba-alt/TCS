@@ -3,6 +3,9 @@
 .env.*
 .env.local
 
+# Allow the example file — it contains no real secrets, only placeholder values
+!.env.example
+
 # Generated data files — gitignored because they are large and regenerable
 data/faiss.index
 data/metadata.json
