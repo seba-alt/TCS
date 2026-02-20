@@ -10,6 +10,7 @@
 data/faiss.index
 data/metadata.json
 data/*.csv
+data/conversations.db
 
 # Python
 __pycache__/

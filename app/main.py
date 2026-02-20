@@ -17,6 +17,7 @@ import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
+import app.models  # noqa: F401 — registers ORM models with Base metadata
 import faiss
 import structlog
 from dotenv import load_dotenv
@@ -24,6 +25,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import FAISS_INDEX_PATH, METADATA_PATH
+from app.database import Base, engine
 from app.routers import health
 
 # Load .env for local development — no-op in production (Railway injects env vars)
@@ -38,6 +40,10 @@ async def lifespan(app: FastAPI):
     Load FAISS index and metadata at startup; nothing to release at shutdown.
     Using lifespan (NOT @app.on_event — that pattern is deprecated in FastAPI 0.90+).
     """
+    # Create database tables if they don't exist (idempotent — safe to call on every startup)
+    Base.metadata.create_all(bind=engine)
+    log.info("startup: database tables created/verified")
+
     log.info("startup: loading FAISS index", path=str(FAISS_INDEX_PATH))
 
     if not FAISS_INDEX_PATH.exists():

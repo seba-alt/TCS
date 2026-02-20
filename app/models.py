@@ -1,0 +1,31 @@
+"""
+SQLAlchemy ORM models.
+
+Conversation: persists every user interaction for lead capture and analytics.
+Email is required — the chat endpoint enforces this at request validation time.
+"""
+import datetime
+
+from sqlalchemy import DateTime, String, Text
+from sqlalchemy.orm import Mapped, mapped_column
+
+from app.database import Base
+
+
+class Conversation(Base):
+    __tablename__ = "conversations"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    email: Mapped[str] = mapped_column(String(320), index=True, nullable=False)
+    query: Mapped[str] = mapped_column(Text, nullable=False)
+    # history: JSON-serialized list of prior {role, content} dicts for multi-turn context.
+    # Empty list ("[]") for first-turn queries.
+    history: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
+    response_type: Mapped[str] = mapped_column(String(50), nullable=False)  # "match" | "clarification"
+    response_narrative: Mapped[str] = mapped_column(Text, nullable=True)
+    # experts: JSON-serialized list of expert dicts (name, title, company, hourly_rate, profile_url).
+    # Empty list ("[]") for clarification responses.
+    response_experts: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime, default=datetime.datetime.utcnow, nullable=False
+    )
