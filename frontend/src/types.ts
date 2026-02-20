@@ -14,6 +14,7 @@ export interface Message {
   role: MessageRole
   content: string              // narrative text for assistant, query text for user
   experts?: Expert[]           // only on assistant messages with type === 'recommendation'
+  conversationId?: number      // from SSE result event; only on assistant recommendation messages
   isStreaming?: boolean        // true while SSE result is being received
 }
 
@@ -35,4 +36,7 @@ export interface SSEResultEvent {
   type: 'recommendation' | 'clarification'
   narrative: string
   experts: Expert[]
+  conversation_id?: number
 }
+
+export type FeedbackVote = 'up' | 'down' | null

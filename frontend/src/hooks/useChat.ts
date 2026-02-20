@@ -117,12 +117,14 @@ export function useChat({ email }: UseChatOptions): UseChatReturn {
             } else if (event.event === 'result') {
               const narrative = event.narrative as string
               const experts = (event.experts ?? []) as Expert[]
+              const conversationId = event.conversation_id as number | undefined
 
               setStatus('streaming')
               updateLastAssistantMessage((msg) => ({
                 ...msg,
                 content: narrative,
                 experts: experts.length > 0 ? experts : undefined,
+                conversationId,
                 isStreaming: true, // cursor still shown until done event
               }))
 
