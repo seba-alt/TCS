@@ -100,7 +100,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 **Goal:** Expert cards appear immediately after a chat response, greyed-out and non-clickable, with an inline email capture form below them — submitting a valid email instantly unlocks all cards and stores the lead; returning users (same browser) see fully unlocked cards with no gate.
 **Depends on:** Phase 4
-**Plans:** 3 plans
+**Plans:** 2/3 plans executed
 
 Plans:
 - [x] 05-01-PLAN.md — Backend lead capture: EmailLead model + POST /api/email-capture endpoint (idempotent)

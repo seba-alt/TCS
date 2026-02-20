@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-20)
 
 **Core value:** A user describes any problem and instantly gets three expertly matched professionals they can contact — no searching, no filtering, no guesswork.
-**Current focus:** Phase 5 — Email Gate UX (Plan 1 of 3 complete)
+**Current focus:** Phase 5 — Email Gate UX (Plan 2 of 3 complete)
 
 ## Current Position
 
 Phase: 5 of 8 (Email Gate UX)
-Plan: 1 of 3 in phase 5 — COMPLETE
-Status: 05-01 complete — EmailLead model + POST /api/email-capture endpoint shipped and verified.
-Last activity: 2026-02-20 — Backend lead capture endpoint live locally. Awaiting 05-02 (frontend email gate).
+Plan: 2 of 3 in phase 5 — COMPLETE
+Status: 05-02 complete — Email gate UX shipped: locked ExpertCards, inline EmailGate form, instant unlock on submission, returning-user bypass via localStorage.
+Last activity: 2026-02-20 — Frontend email gate complete. TypeScript zero errors, vite build clean. Awaiting 05-03 (final plan if any, or deploy).
 
-Progress: [████░░░░░░░░░░░░░░░░] 33% of phase 5 (1/3 plans done)
+Progress: [████████░░░░░░░░░░░░] 67% of phase 5 (2/3 plans done)
 
 ## Live URLs
 
@@ -60,6 +60,7 @@ Steps:
 | Phase 04-deployment P02 | 2 min | 2 tasks | 9 files |
 | Phase 04-deployment P03 | multi-session | 2 tasks | 15 files |
 | Phase 05-email-gate P01 | 1 min | 2 tasks | 3 files |
+| Phase 05 P02 | 3min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -133,6 +134,10 @@ Recent decisions affecting current work:
 - [05-01]: sqlalchemy.dialects.sqlite.insert used (not sqlalchemy.insert) for on_conflict_do_nothing — API is identical to postgresql dialect for future migration
 - [05-01]: Endpoint returns {status: ok} for both new and duplicate emails — frontend never sees a failure from re-submission
 - [05-01]: email_leads table auto-created via existing Base.metadata.create_all in lifespan — no additional startup code needed
+- [Phase 05]: Lazy useState initializer (not useEffect) for localStorage — prevents flash of locked state for returning users
+- [Phase 05]: localStorage write before backend POST — backend failure is silent, UX unlock is immediate
+- [Phase 05]: locked renders as div not anchor — keyboard users cannot tab-activate a locked link; aria-hidden on locked cards
+- [Phase 05]: EmailGate only on last expert message (lastExpertMsgIndex reduce) — prevents duplicate forms in multi-turn chat
 
 ### Pending Todos
 
@@ -145,5 +150,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: Completed 05-01-PLAN.md — EmailLead model + POST /api/email-capture endpoint shipped. Ready for 05-02 (frontend email gate).
+Stopped at: Completed 05-02-PLAN.md — email gate UX complete. Locked ExpertCards on first visit, EmailGate form on last expert message, instant unlock, returning-user bypass via localStorage.
 Resume file: None
