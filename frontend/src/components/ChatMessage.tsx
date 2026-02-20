@@ -1,6 +1,7 @@
 import type { Message } from '../types'
 import ExpertCard from './ExpertCard'
 import EmailGate from './EmailGate'
+import FeedbackBar from './FeedbackBar'
 
 interface Props {
   message: Message
@@ -8,9 +9,10 @@ interface Props {
   isUnlocked: boolean
   onSubmitEmail: (email: string) => Promise<void>
   isLastExpertMessage: boolean
+  email: string | null
 }
 
-export default function ChatMessage({ message, thinkingQuote, isUnlocked, onSubmitEmail, isLastExpertMessage }: Props) {
+export default function ChatMessage({ message, thinkingQuote, isUnlocked, onSubmitEmail, isLastExpertMessage, email }: Props) {
   const isUser = message.role === 'user'
   const isThinking = !isUser && message.isStreaming && !message.content
 
@@ -61,6 +63,13 @@ export default function ChatMessage({ message, thinkingQuote, isUnlocked, onSubm
             ))}
             {!isUnlocked && isLastExpertMessage && (
               <EmailGate onSubmit={onSubmitEmail} />
+            )}
+            {isLastExpertMessage && message.conversationId !== undefined && (
+              <FeedbackBar
+                conversationId={message.conversationId}
+                expertIds={message.experts?.map((e) => e.profile_url ?? e.name) ?? []}
+                email={email}
+              />
             )}
           </div>
         )}

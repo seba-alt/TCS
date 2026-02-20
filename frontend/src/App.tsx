@@ -77,6 +77,7 @@ export default function App() {
                     isUnlocked={isUnlocked}
                     onSubmitEmail={submitEmail}
                     isLastExpertMessage={isLastExpertMessage}
+                    email={email}
                   />
                 )
               })}
