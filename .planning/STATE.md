@@ -99,6 +99,8 @@ Recent decisions affecting current work:
 - [04-02]: Sentry enabled only in PROD builds (import.meta.env.PROD) -- local dev never sends errors to Sentry
 - [04-02]: sentryVitePlugin disabled when SENTRY_AUTH_TOKEN absent -- local builds never fail due to missing Sentry credentials
 - [04-02]: noqa: E402 applied to scripts/ingest.py sys.path-dependent import -- script legitimately needs sys.path insertion before app.config import
+- [Phase 04-deployment]: Data files (faiss.index, metadata.json, experts.csv) committed to git — Railway Railpack cannot inject GOOGLE_API_KEY at build time so ingest.py cannot run as build step
+- [Phase 04-deployment]: why_them field added to Expert dataclass — LLM returns per-expert explanation stored in response_experts DB column for future UI display
 
 ### Pending Todos
 

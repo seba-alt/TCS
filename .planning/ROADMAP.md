@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Foundation** - Project scaffold, CSV data pipeline, FAISS index, FastAPI skeleton with CORS and health endpoint
 - [x] **Phase 2: RAG API** - Embedding-based retrieval, Gemini generation with JSON mode, streaming SSE endpoint
 - [x] **Phase 3: Frontend** - React chat UI, Expert Cards, mobile-responsive layout, connected to streaming API (completed 2026-02-20)
-- [ ] **Phase 4: Deployment** - Vercel + Railway production deploy, environment variables, keep-alive, production CORS
+- [x] **Phase 4: Deployment** - Vercel + Railway production deploy, environment variables, keep-alive, production CORS (completed 2026-02-20)
 
 ## Phase Details
 
@@ -94,4 +94,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | 1. Foundation | 3/3 | Complete | 2026-02-20 |
 | 2. RAG API | 4/4 | Complete | 2026-02-20 |
 | 3. Frontend | 3/3 | Complete   | 2026-02-20 |
-| 4. Deployment | 2/3 | In Progress|  |
+| 4. Deployment | 3/3 | Complete   | 2026-02-20 |
