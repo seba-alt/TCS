@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-20)
 ## Current Position
 
 Phase: 4 of 4 (Deployment) — IN PROGRESS
-Plan: 1 of 3 in phase 4
-Status: 04-01 complete — backend codebase ready for Railway deploy (railway.json, VAR_DIR SQLite, Sentry init, data files unignored). Starting 04-02.
-Last activity: 2026-02-20 — Completed 04-01 (railway.json + VAR_DIR config + Sentry). Backend deploy prep done.
+Plan: 2 of 3 in phase 4
+Status: 04-02 complete — GitHub Actions CI (ruff + tsc) and Sentry React SDK instrumentation committed. Starting 04-03.
+Last activity: 2026-02-20 — Completed 04-02 (CI workflow + Sentry frontend). CI gates live on main.
 
-Progress: [██████████] 33% of phase 4 (1/3 plans done)
+Progress: [████████████████████] 67% of phase 4 (2/3 plans done)
 
 ## Performance Metrics
 
@@ -30,7 +30,7 @@ Progress: [██████████] 33% of phase 4 (1/3 plans done)
 | 01-foundation | 3 | 7.5 min | 2.5 min |
 | 02-rag-api | 4 | 12.2 min | 3.1 min |
 | 03-frontend | 3 | 6 min | 2 min |
-| 04-deployment | 1 (so far) | 2 min | 2 min |
+| 04-deployment | 2 (so far) | 4 min | 2 min |
 
 **Recent Trend:**
 - Last 5 plans: 2.4 min
@@ -39,6 +39,7 @@ Progress: [██████████] 33% of phase 4 (1/3 plans done)
 *Updated after each plan completion*
 | Phase 03-frontend P03 | 2 | 2 tasks | 3 files |
 | Phase 04-deployment P01 | 2 min | 2 tasks | 5 files |
+| Phase 04-deployment P02 | 2 min | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -94,6 +95,10 @@ Recent decisions affecting current work:
 - [04-01]: FAISS index, metadata.json, and experts.csv committed to git — Railway clones repo at deploy time so data files must be tracked
 - [04-01]: sentry-sdk added without version pin — stable and backward-compatible; walrus-operator guard skips init silently when SENTRY_DSN absent
 - [04-01]: railway.json declares healthcheckPath=/api/health with 300s timeout for FAISS lifespan startup
+- [04-02]: CI workflow gates Railway deploys via ruff check and tsc -- both must pass before merge to main
+- [04-02]: Sentry enabled only in PROD builds (import.meta.env.PROD) -- local dev never sends errors to Sentry
+- [04-02]: sentryVitePlugin disabled when SENTRY_AUTH_TOKEN absent -- local builds never fail due to missing Sentry credentials
+- [04-02]: noqa: E402 applied to scripts/ingest.py sys.path-dependent import -- script legitimately needs sys.path insertion before app.config import
 
 ### Pending Todos
 
@@ -106,5 +111,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: Completed 04-01-PLAN.md — backend deployment prep done. Ready for 04-02 (Railway service connect + Volume + env vars).
+Stopped at: Completed 04-02-PLAN.md — CI pipeline + Sentry frontend done. Ready for 04-03 (Railway service connect + Volume + env vars).
 Resume file: None

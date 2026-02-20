@@ -80,8 +80,8 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 04-01-PLAN.md — Backend deployment prep: unignore data files, Railway Volume path, railway.json, Sentry backend
-- [ ] 04-02-PLAN.md — CI pipeline (GitHub Actions ruff + tsc) and Sentry React frontend instrumentation
+- [x] 04-01-PLAN.md — Backend deployment prep: unignore data files, Railway Volume path, railway.json, Sentry backend
+- [x] 04-02-PLAN.md — CI pipeline (GitHub Actions ruff + tsc) and Sentry React frontend instrumentation
 - [ ] 04-03-PLAN.md — Commit and push to main, connect Railway + Vercel, configure env vars, end-to-end verification
 
 ## Progress
@@ -94,4 +94,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | 1. Foundation | 3/3 | Complete | 2026-02-20 |
 | 2. RAG API | 4/4 | Complete | 2026-02-20 |
 | 3. Frontend | 3/3 | Complete   | 2026-02-20 |
-| 4. Deployment | 1/3 | In Progress|  |
+| 4. Deployment | 2/3 | In Progress|  |
