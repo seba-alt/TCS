@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md
 
 **Core value:** A user describes any problem and instantly gets three expertly matched professionals they can contact — no searching, no filtering, no guesswork.
-**Current focus:** v1.2 — Phase 12: Steering Panel Frontend
+**Current focus:** v1.2 — Phase 13: Search Lab A/B Comparison
 
 ## Current Position
 
-Phase: 12 — Steering Panel Frontend
-Plan: 02 complete — Phase 12 complete, ready for Phase 13 (Search Lab A/B Comparison)
-Status: Complete — Phase 12 all 2 plans done (types/hook + IntelligenceDashboardPage steering panel)
-Last activity: 2026-02-21 — Phase 12 Plan 02 complete (IntelligenceDashboardPage steering panel with toggles, threshold inputs, dirty tracking, save flow)
+Phase: 13 — Search Lab A/B Comparison
+Plan: 01 complete — Phase 13 in progress, Plan 01 done (compare endpoint + TypeScript types), Plan 02 next
+Status: In Progress — Phase 13 Plan 01 done (POST /api/admin/compare + TS types)
+Last activity: 2026-02-21 — Phase 13 Plan 01 complete (POST /api/admin/compare with 4 presets + CompareResponse/CompareColumn/CompareExpert/LabConfigKey/LabOverrides types)
 
 Progress: [█████████████████████████░░░░░] v1.0 + v1.1 complete (11/13 phases) — v1.2 Phase 12 done, Phase 13 next
 
@@ -40,7 +40,7 @@ Progress: [███████████████████████
 | 10 (v1.1) | 2/2 plans | Complete |
 | 11 (v1.2) | 2/2 plans | Complete |
 | 12 (v1.2) | 2/2 plans | Complete — 2026-02-21 |
-| 13 (v1.2) | TBD | Not started |
+| 13 (v1.2) | 1/TBD plans | In Progress — Plan 01 done 2026-02-21 |
 
 ## Accumulated Context
 
@@ -97,6 +97,7 @@ Recent decisions affecting current work:
 - [12-02]: Sequential POST per changed threshold (not parallel) — simpler error attribution to individual key
 - [12-02]: Dirty state detection uses string comparison of local input state vs originalThresholds snapshot (initialized on data load)
 - [12-02]: ToggleSwitch uses button[role=switch] with aria-checked — no external library; TooltipIcon uses native title attribute
+- [Phase 13-search-lab-a-b-comparison]: _retrieve_for_lab() reads DB settings then merges config_flags on top — does NOT call retrieve_with_intelligence() which would re-read DB; ThreadPoolExecutor for parallel config execution; per-run overrides applied uniformly to all selected presets
 
 ### Pending Todos
 
@@ -111,5 +112,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-21
-Stopped at: Completed 12-02-PLAN.md — IntelligenceDashboardPage steering panel with toggles, threshold inputs, dirty tracking, and inline save feedback. Phase 12 complete. Ready for Phase 13 (Search Lab A/B Comparison).
+Stopped at: Completed 13-01-PLAN.md — POST /api/admin/compare endpoint with 4 preset configs run in parallel via ThreadPoolExecutor + TypeScript types (CompareResponse, CompareColumn, CompareExpert, LabConfigKey, LabOverrides) in types.ts. Phase 13 Plan 02 (SearchLabPage UI) is next.
 Resume file: None

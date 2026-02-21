@@ -24,10 +24,10 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Search Lab A/B
 
-- [ ] **LAB-01**: Search Lab offers a "Compare modes" option that runs the same query in up to 4 configurations simultaneously: baseline (no intelligence), HyDE only, feedback only, full intelligence (both)
+- [x] **LAB-01**: Search Lab offers a "Compare modes" option that runs the same query in up to 4 configurations simultaneously: baseline (no intelligence), HyDE only, feedback only, full intelligence (both)
 - [ ] **LAB-02**: A/B results render as side-by-side columns per mode showing expert rankings in each configuration
 - [ ] **LAB-03**: A/B diff view highlights experts that changed rank, appeared in one mode but not another, or dropped out entirely between configurations
-- [ ] **LAB-04**: Admin can force-override HyDE and/or feedback flags for a single Search Lab run without changing global settings
+- [x] **LAB-04**: Admin can force-override HyDE and/or feedback flags for a single Search Lab run without changing global settings
 
 ## v2 Requirements
 
@@ -70,10 +70,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PANEL-02 | Phase 12 | Complete |
 | PANEL-03 | Phase 12 | Complete |
 | PANEL-04 | Phase 12 | Complete |
-| LAB-01 | Phase 13 | Pending |
+| LAB-01 | Phase 13 | Complete |
 | LAB-02 | Phase 13 | Pending |
 | LAB-03 | Phase 13 | Pending |
-| LAB-04 | Phase 13 | Pending |
+| LAB-04 | Phase 13 | Complete |
 
 **Coverage:**
 - v1.2 requirements: 12 total
