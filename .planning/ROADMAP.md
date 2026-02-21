@@ -149,5 +149,5 @@ Plans:
 | 9. Admin Expert Tab Enhancement | v1.1 | 3/3 | Complete | 2026-02-21 |
 | 10. Search Intelligence Layer | v1.1 | 2/2 | Complete | 2026-02-21 |
 | 11. Backend Settings API | v1.2 | 2/2 | Complete | 2026-02-21 |
-| 12. Steering Panel Frontend | v1.2 | 2/2 | Complete | 2026-02-21 |
+| 12. Steering Panel Frontend | v1.2 | Complete    | 2026-02-21 | 2026-02-21 |
 | 13. Search Lab A/B Comparison | v1.2 | 0/? | Not started | — |
