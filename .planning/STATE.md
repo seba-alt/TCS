@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md
 
 **Core value:** A user describes any problem and instantly gets three expertly matched professionals they can contact — no searching, no filtering, no guesswork.
-**Current focus:** v1.2 — Phase 11: Backend Settings API
+**Current focus:** v1.2 — Phase 12: Steering Panel Frontend
 
 ## Current Position
 
-Phase: 11 — Backend Settings API
-Plan: 02 complete — ready for Phase 12 (admin settings UI)
-Status: In progress — Phase 11 complete (both plans done)
-Last activity: 2026-02-21 — Phase 11 Plan 02 complete (GET + POST /api/admin/settings endpoints)
+Phase: 12 — Steering Panel Frontend
+Plan: 01 complete — ready for Plan 02 (IntelligenceDashboardPage steering panel)
+Status: In progress — Phase 12 Plan 01 complete (AdminSetting types + useAdminSettings hook)
+Last activity: 2026-02-21 — Phase 12 Plan 01 complete (AdminSetting/AdminSettingsResponse types + useAdminSettings hook)
 
-Progress: [████████████████████████░░░░░░] v1.0 + v1.1 complete (10/13 phases) — v1.2 Phase 11 next
+Progress: [████████████████████████░░░░░░] v1.0 + v1.1 complete (10/13 phases) — v1.2 Phase 12 in progress
 
 ## Live URLs
 
@@ -39,7 +39,7 @@ Progress: [███████████████████████
 | 09 (v1.1) | 3/3 plans | Complete |
 | 10 (v1.1) | 2/2 plans | Complete |
 | 11 (v1.2) | 2/2 plans | Complete |
-| 12 (v1.2) | TBD | Not started |
+| 12 (v1.2) | TBD | In progress — Plan 01 done |
 | 13 (v1.2) | TBD | Not started |
 
 ## Accumulated Context
@@ -92,6 +92,7 @@ Recent decisions affecting current work:
 - [11-02]: GET /api/admin/settings returns native-typed value (bool/float/int) and source field ("db" | "env" | "default") for override hierarchy
 - [11-02]: POST /api/admin/settings uses db.merge() for upsert on AppSetting primary key; value always stored as string
 - [11-02]: Deferred import of AppSetting inside settings endpoint functions — consistent with 11-01 get_settings() pattern
+- [Phase 12-01]: AdminSetting.value typed as boolean|number (native-typed per backend Phase 11 shape); source typed as 'db'|'env'|'default'
 
 ### Pending Todos
 
@@ -106,5 +107,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-21
-Stopped at: Completed 11-02-PLAN.md — GET + POST /api/admin/settings endpoints with SETTINGS_SCHEMA validation and db.merge() upsert. Phase 11 complete. Ready for Phase 12 (admin settings UI).
+Stopped at: Completed 12-01-PLAN.md — AdminSetting/AdminSettingsResponse interfaces in types.ts + useAdminSettings hook in useAdminData.ts. Ready for Phase 12 Plan 02 (IntelligenceDashboardPage steering panel).
 Resume file: None

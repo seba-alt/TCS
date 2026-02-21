@@ -17,10 +17,10 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Steering Panel
 
-- [ ] **PANEL-01**: Admin Intelligence tab displays HyDE and feedback flags as live toggle switches reflecting actual runtime state (DB override first, env var fallback)
-- [ ] **PANEL-02**: Admin can flip a toggle to enable/disable HyDE or feedback re-ranking; change persists to DB and takes effect on the next chat request without any redeploy
-- [ ] **PANEL-03**: Admin Intelligence tab displays editable threshold inputs: similarity threshold (0.0–1.0), HyDE trigger sensitivity (1–10), and feedback boost cap (0–50%)
-- [ ] **PANEL-04**: Admin can save threshold changes; UI confirms success or failure inline with no page reload
+- [x] **PANEL-01**: Admin Intelligence tab displays HyDE and feedback flags as live toggle switches reflecting actual runtime state (DB override first, env var fallback)
+- [x] **PANEL-02**: Admin can flip a toggle to enable/disable HyDE or feedback re-ranking; change persists to DB and takes effect on the next chat request without any redeploy
+- [x] **PANEL-03**: Admin Intelligence tab displays editable threshold inputs: similarity threshold (0.0–1.0), HyDE trigger sensitivity (1–10), and feedback boost cap (0–50%)
+- [x] **PANEL-04**: Admin can save threshold changes; UI confirms success or failure inline with no page reload
 
 ### Search Lab A/B
 
@@ -66,10 +66,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CONF-02 | Phase 11 | Complete |
 | CONF-03 | Phase 11 | Complete |
 | CONF-04 | Phase 11 | Complete |
-| PANEL-01 | Phase 12 | Pending |
-| PANEL-02 | Phase 12 | Pending |
-| PANEL-03 | Phase 12 | Pending |
-| PANEL-04 | Phase 12 | Pending |
+| PANEL-01 | Phase 12 | Complete |
+| PANEL-02 | Phase 12 | Complete |
+| PANEL-03 | Phase 12 | Complete |
+| PANEL-04 | Phase 12 | Complete |
 | LAB-01 | Phase 13 | Pending |
 | LAB-02 | Phase 13 | Pending |
 | LAB-03 | Phase 13 | Pending |
