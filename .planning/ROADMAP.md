@@ -4,7 +4,7 @@
 
 - ✅ **v1.0 MVP** — Phases 1–7 (shipped 2026-02-20)
 - ✅ **v1.1 Expert Intelligence & Search Quality** — Phases 8–10 (shipped 2026-02-21)
-- 🔄 **v1.2 Intelligence Activation & Steering Panel** — Phases 11–13 (in progress)
+- ✅ **v1.2 Intelligence Activation & Steering Panel** — Phases 11–13 (shipped 2026-02-21)
 
 ## Phases
 
@@ -38,7 +38,7 @@ Full phase details: `.planning/milestones/v1.1-ROADMAP.md`
 
 - [x] **Phase 11: Backend Settings API** - SQLite settings table + read/write endpoints so flags and thresholds are DB-controlled at runtime (completed 2026-02-21)
 - [x] **Phase 12: Steering Panel Frontend** - Admin Intelligence tab redesigned as a live control panel with toggles and threshold inputs (completed 2026-02-21)
-- [ ] **Phase 13: Search Lab A/B Comparison** - Side-by-side multi-config query comparison with diff view and per-run flag overrides
+- [x] **Phase 13: Search Lab A/B Comparison** - Side-by-side multi-config query comparison with diff view and per-run flag overrides (completed 2026-02-21)
 
 ## Phase Details
 
@@ -135,8 +135,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 13-01-PLAN.md — Backend compare endpoint + TypeScript A/B types (app/routers/admin.py, frontend/src/admin/types.ts)
-- [ ] 13-02-PLAN.md — SearchLabPage A/B comparison UI with columns, diff view, overrides (frontend/src/admin/pages/SearchLabPage.tsx)
+- [x] 13-01-PLAN.md — Backend compare endpoint + TypeScript A/B types (app/routers/admin.py, frontend/src/admin/types.ts)
+- [x] 13-02-PLAN.md — SearchLabPage A/B comparison UI with columns, diff view, overrides (frontend/src/admin/pages/SearchLabPage.tsx)
 
 ## Progress
 
@@ -154,4 +154,4 @@ Plans:
 | 10. Search Intelligence Layer | v1.1 | 2/2 | Complete | 2026-02-21 |
 | 11. Backend Settings API | v1.2 | 2/2 | Complete | 2026-02-21 |
 | 12. Steering Panel Frontend | v1.2 | 2/2 | Complete | 2026-02-21 |
-| 13. Search Lab A/B Comparison | 1/2 | In Progress|  | — |
+| 13. Search Lab A/B Comparison | v1.2 | 2/2 | Complete | 2026-02-21 |

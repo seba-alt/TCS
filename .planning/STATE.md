@@ -10,11 +10,11 @@ See: .planning/PROJECT.md
 ## Current Position
 
 Phase: 13 — Search Lab A/B Comparison
-Plan: 01 complete — Phase 13 in progress, Plan 01 done (compare endpoint + TypeScript types), Plan 02 next
-Status: In Progress — Phase 13 Plan 01 done (POST /api/admin/compare + TS types)
-Last activity: 2026-02-21 — Phase 13 Plan 01 complete (POST /api/admin/compare with 4 presets + CompareResponse/CompareColumn/CompareExpert/LabConfigKey/LabOverrides types)
+Plan: 02 complete — Phase 13 complete (Plan 01: compare endpoint + TS types; Plan 02: SearchLabPage A/B UI)
+Status: Complete — Phase 13 done (POST /api/admin/compare + A/B comparison UI with diff view and per-run overrides)
+Last activity: 2026-02-21 — Phase 13 Plan 02 complete (SearchLabPage rewritten as A/B comparison UI: collapsible config panel, side-by-side ranked columns, diff view, override banner)
 
-Progress: [█████████████████████████░░░░░] v1.0 + v1.1 complete (11/13 phases) — v1.2 Phase 12 done, Phase 13 next
+Progress: [███████████████████████████░░░] v1.0 + v1.1 + v1.2 complete (13/13 phases) — Phase 13 done, all planned phases complete
 
 ## Live URLs
 
@@ -40,7 +40,7 @@ Progress: [███████████████████████
 | 10 (v1.1) | 2/2 plans | Complete |
 | 11 (v1.2) | 2/2 plans | Complete |
 | 12 (v1.2) | 2/2 plans | Complete — 2026-02-21 |
-| 13 (v1.2) | 1/TBD plans | In Progress — Plan 01 done 2026-02-21 |
+| 13 (v1.2) | 2/2 plans | Complete — 2026-02-21 |
 
 ## Accumulated Context
 
@@ -98,6 +98,9 @@ Recent decisions affecting current work:
 - [12-02]: Dirty state detection uses string comparison of local input state vs originalThresholds snapshot (initialized on data load)
 - [12-02]: ToggleSwitch uses button[role=switch] with aria-checked — no external library; TooltipIcon uses native title attribute
 - [Phase 13-search-lab-a-b-comparison]: _retrieve_for_lab() reads DB settings then merges config_flags on top — does NOT call retrieve_with_intelligence() which would re-read DB; ThreadPoolExecutor for parallel config execution; per-run overrides applied uniformly to all selected presets
+- [13-02]: CompareColumnCard defined at module level — avoids re-creation on every render; consistent with sub-component pattern from 09-03
+- [13-02]: Diff delta = baselineRank - expert.rank so positive = moved up (amber/warm), negative = moved down (blue/cool); "new" badge (emerald) for experts absent from baseline
+- [13-02]: Override state initialized as empty LabOverrides{} — persists within session, resets on reload; no backend persistence needed for per-run overrides
 
 ### Pending Todos
 
@@ -112,5 +115,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-21
-Stopped at: Completed 13-01-PLAN.md — POST /api/admin/compare endpoint with 4 preset configs run in parallel via ThreadPoolExecutor + TypeScript types (CompareResponse, CompareColumn, CompareExpert, LabConfigKey, LabOverrides) in types.ts. Phase 13 Plan 02 (SearchLabPage UI) is next.
+Stopped at: Completed 13-02-PLAN.md — SearchLabPage rewritten as A/B comparison UI with collapsible 4-config panel, side-by-side ranked columns, diff view (amber/blue rank-change highlighting, delta badges), ghost placeholder alignment, and per-run HyDE/feedback override controls with amber banner. Phase 13 complete.
 Resume file: None
