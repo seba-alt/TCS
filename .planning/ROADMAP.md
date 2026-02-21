@@ -41,7 +41,7 @@ See `.planning/milestones/v1.2-ROADMAP.md`
 - [x] **Phase 14: Hybrid Search Backend** - Deploy `/api/explore` with three-stage hybrid pipeline and FTS5 index
 - [x] **Phase 15: Zustand State & Routing** - Create `useExplorerStore` and swap homepage to `MarketplacePage` (completed 2026-02-21)
 - [x] **Phase 16: Marketplace Page & Sidebar** - Page layout, faceted filter sidebar, mobile bottom-sheet (completed 2026-02-21)
-- [ ] **Phase 17: Expert Grid & Cards** - Virtualized grid, high-density cards, Framer Motion entry animations
+- [x] **Phase 17: Expert Grid & Cards** - Virtualized grid, high-density cards, Framer Motion entry animations (completed 2026-02-21)
 - [ ] **Phase 18: Floating AI Co-Pilot** - FAB panel, Gemini function calling, mobile full-screen overlay
 - [ ] **Phase 19: Extended Features** - Lead capture, match report, URL state, fuzzy suggestions, empty states
 
@@ -144,6 +144,6 @@ Plans:
 | 14. Hybrid Search Backend | 3/3 | Complete    | 2026-02-21 | 2026-02-21 |
 | 15. Zustand State & Routing | 1/1 | Complete    | 2026-02-21 | - |
 | 16. Marketplace Page & Sidebar | v2.0 | 3/3 | Complete | 2026-02-21 |
-| 17. Expert Grid & Cards | v2.0 | 0/3 | Not started | - |
+| 17. Expert Grid & Cards | v2.0 | Complete    | 2026-02-21 | - |
 | 18. Floating AI Co-Pilot | v2.0 | 0/? | Not started | - |
 | 19. Extended Features | v2.0 | 0/? | Not started | - |
