@@ -4,12 +4,13 @@ import { useExplorerStore, useFilterSlice } from '../store'
 import { useExplore } from '../hooks/useExplore'
 import { FilterSidebar } from '../components/sidebar/FilterSidebar'
 import { FilterChips } from '../components/marketplace/FilterChips'
-import { SkeletonGrid } from '../components/marketplace/SkeletonGrid'
+import { ExpertGrid } from '../components/marketplace/ExpertGrid'
 import { MobileFilterSheet } from '../components/sidebar/MobileFilterSheet'
 
 export default function MarketplacePage() {
   // Fetch hook — reads filter state from store, calls /api/explore, writes results back
-  useExplore()
+  // Returns loadNextPage for VirtuosoGrid endReached (infinite scroll)
+  const { loadNextPage } = useExplore()
 
   // Preserve Phase 15 pilot reset behavior
   const resetPilot = useExplorerStore((s) => s.resetPilot)
@@ -20,6 +21,7 @@ export default function MarketplacePage() {
   // Results state for conditional rendering
   const loading = useExplorerStore((s) => s.loading)
   const experts = useExplorerStore((s) => s.experts)
+  const isFetchingMore = useExplorerStore((s) => s.isFetchingMore)
 
   // Mobile filter sheet state
   const [sheetOpen, setSheetOpen] = useState(false)
@@ -35,9 +37,9 @@ export default function MarketplacePage() {
       <FilterSidebar />
 
       {/* Main content area */}
-      <main className="flex-1 min-h-screen flex flex-col">
+      <main className="flex-1 flex flex-col" style={{ height: '100vh' }}>
         {/* Mobile toolbar — visible only on mobile */}
-        <div className="md:hidden flex items-center justify-between px-4 py-3 border-b border-gray-100">
+        <div className="md:hidden flex items-center justify-between px-4 py-3 border-b border-gray-100 shrink-0">
           <h1 className="text-lg font-semibold text-gray-900">Experts</h1>
           <button
             onClick={() => setSheetOpen(true)}
@@ -54,24 +56,22 @@ export default function MarketplacePage() {
         </div>
 
         {/* Desktop header — visible only on desktop */}
-        <div className="hidden md:flex items-center px-6 py-4 border-b border-gray-100">
+        <div className="hidden md:flex items-center px-6 py-4 border-b border-gray-100 shrink-0">
           <h1 className="text-xl font-semibold text-gray-900">Find an Expert</h1>
         </div>
 
         {/* Active filter chips strip */}
         <FilterChips />
 
-        {/* Results area — Phase 17 replaces this placeholder with Virtuoso grid */}
-        <div className="flex-1">
-          {loading ? (
-            <SkeletonGrid />
-          ) : (
-            <div className="p-4 text-sm text-gray-400">
-              {experts.length > 0
-                ? `${experts.length} experts loaded — grid coming in Phase 17`
-                : 'No results — grid coming in Phase 17'}
-            </div>
-          )}
+        {/* Results area — ExpertGrid with VirtuosoGrid for infinite scroll */}
+        {/* flex-1 + min-h-0 gives VirtuosoGrid a known height to virtualize against */}
+        <div className="flex-1 min-h-0">
+          <ExpertGrid
+            experts={experts}
+            loading={loading}
+            isFetchingMore={isFetchingMore}
+            onEndReached={loadNextPage}
+          />
         </div>
       </main>
 
