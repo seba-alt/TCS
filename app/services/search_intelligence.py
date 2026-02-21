@@ -1,9 +1,13 @@
 """
 Search intelligence layer: HyDE query expansion + feedback re-ranking.
 
-Both features are gated by env var flags read at module import time:
+Both features are gated by settings read from the DB on every request:
     QUERY_EXPANSION_ENABLED   — enables HyDE (Hypothetical Document Embeddings)
     FEEDBACK_LEARNING_ENABLED — enables feedback-weighted re-ranking
+
+Settings are read via get_settings(db) on every retrieve_with_intelligence() call.
+This ensures a POST /api/admin/settings change takes effect on the very next chat
+request with no Railway redeploy required.
 
 retrieve_with_intelligence() is SYNCHRONOUS. It MUST NOT be async because it
 calls synchronous genai.Client() and embed_query(). Call it from chat.py via
@@ -11,8 +15,7 @@ loop.run_in_executor(None, lambda: retrieve_with_intelligence(...)) — same pat
 as retriever.retrieve(). The HyDE timeout (asyncio.wait_for) is handled by the
 caller in chat.py; this module does not manage asyncio timeouts.
 
-Railway injects env vars at startup — flags are stable for the process lifetime.
-Both flags default to False; Railway explicitly enables them after validation.
+All 5 settings fall back to env vars (or hardcoded defaults) when no DB row exists.
 """
 import os
 import json
@@ -26,31 +29,67 @@ from sqlalchemy.orm import Session
 from sqlalchemy import select
 
 from app.services.embedder import embed_query
-from app.services.retriever import retrieve, RetrievedExpert, SIMILARITY_THRESHOLD, TOP_K
+from app.services.retriever import retrieve, RetrievedExpert, TOP_K
 from app.models import Feedback
 
 log = structlog.get_logger()
 
-# ── Feature Flags ─────────────────────────────────────────────────────────────
-
-
-def _flag(name: str) -> bool:
-    """Read an environment variable as a boolean feature flag."""
-    return os.getenv(name, "false").lower().strip() in ("true", "1", "yes")
-
-
-QUERY_EXPANSION_ENABLED: bool = _flag("QUERY_EXPANSION_ENABLED")
-FEEDBACK_LEARNING_ENABLED: bool = _flag("FEEDBACK_LEARNING_ENABLED")
-
-# ── Constants ─────────────────────────────────────────────────────────────────
-
-# Skip HyDE if >= this many candidates already score >= SIMILARITY_THRESHOLD.
-# A weak query has fewer than STRONG_RESULT_MIN strong results.
-STRONG_RESULT_MIN = 3
+# ── Safety constant ────────────────────────────────────────────────────────────
 
 # Abort HyDE LLM call after this many seconds (gemini-2.5-flash socket hang bug —
 # see RESEARCH.md Pitfall 4). Enforced by asyncio.wait_for in chat.py caller.
+# This is a hang-protection guard, NOT a tuneable setting — keep hardcoded.
 HYDE_TIMEOUT_SECONDS = 5.0
+
+# ── DB-backed settings ────────────────────────────────────────────────────────
+
+
+def get_settings(db: Session) -> dict:
+    """
+    Read all 5 intelligence settings from the DB, falling back to env vars.
+
+    Called on every retrieve_with_intelligence() invocation — never cached.
+    This ensures a POST /api/admin/settings change takes effect on the next request
+    with no Railway redeploy required.
+
+    Returns a dict with native Python types (bool, float, int) ready to use directly.
+
+    Valid keys and their defaults:
+        QUERY_EXPANSION_ENABLED   — bool,  default: "false"
+        FEEDBACK_LEARNING_ENABLED — bool,  default: "false"
+        SIMILARITY_THRESHOLD      — float, default: "0.60"
+        STRONG_RESULT_MIN         — int,   default: "3"
+        FEEDBACK_BOOST_CAP        — float, default: "0.20"
+    """
+    from app.models import AppSetting  # deferred import — avoids circular import at module load
+
+    rows = {row.key: row.value for row in db.scalars(select(AppSetting)).all()}
+
+    def _db_or_env(key: str, default: str) -> str:
+        return rows.get(key, os.getenv(key, default))
+
+    def _bool(key: str, default: str) -> bool:
+        return _db_or_env(key, default).lower().strip() in ("true", "1", "yes")
+
+    def _float(key: str, default: str) -> float:
+        try:
+            return float(_db_or_env(key, default))
+        except (ValueError, TypeError):
+            return float(default)
+
+    def _int(key: str, default: str) -> int:
+        try:
+            return int(_db_or_env(key, default))
+        except (ValueError, TypeError):
+            return int(default)
+
+    return {
+        "QUERY_EXPANSION_ENABLED": _bool("QUERY_EXPANSION_ENABLED", "false"),
+        "FEEDBACK_LEARNING_ENABLED": _bool("FEEDBACK_LEARNING_ENABLED", "false"),
+        "SIMILARITY_THRESHOLD": _float("SIMILARITY_THRESHOLD", "0.60"),
+        "STRONG_RESULT_MIN": _int("STRONG_RESULT_MIN", "3"),
+        "FEEDBACK_BOOST_CAP": _float("FEEDBACK_BOOST_CAP", "0.20"),
+    }
 
 # ── HyDE — lazy singleton client ──────────────────────────────────────────────
 
@@ -95,6 +134,14 @@ def retrieve_with_intelligence(
                 "feedback_applied": bool,    # True if feedback re-ranking ran
             }
     """
+    # Read all settings from DB on every call (fallback to env vars when no DB row)
+    settings = get_settings(db)
+    query_expansion_enabled = settings["QUERY_EXPANSION_ENABLED"]
+    feedback_learning_enabled = settings["FEEDBACK_LEARNING_ENABLED"]
+    strong_result_min = settings["STRONG_RESULT_MIN"]
+    similarity_threshold = settings["SIMILARITY_THRESHOLD"]
+    feedback_boost_cap = settings["FEEDBACK_BOOST_CAP"]
+
     # Step 1: Initial FAISS retrieval
     candidates = retrieve(query, faiss_index, metadata)
     intelligence: dict = {
@@ -104,7 +151,7 @@ def retrieve_with_intelligence(
     }
 
     # Step 2: HyDE expansion — only when enabled and query is weak
-    if QUERY_EXPANSION_ENABLED and _is_weak_query(candidates):
+    if query_expansion_enabled and _is_weak_query(candidates, strong_result_min, similarity_threshold):
         bio = _generate_hypothetical_bio(query)
         if bio is not None:
             original_vec = embed_query(query)
@@ -116,8 +163,8 @@ def retrieve_with_intelligence(
             log.info("hyde.triggered", query_preview=query[:60])
 
     # Step 3: Feedback re-ranking — only when enabled
-    if FEEDBACK_LEARNING_ENABLED:
-        candidates = _apply_feedback_boost(candidates, db)
+    if feedback_learning_enabled:
+        candidates = _apply_feedback_boost(candidates, db, feedback_boost_cap)
         intelligence["feedback_applied"] = True
 
     return candidates, intelligence
@@ -125,15 +172,19 @@ def retrieve_with_intelligence(
 # ── Internal helpers ──────────────────────────────────────────────────────────
 
 
-def _is_weak_query(candidates: list[RetrievedExpert]) -> bool:
+def _is_weak_query(
+    candidates: list[RetrievedExpert],
+    strong_result_min: int,
+    similarity_threshold: float,
+) -> bool:
     """
     Return True when the first FAISS pass produced too few strong results.
 
-    A query is considered weak when fewer than STRONG_RESULT_MIN candidates
-    score >= SIMILARITY_THRESHOLD. HyDE is only triggered for weak queries.
+    A query is considered weak when fewer than strong_result_min candidates
+    score >= similarity_threshold. HyDE is only triggered for weak queries.
     """
-    strong = sum(1 for c in candidates if c.score >= SIMILARITY_THRESHOLD)
-    return strong < STRONG_RESULT_MIN
+    strong = sum(1 for c in candidates if c.score >= similarity_threshold)
+    return strong < strong_result_min
 
 
 def _generate_hypothetical_bio(query: str) -> str | None:
@@ -299,6 +350,7 @@ def _merge_candidates(
 def _apply_feedback_boost(
     candidates: list[RetrievedExpert],
     db: Session,
+    feedback_boost_cap: float = 0.20,
 ) -> list[RetrievedExpert]:
     """
     Re-rank candidates using cumulative thumbs up/down feedback signals.
@@ -306,18 +358,20 @@ def _apply_feedback_boost(
     Cold-start guard: experts with fewer than 10 global feedback interactions
     receive no boost (prevents statistical noise from sparse data — SEARCH-05).
 
-    Boost formula:
+    Boost formula (uses feedback_boost_cap, default 0.20):
         ratio = up / (up + down)
-        if ratio > 0.5: multiplier = 1.0 + (ratio - 0.5) * 0.4  (max 1.20)
-        if ratio < 0.5: multiplier = 1.0 - (0.5 - ratio) * 0.4  (min 0.80)
+        boost_factor = feedback_boost_cap * 2   # ratio range 0.0-1.0, cap range 0.0-0.50
+        if ratio > 0.5: multiplier = 1.0 + (ratio - 0.5) * boost_factor  (max 1 + cap)
+        if ratio < 0.5: multiplier = 1.0 - (0.5 - ratio) * boost_factor  (min 1 - cap)
         if ratio == 0.5: multiplier = 1.0 (no change)
 
     Graceful degradation: any DB error returns candidates unchanged and logs a
     warning. Never raises — SEARCH-06 requires feedback to never block search.
 
     Args:
-        candidates: Current candidate list (may have been HyDE-merged).
-        db:         SQLAlchemy Session for feedback table access.
+        candidates:        Current candidate list (may have been HyDE-merged).
+        db:                SQLAlchemy Session for feedback table access.
+        feedback_boost_cap: Max fractional score adjustment (0.0–0.50). DB-controlled.
 
     Returns:
         Re-ranked candidates (or original list on DB failure).
@@ -347,6 +401,7 @@ def _apply_feedback_boost(
                     counts[eid][row.vote] = counts[eid].get(row.vote, 0) + 1
 
         # Compute multipliers for experts that meet the cold-start threshold
+        boost_factor = feedback_boost_cap * 2  # ratio range 0.0-1.0, cap range 0.0-0.50
         multipliers: dict[str, float] = {}
         for url in url_set:
             up = counts[url]["up"]
@@ -357,10 +412,10 @@ def _apply_feedback_boost(
                 continue
             ratio = up / total
             if ratio > 0.5:
-                boost = (ratio - 0.5) * 0.4  # max 0.20 at ratio=1.0
+                boost = (ratio - 0.5) * boost_factor  # max feedback_boost_cap at ratio=1.0
                 multipliers[url] = 1.0 + boost
             elif ratio < 0.5:
-                penalty = (0.5 - ratio) * 0.4  # max 0.20 at ratio=0.0
+                penalty = (0.5 - ratio) * boost_factor  # max feedback_boost_cap at ratio=0.0
                 multipliers[url] = 1.0 - penalty
 
         # Apply multipliers in-place (dataclass fields are mutable)
