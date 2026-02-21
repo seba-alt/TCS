@@ -64,7 +64,7 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 09-01-PLAN.md — Backend: enrich _serialize_expert() with tags+score, fix default sort, add GET /api/admin/domain-map (app/routers/admin.py)
+- [x] 09-01-PLAN.md — Backend: enrich _serialize_expert() with tags+score, fix default sort, add GET /api/admin/domain-map (app/routers/admin.py)
 - [ ] 09-02-PLAN.md — Frontend types + hook: update ExpertRow, add DomainMap interfaces, add useAdminDomainMap hook (types.ts, useAdminData.ts)
 - [ ] 09-03-PLAN.md — Frontend table overhaul: sort/filter/pagination/domain-map section + human verification (ExpertsPage.tsx)
 
@@ -91,5 +91,5 @@ Plans:
 | 6. Feedback | v1.0 | 3/3 | Complete | 2026-02-20 |
 | 7. Analytics Dashboard v2 | v1.0 | 4/4 | Complete | 2026-02-20 |
 | 8. Data Enrichment Pipeline | 4/4 | Complete   | 2026-02-21 | — |
-| 9. Admin Expert Tab Enhancement | v1.1 | 0/3 | Not started | — |
+| 9. Admin Expert Tab Enhancement | v1.1 | 1/3 | In progress | — |
 | 10. Search Intelligence Layer | v1.1 | 0/? | Not started | — |

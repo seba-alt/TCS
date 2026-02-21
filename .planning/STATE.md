@@ -9,10 +9,10 @@ See: .planning/PROJECT.md (updated 2026-02-21 after v1.1 milestone started)
 
 ## Current Position
 
-Phase: 8 of 10 (Data Enrichment Pipeline)
-Plan: 08-04 complete
+Phase: 9 of 10 (Admin Expert Tab Enhancement)
+Plan: 09-01 complete
 Status: In progress
-Last activity: 2026-02-21 — Phase 8 Plan 04 complete (Auto-tagging on POST /api/admin/experts + "Generating tags..." UI message)
+Last activity: 2026-02-21 — Phase 9 Plan 01 complete (Backend API: tags+findability_score in _serialize_expert(), worst-first sort, GET /api/admin/domain-map)
 
 Progress: [████████████████████░░░░░░░░░░] v1.0 complete (7/7 phases) — v1.1 starting Phase 8
 
@@ -63,6 +63,10 @@ Recent decisions affecting current work:
 - [Phase 08]: CONCURRENCY=5 conservative default for Gemini calls; constant at top of file with AI Studio RPM docs link
 - [08-04]: Auto-tagging synchronous on POST /api/admin/experts — expert fully enriched before response; BackgroundTasks retry fires only on Gemini failure
 - [08-04]: No-bio experts skip Gemini but still get findability_score computed; creation never fails due to AI error
+- [09-01]: _serialize_expert() uses json.loads(e.tags or '[]') — safe NULL default, no try/except needed
+- [09-01]: GET /api/admin/experts sorts by findability_score asc nulls_first — worst experts surface at top for admin review
+- [09-01]: domain-map uses Expert.profile_url.in_() not username — Feedback.expert_ids stores profile URLs
+- [09-01]: Empty url_set guard in domain-map returns early to avoid SQLite empty .in_() query
 
 ### Pending Todos
 
@@ -78,5 +82,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-21
-Stopped at: Completed 08-04-PLAN.md — POST /api/admin/experts extended with synchronous auto-tagging (BackgroundTasks retry on failure), ExpertsPage.tsx updated to show "Generating tags..." during submission.
+Stopped at: Completed 09-01-PLAN.md — GET /api/admin/experts enriched with tags+findability_score and worst-first sort; GET /api/admin/domain-map added (top-10 downvoted tag domains).
 Resume file: None

@@ -24,12 +24,12 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Admin Expert Tab
 
-- [ ] **ADMIN-01**: Admin Expert tab displays First Name and Last Name separately (replacing the current Username-based display)
-- [ ] **ADMIN-02**: Admin Expert tab displays a bio preview (truncated to ~120 characters)
-- [ ] **ADMIN-03**: Admin Expert tab displays the expert's profile URL as a clickable link
-- [ ] **ADMIN-04**: Admin Expert tab displays each expert's domain tags as visual pills
-- [ ] **ADMIN-05**: Admin Expert tab displays a color-coded findability score badge per expert: red (0–39), yellow (40–69), green (70–100)
-- [ ] **ADMIN-06**: Admin Expert tab defaults to worst-first sort by findability score so lowest-quality profiles surface at the top
+- [x] **ADMIN-01**: Admin Expert tab displays First Name and Last Name separately (replacing the current Username-based display)
+- [x] **ADMIN-02**: Admin Expert tab displays a bio preview (truncated to ~120 characters)
+- [x] **ADMIN-03**: Admin Expert tab displays the expert's profile URL as a clickable link
+- [x] **ADMIN-04**: Admin Expert tab displays each expert's domain tags as visual pills
+- [x] **ADMIN-05**: Admin Expert tab displays a color-coded findability score badge per expert: red (0–39), yellow (40–69), green (70–100)
+- [x] **ADMIN-06**: Admin Expert tab defaults to worst-first sort by findability score so lowest-quality profiles surface at the top
 
 ### Search Intelligence
 
@@ -39,7 +39,7 @@ Requirements for this milestone. Each maps to roadmap phases.
 - [ ] **SEARCH-04**: System applies a soft feedback-weighted boost to retrieval results based on cumulative thumbs up/down votes per expert
 - [ ] **SEARCH-05**: Feedback re-ranking requires a minimum of 10 interactions per expert before applying any boost, capped at 20% of similarity score
 - [ ] **SEARCH-06**: Feedback re-ranking is controlled by a `FEEDBACK_LEARNING_ENABLED` environment variable flag
-- [ ] **SEARCH-07**: Admin can view a domain map endpoint (`GET /api/admin/domain-map`) showing which expert tag domains appear most frequently in downvoted results
+- [x] **SEARCH-07**: Admin can view a domain map endpoint (`GET /api/admin/domain-map`) showing which expert tag domains appear most frequently in downvoted results
 
 ## v2 Requirements
 
@@ -86,13 +86,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FIND-01 | Phase 8 | Complete |
 | FIND-02 | Phase 8 | Complete |
 | FIND-03 | Phase 8 | Complete |
-| ADMIN-01 | Phase 9 | Pending |
-| ADMIN-02 | Phase 9 | Pending |
-| ADMIN-03 | Phase 9 | Pending |
-| ADMIN-04 | Phase 9 | Pending |
-| ADMIN-05 | Phase 9 | Pending |
-| ADMIN-06 | Phase 9 | Pending |
-| SEARCH-07 | Phase 9 | Pending |
+| ADMIN-01 | Phase 9 | Complete |
+| ADMIN-02 | Phase 9 | Complete |
+| ADMIN-03 | Phase 9 | Complete |
+| ADMIN-04 | Phase 9 | Complete |
+| ADMIN-05 | Phase 9 | Complete |
+| ADMIN-06 | Phase 9 | Complete |
+| SEARCH-07 | Phase 9 | Complete |
 | SEARCH-01 | Phase 10 | Pending |
 | SEARCH-02 | Phase 10 | Pending |
 | SEARCH-03 | Phase 10 | Pending |
