@@ -117,7 +117,11 @@ Plans:
   2. Admin flips a toggle; the UI calls `POST /api/admin/settings`, the toggle updates to the new state, and the next chat request uses the new flag value — no page reload required
   3. Admin sees three editable numeric inputs for similarity threshold (0.0–1.0), HyDE trigger sensitivity (1–10), and feedback boost cap (0–50%); inputs are pre-filled with current values from `GET /api/admin/settings`
   4. Admin changes a threshold value and clicks Save; the UI shows an inline success or error message without a full page reload, and `GET /api/admin/settings` reflects the new value
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 12-01-PLAN.md — AdminSetting types + useAdminSettings hook (frontend/src/admin/types.ts, frontend/src/admin/hooks/useAdminData.ts)
+- [ ] 12-02-PLAN.md — Steering panel: rewrite IntelligenceDashboardPage with toggles, threshold inputs, dirty tracking, save flow (frontend/src/admin/pages/IntelligenceDashboardPage.tsx)
 
 ### Phase 13: Search Lab A/B Comparison
 **Goal**: Search Lab can run a single query across up to 4 intelligence configurations simultaneously and display results as side-by-side columns with a diff view that highlights rank changes, new appearances, and dropped experts — plus per-run flag overrides that do not affect global settings
@@ -144,6 +148,6 @@ Plans:
 | 8. Data Enrichment Pipeline | v1.1 | 4/4 | Complete | 2026-02-21 |
 | 9. Admin Expert Tab Enhancement | v1.1 | 3/3 | Complete | 2026-02-21 |
 | 10. Search Intelligence Layer | v1.1 | 2/2 | Complete | 2026-02-21 |
-| 11. Backend Settings API | 2/2 | Complete    | 2026-02-21 | — |
-| 12. Steering Panel Frontend | v1.2 | 0/? | Not started | — |
+| 11. Backend Settings API | v1.2 | 2/2 | Complete | 2026-02-21 |
+| 12. Steering Panel Frontend | v1.2 | 0/2 | Not started | — |
 | 13. Search Lab A/B Comparison | v1.2 | 0/? | Not started | — |
