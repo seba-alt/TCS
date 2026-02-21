@@ -220,7 +220,7 @@ export default function ExpertsPage() {
                 disabled={submitting}
                 className="px-5 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition-colors"
               >
-                {submitting ? 'Adding…' : 'Add Expert'}
+                {submitting ? 'Generating tags...' : 'Add Expert'}
               </button>
               <button
                 type="button"
