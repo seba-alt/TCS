@@ -36,7 +36,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Re
 from fastapi.responses import StreamingResponse
 from fastapi.security import APIKeyHeader
 from pydantic import BaseModel
-from sqlalchemy import func, select, update
+from sqlalchemy import Integer, func, select, update
 from sqlalchemy.orm import Session
 
 import structlog
