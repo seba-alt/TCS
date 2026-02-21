@@ -55,7 +55,7 @@ See `.planning/milestones/v1.2-ROADMAP.md`
   1. `GET /api/explore` returns a JSON `ExploreResponse` with `experts[]`, `total`, `cursor`, and `took_ms` fields for any combination of query, rate range, and tag filters
   2. When filters are active and no text query is given, results are sorted by findability score descending — FAISS and BM25 are skipped entirely
   3. When a text query is given, results reflect fused FAISS (0.7) + BM25 (0.3) weighted ranking, with findability and feedback boosts applied on top
-  4. The FTS5 `experts_fts` virtual table exists in the Railway SQLite database and is populated with all 1,558 experts at startup
+  4. The FTS5 `experts_fts` virtual table exists in the Railway SQLite database and is populated with all experts at startup (count grows over time)
   5. The `username_to_faiss_pos` mapping is built at startup and IDSelectorBatch correctly restricts FAISS search to only the SQLAlchemy pre-filtered expert set
 **Plans**: 2 plans
 
@@ -94,7 +94,7 @@ Plans:
 - [x] 16-03-PLAN.md — Human verify checkpoint: sidebar interactions, mobile bottom-sheet, filter/fetch flow
 
 ### Phase 17: Expert Grid & Cards
-**Goal**: Users can browse all 1,558 experts in a performant, animated grid with rich cards — the core browsing experience of the marketplace
+**Goal**: Users can browse all experts in a performant, animated grid with rich cards — the core browsing experience of the marketplace (expert count grows over time)
 **Depends on**: Phase 16
 **Requirements**: MARKET-02, MARKET-03, MARKET-04, MARKET-05
 **Success Criteria** (what must be TRUE):
@@ -102,7 +102,12 @@ Plans:
   2. Each expert card displays name, job title, company, hourly rate, domain tag pills, findability badge, and a match reason snippet
   3. Clicking a domain tag pill on a card adds that tag to the sidebar filters and immediately triggers a re-fetch with the new tag active
   4. Cards animate into view on mount; sidebar and modal transitions use AnimatePresence; no exit animations are applied to virtualized card items
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 17-01-PLAN.md — Fix Expert type (snake_case), extend resultsSlice (appendResults, isFetchingMore), extend useExplore (loadNextPage), install react-virtuoso + motion
+- [ ] 17-02-PLAN.md — Create ExpertCard + EmptyState + ExpertGrid components, wire into MarketplacePage
+- [ ] 17-03-PLAN.md — Human verify checkpoint: cards, animations, infinite scroll, tag pill wiring, empty state
 
 ### Phase 18: Floating AI Co-Pilot
 **Goal**: Users can describe what they need in natural language and the co-pilot translates that into filter updates, making the marketplace intelligently navigable via conversation
@@ -139,6 +144,6 @@ Plans:
 | 14. Hybrid Search Backend | 3/3 | Complete    | 2026-02-21 | 2026-02-21 |
 | 15. Zustand State & Routing | 1/1 | Complete    | 2026-02-21 | - |
 | 16. Marketplace Page & Sidebar | v2.0 | 3/3 | Complete | 2026-02-21 |
-| 17. Expert Grid & Cards | v2.0 | 0/? | Not started | - |
+| 17. Expert Grid & Cards | v2.0 | 0/3 | Not started | - |
 | 18. Floating AI Co-Pilot | v2.0 | 0/? | Not started | - |
 | 19. Extended Features | v2.0 | 0/? | Not started | - |
