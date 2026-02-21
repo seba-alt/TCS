@@ -1,308 +1,543 @@
 # Stack Research
 
-**Domain:** RAG-based expert discovery chatbot — v1.1 Expert Intelligence & Search Quality
+**Domain:** Expert Marketplace — v2.0 rearchitecture additions only
 **Researched:** 2026-02-21
-**Research Mode:** Ecosystem (Subsequent Milestone)
-**Confidence:** HIGH for additions; existing stack already in production
+**Research Mode:** Ecosystem (Subsequent Milestone — stack additions only)
+**Confidence:** HIGH for npm packages; MEDIUM for FAISS IDSelectorBatch on flat index; MEDIUM for FTS5/SQLAlchemy pattern
 
 ---
 
 ## Scope of This Document
 
-This document covers ONLY the stack additions and changes needed for v1.1. The existing production stack (FastAPI + SQLAlchemy + SQLite + FAISS + google-genai + React + Vite + Tailwind) is validated and unchanged. Each section below is scoped to one of the five new feature areas.
+Covers ONLY the stack additions and changes needed for v2.0. The existing production stack is validated and unchanged:
+
+- **Backend:** FastAPI + SQLAlchemy + SQLite + FAISS (faiss-cpu 1.13.*) + google-genai (1.64.*) + tenacity (9.1.*)
+- **Frontend:** React + Vite + Tailwind v3 + React Router v7
+- **AI:** gemini-embedding-001 (768-dim, MRL-truncated) + Gemini 2.5 Flash
+
+Seven specific questions were investigated. Each section below gives a direct answer.
 
 ---
 
-## Critical Breaking Change: Embedding Model Deprecation
+## 1. Zustand — State Management
 
-**text-embedding-004 was shut down on January 14, 2026.** The codebase has already migrated to `gemini-embedding-001` (confirmed in `app/config.py`). All v1.1 work must use `gemini-embedding-001`.
+### Recommendation
 
-**Dimension change:** gemini-embedding-001 defaults to 3072 dimensions. The codebase truncates to 768 via `output_dimensionality=768` (Matryoshka Representation Learning — truncated prefixes retain quality). This is already set in `app/config.py` and `scripts/ingest.py`. Do not change OUTPUT_DIM without rebuilding the FAISS index.
+Install `zustand@^5.0.0`. Version 5.0.10 was released 2026-01-12. This is the current stable major with no breaking changes from 5.0.8 (October 2025).
 
----
+### Persist middleware pattern
 
-## Feature 1: AI Auto-Tagging (Batch LLM for 1,558 Experts)
+`persist` ships bundled inside `zustand/middleware` — no additional package required.
 
-### What is needed
+```typescript
+// store/useSearchStore.ts
+import { create } from 'zustand'
+import { persist, createJSONStorage } from 'zustand/middleware'
 
-A one-shot offline script that calls `gemini-2.5-flash` for each expert and writes domain tags back to the SQLite `experts` table. This is a batch processing problem, not a library selection problem — the existing `google-genai` SDK already supports it. The challenge is rate limit management.
+interface SearchState {
+  searchParams: { query: string; rateMin: number; rateMax: number; tags: string[] }
+  results: Expert[]
+  isPilotOpen: boolean
+  setSearchParams: (params: Partial<SearchState['searchParams']>) => void
+  setResults: (results: Expert[]) => void
+  togglePilot: () => void
+}
 
-### Rate Limit Reality (MEDIUM confidence — verify at ai.google.dev/gemini-api/docs/rate-limits)
-
-| Tier | gemini-2.5-flash RPM | gemini-2.5-flash RPD |
-|------|---------------------|---------------------|
-| Free | ~5 RPM | ~250 RPD |
-| Tier 1 (paid) | ~150-300 RPM | ~10,000 RPD |
-
-At 1,558 experts and free tier (5 RPM), tagging takes ~5+ hours. At Tier 1 (150 RPM), ~11 minutes. Use paid Tier 1 for the tagging run — this is a one-time offline job.
-
-### Stack additions for auto-tagging
-
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| `tenacity` | `9.1.*` (already in requirements.txt as `8.4.*` — upgrade) | Retry with exponential backoff on 429 rate limit errors | Already used in `scripts/ingest.py` for embeddings. Same pattern applies to LLM tagging calls. Upgrade to 9.1.x for Python 3.10+ requirement compliance. |
-| `asyncio.Semaphore` | stdlib | Bound concurrent LLM calls | Use Python stdlib semaphore to cap inflight requests — no additional library needed. Pattern: `async with semaphore: await client.aio.models.generate_content(...)` |
-
-**Do NOT add:** LangChain, Haystack, or any orchestration framework. The existing `google-genai` SDK (`client.models.generate_content`) handles this directly.
-
-### Tagging script pattern
-
-```python
-# scripts/generate_tags.py — offline, one-shot, run before FAISS re-ingest
-import asyncio
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
-
-CONCURRENCY = 10  # adjust to stay under RPM limit
-SEMAPHORE = asyncio.Semaphore(CONCURRENCY)
-
-@retry(
-    stop=stop_after_attempt(5),
-    wait=wait_exponential(multiplier=2, min=5, max=120),
-    retry=retry_if_exception_type(Exception),
-    reraise=True,
+export const useSearchStore = create<SearchState>()(
+  persist(
+    (set) => ({
+      searchParams: { query: '', rateMin: 0, rateMax: 9999, tags: [] },
+      results: [],
+      isPilotOpen: false,
+      setSearchParams: (params) =>
+        set((state) => ({ searchParams: { ...state.searchParams, ...params } })),
+      setResults: (results) => set({ results }),
+      togglePilot: () => set((state) => ({ isPilotOpen: !state.isPilotOpen })),
+    }),
+    {
+      name: 'tcs-search-v2',                          // localStorage key
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({                        // ONLY persist these fields
+        searchParams: state.searchParams,
+        isPilotOpen: state.isPilotOpen,
+        // results intentionally excluded — re-fetched on load
+      }),
+    }
+  )
 )
-async def tag_expert(client, expert: dict) -> list[str]:
-    async with SEMAPHORE:
-        prompt = f"""Given this expert profile, return a JSON array of 3-7 domain tags.
-Job Title: {expert['job_title']}
-Bio: {expert['bio'][:500]}
-Tags must be lowercase, specific domain terms (e.g. "contract law", "ux research", "growth marketing").
-Return ONLY valid JSON: ["tag1", "tag2", ...]"""
-        response = await client.aio.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-                temperature=0.1,
-            ),
-        )
-        return json.loads(response.text)
 ```
 
-### SQLite schema addition for tags
+**Key points:**
+- `partialize` is the correct way to exclude `results` from persistence (large, stale on reload)
+- `createJSONStorage` is required in v5 — bare `localStorage` no longer accepted directly
+- No `devtools` middleware conflict — stack as `create<S>()(devtools(persist(...)))` if needed
+- Hydration is synchronous in browser environments — no SSR hydration concern (this is Vite SPA)
 
-Add a `tags` column to the `experts` table (TEXT, JSON-serialized list). No migration framework needed — SQLite `ALTER TABLE experts ADD COLUMN tags TEXT DEFAULT '[]'` via SQLAlchemy `text()` at script startup.
+### Installation
+
+```bash
+npm install zustand@^5.0.0
+```
+
+**Confidence:** HIGH — version confirmed from npm (5.0.10), persist pattern from official Zustand docs (zustand.docs.pmnd.rs/middlewares/persist).
+
+---
+
+## 2. react-virtuoso — Virtualized Expert Grid
+
+### Recommendation
+
+Install `react-virtuoso@^4.18.0`. Version 4.18.1 is current (published ~2 months before 2026-02-21).
+
+### VirtuosoGrid vs Virtuoso — which to use
+
+**Use `Virtuoso` (not `VirtuosoGrid`) for the expert marketplace grid.**
+
+| Component | Item sizing | Layout | Best for |
+|-----------|-------------|--------|----------|
+| `VirtuosoGrid` | Fixed, identical items | CSS grid via className props | Image galleries, same-height uniform tiles |
+| `Virtuoso` | Variable height, measured at render | Single column or custom row renderer | Cards with variable bio length, tag counts |
+
+Expert cards will have variable height — different bio lengths, tag counts, findability scores. `VirtuosoGrid` requires items to be the same size (its grid is CSS-controlled, not measured per-item). It will produce misaligned rows if card heights differ by even a few pixels.
+
+**Correct pattern for variable-height multi-column grid:**
+
+```tsx
+// Option A: Virtuoso with CSS grid row renderer (recommended for v2.0)
+// Render N cards per "row item" — Virtuoso measures each row naturally
+import { Virtuoso } from 'react-virtuoso'
+
+const COLS = 3  // or responsive via useBreakpoint
+
+export function ExpertGrid({ experts }: { experts: Expert[] }) {
+  const rows = chunkArray(experts, COLS)   // [[e1,e2,e3],[e4,e5,e6],...]
+
+  return (
+    <Virtuoso
+      data={rows}
+      itemContent={(_, row) => (
+        <div className="grid grid-cols-3 gap-4 px-4">
+          {row.map((expert) => <ExpertCard key={expert.username} expert={expert} />)}
+        </div>
+      )}
+      style={{ height: '100vh' }}
+    />
+  )
+}
+```
+
+This approach: Virtuoso virtualizes rows, each row is a CSS grid with N cards. Works correctly with variable card heights because Virtuoso measures each full row.
+
+**If cards become uniform fixed-height** (e.g. you clamp bio to 2 lines): switch to `VirtuosoGrid` for simpler API. But do not start there.
+
+### Installation
+
+```bash
+npm install react-virtuoso@^4.18.0
+```
+
+**Confidence:** HIGH — version from npm (4.18.1); VirtuosoGrid/Virtuoso distinction from official docs (virtuoso.dev) and GitHub issue #85.
+
+---
+
+## 3. Framer Motion — Animations
+
+### Recommendation
+
+Install `framer-motion@^12.0.0`. Version 12.34.3 was the latest as of 2026-02-21 (actively published — last update was ~21 hours before research date).
+
+**Rebranding note:** The library was rebranded to "Motion" but the npm package is still `framer-motion`. Import paths are unchanged. Do not install the separate `motion` package (it targets the web animations API, not React).
+
+### React 18 + Vite compatibility
+
+- Framer Motion v7+ requires React 18 as minimum. v12 is fully React 18 compatible.
+- Vite compatibility is standard — no special config needed. The library ships ESM and is tree-shakable by Vite's bundler.
+- React 19 support is in active testing in their CI as of v12.
+
+### Usage pattern for marketplace animations
+
+```tsx
+import { motion, AnimatePresence } from 'framer-motion'
+
+// Card entrance animation
+<motion.div
+  initial={{ opacity: 0, y: 16 }}
+  animate={{ opacity: 1, y: 0 }}
+  exit={{ opacity: 0, y: -8 }}
+  transition={{ duration: 0.15, ease: 'easeOut' }}
+>
+  <ExpertCard expert={expert} />
+</motion.div>
+
+// AI co-pilot panel slide-in
+<AnimatePresence>
+  {isPilotOpen && (
+    <motion.aside
+      key="pilot"
+      initial={{ x: '100%' }}
+      animate={{ x: 0 }}
+      exit={{ x: '100%' }}
+      transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+      className="fixed right-0 top-0 h-full w-96 bg-white shadow-xl z-50"
+    >
+      <AIPilot />
+    </motion.aside>
+  )}
+</AnimatePresence>
+```
+
+**Warning:** Do NOT wrap virtualized list items in `motion.div` at the Virtuoso item level — this creates a new animation instance per row on every scroll event, causing jank. Animate only on mount via `initial`/`animate`; use `layoutId` only for shared element transitions (e.g. expert card expanding to detail view).
+
+### Installation
+
+```bash
+npm install framer-motion@^12.0.0
+```
+
+**Confidence:** HIGH — version confirmed from npm (12.34.3); React 18 minimum from official changelog (v7 release notes).
+
+---
+
+## 4. FAISS IDSelectorBatch — Pre-filtered Vector Search
+
+### Recommendation
+
+**IDSelectorBatch is available in `faiss-cpu` with no additional installation.** The existing `faiss-cpu==1.13.*` (already in requirements.txt) includes Python bindings for `IDSelectorBatch` and `SearchParametersFlat`.
+
+### API pattern for flat index pre-filtering
+
+The existing FAISS index is `IndexFlatIP` (inner product, with normalized vectors). The IDSelectorBatch + SearchParameters pattern for flat indexes:
 
 ```python
-# Pattern: idempotent column addition
-from sqlalchemy import text
-with engine.connect() as conn:
-    try:
-        conn.execute(text("ALTER TABLE experts ADD COLUMN tags TEXT DEFAULT '[]'"))
+import faiss
+import numpy as np
+
+# --- At search time, after SQLAlchemy pre-filter ---
+
+# 1. Get candidate IDs from SQLAlchemy filter (rate, tags, etc.)
+candidate_ids: list[int] = [42, 99, 301, ...]   # FAISS internal IDs (0-indexed row in index)
+
+# 2. Build IDSelectorBatch
+ids_array = np.array(candidate_ids, dtype=np.int64)
+selector = faiss.IDSelectorBatch(ids_array)
+
+# 3. Build SearchParameters — for flat (non-IVF) index use SearchParameters directly
+params = faiss.SearchParameters()
+params.sel = selector
+
+# 4. Search only within the selected IDs
+D, I = index.search(query_vector, k=20, params=params)
+```
+
+**Critical implementation note:** The existing FAISS index uses consecutive integer IDs (0 to N-1) that correspond to the order experts were added. If experts are ever deleted or reordered in SQLite, the FAISS IDs will drift from SQLite row IDs. The safest mapping is to maintain a Python list `faiss_id_to_expert_id: list[int]` loaded at startup alongside the index. The SQLAlchemy pre-filter returns expert database IDs; translate to FAISS IDs via this list before building IDSelectorBatch.
+
+**For the IVF variant** (not used in production, but if migrated): use `SearchParametersIVF(sel=selector, nprobe=index.nprobe)` instead.
+
+**Performance reality at 1,558 experts:** IDSelectorBatch on a flat index of 1,558 vectors is essentially free — FAISS will scan all 1,558 vectors and apply the selector mask. The benefit is correctness (returning only pre-filtered experts), not speed. The `<200ms` latency target is dominated by SQLAlchemy query time, not FAISS scan time at this scale.
+
+### No installation change needed
+
+```bash
+# Already in requirements.txt — no change
+faiss-cpu==1.13.*
+```
+
+**Confidence:** MEDIUM — IDSelectorBatch confirmed in faiss-cpu Python bindings from official docs and GitHub issues. The exact `SearchParameters` class name for flat indexes (vs `SearchParametersIVF` for IVF indexes) was confirmed from FAISS wiki ("Setting search parameters for one query"). The specific attribute `params.sel` confirmed from GitHub test file `tests/test_search_params.py`. Flagged MEDIUM because the exact runtime behavior on `IndexFlatIP` was not tested live.
+
+---
+
+## 5. SQLite FTS5 — Full-Text Search on Expert Fields
+
+### Recommendation
+
+**FTS5 requires no pip install — it is compiled into CPython's `sqlite3` module.** Use SQLAlchemy `text()` for all DDL and FTS5 queries. No ORM-level FTS5 support exists in SQLAlchemy; raw SQL is the only path.
+
+### Enable pattern via SQLAlchemy
+
+```python
+from sqlalchemy import text, event
+from sqlalchemy.engine import Engine
+
+# --- On startup / migration ---
+
+def setup_fts5(engine):
+    """Create FTS5 virtual table and sync triggers. Idempotent."""
+    with engine.connect() as conn:
+        # 1. Create FTS5 virtual table (content= points at source table)
+        conn.execute(text("""
+            CREATE VIRTUAL TABLE IF NOT EXISTS experts_fts USING fts5(
+                username,
+                first_name,
+                last_name,
+                job_title,
+                bio,
+                tags,
+                content='experts',        -- content table (shadow table mode)
+                content_rowid='id'         -- maps to experts.id
+            )
+        """))
+
+        # 2. INSERT trigger — keep FTS in sync
+        conn.execute(text("""
+            CREATE TRIGGER IF NOT EXISTS experts_fts_insert
+            AFTER INSERT ON experts BEGIN
+                INSERT INTO experts_fts(rowid, username, first_name, last_name, job_title, bio, tags)
+                VALUES (new.id, new.username, new.first_name, new.last_name, new.job_title, new.bio, new.tags);
+            END
+        """))
+
+        # 3. DELETE trigger
+        conn.execute(text("""
+            CREATE TRIGGER IF NOT EXISTS experts_fts_delete
+            AFTER DELETE ON experts BEGIN
+                INSERT INTO experts_fts(experts_fts, rowid, username, first_name, last_name, job_title, bio, tags)
+                VALUES ('delete', old.id, old.username, old.first_name, old.last_name, old.job_title, old.bio, old.tags);
+            END
+        """))
+
+        # 4. UPDATE trigger
+        conn.execute(text("""
+            CREATE TRIGGER IF NOT EXISTS experts_fts_update
+            AFTER UPDATE ON experts BEGIN
+                INSERT INTO experts_fts(experts_fts, rowid, username, first_name, last_name, job_title, bio, tags)
+                VALUES ('delete', old.id, old.username, old.first_name, old.last_name, old.job_title, old.bio, old.tags);
+                INSERT INTO experts_fts(rowid, username, first_name, last_name, job_title, bio, tags)
+                VALUES (new.id, new.username, new.first_name, new.last_name, new.job_title, new.bio, new.tags);
+            END
+        """))
+
+        # 5. Initial population (only if FTS table is empty)
+        count = conn.execute(text("SELECT COUNT(*) FROM experts_fts")).scalar()
+        if count == 0:
+            conn.execute(text("""
+                INSERT INTO experts_fts(rowid, username, first_name, last_name, job_title, bio, tags)
+                SELECT id, username, first_name, last_name, job_title, bio, tags FROM experts
+            """))
+
         conn.commit()
-    except Exception:
-        pass  # Column already exists
 ```
+
+### FTS5 query pattern for hybrid search
+
+```python
+# In retriever — Phase 1 of hybrid search pipeline
+async def fts_prefilter(query: str, session) -> list[int]:
+    """Return expert IDs matching FTS5 query. Used to narrow FAISS search space."""
+    # FTS5 MATCH syntax: phrases, prefix search (term*), boolean (AND/OR/NOT)
+    fts_query = " OR ".join(query.split()[:5])   # naive tokenization; improve later
+    rows = session.execute(
+        text("""
+            SELECT e.id
+            FROM experts e
+            JOIN experts_fts fts ON fts.rowid = e.id
+            WHERE experts_fts MATCH :q
+            ORDER BY rank           -- FTS5 BM25 rank (lower = better)
+            LIMIT 200               -- candidate set for FAISS re-ranking
+        """),
+        {"q": fts_query}
+    ).fetchall()
+    return [row[0] for row in rows]
+```
+
+**Important notes:**
+- FTS5 `content=` mode means FTS stores no data itself — it reads from `experts` table on demand. Triggers are mandatory for keeping the index current.
+- `rank` in FTS5 ORDER BY is the built-in BM25 rank — lower value = more relevant (FTS5 returns negative BM25 scores).
+- The `tags` column stores JSON (`["tag1", "tag2"]`). FTS5 will tokenize the JSON text including brackets. This is acceptable — brackets won't match user queries. Do NOT pre-process to strip JSON if adding FTS5 later; the tokenizer handles it.
+- Test FTS5 availability at startup: `conn.execute(text("SELECT fts5('test')"))` — if this raises, SQLite was compiled without FTS5 (rare in CPython but possible in some Railway base images).
+
+### No installation change needed
+
+```bash
+# No new package — FTS5 is in Python's built-in sqlite3
+# SQLAlchemy already in requirements.txt
+```
+
+**Confidence:** MEDIUM — FTS5 availability in CPython confirmed from Python/SQLite docs. SQLAlchemy `text()` pattern for FTS5 DDL confirmed from SQLAlchemy GitHub discussion #9466 and multiple community sources. Railway SQLite FTS5 availability assumed (standard CPython wheels include it) but not verified live — add startup check.
 
 ---
 
-## Feature 2: Findability Scoring
+## 6. Gemini Function Calling — AI Co-Pilot
 
-### What is needed
+### Recommendation
 
-A pure Python computation function — no new libraries required. Findability score (0-100) is calculated from existing SQLite fields: bio presence/length, profile_url presence, tags count, job_title presence. This is arithmetic over already-fetched data.
+**Use `google-genai` (already in requirements.txt). Do NOT install `google-generativeai`** — that package is deprecated and its GitHub repo is now named `deprecated-generative-ai-python`. The `google-genai` SDK reached GA in May 2025 and is the only supported path for new Gemini features.
 
-### Stack additions for findability scoring
+Function calling is fully supported in `google-genai` via `types.FunctionDeclaration` and `response.function_calls`.
 
-None. All computation uses:
-- `len()`, string checks on existing SQLite `experts` fields
-- `json.loads()` on the `tags` JSON column (stdlib)
-- SQLAlchemy to persist the score back to the `experts` table
-
-Add a `findability_score` column (Float, nullable) to the `experts` table via the same idempotent `ALTER TABLE` pattern above.
-
-### Scoring formula guidance
+### Function calling API pattern for the AI co-pilot
 
 ```python
-def compute_findability(expert: dict) -> int:
-    score = 0
-    bio = (expert.get("bio") or "").strip()
-    if bio:
-        score += 30
-        if len(bio) >= 100:
-            score += 10
-        if len(bio) >= 300:
-            score += 10
-    if (expert.get("profile_url") or "").strip():
-        score += 20
-    tags = json.loads(expert.get("tags") or "[]")
-    if tags:
-        score += 15
-        if len(tags) >= 3:
-            score += 5
-    if (expert.get("job_title") or "").strip():
-        score += 10
-    return min(score, 100)
-```
+from google import genai
+from google.genai import types
 
----
+# --- Function declaration for the marketplace filter tool ---
 
-## Feature 3: FAISS Re-ingest with Enriched Text
+apply_filters_fn = types.FunctionDeclaration(
+    name="apply_filters",
+    description=(
+        "Apply search filters to narrow the expert marketplace results. "
+        "Call this when the user mentions rate ranges, specific domains, tags, or location."
+    ),
+    parameters_json_schema={
+        "type": "object",
+        "properties": {
+            "query": {
+                "type": "string",
+                "description": "Natural language search query for semantic search"
+            },
+            "rate_min": {
+                "type": "integer",
+                "description": "Minimum hourly rate in USD"
+            },
+            "rate_max": {
+                "type": "integer",
+                "description": "Maximum hourly rate in USD"
+            },
+            "tags": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Domain tags to filter by (e.g. ['contract law', 'ip law'])"
+            }
+        },
+        "required": []
+    }
+)
 
-### What is needed
+tool = types.Tool(function_declarations=[apply_filters_fn])
 
-The existing `scripts/ingest.py` is already the correct pattern. The only change is updating `expert_to_text()` to include tags in the embedding text. No new libraries — `faiss-cpu`, `numpy`, and `google-genai` are already present.
+# --- At inference time ---
 
-### Updated `expert_to_text` pattern
-
-```python
-def expert_to_text(row: dict) -> str:
-    # ... existing name/title/company/bio logic ...
-    tags = json.loads(row.get("tags") or "[]")
-    if tags:
-        parts.append(f"Domain expertise: {', '.join(tags)}.")
-    return " ".join(parts) if parts else "Unknown expert"
-```
-
-### Batch embedding strategy (confirmed working pattern)
-
-The existing `ingest.py` batch strategy is correct and already handles this:
-- Batch size: 100 texts per `embed_content` call (API hard limit confirmed)
-- `tenacity` retry with exponential backoff for 429 errors
-- `output_dimensionality=768` (MRL truncation — 75% storage savings, 0.26% quality loss)
-- `faiss.normalize_L2()` required after truncation (truncated vectors are NOT pre-normalized)
-- `time.sleep(0.5)` between batches as basic throttle
-
-For 1,558 experts at 100/batch = 16 batches. At 5 RPM free tier: ~3 minutes. At 150 RPM paid: ~7 seconds. The existing implementation already handles this.
-
-**faiss-cpu version:** Already on `1.13.*` (latest as of December 2025 is 1.13.2). No change needed.
-
----
-
-## Feature 4: Feedback-Based Retrieval Improvement
-
-### What is needed
-
-A query-time signal layer that reads from the existing `feedback` + `conversations` SQLite tables to boost or suppress retrieval results. No new libraries — this is pure SQLAlchemy + Python list manipulation.
-
-### Design: SQLite-based feedback signal
-
-The `feedback` table already stores `vote` ("up"/"down"), `expert_ids` (JSON list of profile_url|name), and `conversation_id`. The `conversations` table has `query`. The feedback loop works in two steps:
-
-**Step 1: Expert reputation map** (cached in `app.state` at startup, refreshed periodically)
-
-```python
-# Aggregate: for each expert_id, compute net_score = upvotes - downvotes
-# Cache as dict: {expert_id: net_score}
-# Refresh every N minutes via background task or on /admin reload endpoint
-```
-
-**Step 2: Score adjustment at retrieval time**
-
-```python
-# In retriever.py — after FAISS search, before returning candidates
-for candidate in candidates:
-    expert_key = candidate.profile_url or candidate.name
-    reputation = feedback_map.get(expert_key, 0)
-    # Additive boost: small signal, don't override FAISS quality
-    candidate.adjusted_score = candidate.score + (reputation * 0.01)
-# Re-sort by adjusted_score
-candidates.sort(key=lambda c: c.adjusted_score, reverse=True)
-```
-
-**Step 3: Domain feedback signal** (for query expansion integration)
-
-Store a lightweight in-memory map `{domain_keyword: feedback_direction}` derived from queries that received thumbs-up/down. Persist to SQLite as a JSON blob in a new `search_signals` table for cross-restart durability.
-
-### SQLite schema addition for search signals
-
-```sql
-CREATE TABLE IF NOT EXISTS search_signals (
-    id INTEGER PRIMARY KEY,
-    key TEXT UNIQUE NOT NULL,      -- e.g. "domain:marketing"
-    signal REAL NOT NULL DEFAULT 0.0,  -- running average, positive=good, negative=bad
-    sample_count INTEGER NOT NULL DEFAULT 0,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-```
-
-No ORM model required for v1.1 — use `sqlalchemy.text()` for direct SQL. Add a proper SQLAlchemy model if signals become a first-class feature.
-
-### No new libraries needed
-
-The feedback loop uses only:
-- `sqlalchemy` (already present) — read `feedback` + `conversations` tables
-- `json` (stdlib) — parse `expert_ids` JSON
-- `app.state` (FastAPI) — cache the feedback map between requests
-- `asyncio.create_task` + `asyncio.sleep` — periodic background refresh
-
-**Do NOT add:** Redis, Celery, separate cache service. SQLite at this scale (hundreds of feedback rows) is fast enough for direct query-time reads.
-
----
-
-## Feature 5: Query Expansion Before FAISS Search
-
-### What is needed
-
-Before embedding a user query and searching FAISS, expand the query using one of two techniques. Choose based on latency budget:
-
-| Technique | Latency cost | Quality gain | Recommended |
-|-----------|-------------|-------------|-------------|
-| **HyDE** (Hypothetical Document Embeddings) | ~1-2s (one extra Gemini call) | HIGH — generates expert-like text, searches document space | YES for v1.1 |
-| **Synonym expansion** | ~0ms | LOW — simple keyword expansion | Only if HyDE adds too much latency |
-| Multi-query (RAG Fusion) | ~2-5s | HIGH — multiple retrieval paths averaged | Defer to v1.2 |
-
-### HyDE implementation (no new libraries)
-
-```python
-# In retriever.py or a new query_expander.py service
-async def expand_query_hyde(query: str, client: genai.Client) -> str:
-    """
-    Generate a hypothetical expert bio that would answer this query.
-    Embed the hypothetical bio instead of (or averaged with) the raw query.
-    """
-    prompt = f"""Write a 2-3 sentence professional bio of an expert who would perfectly
-answer this client need: "{query}"
-Write as if describing a real expert profile. Be specific about domain and skills."""
+async def pilot_chat(
+    user_message: str,
+    visible_experts: list[dict],
+    client: genai.Client,
+) -> dict:
+    # Give the model context about what's currently visible
+    context = f"The user is viewing {len(visible_experts)} experts. " \
+              f"Top 3: {', '.join(e['name'] for e in visible_experts[:3])}."
 
     response = await client.aio.models.generate_content(
         model="gemini-2.5-flash",
-        contents=prompt,
-        config=types.GenerateContentConfig(temperature=0.2),
+        contents=[
+            types.Content(role="user", parts=[types.Part(text=context)]),
+            types.Content(role="user", parts=[types.Part(text=user_message)]),
+        ],
+        config=types.GenerateContentConfig(
+            tools=[tool],
+            tool_config=types.ToolConfig(
+                function_calling_config=types.FunctionCallingConfig(
+                    mode="AUTO"   # model decides when to call vs respond in text
+                )
+            ),
+            temperature=0.2,
+        ),
     )
-    return response.text
 
-# In retrieve():
-hypothetical_doc = await expand_query_hyde(query, client)
-# Option A: embed hypothetical doc only (pure HyDE)
-vector = embed_text(hypothetical_doc, task_type="RETRIEVAL_DOCUMENT")
-# Option B: average raw query embedding + HyDE embedding (hedged HyDE)
-query_vec = embed_text(query, task_type="RETRIEVAL_QUERY")
-hyde_vec = embed_text(hypothetical_doc, task_type="RETRIEVAL_DOCUMENT")
-vector = (query_vec + hyde_vec) / 2
-faiss.normalize_L2(vector)
+    # Check if model called a function
+    if response.function_calls:
+        fn_call = response.function_calls[0]
+        # fn_call.name == "apply_filters"
+        # fn_call.args == {"query": "...", "rate_max": 150, "tags": [...]}
+        return {
+            "type": "function_call",
+            "function": fn_call.name,
+            "args": dict(fn_call.args),
+        }
+    else:
+        return {
+            "type": "text",
+            "text": response.text,
+        }
 ```
 
-**Recommendation: hedged HyDE (Option B).** Pure HyDE can drift from the user's intent if Gemini generates a bio with wrong assumptions. Averaging preserves the original query signal while enriching with document-space vocabulary.
+**Key notes:**
+- `response.function_calls` is a list — check `if response.function_calls` before accessing `[0]`
+- `fn_call.args` is a `Struct` object (protobuf) — wrap in `dict()` before JSON serialization
+- Function calling mode `"AUTO"` lets the model decide. Use `"ANY"` to force a tool call (not recommended for co-pilot — sometimes plain text answers are better)
+- The co-pilot receives the function call result as a frontend event and triggers a Zustand state update via `setSearchParams(fn_call.args)` — no round-trip back to Gemini needed for filter application
+- `google-genai` version already in production (`1.64.*`) supports all of the above — no version change needed
 
-### Expert pool domain mapping (for query expansion)
+### No installation change needed
 
-Build a domain vocabulary map at startup by extracting tags from all experts in the database. When a query matches known domain terms, expand it with related terms from the tag corpus.
-
-```python
-# At startup: build tag co-occurrence map from experts table
-# {tag: set_of_related_tags_based_on_co_occurrence_in_same_expert}
-# Use at query time: if "marketing" found in query, also search "growth marketing", "digital marketing", "brand strategy"
+```bash
+# Already in requirements.txt — no change
+google-genai==1.64.*
 ```
 
-This is pure Python set/dict manipulation — no new libraries.
+**Confidence:** HIGH — `FunctionDeclaration`, `response.function_calls`, and `fn_call.args` API confirmed from Google AI developer forum, googleapis/python-genai GitHub, and multiple 2025 examples. Package deprecation of `google-generativeai` confirmed from official GitHub repo rename.
 
 ---
 
-## Recommended Package Updates
+## 7. OKLCH Colors — Tailwind v3 vs v4
 
-The existing `requirements.txt` needs one version update for v1.1:
+### Recommendation
 
-| Package | Current | Recommended | Reason |
-|---------|---------|-------------|--------|
-| `tenacity` | `8.4.*` | `9.1.*` | 9.x requires Python 3.10+, adds `retry_if_exception_message`, cleaner API. The existing usage pattern is compatible — no code changes needed beyond version bump. |
+**Do not upgrade to Tailwind v4 for v2.0.** Stay on Tailwind v3. Use raw CSS custom properties for any OKLCH colors needed.
 
-All other packages remain unchanged.
+### The reality
+
+| Tailwind version | OKLCH support |
+|-----------------|---------------|
+| v3 (current) | Not built-in. OKLCH can be used in arbitrary CSS values and `theme.extend.colors` with raw strings, but no built-in OKLCH palette. Requires PostCSS plugin for browser fallbacks. |
+| v4 | Built-in native OKLCH palette. All default colors are in OKLCH. CSS variables by default. |
+
+**Why NOT to upgrade to v4 for v2.0:**
+- Tailwind v4 is a breaking change — it removes `tailwind.config.js` in favor of CSS-based config (`@import "tailwindcss"`), drops JIT mode (now always on), and changes how plugins work
+- The existing Tailwind v3 config (custom colors, any plugins) would need migration
+- React Router v7, Vite, and the existing component tree are tested against v3 — v4 migration risk is non-trivial
+- v2.0 is a marketplace rearchitecture; a CSS framework migration adds scope and risk without feature value
+
+**If OKLCH-like vivid colors are needed in v3:**
+
+```css
+/* globals.css — define OKLCH as CSS custom properties */
+:root {
+  --color-primary: oklch(65% 0.2 260);      /* vivid blue */
+  --color-accent: oklch(72% 0.18 145);       /* vivid teal */
+}
+```
+
+```js
+// tailwind.config.js — reference CSS variables
+module.exports = {
+  theme: {
+    extend: {
+      colors: {
+        primary: 'oklch(var(--color-primary-l) var(--color-primary-c) var(--color-primary-h) / <alpha-value>)',
+        // Simpler: just use the oklch() value directly in Tailwind arbitrary values
+        // e.g. className="bg-[oklch(65%_0.2_260)]"
+      }
+    }
+  }
+}
+```
+
+**Simplest v3 approach:** Use Tailwind's arbitrary value syntax directly for OKLCH colors: `className="bg-[oklch(65%_0.2_260)]"`. No plugin, no config change. OKLCH is supported in all modern browsers (Safari 15.4+, Chrome 111+, Firefox 113+) — the Tinrate user base is assumed modern-browser.
+
+**PostCSS fallback plugin:** Only needed if supporting Safari < 15.4. Install `@csstools/postcss-oklab-function` if required — but at this scale, browser support likely warrants no fallback.
+
+### No installation change needed for v3 OKLCH usage
 
 ```bash
-# Update tenacity only
-pip install "tenacity==9.1.*"
+# If PostCSS fallbacks needed for older browsers only:
+npm install -D @csstools/postcss-oklab-function
 ```
+
+**Confidence:** HIGH — Tailwind v4 OKLCH built-in confirmed from official v4.0 blog post. v3 limitation (no built-in OKLCH palette) confirmed from official v3 color docs. Browser support for OKLCH confirmed from MDN/caniuse.
+
+---
+
+## New Package Summary
+
+### Frontend additions
+
+```bash
+npm install zustand@^5.0.0 react-virtuoso@^4.18.0 framer-motion@^12.0.0
+```
+
+### Backend additions
+
+None. All v2.0 backend features (IDSelectorBatch, FTS5, Gemini function calling) use packages already in `requirements.txt`.
 
 ---
 
@@ -310,24 +545,27 @@ pip install "tenacity==9.1.*"
 
 | Avoid | Why | Use Instead |
 |-------|-----|-------------|
-| LangChain | Adds 100+ MB of dependencies, obscures control flow, wraps google-genai in unpredictable ways. All v1.1 features are implementable directly with the existing SDK. | Direct `google-genai` SDK calls |
-| Haystack | Same reasons as LangChain. Framework overhead for what is essentially a few Python functions. | Direct implementation |
-| Redis / Memcached | Overkill for caching a ~1,558-entry feedback map. SQLite read + `app.state` dict is sufficient at this scale. | `app.state` dict + SQLite |
-| Celery / RQ | Task queue overhead for a periodic 60-second refresh. `asyncio.create_task` covers this. | `asyncio` background task |
-| `aiolimiter` / `asynciolimiter` | Third-party rate limiter libraries add complexity. `asyncio.Semaphore` + `tenacity` covers all rate limit scenarios for offline batch jobs. | `asyncio.Semaphore` + `tenacity` |
-| pgvector / ChromaDB | Vector scale does not warrant infrastructure change. 1,558 vectors is tiny for FAISS. | `faiss-cpu` (already present) |
-| Cross-encoder reranking models | sentence-transformers cross-encoders (~400MB models) add significant memory and cold-start cost on Railway for marginal gain at 1,558 expert scale. | HyDE query expansion + feedback score adjustment |
+| `@tanstack/react-virtual` | Overlaps with react-virtuoso; no advantage for this use case | `react-virtuoso` (simpler API for variable heights) |
+| `react-window` / `react-virtualized` | Older generation; react-virtuoso supersedes both | `react-virtuoso` |
+| `jotai` / `recoil` / `valtio` | Unnecessary — Zustand covers all v2.0 state needs with less API surface | `zustand` |
+| `google-generativeai` | Deprecated package — Google has renamed its GitHub repo to `deprecated-generative-ai-python` | `google-genai` (already installed) |
+| Tailwind v4 | Breaking changes to config, requires migration of existing v3 setup; no feature value for v2.0 | Tailwind v3 + OKLCH arbitrary values |
+| `sqlitefts` (PyPI package) | Wraps FTS4 (older), not needed — FTS5 is available via SQLite built-in | Raw `CREATE VIRTUAL TABLE ... USING fts5` via `text()` |
+| `pgvector` / ChromaDB | FAISS at 1,558 vectors needs no infrastructure change; IDSelectorBatch adds pre-filtering | `faiss-cpu` (already installed) |
+| `@motionone/animation` / `motion` (npm) | This is the web animation API library, not the React framer-motion library | `framer-motion` |
 
 ---
 
 ## Version Compatibility
 
-| Package | Version in requirements.txt | Compatible with | Notes |
-|---------|---------------------------|-----------------|-------|
-| `faiss-cpu` | `1.13.*` | `numpy 2.2.*` | faiss-cpu 1.13.x requires numpy 1.x or 2.x — both work |
-| `google-genai` | `1.64.*` | `gemini-embedding-001`, `gemini-2.5-flash` | Confirmed: `client.aio.models.generate_content()` is async-native in 1.x |
-| `tenacity` | upgrade to `9.1.*` | Python 3.10+ | Breaking: removed deprecated `RetryError.last_attempt` — verify any catches |
-| `sqlalchemy` | `2.0.*` | `sqlite` + `text()` for raw SQL | No change needed; `ALTER TABLE ADD COLUMN` via `text()` is the migration pattern |
+| Package | Version | Compatible with | Notes |
+|---------|---------|-----------------|-------|
+| `zustand@^5.0.0` | 5.0.10 | React 18, TypeScript 5.x | No React 19 issues; works with Vite ESM |
+| `react-virtuoso@^4.18.0` | 4.18.1 | React 18, Vite | ESM-native; no special Vite config |
+| `framer-motion@^12.0.0` | 12.34.3 | React 18 minimum (v7+ requirement) | ESM; tree-shakeable; no Vite config needed |
+| `faiss-cpu@1.13.*` | 1.13.2 | numpy 1.x or 2.x | IDSelectorBatch included; no change |
+| `google-genai@1.64.*` | 1.64.* | Gemini 2.5 Flash, function calling | GA since May 2025; `response.function_calls` available |
+| Tailwind v3 (no change) | — | React 18, Vite | OKLCH via arbitrary values — no plugin needed |
 
 ---
 
@@ -335,42 +573,35 @@ pip install "tenacity==9.1.*"
 
 | Recommended | Alternative | When to Use Alternative |
 |-------------|-------------|-------------------------|
-| HyDE query expansion via gemini-2.5-flash | Multi-query RAG Fusion | If latency becomes acceptable and recall still poor after v1.1 |
-| `asyncio.Semaphore` + `tenacity` for batch tagging | Gemini Batch API (async job) | If tagging needs to run repeatedly or at scale beyond 10K experts; Batch API offers 50% cost savings but 24h latency — wrong tradeoff for a one-shot job |
-| SQLite-native feedback map | Dedicated analytics store | When feedback volume exceeds ~50K rows and query latency on `feedback` table becomes measurable |
-| In-memory `app.state` for feedback cache | Redis | Only if multiple Railway instances run concurrently (not the case in v1.1) |
-| Hedged HyDE (averaged embeddings) | Pure HyDE | Use pure HyDE if hedged version shows query drift in test lab evaluation |
-
----
-
-## Installation
-
-No new packages needed. Update tenacity version only:
-
-```bash
-# Backend — update requirements.txt
-# Change: tenacity==8.4.*
-# To:     tenacity==9.1.*
-
-pip install "tenacity==9.1.*"
-```
-
-No frontend package additions needed for v1.1. The admin Expert tab enhancements use existing React + Tailwind patterns.
+| `Virtuoso` (list) for variable-height grid | `VirtuosoGrid` | Only if cards are confirmed uniform fixed-height; then VirtuosoGrid offers simpler API |
+| Stay on Tailwind v3 | Upgrade to Tailwind v4 | If starting a new project from scratch, v4 is the right choice; for v2.0 migration cost outweighs benefit |
+| `framer-motion` for animations | CSS transitions only | If bundle size is a concern (framer-motion adds ~50KB gzip); CSS transitions are sufficient for filter state changes but cannot do spring physics for panel slide-in |
+| Direct `google-genai` function calling | LangChain tool calling | If orchestrating multi-step agent chains with memory and planning; overkill for a single-tool co-pilot |
+| SQLite FTS5 via triggers | Meilisearch / Typesense | If full-text search quality degrades significantly at >10K experts or if typo-tolerance becomes a priority |
 
 ---
 
 ## Sources
 
-- [gemini-embedding-001 deprecation of text-embedding-004](https://github.com/mem0ai/mem0/issues/3942) — MEDIUM confidence (community issue confirming Jan 14, 2026 deprecation)
-- [Gemini Batch API now supports Embeddings](https://developers.googleblog.com/en/gemini-batch-api-now-supports-embeddings-and-openai-compatibility/) — MEDIUM confidence
-- [Gemini API Rate Limits — official docs](https://ai.google.dev/gemini-api/docs/rate-limits) — MEDIUM confidence (third-party summaries verified direction; check official docs for exact current numbers)
-- [embed_content batch limit: 100 texts per call](https://github.com/googleapis/python-genai/issues/427) — MEDIUM confidence (community-confirmed hard limit)
-- [gemini-embedding-001: 3072 dims, MRL truncation to 768](https://github.com/RooCodeInc/Roo-Code/issues/5774) — HIGH confidence (confirmed by multiple sources)
-- [faiss-cpu 1.13.2 latest on PyPI](https://pypi.org/project/faiss-cpu/) — HIGH confidence
-- [tenacity 9.1.4 latest on PyPI](https://pypi.org/project/tenacity/) — HIGH confidence
-- [HyDE paper and implementation pattern](https://medium.aiplanet.com/advanced-rag-improving-retrieval-using-hypothetical-document-embeddings-hyde-1421a8ec075a) — MEDIUM confidence (pattern is well-established in RAG literature)
-- Existing codebase (`app/config.py`, `scripts/ingest.py`, `app/services/embedder.py`) — HIGH confidence (in production, validated)
+- [Zustand npm — version 5.0.10](https://www.npmjs.com/package/zustand) — HIGH confidence
+- [Zustand persist middleware docs](https://zustand.docs.pmnd.rs/middlewares/persist) — HIGH confidence (official docs)
+- [Zustand persist + slice pattern discussion #2027](https://github.com/pmndrs/zustand/discussions/2027) — MEDIUM confidence
+- [react-virtuoso npm — version 4.18.1](https://www.npmjs.com/package/react-virtuoso) — HIGH confidence
+- [react-virtuoso VirtuosoGrid docs](https://virtuoso.dev/react-virtuoso/virtuoso-grid/) — HIGH confidence (official docs)
+- [framer-motion npm — version 12.34.3](https://www.npmjs.com/package/framer-motion) — HIGH confidence
+- [Motion changelog — React 18 minimum](https://motion.dev/changelog) — HIGH confidence (official changelog)
+- [FAISS IDSelectorBatch C++ API](https://faiss.ai/cpp_api/struct/structfaiss_1_1IDSelectorBatch.html) — HIGH confidence (official FAISS docs)
+- [FAISS Setting search parameters wiki](https://github.com/facebookresearch/faiss/wiki/Setting-search-parameters-for-one-query) — HIGH confidence (official wiki)
+- [faiss-cpu 1.13.2 on libraries.io](https://libraries.io/pypi/faiss-cpu) — HIGH confidence
+- [SQLite FTS5 official docs](https://sqlite.org/fts5.html) — HIGH confidence
+- [SQLAlchemy FTS5 discussion #9466](https://github.com/sqlalchemy/sqlalchemy/discussions/9466) — MEDIUM confidence (community discussion confirming text() is the only path)
+- [google-genai PyPI](https://pypi.org/project/google-genai/) — HIGH confidence
+- [google-generativeai deprecated GitHub](https://github.com/google-gemini/deprecated-generative-ai-python) — HIGH confidence (official deprecation)
+- [Gemini function calling API — google-genai](https://ai.google.dev/gemini-api/docs/function-calling) — HIGH confidence (official docs, confirmed API shape)
+- [Tailwind v4.0 blog — OKLCH built-in](https://tailwindcss.com/blog/tailwindcss-v4) — HIGH confidence (official announcement)
+- [Tailwind v3 colors docs — no OKLCH built-in](https://tailwindcss.com/docs/customizing-colors) — HIGH confidence
 
 ---
-*Stack research for: TCS v1.1 Expert Intelligence & Search Quality*
+
+*Stack research for: TCS v2.0 Expert Marketplace rearchitecture*
 *Researched: 2026-02-21*

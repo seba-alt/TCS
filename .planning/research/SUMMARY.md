@@ -1,194 +1,196 @@
 # Project Research Summary
 
-**Project:** TCS / Tinrate AI Concierge — v1.1 Expert Intelligence & Search Quality
-**Domain:** RAG-based expert-matching chatbot — subsequent milestone (existing production system)
+**Project:** TCS — Tinrate Expert Marketplace v2.0 (Extreme Semantic Explorer)
+**Domain:** Expert/professional marketplace with AI-assisted search and lead capture
 **Researched:** 2026-02-21
-**Confidence:** HIGH
+**Confidence:** HIGH — all four research areas resolved against official documentation, live codebase, and verified sources
 
 ## Executive Summary
 
-This milestone extends a working production RAG system (FastAPI + FAISS + Gemini + React) rather than building from scratch. The core challenge is data enrichment at scale: 1,558 expert profiles exist in SQLite, but the FAISS index only contains 530 of them, and none have domain tags. All v1.1 search quality improvements depend on first tagging every expert with AI-generated domain terms and re-ingesting the complete expert set into FAISS with enriched text. The recommended approach is a strict serial pipeline: batch tag generation offline first, then FAISS re-ingest reading from the enriched DB, then admin UI enhancements, then search intelligence features layered on top. No new infrastructure is needed — every feature is implementable with the existing google-genai SDK, SQLite, and FastAPI patterns already in production.
+TCS v2.0 is a brownfield rearchitecture of an existing production expert marketplace: replacing a chat-centric interface with a full professional marketplace (faceted search sidebar, virtualized expert grid, floating AI co-pilot) while preserving all existing infrastructure (FastAPI, SQLAlchemy, SQLite, FAISS, Gemini, admin dashboard). The dominant theme from research is that the existing technology stack covers almost all v2.0 needs — only three npm packages are added (Zustand, react-virtuoso, Framer Motion) and zero backend packages change. Everything new builds on validated foundations.
 
-The highest-leverage improvements are also the most straightforward: AI batch tagging (one offline Gemini script), FAISS re-ingest with tag-enriched text (modified existing ingest.py), findability scoring (deterministic Python formula), and an enhanced admin Expert tab (React table additions). These four deliver the stated milestone goal and unblock everything else. The search intelligence features — HyDE query expansion and feedback-weighted re-ranking — are valuable but should be layered on after the data foundation is solid, with careful gating to avoid query drift and popularity bias.
+The recommended approach is a strict sequential build order driven by data dependencies: the hybrid search backend (FTS5 migration + /api/explore endpoint) must ship first because every other component depends on its API contract. Zustand global state is the second dependency — the sidebar, grid, and AI co-pilot cannot share state without it. From there, the marketplace UI assembles in layers (page layout, then grid, then co-pilot). This is not a preference; it is the dependency graph. Attempting to build in parallel without a working API or store leads to mock-debt that must be unwound later.
 
-The dominant risks in this milestone are all data integrity risks, not architectural ones. Partial FAISS index from silent API throttling, schema-drifted tags from unconstrained LLM output, and crash-corrupted metadata files are the three failure modes most likely to be missed and hardest to recover from. Each has a clear prevention pattern (count assertions, response_schema enforcement, staging file writes) that costs trivial implementation effort. The search intelligence features carry secondary risks around query drift and feedback cold-start that are well-understood in the RAG literature and equally preventable with documented thresholds.
-
----
+The key risks are specific and well-documented. FAISS IDSelectorBatch must be used exclusively as a search-time filter (not `remove_ids`). The FTS5 UPDATE trigger must capture old values before overwriting them, or the search index silently corrupts. Zustand persist must be scoped with `partialize` and `version` from day one to prevent returning users getting broken state on every deploy. Framer Motion `AnimatePresence` exit animations are incompatible with the virtualizer and must only be used outside it. Gemini function call output must be validated field-by-field before touching the store. Every pitfall has a clear, low-cost prevention strategy documented in PITFALLS.md.
 
 ## Key Findings
 
 ### Recommended Stack
 
-No new libraries are required for v1.1. The existing production stack handles every feature area. The only package change is upgrading `tenacity` from `8.4.*` to `9.1.*` for Python 3.10+ compliance and a cleaner retry API. The embedding model migration has already occurred: `gemini-embedding-001` with `output_dimensionality=768` (MRL truncation) is confirmed in `app/config.py`. All offline scripts use the same `google-genai` SDK already present.
+The existing production stack (FastAPI + SQLAlchemy + SQLite + FAISS + Gemini + React + Vite + Tailwind v3) handles all v2.0 requirements without infrastructure change. Backend additions (FTS5, IDSelectorBatch, Gemini function calling) use packages already in `requirements.txt`. Frontend adds exactly three packages. See `STACK.md` for full version details.
 
 **Core technologies:**
-- `google-genai 1.64.*`: All Gemini calls (tagging, query expansion, generation) — already in production, handles async natively via `client.aio.models`
-- `faiss-cpu 1.13.*`: Vector search — unchanged, 1,558 vectors is trivially small for FAISS in-memory
-- `asyncio.Semaphore` + `tenacity 9.1.*`: Rate limit management for batch tagging — stdlib + existing dependency (version bump only)
-- `SQLAlchemy 2.0.*` + `sqlalchemy.text()`: Schema migrations for two new columns (tags, findability_score) — same idempotent ALTER TABLE pattern already in main.py
+- `zustand@^5.0.0` — global state management for filters, results, and co-pilot — chosen for module-level singleton pattern required by the co-pilot's async dispatch outside React render cycle
+- `react-virtuoso@^4.18.0` — virtualized expert grid — use `Virtuoso` (list) not `VirtuosoGrid` (fixed-height grid) because expert cards have variable heights
+- `framer-motion@^12.0.0` — animations for co-pilot panel slide-in and card entry — use `LazyMotion` + `domAnimation` to keep bundle size at ~15KB; no exit animations on virtualized items
+- `faiss-cpu@1.13.*` (existing) — pre-filtered vector search via `IDSelectorBatch` + `SearchParameters` at search time, not destructive `remove_ids`
+- `google-genai@1.64.*` (existing) — Gemini 2.5 Flash for AI co-pilot with `apply_filters` function calling; `google-generativeai` is deprecated
+- SQLite FTS5 (built-in, no install) — BM25 full-text search for keyword matching in hybrid pipeline
+- Tailwind v3 (existing, no upgrade) — OKLCH colors via arbitrary values `bg-[oklch(...)]`; do not upgrade to v4 during this milestone
 
-**Critical version note:** `text-embedding-004` was shut down January 14, 2026. `gemini-embedding-001` is already in production. Do not reference the old model anywhere in v1.1 work.
-
-See `/Users/sebastianhamers/Documents/TCS/.planning/research/STACK.md` for full detail.
+**What NOT to add:** Tailwind v4 (breaking changes, no feature value for v2.0), `VirtuosoGrid` (fixed-height only), `google-generativeai` (deprecated), any vector database (FAISS at 1,558 experts needs no change).
 
 ### Expected Features
 
-The milestone divides cleanly into a P1 core (4 features that deliver the stated milestone value) and a P2 extension (3 features that improve search quality measurably). The P1 features are all data-layer or admin-display work — no retrieval path changes. P2 features touch the live retrieval path and carry more risk.
+**Must have (v2.0 core — marketplace is incomplete without these):**
+- Zustand global state (filter + results + pilot slices with `partialize` persist) — unblocks everything else
+- `/api/explore` hybrid endpoint (SQLAlchemy pre-filter → FAISS IDSelectorBatch → FTS5 BM25 → fused weighted scoring)
+- Faceted sidebar (rate range slider, domain tag multi-select, text search, active filter chips, clear all)
+- Virtualized expert grid (react-virtuoso, variable-height cards, name/title/rate/tags/CTA)
+- Floating AI co-pilot (FAB → slide-in panel, Gemini conversation, context-aware of current grid results)
+- Gemini function calling `apply_filters` (AI updates Zustand filter state from conversation)
+- Email gate extended to "View Full Profile" trigger (existing gate mechanism, new trigger point)
+- Loading skeletons and empty state with co-pilot CTA (no dead ends)
 
-**Must have (P1 — v1.1 core):**
-- AI batch auto-tagging (1,558 experts via Gemini 2.5 Flash, structured JSON output) — prerequisite for all other features
-- FAISS re-ingest with all 1,558 experts + tags in embedding text — raises index from 530 to 1,558; without this, tags are cosmetic
-- Findability score (0-100 deterministic formula: bio presence/length, profile URL, tags, job title) — stored as Float column, enables worst-first admin sort
-- Enhanced admin Expert tab (first/last name, bio preview, profile URL link, tag pills, color-coded score badge, worst-first default sort) — admin visibility layer over the enriched data
+**Should have (v2.0 extended — after core works):**
+- "Download Match Report" lead magnet (personalized PDF, gated by email, server-side generation)
+- URL filter sync (serialize Zustand slice to query params for shareable filters)
+- Fuzzy search / "Did you mean?" (FTS5 prefix search + Levenshtein on tag vocabulary)
+- Match reason snippet on expert cards (Gemini-generated plain-language explanation per result)
+- Mobile bottom sheet sidebar (after desktop sidebar is complete)
 
-**Should have (P2 — v1.1 extended):**
-- Feedback-weighted re-ranking (post-FAISS soft boost using cumulative thumbs up/down per expert, minimum 10 interactions threshold, max 20% similarity score boost)
-- Query expansion via HyDE (hedged: averaged raw query + hypothetical expert bio embedding; one extra Gemini call per search; gated on weak original results only)
-- Expert domain pre-mapping (group tags into domain clusters from the tagging output; enriches GAP reports)
+**Defer to v2.1+:**
+- Saved filter presets (localStorage named filter sets — need is not validated)
+- Co-pilot suggested question chips (nice-to-have, patterns not yet understood)
+- Expert card detail slide-in drawer (conversion improvement to test post-v2.0)
 
-**Defer (v2+):**
-- Search quality test lab (high UI complexity, high long-term value; defer until feedback corpus is large enough to show signal)
-- Manual tag editing with FAISS sync (requires "mark as reviewed" workflow and scheduled re-ingest)
-- Multi-query RAG Fusion (higher Gemini call overhead; test HyDE alone first)
-
-See `/Users/sebastianhamers/Documents/TCS/.planning/research/FEATURES.md` for full detail.
+**Anti-features to avoid:** Star ratings without Tinrate data sync, real-time availability/calendar integration, aggressive email gate on search access, full bio text in cards, more than 2-3 sort options, 20+ filter dimensions, numeric cosine similarity scores shown to users.
 
 ### Architecture Approach
 
-The architecture is additive: two new offline scripts, two new SQLite columns on the Expert table, one new service file, and surgical modifications to three existing backend files. No components are replaced. The DB is the single source of truth — ingest.py must be changed to read from the Expert SQLAlchemy table rather than experts.csv to ensure tags (written by tag_experts.py) are included in the FAISS embedding text. This also fixes a latent consistency risk where CSV and DB could diverge.
+The architecture is a thin-router / fat-service pattern extended to two new backend endpoints (`explore.py` → `explorer.py` service, `pilot.py` as Gemini proxy) and a Zustand module-level singleton on the frontend. Admin routes and all existing services remain entirely unchanged. The homepage route changes from `App` (chat) to `MarketplacePage` (marketplace). React Router v7 lazy loading requires the marketplace component and its loader to be in separate files to prevent heavy dependencies from leaking into the initial bundle.
 
 **Major components:**
-1. `scripts/tag_experts.py` (NEW) — offline batch pipeline: reads Expert table, calls Gemini 2.5 Flash with structured output schema (Pydantic `response_schema`), writes tags + findability_score back to Expert table; must run before ingest
-2. `scripts/ingest.py` (MODIFIED) — reads from Expert table (not CSV), appends `"Tags: X, Y, Z."` to `expert_to_text()`, rebuilds FAISS index with all 1,558 experts
-3. `app/services/query_expander.py` (NEW) — calls Gemini to generate 2 query variants; integrated in chat.py as a graceful-degrading pre-step before retrieve()
-4. `app/services/retriever.py` (MODIFIED) — accepts `extra_queries` param; runs FAISS search per query variant, deduplicates by username, returns merged top-K
-5. `app/routers/admin.py` (MODIFIED) — `_serialize_expert()` adds tags/score; new `GET /api/admin/domain-map` endpoint surfaces tag-level downvote frequency from Feedback table
-6. `app/models.py` + `app/main.py` (MODIFIED) — two new columns (tags TEXT, findability_score REAL) via idempotent ALTER TABLE guards in lifespan
+1. `app/services/explorer.py` (NEW) — three-stage hybrid search pipeline: SQLAlchemy pre-filter → FAISS IDSelectorBatch → FTS5 BM25 → fused rank (0.7 FAISS / 0.3 BM25) → cursor pagination
+2. `app/routers/pilot.py` (NEW) — thin Gemini API proxy with `apply_filters` function declaration; returns raw function call or text to frontend
+3. `frontend/src/store/useExplorerStore.ts` (NEW) — Zustand module-level singleton with three slices (filters, results, pilot); `partialize` persists only user-preference fields
+4. `frontend/src/components/marketplace/` (NEW) — `FilterSidebar`, `ExpertGrid`, `ExpertCard`, `CoPilot` — all read/write through `useExplorerStore`
+5. `frontend/src/hooks/usePilot.ts` (NEW) — Gemini two-turn function calling loop; dispatches to store via `useExplorerStore.getState()` from async callbacks
+6. `app/main.py` (MODIFIED, minimally) — FTS5 migration block, `username_to_faiss_pos` mapping at startup, two new router registrations
 
-See `/Users/sebastianhamers/Documents/TCS/.planning/research/ARCHITECTURE.md` for full detail.
+**Critical integration constraint:** FAISS uses positional indices (0 to 1557), not `Expert.id` values from SQLite. A `username_to_faiss_pos` mapping must be built at startup from `app.state.metadata` and stored in `app.state`. SQLAlchemy pre-filter results must be translated through this mapping before constructing `IDSelectorBatch`.
 
 ### Critical Pitfalls
 
-1. **Silent partial FAISS index from embedding API throttling** — 429 errors mid-ingest produce a valid-looking but incomplete index with no crash. Prevention: `tenacity` retry on every embed call plus assert `index.ntotal == 1558` before writing the index to disk.
+1. **FAISS `remove_ids` vs search-time `IDSelectorBatch`** — Never call `index.remove_ids()` on the production index; it mutates the index and silently shifts all sequential IDs. Use `faiss.SearchParameters(sel=faiss.IDSelectorBatch(ids))` exclusively. Add a unit test asserting `index.ntotal == 1558` after every code path that touches the index.
 
-2. **LLM tag schema drift across 1,558-expert batch run** — temperature > 0 and LLM non-determinism cause structurally inconsistent tag output (mixed case, wrong array format, wrong count). Prevention: `response_mime_type="application/json"` + `response_schema` with Pydantic model + `min_items`/`max_items` constraints + post-response validation on every call.
+2. **FTS5 UPDATE trigger capturing wrong (post-update) values** — The UPDATE trigger must explicitly delete old tokens using `old.` values and insert new tokens using `new.` values in a single AFTER UPDATE trigger. The naive pattern of three separate AFTER triggers corrupts the index ~10% of the time. Always run `INSERT INTO experts_fts(experts_fts) VALUES('rebuild')` after creating the table to backfill existing 1,558 rows (triggers do not backfill).
 
-3. **Crash leaves metadata.json in partially-tagged state** — the resulting half-enriched FAISS index is worse than either fully-tagged or fully-untagged. Prevention: write to `data/tags_staging.json` during the run, promote to production only after count assertion passes; implement `--resume` flag for idempotent re-runs.
+3. **Zustand persist rehydrating stale/incompatible state across deploys** — Use `partialize` to persist only `emailGated` (and optionally filter preferences); never persist `results`, `isLoading`, or `messages`. Set `version: 1` from day one and implement `migrate` to reset incompatible old state. Bump `version` on every deploy that changes the persisted shape.
 
-4. **Railway volume not mounted during pre-deploy** — index writes in pre-deploy silently write to a temp filesystem that disappears at runtime. Prevention: all index writes must happen in the FastAPI lifespan startup handler (where the volume IS mounted), never in pre-deploy.
+4. **Gemini function call output applied to Zustand without validation** — Gemini's structured output guarantees syntactic JSON validity, not semantic correctness. Write a strict `validateFilterArgs` function that whitelists only `minRate`, `maxRate`, `tags`, `query` and enforces valid ranges before any store dispatch. Treat Gemini output as untrusted input.
 
-5. **Query expansion causing drift worse than no expansion** — LLM-generated variants introduce domain-wrong terms that dilute retrieval. Prevention: gate expansion on weak original results only (skip if original returns 3+ above-threshold results); add `QUERY_EXPANSION_ENABLED` env var flag; run 10-query regression test before enabling in production.
-
-6. **Feedback cold-start / popularity bias** — sparse early feedback disproportionately boosts already-visible experts. Prevention: require minimum 10 interactions before applying any feedback boost; cap boost at 20% of similarity score.
-
-See `/Users/sebastianhamers/Documents/TCS/.planning/research/PITFALLS.md` for full detail.
-
----
+5. **Framer Motion `AnimatePresence` exit animations inside Virtuoso** — Virtuoso unmounts DOM nodes immediately on scroll; `AnimatePresence` never gets to run exit animations. Use `animate` (entry only) on card `motion` elements; never define `exit` on virtualized items. Reserve `AnimatePresence` for the co-pilot panel, filter sidebar, and modals.
 
 ## Implications for Roadmap
 
-Based on research, the dependency graph dictates a clear serial phase structure for P1 and parallel independence for P2 features. The order is not a stylistic choice — each phase has hard data prerequisites from the phase before it.
+Based on the dependency graph established in ARCHITECTURE.md and the feature priority matrix in FEATURES.md, research strongly supports a 5-phase build order with an optional 6th phase for extended features.
 
-### Phase 1: Data Enrichment Pipeline
+### Phase 1: Hybrid Search Backend
+**Rationale:** Every other component (UI, state, co-pilot) is blocked until the API contract is established and the FTS5 index exists on Railway. This phase has no frontend dependency and can ship independently. FTS5 migration is idempotent (IF NOT EXISTS) and safe to deploy early.
+**Delivers:** Working `/api/explore` endpoint returning `ExploreResponse` with cursor pagination; FTS5 virtual table on Railway SQLite; `username_to_faiss_pos` mapping in `app.state`; `ExploreResponse` Pydantic schema (the contract all frontend phases depend on)
+**Addresses features:** `/api/explore` hybrid endpoint (P1 core), expert count display, pure filter mode (no query), hybrid search mode
+**Avoids:** FAISS `remove_ids` mutation (add code comment and unit test now), FTS5 UPDATE trigger bug (correct three-trigger pattern from day one), FTS5 missing rebuild (include in migration script with verification SQL)
+**Research flag:** STANDARD PATTERNS — all three pipeline stages are documented with exact code in ARCHITECTURE.md and STACK.md. No additional research needed.
 
-**Rationale:** Everything else depends on tags existing in the DB. This is the unblocking prerequisite for all other features. It also contains the highest-risk data integrity work (batch LLM + FAISS re-ingest), which must be validated before touching the live retrieval path.
-**Delivers:** All 1,558 Expert rows with tags (JSON) and findability_score (Float) in SQLite; new FAISS index with 1,558 vectors (up from 530) using tag-enriched embedding text; two new SQLite columns added via idempotent migration.
-**Addresses:** AI batch auto-tagging, FAISS re-ingest (P1 features 1 and 2 from FEATURES.md)
-**Avoids:** Silent partial index (count assertion), schema-drifted tags (response_schema + validation), crash corruption (staging file + resume logic), Railway volume write in wrong context (lifespan handler only), shared API quota exhaustion (run at off-peak hours with 8 RPM cap)
-**Implementation notes:**
-- Add tags + findability_score columns to Expert model + main.py lifespan guards first (30 min)
-- Write tag_experts.py with Pydantic response_schema, validation, staging file, --resume flag
-- Modify ingest.py to read from Expert DB table (not CSV) and include tags in expert_to_text()
-- Run batch tagging at off-peak hours to avoid shared quota exhaustion
-- Validate: `index.ntotal == 1558` before marking done; sample 30 random experts for tag quality
+### Phase 2: Zustand State and Routing
+**Rationale:** Zustand is the load-bearing middleware for the entire frontend. The sidebar, grid, and co-pilot cannot share state without it. React Router route change (homepage to marketplace) must happen here so Phase 3 builds against the real route. This phase can begin in parallel with Phase 1 using a mock API response; it must finalize after Phase 1 API contract is confirmed.
+**Delivers:** `useExplorerStore.ts` with filter, results, and pilot slices; `partialize` + `version: 1` + `migrate` configured from day one; React Router route change (`/` to `MarketplacePage`); `ExpertCard` and `ExploreResponse` TypeScript types; `useExplore` hook (debounced fetch)
+**Uses:** `zustand@^5.0.0` with `persist` middleware; React Router v7 `lazy()` with loader/component in separate files
+**Avoids:** Double source of truth (write state ownership table before any code; grep for `useState` holding filter/result/gate data); persist rehydration (partialize + version from day one); React Router lazy loading bundle leak (separate `marketplace.loader.ts` from `MarketplacePage.tsx`); OKLCH browser decision (document now, add PostCSS plugin only if needed)
+**Research flag:** STANDARD PATTERNS — Zustand v5 and React Router v7 are well-documented. No additional research needed.
 
-### Phase 2: Admin Expert Tab Enhancement
+### Phase 3: Marketplace Page and Filter Sidebar
+**Rationale:** Depends on Phase 1 (API works) and Phase 2 (store works). The page layout and sidebar controls are the visible frame that the grid and co-pilot attach to. Card design must be finalized here before virtualization is implemented — react-virtuoso requires stable card height to avoid measurement thrash.
+**Delivers:** `MarketplacePage.tsx` layout (sidebar + grid area + floating pilot FAB); `FilterSidebar.tsx` (rate range dual-handle slider, tag checkboxes with counts, text search, active filter chips, clear all); debounced filter-to-API wiring; loading skeletons; empty state with co-pilot CTA; expert count ("Showing X of 1,558")
+**Implements:** Left sidebar as primary navigation (non-negotiable industry pattern); sidebar controls as controlled components driven by Zustand; filter chips as single source of visual truth for active state
+**Avoids:** Mobile sidebar vs co-pilot panel conflict (design mutual-exclusion state machine before building either); card height decision (target fixed height with line-clamp to simplify Phase 4 virtualization)
+**Research flag:** STANDARD PATTERNS — faceted sidebar and card design are well-documented marketplace patterns with strong industry consensus.
 
-**Rationale:** Phase 1 produces the data; Phase 2 surfaces it. Admin can verify tag quality and findability scores before search intelligence features go live. This is the lowest-risk phase — read-only display work, no retrieval path changes.
-**Delivers:** Enhanced admin Expert tab with first/last name, bio preview, profile URL (clickable), tag pills (4 + overflow), color-coded findability score badge (red 0-39, yellow 40-69, green 70-100), worst-first default sort, score breakdown tooltip.
-**Addresses:** Enhanced admin Expert tab (P1 feature 4), expert domain pre-mapping (P2 feature)
-**Avoids:** Findability score misused as retrieval signal — document explicitly as admin-diagnostic only, no retrieval weight in v1.1.
-**Research flag:** Standard React/Tailwind table patterns. Does not need deeper research. Follow existing admin component patterns in `frontend/src/admin/`.
+### Phase 4: Expert Grid with Virtualization
+**Rationale:** Depends on Phase 3 (page skeleton exists and card design is finalized). react-virtuoso requires finalized card content to avoid layout thrash. This phase virtualizes the grid for 1,558 experts and wires infinite scroll via cursor pagination.
+**Delivers:** `ExpertGrid.tsx` with react-virtuoso `Virtuoso` component (row-chunked CSS grid approach, not `VirtuosoGrid`); `ExpertCard.tsx` with fixed-height design (name, title, rate, 2-3 tag pills, CTA); `endReached` callback triggering cursor pagination via `appendResults`; Framer Motion entry-only card animation (no exit)
+**Uses:** `react-virtuoso@^4.18.0` (`Virtuoso` list with CSS grid row renderer); `framer-motion@^12.0.0` with `LazyMotion + domAnimation`
+**Avoids:** VirtuosoGrid jitter (use `Virtuoso` with row-chunked approach; use `padding` not `margin` on cards; fixed card height); AnimatePresence exit animations (entry `animate` only; no `exit` prop on card motion elements); Framer Motion bundle size (LazyMotion + domAnimation feature set targets ~15KB)
+**Research flag:** STANDARD PATTERNS — react-virtuoso docs and known VirtuosoGrid limitations are documented in PITFALLS.md. No additional research needed.
 
-### Phase 3: Search Intelligence Layer
+### Phase 5: Floating AI Co-Pilot
+**Rationale:** Depends on Phase 2 (Zustand store) and Phase 4 (grid exists to provide context). The co-pilot backend (`pilot.py`) can be built in parallel with Phase 4 — they share no code. The co-pilot is the primary differentiator and the last piece to snap into place.
+**Delivers:** `app/routers/pilot.py` (Gemini thin proxy with `apply_filters` tool declaration); `usePilot.ts` (two-turn function calling loop with `validateFilterArgs` before any store dispatch); `CoPilot.tsx` (bottom-right FAB, slide-in panel with context strip, conversation area, sticky input); `AnimatePresence` on panel open/close; mobile full-screen overlay
+**Uses:** `google-genai@1.64.*` (existing); Gemini 2.5 Flash with `apply_filters` FunctionDeclaration; `useExplorerStore.getState()` from async callbacks
+**Avoids:** Gemini output not validated (write `validateFilterArgs` before wiring; unit test with crafted invalid values); server-side state push anti-pattern (backend is a thin proxy only — no filter state on backend); `adminKey` never in Zustand persist (stays in `sessionStorage`)
+**Research flag:** MEDIUM COMPLEXITY — the Gemini two-turn proxy pattern (FastAPI forwarding function call to frontend, frontend returning tool result, second Gemini call for final text) has no official FastAPI reference implementation. The pattern is inferred from documented Gemini function calling behavior. Consider a short spike to validate the exact `PilotRequest` / `PilotResponse` shape against SDK behavior before full build.
 
-**Rationale:** Search quality improvements build on the enriched FAISS index from Phase 1. These features touch the live retrieval path and require careful gating and measurement before enabling in production.
-**Delivers:** HyDE query expansion (hedged: averaged raw query + hypothetical bio embedding), feedback-weighted re-ranking (cumulative score per expert, minimum 10 interaction threshold, 20% similarity score cap), domain map admin endpoint (`GET /api/admin/domain-map`).
-**Addresses:** Query expansion (P2 feature), feedback-weighted re-ranking (P2 feature), domain pre-mapping (P2 feature)
-**Avoids:** Query drift (gate on weak original results, 2 variant limit, regression test), popularity bias (minimum 10 interaction threshold, 20% boost cap), latency degradation (asyncio.gather parallelization, 1s timeout on expansion), feedback loop suppressing niche experts (impression distribution monitoring), blocking the event loop (use run_in_executor for sync Gemini calls in async handler)
-**Implementation notes:**
-- Create query_expander.py service with graceful fallback on Gemini failure
-- Modify retriever.py to accept extra_queries with deduplication
-- Wire into chat.py with run_in_executor (never block event loop on sync Gemini calls)
-- Add QUERY_EXPANSION_ENABLED + FEEDBACK_LEARNING_ENABLED env var flags before shipping
-- Run 10-query regression test; compare thumbs-up rate pre/post; benchmark p95 latency before/after
-**Research flag:** The architecture research provides complete implementation patterns, but the specific HyDE prompt effectiveness and expansion gating threshold need empirical validation against the actual expert corpus. Plan iteration on the prompt during Phase 3 implementation. Also: check current feedback corpus size before planning Phase 3 — if under 50 thumbs events, ship feedback infrastructure with `FEEDBACK_LEARNING_ENABLED=false`.
+### Phase 6: Extended Features (v2.0 Polish)
+**Rationale:** These features add significant value but do not change the core architecture once Phases 1-5 are working. They can be sequenced independently of each other.
+**Delivers:** URL filter sync (Zustand → query params for shareable links); "Download Match Report" lead magnet (server-side PDF generation, WeasyPrint on Railway, gated by email); fuzzy search / "Did you mean?" (FTS5 prefix + tag vocabulary Levenshtein); match reason snippet on cards (lightweight Gemini call at retrieval time)
+**Research flag:** NEEDS RESEARCH for Download Match Report — WeasyPrint PDF generation on Railway (memory constraints, font availability on Railway's base image) is underexplored. Run a spike: generate a 5-expert report and measure memory and latency before committing. Alternative: send the report as a formatted HTML email (simpler, lower risk, easier to build). All other Phase 6 features follow standard patterns.
 
 ### Phase Ordering Rationale
 
-- **Phase 1 must come first** because the tags column must exist before tag_experts.py runs, and tags must be in the DB before ingest.py can embed them. The FAISS index must be rebuilt before retriever.py changes are meaningful.
-- **Phase 2 before Phase 3** because admin review of tags and scores provides a human quality gate before those signals influence live retrieval. Admin visibility also lets developers verify data quality without touching the user-facing path.
-- **Phase 3 is a single phase** because query expansion and feedback re-ranking are independent retrieval improvements but both require the enriched FAISS index and are best measured together via the same feedback signal (thumbs rate).
-- The feedback learning component of Phase 3 can be decoupled from query expansion if needed — both have `ENABLED` env var flags to allow independent shipping.
+- Phase 1 must come before all other phases: the API contract is the single dependency of all frontend phases. Without it, frontend builds against mocks that must be unwound.
+- Phase 2 can partially run in parallel with Phase 1: the Zustand store can be scaffolded against a mock API response, then finalized after Phase 1 ships. This is the only safe parallelization point.
+- Phase 3 before Phase 4: card design must be finalized before virtualization is implemented. Virtuoso requires stable card content to avoid measurement instability.
+- Phase 5 co-pilot backend in parallel with Phase 4: `pilot.py` has no dependency on the frontend grid. The co-pilot frontend (CoPilot.tsx, usePilot.ts) requires Phase 4 (grid must exist to provide context for the AI).
+- Phase 6 after all core phases: these features are additive to a working marketplace, not prerequisites.
 
 ### Research Flags
 
 Phases needing deeper research during planning:
-- **Phase 3:** HyDE prompt engineering and expansion gating thresholds need empirical validation against the actual TCS expert corpus. The architecture research provides the implementation pattern (hedged HyDE with `extra_queries` param) but not the optimal prompt text or the exact `original_quality_threshold` value. Plan a manual evaluation pass on 20 representative queries during Phase 3 implementation.
-- **Phase 3:** Feedback signal volume is unknown at research time. Check the SQLite `feedback` table row count before planning Phase 3. If under 50 rows, implement feedback re-ranking infrastructure but ship with `FEEDBACK_LEARNING_ENABLED=false`.
+- **Phase 5 (co-pilot two-turn loop):** MEDIUM — validate the exact FastAPI proxy implementation for the Gemini two-turn function calling flow before full build. The pattern is derived from documentation but has no official FastAPI+Gemini reference. A one-day spike is recommended.
+- **Phase 6 (Download Match Report):** LOW-MEDIUM — WeasyPrint on Railway requires environment validation (memory limits, font loading). Run a spike before committing to WeasyPrint. HTML email is the safe fallback.
 
-Phases with standard patterns (skip deeper research):
-- **Phase 1 (tagging script):** Pattern is fully specified in ARCHITECTURE.md with working code examples. Rate limit handling, response_schema usage, and staging file approach are documented. No novel patterns.
-- **Phase 1 (ingest.py modification):** The change is surgical — read from Expert DB instead of CSV, append tags in expert_to_text(). The existing ingest.py is correct otherwise.
-- **Phase 2 (admin tab):** Standard React table + Tailwind badge pattern. Follow existing admin component conventions in `frontend/src/admin/`. No novel UI patterns.
-
----
+Standard patterns (skip research-phase):
+- **Phase 1:** SQLite FTS5, FAISS IDSelectorBatch, FastAPI router pattern — fully documented with exact code in ARCHITECTURE.md
+- **Phase 2:** Zustand v5 with persist middleware, React Router v7 lazy loading — official docs are comprehensive
+- **Phase 3:** Faceted sidebar, dual-handle rate slider, tag checkboxes, active filter chips — established marketplace UX patterns with strong consensus
+- **Phase 4:** react-virtuoso `Virtuoso` component, Framer Motion `LazyMotion` — well-documented, pitfalls already identified and mitigated in PITFALLS.md
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | Existing production stack is validated. Only change is tenacity version bump. All implementation patterns verified against official Google GenAI + FAISS docs and confirmed working in the existing codebase. gemini-embedding-001 migration already done. |
-| Features | MEDIUM-HIGH | P1 features have well-established patterns (batch tagging, FAISS re-ingest, admin tables). P2 search intelligence features (HyDE, feedback re-ranking) are documented in RAG literature but specific thresholds and prompt effectiveness need empirical validation against this specific corpus. |
-| Architecture | HIGH | Based on direct inspection of all production source files. Component boundaries are unambiguous. Data flow diagrams in ARCHITECTURE.md are grounded in actual file structure, not abstract. Build order is dictated by hard data dependencies. |
-| Pitfalls | MEDIUM-HIGH | Rate limiting, FAISS thread safety, and Railway volume constraints are verified against official documentation. Query drift and feedback cold-start claims are well-established in literature. Specific threshold values (10 interactions, 20% cap) are informed heuristics requiring empirical tuning for this system. |
+| Stack | HIGH | All packages version-confirmed from npm/PyPI. No new backend packages. Frontend additions (Zustand, react-virtuoso, Framer Motion) from official docs. Existing packages (faiss-cpu, google-genai, Tailwind v3) are unchanged and validated in production. |
+| Features | MEDIUM-HIGH | Table stakes (sidebar, cards, virtualization) are industry consensus with strong multi-source agreement. AI co-pilot anchoring patterns are 6-12 months old and less settled. Download Match Report conversion data is from secondary sources. |
+| Architecture | HIGH | Resolved against live codebase (direct file inspection of all production source files) plus official FAISS, SQLite, Gemini, Zustand, and FastAPI docs. Build order derived from actual dependency graph, not preference. |
+| Pitfalls | HIGH | FAISS, FTS5, and Zustand pitfalls are documented in official sources and verified GitHub issues. react-virtuoso jitter and AnimatePresence incompatibility are confirmed open issues with documented workarounds. Gemini validation pitfall is MEDIUM (community-informed). |
 
-**Overall confidence:** HIGH for the P1 data pipeline and admin display phases. MEDIUM-HIGH for the P2 search intelligence features pending empirical validation of expansion gating and feedback thresholds.
+**Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **Exact Gemini rate limits for paid tier:** STACK.md cites 150-300 RPM for Tier 1. Verify the exact current RPM limit at ai.google.dev/gemini-api/docs/rate-limits before setting CONCURRENCY in tag_experts.py. Use conservative values (8 RPM for LLM, 50 RPM for embeddings) if uncertain.
-- **Current feedback corpus size:** Unknown at research time. Check `SELECT COUNT(*) FROM feedback` before planning Phase 3. If under 50 rows, ship feedback re-ranking infrastructure with `FEEDBACK_LEARNING_ENABLED=false`.
-- **HyDE prompt effectiveness:** The hypothetical bio generation prompt in STACK.md and ARCHITECTURE.md is a reasonable starting point. Plan a manual evaluation pass on 20 representative queries before enabling in production — the prompt may need iteration for the expert-matching domain.
-- **ingest.py source-of-truth migration:** ARCHITECTURE.md flags that ingest.py currently reads from experts.csv. The transition to reading from the Expert SQLAlchemy table needs careful handling — verify the existing filter logic (`bio and hourly_rate`) translates correctly to the ORM query before running against production data.
-
----
+- **Gemini two-turn proxy exact implementation:** The architecture document gives the full pattern (inferred from Gemini function calling docs + Zustand docs), but the FastAPI `pilot.py` proxy has no official reference. Validate during Phase 5 planning or early spike. If the two-turn approach is too complex, a simplified one-shot approach (Gemini returns function call, frontend executes, no second Gemini turn for confirmation text) is a viable fallback.
+- **WeasyPrint on Railway:** PDF generation in a Railway container is not validated. Memory and font availability are unknowns. Gate this behind a spike before committing to the approach in Phase 6.
+- **FTS5 on Railway's SQLite:** The migration assumes Railway's Python image ships CPython's `sqlite3` with FTS5 compiled in (standard for CPython wheels). Almost certainly true, but add a startup check (`SELECT fts5('test')`) — if it raises, fall back to SQLAlchemy LIKE-only search until confirmed.
+- **Tag LIKE query performance at scale:** The SQLAlchemy tag filter uses `LIKE '%"tag"%'` — O(n) full-table scan. At 1,558 experts this is fast (<3ms). If the expert count grows beyond 10k, this needs SQLite JSON virtual columns or Postgres GIN index. Not a v2.0 issue, but flag for future milestones.
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- Existing production codebase (`app/config.py`, `app/models.py`, `app/main.py`, `app/routers/admin.py`, `app/services/retriever.py`, `scripts/ingest.py`) — direct inspection, all architecture patterns grounded here
-- Google GenAI structured output docs (response_schema, Pydantic): https://ai.google.dev/gemini-api/docs/structured-output
-- FAISS write/read index and thread safety: https://faiss.ai/index.html and https://github.com/facebookresearch/faiss/wiki/Threads-and-asynchronous-calls
-- Railway volumes documentation: https://docs.railway.com/volumes
-- FastAPI lifespan pattern: https://fastapi.tiangolo.com/advanced/events/
-- faiss-cpu 1.13.2 on PyPI: https://pypi.org/project/faiss-cpu/
-- tenacity 9.1.4 on PyPI: https://pypi.org/project/tenacity/
+- [FAISS wiki — Setting search parameters](https://github.com/facebookresearch/faiss/wiki/Setting-search-parameters-for-one-query) — IDSelectorBatch search-time API
+- [FAISS IDSelectorBatch C++ API](https://faiss.ai/cpp_api/struct/structfaiss_1_1IDSelectorBatch.html) — numpy int64 array input confirmation
+- [SQLite FTS5 official docs](https://sqlite.org/fts5.html) — external content tables, rebuild command, trigger patterns
+- [Gemini function calling docs](https://ai.google.dev/gemini-api/docs/function-calling) — two-turn loop, FunctionDeclaration schema
+- [Zustand persist middleware docs](https://zustand.docs.pmnd.rs/middlewares/persist) — partialize, version, migrate
+- [react-virtuoso official docs](https://virtuoso.dev) — Virtuoso vs VirtuosoGrid, endReached, troubleshooting (margin vs padding)
+- [FastAPI bigger applications](https://fastapi.tiangolo.com/tutorial/bigger-applications/) — router-per-file pattern
+- [React Router v7 SPA mode](https://reactrouter.com/how-to/spa) — lazy loading, loader/component separation
+- [Tailwind v4 blog](https://tailwindcss.com/blog/tailwindcss-v4) — OKLCH built-in (v4 only, not v3)
+- Direct codebase inspection: `app/main.py`, `app/models.py`, `app/routers/`, `app/services/`, `frontend/src/` — ground truth for all integration points
 
 ### Secondary (MEDIUM confidence)
-- Google Gemini API rate limits: https://ai.google.dev/gemini-api/docs/rate-limits — direction confirmed, exact paid-tier numbers need verification
-- HyDE query expansion pattern: https://medium.aiplanet.com/advanced-rag-improving-retrieval-using-hypothetical-document-embeddings-hyde-1421a8ec075a
-- RAG feedback re-ranking (NVIDIA technical blog): https://developer.nvidia.com/blog/enhancing-rag-pipelines-with-re-ranking/
-- Query expansion pitfalls: https://medium.com/@sahin.samia/query-expansion-in-enhancing-retrieval-augmented-generation-rag-d41153317383
-- Cold start and sparse signals in recommender systems: https://medium.com/data-scientists-handbook/cracking-the-cold-start-problem-in-recommender-systems-a-practitioners-guide-069bfda2b800
-- Hard negatives degrading RAG: https://arxiv.org/html/2506.00054v1
-- gemini-embedding-001 deprecation of text-embedding-004 (Jan 14, 2026): https://github.com/mem0ai/mem0/issues/3942
-- embed_content batch limit 100 texts per call: https://github.com/googleapis/python-genai/issues/427
-- Gemini Batch API: https://ai.google.dev/gemini-api/docs/batch-api
+- [SQLite forum — FTS5 trigger bug](https://sqlite.org/forum/info/da59bf102d7a7951740bd01c4942b1119512a86bfa1b11d4f762056c8eb7fc4e) — UPDATE trigger corruption documented by SQLite contributors
+- [FAISS issue #3112](https://github.com/facebookresearch/faiss/issues/3112) — IDSelectorBatch hash collision (not relevant for sequential IDs)
+- [react-virtuoso issue #479](https://github.com/petyosi/react-virtuoso/issues/479) and [#1086](https://github.com/petyosi/react-virtuoso/issues/1086) — VirtuosoGrid jitter with variable heights (open since 2021, unresolved)
+- [Framer Motion issue #1682](https://github.com/framer/motion/issues/1682) — AnimatePresence exit animation incompatibility with virtualizers
+- [Zustand hydration race condition fix — v5.0.10](https://github.com/pmndrs/zustand/discussions/2556) — reason to use 5.0.10+
+- [React Training blog — React Router v7 lazy loading pitfalls](https://reacttraining.com/blog/spa-lazy-loading-pitfalls) — loader/component separation required for true code splitting
+- [Brixon Group — B2B lead magnet conversion data](https://brixongroup.com/en/b2b-lead-magnets-compared-gated-pdf-vs-interactive-tool-which-strategy-will-deliver-better-results-in/) — personalized report 6.2% vs static 3.8%
+- [Microsoft Learn AI UX guidance](https://learn.microsoft.com/en-us/microsoft-cloud/dev/copilot/isv/ux-guidance) — floating AI co-pilot patterns
 
-### Tertiary (LOW-MEDIUM confidence)
-- LLM batch-sensitive nondeterminism: https://superintelligencenews.com/research/thinking-machines-llm-nondeterminism-inference/ — supports using response_schema
-- Completeness meter UX pattern: https://ui-patterns.com/patterns/CompletenessMeter — informed findability score display decisions
+### Tertiary (LOW confidence)
+- [Microsoft Bing floating Copilot — Windows Forum](https://windowsforum.com/threads/microsoft-bings-new-ai-features-floating-copilot-box-source-transparency-chat-driven-results.371429/) — FAB anchor position convention (bottom-right) used by industry-standard assistants
+- Prompt injection risk for Gemini function calling — community-informed, not officially documented as a specific attack vector for this architecture
 
 ---
 *Research completed: 2026-02-21*

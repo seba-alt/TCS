@@ -1,324 +1,422 @@
 # Pitfalls Research
 
-**Project:** Tinrate AI Concierge Chatbot — v1.1 Expert Intelligence & Search Quality
-**Domain:** Batch AI tagging + FAISS hot-swap + query expansion + sparse feedback learning on existing RAG system
+**Project:** Tinrate Expert Marketplace — v2.0 Extreme Semantic Explorer
+**Domain:** Adding hybrid search, Zustand, react-virtuoso, Framer Motion, Gemini function calling to existing production FastAPI + React app (brownfield, not greenfield)
 **Researched:** 2026-02-21
-**Confidence:** MEDIUM-HIGH — rate limit and FAISS thread-safety claims verified against official Google and FAISS documentation; feedback cold-start claims are well-established in recommender systems literature; Railway volume constraints verified against Railway docs.
+**Confidence:** HIGH for FAISS, SQLite FTS5, and Zustand (official docs and GitHub issues verified); MEDIUM for react-virtuoso/Framer Motion integration (community issue trackers); MEDIUM for Gemini function calling security (official guidance exists but frontend-specific risks are community-sourced)
 
 ---
 
 ## Critical Pitfalls
 
-Mistakes that cause broken data pipelines, production downtime, or permanently degraded retrieval quality.
+Mistakes that cause rewrites, production downtime, silent data corruption, or security regressions when adding these features to a live system.
 
 ---
 
-### Pitfall 1: Embedding API Silently Throttled During 1,558-Expert Re-ingest
+### Pitfall 1: IDSelectorBatch With IndexFlatIP Confuses Search-Time Pre-filtering With Destructive remove_ids
 
 **What goes wrong:**
-The `google-genai` SDK's `embed_content()` call routes exclusively through the `batchEmbedContents` endpoint, which has a 150-request rate limit. When embedding all 1,558 experts sequentially in a tight loop (even with chunked batches), the process hits 429 errors mid-run. If errors are not caught and retried, the run silently produces a partial FAISS index — fewer than 1,558 vectors — with no warning. The index appears complete and loads successfully, but search quality is permanently degraded because a third of the expert pool is missing.
+Developers conflate two entirely different FAISS operations that both involve `IDSelectorBatch`: (a) using it as a search-time filter via `SearchParameters(sel=selector)` — which is safe and non-destructive — and (b) calling `index.remove_ids(selector)` — which permanently mutates the index in place and **shifts the sequential IDs of every vector above the removed ones**. If `remove_ids` is accidentally called (e.g., copied from a deletion example in a StackOverflow answer), the FAISS vector-to-expert ID mapping silently breaks. Searches return wrong experts for every query, with no error raised.
 
 **Why it happens:**
-Developers call `embed_content()` for each expert record in a loop without rate-limit handling, expecting the SDK to manage throttling. The SDK does not transparently handle 429s in embedding calls. The FAISS index write succeeds with however many vectors were generated before the quota error, so there is no crash to alert the developer.
+The FAISS wiki and most code examples use `IDSelectorBatch` in the context of `remove_ids` (the only operation the wiki documents for it). Developers building pre-filtered search find `IDSelectorBatch`, read the surrounding documentation, and copy the `remove_ids` pattern when they actually want search-time filtering. The search-time pattern uses a different API: `faiss.SearchParameters(sel=selector)`.
+
+The additional ID-shift behavior compounds the risk: `IndexFlatIP` uses sequential integer IDs (0, 1, 2, ...). After removing vector at position 100, vector 101 becomes 100, 102 becomes 101, and so on. Any metadata mapping (`expert_row_id → faiss_vector_index`) built before removal is now wrong for every expert after the removed one.
 
 **How to avoid:**
-- Implement exponential backoff with jitter using `tenacity` around every embedding call:
-  ```python
-  from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
-  import google.api_core.exceptions
+Never call `remove_ids` on the production FAISS index. Use `IDSelectorBatch` exclusively for search-time pre-filtering:
 
-  @retry(
-      retry=retry_if_exception_type(Exception),
-      wait=wait_exponential(multiplier=1, min=2, max=60),
-      stop=stop_after_attempt(6)
-  )
-  def embed_one(client, text: str) -> list[float]:
-      result = client.models.embed_content(model="text-embedding-004", contents=text)
-      return result.embeddings[0].values
-  ```
-- Add a sleep between batches: `time.sleep(0.5)` between every 10 embeddings is safe for free tier; `time.sleep(0.2)` for paid.
-- After generating all embeddings, assert `len(embeddings) == 1558` before writing the FAISS index. Abort and log if the count is wrong.
-- Run re-ingest as an offline script (`scripts/reindex_experts.py`) not in-process. Write the index to a temp file first, then replace the live file only after the count assertion passes.
-- If the SDK consistently throttles, bypass `embed_content()` and call `embedContent` (singular) via direct HTTP POST — this avoids the batch endpoint's tighter quota.
+```python
+import faiss
+import numpy as np
+
+# Safe pattern — search-time pre-filtering only, does NOT mutate the index
+allowed_ids = np.array(filtered_expert_ids, dtype=np.int64)
+selector = faiss.IDSelectorBatch(allowed_ids)
+search_params = faiss.SearchParameters(sel=selector)
+
+distances, indices = index.search(query_vector, k=top_k, params=search_params)
+```
+
+Add a guard comment at the top of any FAISS utility module:
+
+```python
+# FAISS INDEX IS READ-ONLY AT RUNTIME.
+# Do not call index.remove_ids() — it mutates the index and shifts all sequential IDs.
+# Pre-filtering uses SearchParameters(sel=IDSelectorBatch(ids)) — see search_experts().
+```
+
+For the hybrid search route: SQLAlchemy pre-filters to a list of matching expert row IDs → those IDs are passed as `allowed_ids` to `IDSelectorBatch` → FAISS searches only that subset.
 
 **Warning signs:**
-- Script finishes in less than 3 minutes for 1,558 experts (embeddings take ~0.3s each; a full run should take at least 8 minutes)
-- FAISS index file is smaller than the v1.0 index that held 530 vectors
-- `faiss.read_index(path).ntotal` returns a value below 1,558 after the run
+- Search results return different experts than before a "cleanup" or "filter" operation on the index
+- `index.ntotal` decreases over time (it should always be 1,558 at v2.0)
+- The mapping between `faiss_index_position` and `expert_id` is off by a constant value for some experts
 
-**Phase to address:** Phase 1 (batch tagging) — validate count before writing index. This check costs 1 line and saves debugging a silent data quality regression.
+**Phase to address:** Phase 1 (hybrid search backend) — document the search-time vs. destructive distinction before writing any FAISS code. Add a unit test that asserts `index.ntotal == 1558` after every code path that touches the FAISS index.
 
 ---
 
-### Pitfall 2: Gemini LLM Produces Inconsistent Tags Across the Batch (Schema Drift)
+### Pitfall 2: FTS5 External Content Table Loses Sync With experts Table on UPDATE — AFTER Trigger Is Wrong
 
 **What goes wrong:**
-When tagging 1,558 experts with a single LLM call per expert (or small batch), temperature > 0 and CUDA batch-size variation cause the same prompt to produce structurally different outputs across the run. Some experts get 3 tags, others get 7. Some tags are capitalized, others lowercase. Some are comma-separated strings, others are JSON arrays. The tag schema drifts across the run without any single call failing. The resulting `metadata.json` is inconsistent, FAISS embedding text varies in structure, and the admin tab displays garbled tag data.
+When creating an FTS5 external content table pointing at the existing `experts` table, the synchronization triggers are written with `AFTER UPDATE` for all operations. This silently corrupts the FTS index for updated rows. The FTS extension handles an UPDATE by: (1) fetching the pre-update values to delete the old tokens, then (2) inserting the new tokens. If the trigger fires AFTER the update, step (1) fetches the already-modified values instead of the original ones — the old tokens are never removed. Queries for the old value still match the updated row, and queries for the new value also match. Search results become stale and semantically wrong, with no error raised.
 
 **Why it happens:**
-LLMs are non-deterministic. Research confirms that even `temperature=0` with identical prompts yields structurally different outputs when CUDA batch sizes vary (batch-sensitive nondeterminism). Long batch runs accumulate these structural variations silently. Without output validation after each call, bad tags are written to disk alongside good ones.
+The SQLite FTS5 documentation's example trigger code uses `AFTER INSERT`, `AFTER DELETE`, and `AFTER UPDATE`. Developers copy this pattern uniformly. The critical exception is that the DELETE portion of an UPDATE (removing old tokens) must have access to the pre-update state, which is only available in a `BEFORE UPDATE` context. The SQLite community has documented random corruption occurring about 10% of the time with the naive AFTER pattern.
+
+The initial population trap is also common: creating the FTS5 virtual table after the `experts` table already has 1,558 rows means the index starts empty. Triggers only capture changes after they are created; they do not backfill existing rows. FTS searches return zero results until a full rebuild is run.
 
 **How to avoid:**
-- Use `response_mime_type="application/json"` and a `response_schema` with Gemini to enforce structured output:
-  ```python
-  from google.genai import types
+Use the correct trigger pattern. UPDATE triggers must explicitly capture old values:
 
-  schema = types.Schema(
-      type=types.Type.OBJECT,
-      properties={
-          "tags": types.Schema(
-              type=types.Type.ARRAY,
-              items=types.Schema(type=types.Type.STRING),
-              min_items=3,
-              max_items=6
-          )
-      },
-      required=["tags"]
-  )
-  ```
-- Set `temperature=0` to minimize variation (does not eliminate it, but reduces frequency).
-- After each LLM response, validate: assert `isinstance(tags, list)`, assert `3 <= len(tags) <= 6`, assert all tags are non-empty strings. Retry once on validation failure before logging and skipping.
-- Write tags to a staging file (`data/tags_staging.json`) rather than directly overwriting `metadata.json`. Review a sample (20–30 experts) before promoting to production.
-- Run a post-processing normalization step: lowercase all tags, strip whitespace, deduplicate.
+```sql
+-- Create FTS5 external content table
+CREATE VIRTUAL TABLE experts_fts USING fts5(
+    first_name, last_name, job_title, bio, tags,
+    content='experts',
+    content_rowid='id'
+);
+
+-- Initial population (REQUIRED for existing data — triggers don't backfill)
+INSERT INTO experts_fts(experts_fts) VALUES('rebuild');
+
+-- INSERT trigger
+CREATE TRIGGER experts_fts_ai AFTER INSERT ON experts BEGIN
+    INSERT INTO experts_fts(rowid, first_name, last_name, job_title, bio, tags)
+    VALUES (new.id, new.first_name, new.last_name, new.job_title, new.bio, new.tags);
+END;
+
+-- DELETE trigger
+CREATE TRIGGER experts_fts_ad AFTER DELETE ON experts BEGIN
+    INSERT INTO experts_fts(experts_fts, rowid, first_name, last_name, job_title, bio, tags)
+    VALUES ('delete', old.id, old.first_name, old.last_name, old.job_title, old.bio, old.tags);
+END;
+
+-- UPDATE trigger — uses OLD values to delete, NEW values to insert
+CREATE TRIGGER experts_fts_au AFTER UPDATE ON experts BEGIN
+    INSERT INTO experts_fts(experts_fts, rowid, first_name, last_name, job_title, bio, tags)
+    VALUES ('delete', old.id, old.first_name, old.last_name, old.job_title, old.bio, old.tags);
+    INSERT INTO experts_fts(rowid, first_name, last_name, job_title, bio, tags)
+    VALUES (new.id, new.first_name, new.last_name, new.job_title, new.bio, new.tags);
+END;
+```
+
+After creating the triggers, always run `INSERT INTO experts_fts(experts_fts) VALUES('rebuild')` once to populate from existing data.
+
+Verify the index after migration:
+```sql
+SELECT COUNT(*) FROM experts_fts;  -- Must equal 1558
+SELECT * FROM experts_fts WHERE experts_fts MATCH 'marketing' LIMIT 5;  -- Must return results
+```
 
 **Warning signs:**
-- Sample of 10 tagged experts shows tags in mixed case and varying counts
-- `metadata.json` has entries where `tags` is a string rather than a list
-- Admin Expert tab shows some experts with 1 tag, others with 10+
+- FTS search returns zero results after migration
+- Searching for an expert by job title that you know exists returns nothing
+- Updating an expert's bio in the admin panel and then searching for the old bio terms still finds that expert
 
-**Phase to address:** Phase 1 (batch tagging) — enforce JSON schema and validate output before writing. Never write raw LLM output directly to the source-of-truth file.
+**Phase to address:** Phase 1 (hybrid search backend) — run FTS5 migration in a local SQLite copy before touching the Railway production DB. Include rebuild and verification SQL in the migration script, not as a manual step.
 
 ---
 
-### Pitfall 3: FAISS Index Hot-Swap Corrupts In-Flight Search Requests
+### Pitfall 3: Zustand Store Introduced Alongside Existing useState Creates Double Source of Truth
 
 **What goes wrong:**
-The re-ingest script writes a new `faiss.index` file to the Railway volume and the FastAPI app detects this and reloads the global index variable in-process. However, FAISS is thread-safe for concurrent reads but NOT for write operations. If a user search request reads the global index at the same moment the reload writes to it, the behavior is undefined — the app may return garbage results, raise a segfault-style error, or silently return zero results. This is a race condition that is difficult to reproduce locally (single-threaded dev) but occurs in production under any real user load.
+The existing chat page and admin components manage state entirely with local `useState`. When Zustand is introduced for the new marketplace (`searchParams`, `results`, `isPilotOpen`), developers incrementally migrate by adding the Zustand store for new code while leaving old components on `useState`. The result is two competing representations of the same data: the URL search params, the Zustand store, and scattered component-level `useState` all influence what the UI renders. Filters applied in the Zustand store do not propagate to components still reading from `useState`. The back button clears Zustand state but leaves stale `useState` data. Filter state appears correct in one component and stale in another.
 
 **Why it happens:**
-Python global variables are shared across all request handler threads in FastAPI. Reassigning a global FAISS index object (`app.state.index = new_index`) is not an atomic operation. The old index object is not safely garbage-collected while search threads hold a reference to it.
+Incremental migration feels safe: "I'll add Zustand for the new marketplace and leave existing components alone." But data that multiple components need to agree on (filter values, search results, email gate status) must have exactly one owner. Splitting ownership between Zustand and `useState` across components that render simultaneously means React's reconciliation cannot guarantee consistency.
 
 **How to avoid:**
-- Use a `threading.Lock` around the index replacement:
-  ```python
-  import threading
-  import faiss
+Decide ownership before writing any Zustand code. For v2.0, the rule is:
 
-  _index_lock = threading.Lock()
-  _current_index = None  # module-level global
+- **Zustand owns:** `searchParams` (rate range, tag filters, text query), `results` (current expert list), `isPilotOpen`, `emailGated` (previously localStorage only)
+- **Component-level `useState` owns:** form input buffer state (text being typed before submit), UI toggle state local to one component (accordion open/close)
+- **Never split:** if two components read the same value, it must be in Zustand, not `useState` in a parent
 
-  def get_index():
-      return _current_index  # safe for reads (Python GIL protects reference reads)
+For the email gate specifically: the existing `localStorage` flag must be migrated into the Zustand store (with persist middleware) so all v2.0 components read from one place. Do not keep the old `useState` initializer pattern alongside a Zustand selector for the same flag.
 
-  def replace_index(new_index_path: str):
-      global _current_index
-      new_index = faiss.read_index(new_index_path)
-      with _index_lock:
-          old = _current_index
-          _current_index = new_index
-          del old  # explicit release
-  ```
-- FAISS CPU index search is thread-safe for concurrent reads. Only the replacement itself needs the lock, and it is fast (microseconds for a 1,558-vector index).
-- Write the new index to a temp file first (`faiss.index.tmp`), then use `os.replace()` (atomic on POSIX) to swap the file on disk: `os.replace("faiss.index.tmp", "faiss.index")`. This ensures the file on disk is never in a half-written state if the process restarts mid-write.
-- The simplest safe approach for 1,558 vectors: trigger a Railway redeploy after re-indexing. Cold-start takes ~5 seconds at this scale, which is acceptable for a planned maintenance event. This avoids all in-process hot-swap complexity.
+Zustand's pattern of using per-slice selectors prevents unnecessary re-renders and makes ownership explicit:
+
+```typescript
+// Good — one source of truth
+const searchParams = useSearchStore((s) => s.searchParams);
+
+// Bad — parallel useState that shadows the store
+const [localSearchParams, setLocalSearchParams] = useState(/* ...from somewhere */ );
+```
 
 **Warning signs:**
-- Search requests return 0 results immediately after index reload triggers
-- FastAPI logs show AttributeError or segfault-adjacent errors during index reload
-- Railway logs show simultaneous "reloading index" and "search request" log lines
+- Filter state in the sidebar does not match what the results grid is displaying
+- Clearing filters in one component does not clear them in another
+- The email gate modal re-appears for users who already gated, on some pages but not others
 
-**Phase to address:** Phase 2 (FAISS re-ingest) — decide on hot-swap vs. redeploy strategy before writing index reload code. At 1,558 vectors, redeploy is the safer default.
+**Phase to address:** Phase 2 (Zustand integration) — write a state ownership table (who owns what) before writing any store code. Do a grep for every `useState` that holds filter, result, or gate data and migrate each one before the phase is considered done.
 
 ---
 
-### Pitfall 4: Railway Volume Not Accessible During the Build/Pre-Deploy Phase
+### Pitfall 4: Zustand Persist Middleware Rehydrates Stale or Incompatible State on Deploy
 
 **What goes wrong:**
-The re-ingest script is added as a Railway pre-deploy command to run before the server starts. The script attempts to write the new FAISS index to the persistent volume path. The command fails silently or with a permissions error because Railway does not mount persistent volumes during pre-deploy — volumes are only mounted during the start command (runtime).
+Persist middleware serializes the Zustand store to localStorage on every change and rehydrates it on page load. When v2.0 deploys, users returning to the site have stale v1.x state in their localStorage: old filter shapes, result arrays from the previous chat UI, or `emailGated` flags that were structured differently. Zustand rehydrates this stale state, the store's TypeScript types don't match, and components crash or silently render wrong data. In the worst case, the entire app breaks for returning users until they manually clear their localStorage — which they don't know to do.
+
+A related risk: persisting large arrays. If `results` (the full 1,558-expert response array) is included in the persisted state, localStorage fills up quickly. localStorage has a 5–10 MB limit per origin (varies by browser), and exceeding it causes `QuotaExceededError` which silently fails in some browsers.
 
 **Why it happens:**
-Railway's pre-deploy command executes in a separate container from the application, specifically without volume mounts. This is documented but easy to miss when setting up automated re-indexing workflows.
+Developers add `persist(...)` wrapping the entire store without thinking about what should survive across sessions vs. what should reset. Everything goes in because it's easier than deciding. Version numbers are omitted because "we'll add them later." Large arrays (results, expert objects with bio strings) are persisted without measuring their serialized size.
 
 **How to avoid:**
-- Run re-ingest as part of the application start sequence, not pre-deploy:
-  ```python
-  # In FastAPI lifespan or startup handler:
-  @asynccontextmanager
-  async def lifespan(app: FastAPI):
-      # Volume IS mounted here — safe to read/write FAISS index
-      load_or_rebuild_index()
-      yield
-  ```
-- Alternatively, run re-ingest manually from a local script that uploads the index to the volume via Railway's volume UI or SSH, then redeploy the app (which reads the updated index from the volume at startup).
-- Never put index write operations in Railway's `nixpacks.toml` build command or pre-deploy field.
+Use `partialize` to persist only user-preference state, never computed/fetched results:
+
+```typescript
+persist(
+  (set, get) => ({ ...storeDefinition }),
+  {
+    name: 'tinrate-marketplace-v2',
+    version: 1,
+    // Only persist preferences, not results or transient UI state
+    partialize: (state) => ({
+      emailGated: state.emailGated,
+      // Do NOT persist: results, isLoading, isPilotOpen, searchParams
+    }),
+    migrate: (persistedState: unknown, version: number) => {
+      // Handle v1.x → v2.0 shape change
+      if (version === 0) {
+        return { emailGated: false }; // reset incompatible old state
+      }
+      return persistedState as StoreState;
+    },
+  }
+)
+```
+
+Rules for what NOT to persist:
+- `results` — large array, always re-fetchable, goes stale immediately
+- `isLoading` / `error` — transient UI state, meaningless across sessions
+- `isPilotOpen` — acceptable to reset on each visit
+- `searchParams` — debatable; only persist if the UX explicitly says "your last search is saved"
+- Any field that references IDs or data that the server can delete or change
+
+Measure the serialized size of any persisted field: `JSON.stringify(state.emailGated).length` must be negligible. If a field's serialized size approaches 100KB, do not persist it.
 
 **Warning signs:**
-- Pre-deploy logs show `FileNotFoundError` or `PermissionError` on the volume path
-- The FAISS index on the volume is not updated despite the pre-deploy script "succeeding" (it ran against a temp filesystem, not the volume)
-- Railway deploy completes but the app starts with the old index
+- Console error `QuotaExceededError` in storage operations (only visible in devtools, not to users)
+- Returning users see stale filter values or an incorrectly gated/ungated state
+- TypeScript runtime errors like `Cannot read property X of undefined` on first render for returning users, but not for new users
+- `zustand-persist` hydration concurrency bug (affects Zustand < v5.0.10): concurrent hydration calls produce inconsistent state — upgrade to v5.0.10+
 
-**Phase to address:** Phase 2 (FAISS re-ingest) — test index write in Railway's start command context, not pre-deploy, before building any automation around it.
+**Phase to address:** Phase 2 (Zustand integration) — define `partialize` and `version` before the store is used in any component. Bump `version` on every deploy that changes the persisted state shape.
 
 ---
 
-### Pitfall 5: Query Expansion Causes Query Drift — Worse Results Than No Expansion
+### Pitfall 5: react-virtuoso VirtuosoGrid Jitters With CSS Grid and Variable-Height Cards
 
 **What goes wrong:**
-Query expansion is implemented by asking Gemini to generate 2–3 synonymous reformulations of the user's query, then running FAISS search for each and merging results. Gemini introduces semantically adjacent but domain-wrong terms. A user query "I need a UX designer for a mobile app" expands to include "product designer," "user researcher," and "app developer." The expansion retrieves mobile developers and market researchers who dominate the merged result set, pushing the UX specialists the user actually wanted further down. The Gemini response confidently recommends wrong experts.
+The expert grid is built with `VirtuosoGrid` using a CSS `grid` layout (`grid-template-columns: repeat(auto-fill, minmax(280px, 1fr))`). Expert cards have variable height because some bios are longer than others, some experts have more tags, and card expansion (on hover or click) changes card height dynamically. This triggers a known and documented bug in `VirtuosoGrid`: when the grid container's height is close to the height of items, or when the scrollbar appears and reduces the container's effective width (causing item width to change, which changes item height), the grid jitters and flickers on scroll. The issue is tracked as GitHub issue #479 and #1086 and has been reported since 2021 — it is not fixed as of 2025.
+
+The CSS `margin` trap is a separate issue: applying `margin` to card elements instead of `padding` confuses Virtuoso's item measuring mechanism. The scroll height is miscalculated and users cannot scroll all the way to the bottom of the list. This is documented on the Virtuoso troubleshooting page.
 
 **Why it happens:**
-LLMs expand queries based on general language patterns, not domain-specific retrieval logic. They do not know which expansions will retrieve better-matching experts from THIS specific corpus. Over-expansion introduces hard negatives — semantically adjacent but contextually wrong passages — that dilute the retrieval signal. Research confirms this: "increasing retrieved passages does not consistently improve performance; hard negatives can mislead LLMs even when relevant passages are available."
+`VirtuosoGrid` measures item heights to calculate scroll position. When item height changes (due to variable content, width changes from scrollbar appearance, or CSS animations), the measuring function is called repeatedly, triggering rapid DOM updates, which causes visible jitter. CSS margins are outside the measured element boundary, so they are not included in Virtuoso's height calculations.
 
 **How to avoid:**
-- Weight the original query more heavily than expansions. Run FAISS search with original query and get top-K. Only use expansion results to break ties or fill gaps when original query returns fewer than K results above the similarity threshold.
-  ```python
-  # Conservative expansion pattern:
-  original_results = search(original_query, k=8)
-  if len([r for r in original_results if r.score > THRESHOLD]) >= 3:
-      return original_results  # original was good enough
-  # Only expand if original retrieval is weak:
-  expanded_results = [search(q, k=4) for q in expand_query(original_query)]
-  ```
-- Limit expansions to 2 maximum. More than 2 expansions dramatically increases noise.
-- Test expansion on 20 representative queries BEFORE shipping. Compare results with and without expansion. If expansion reduces precision on more than 25% of test queries, disable it for that query type.
-- Add a similarity ceiling: discard any expansion result with cosine similarity lower than the worst original result. Expansion should only add, not replace.
-- Measure impact using the existing feedback signals: track thumbs-up rate per query, compare pre/post expansion.
+- Use `padding` on card elements, never `margin`. Replace `gap` on the grid with `padding` on individual cards if needed.
+- Fix card heights. The most reliable fix for `VirtuosoGrid` is uniform card height. Give all cards the same height (e.g., 320px), use `overflow: hidden` or `line-clamp` for variable-length bio text, and show the full bio in a side panel or modal, not in the card itself. This eliminates variable-height jitter entirely.
+- If cards must have variable height, use `Virtuoso` (the list component) with a single-column layout on mobile and a CSS column approach for desktop — not `VirtuosoGrid`. `Virtuoso` handles variable heights more robustly than `VirtuosoGrid`.
+- Set `overscan` to a higher value (`overscan={800}`) to reduce the frequency of remeasuring near the visible boundary.
+- Do not use Framer Motion layout animations on cards inside `VirtuosoGrid` — layout recalculations trigger Virtuoso remeasuring, compounding jitter.
 
 **Warning signs:**
-- Queries that returned accurate experts in v1.0 now return adjacent-but-wrong experts
-- Gemini response includes hedging language about expert relevance
-- Admin test lab shows lower thumbs-up rate after expansion is enabled
+- Grid flickers or cards jump vertically when the user scrolls to the bottom of the list
+- The scrollbar appears and the entire grid layout shifts horizontally for a frame
+- Users report they "can't scroll to the bottom" — they reach a point where the scroll stops before the last item
 
-**Phase to address:** Phase 3 (search intelligence) — run A/B comparison on test set before enabling expansion in production. Have an env var flag to disable expansion independently: `QUERY_EXPANSION_ENABLED=true`.
+**Phase to address:** Phase 3 (marketplace grid) — prototype the grid with both uniform-height and variable-height cards in a local sandbox before integrating. If variable height is required, validate the chosen approach handles 1,558 items with zero jitter before considering the phase done.
 
 ---
 
-### Pitfall 6: Sparse Feedback Signals Applied Too Early Create a Feedback Loop (Popularity Bias)
+### Pitfall 6: Framer Motion AnimatePresence and Virtualization Are Incompatible — Exit Animations Never Fire
 
 **What goes wrong:**
-The system has collected thumbs feedback for a few weeks. A few popular experts (those with clear, well-written bios, prominent job titles, or who happen to match common query types) accumulate thumbs-up signals faster than niche experts. When feedback signals are used to boost expert ranking, the popular experts get promoted further, receive even more exposure, accumulate more thumbs-up, and get boosted further still. Niche experts who are legitimately best-matched for specific queries never get shown — they cannot accumulate feedback because they never rank high enough to receive impressions. The retrieval system degrades to a popularity contest.
+`AnimatePresence` is added around expert cards to animate them in on mount and out on unmount. Inside `VirtuosoGrid`, cards are unmounted by the virtualizer when they scroll out of the viewport. When a card scrolls out, Virtuoso removes it from the DOM immediately. `AnimatePresence` never gets the chance to run the exit animation because the DOM node is gone before the animation can execute. The user sees cards disappear instantly instead of animating out. If `AnimatePresence` tries to block unmounting until the exit animation completes, it conflicts with Virtuoso's DOM management and causes layout corruption.
+
+A secondary issue: animating all 1,558 card mount animations simultaneously (e.g., on initial load or after a filter change) causes a large performance spike. Each `motion` element adds a ResizeObserver, style calculation, and RAF task. At 20–30 visible items, this is acceptable. At 100+ items rendered simultaneously (e.g., when virtualization is briefly disabled), it causes frame drops.
 
 **Why it happens:**
-This is the classic cold-start / popularity bias problem in recommender systems. Feedback signals are inherently biased by position: experts shown in position 1 receive more clicks and thumbs-up than identical experts shown in position 3, purely due to presentation order, not quality.
+`AnimatePresence` assumes it controls the mount/unmount lifecycle of its children. Virtualization libraries also control mount/unmount based on scroll position. These two control mechanisms conflict. The mount animation works fine (Virtuoso mounts → motion animates in). The unmount animation fails (Virtuoso unmounts instantly → motion never fires exit).
 
 **How to avoid:**
-- Apply a minimum feedback threshold before promoting any expert based on signals: require at least 10 thumbs-up interactions (not just positive rate) before the feedback signal influences ranking. Below this threshold, fall back to pure semantic similarity.
-  ```python
-  MIN_FEEDBACK_INTERACTIONS = 10
-
-  def get_score_boost(expert_id: int) -> float:
-      stats = db.query(ExpertFeedback).filter_by(expert_id=expert_id).first()
-      if not stats or stats.total_interactions < MIN_FEEDBACK_INTERACTIONS:
-          return 0.0  # no boost — insufficient data
-      positive_rate = stats.thumbs_up / stats.total_interactions
-      return (positive_rate - 0.5) * 0.2  # max ±0.1 boost on similarity score
+- Do not use `AnimatePresence` with exit animations on items inside `Virtuoso` or `VirtuosoGrid`. Exit animations will not work reliably.
+- Use `animate` (mount animation) without `exit` for cards: fade-in and scale-in on mount is safe. Simply do not define an `exit` prop.
+- Use `LazyMotion` with `domAnimation` (not `domMax`) to minimize the bundle contribution from Framer Motion to ~15KB:
+  ```tsx
+  import { LazyMotion, domAnimation, m } from 'framer-motion';
+  // Use <m.div> instead of <motion.div>
+  // Wrap app in <LazyMotion features={domAnimation}>
   ```
-- Cap the maximum boost to a small fraction of the similarity score (10–20%). Feedback should refine retrieval, not override it.
-- Separate feedback learning from retrieval so they can be toggled independently: `FEEDBACK_LEARNING_ENABLED=true`.
-- Log which experts receive impressions vs. thumbs per query type. If impression distribution becomes highly concentrated (top 20 experts receiving 80% of all impressions), that's a signal of runaway popularity bias.
-- Consider exploration: occasionally surface a lower-ranked expert (position 3 swap) to allow niche experts to collect feedback. A/B this carefully.
+- Limit animation to the card's initial appearance. After the first render, do not re-animate cards that re-enter the viewport on scroll — Virtuoso remounts cards as the user scrolls back up, which would re-trigger entry animations and look wrong. Use a `hasAnimated` ref or `initial={false}` after first mount.
+- Reserve `AnimatePresence` for components outside the virtualizer: the AI co-pilot sidebar, filter sidebar slide-in/out, modal dialogs, the bottom sheet on mobile. These work correctly with `AnimatePresence` because their lifecycle is controlled by React state, not by a virtualizer.
 
 **Warning signs:**
-- The same 20–30 experts appear in nearly all recommendations regardless of query content
-- Niche experts with specific skills (e.g., "blockchain auditor," "marine biologist consultant") never appear despite existing in the database
-- Thumbs-up rate initially improves then plateaus — the system is optimizing for a narrow popular slice
+- Cards do not animate out when the user scrolls, but do animate in when scrolling back up
+- Performance profiler shows 50+ ResizeObserver callbacks per scroll tick
+- Bundle size analysis shows `framer-motion` contributing more than 35KB to the initial JS bundle
 
-**Phase to address:** Phase 3 (search intelligence) — set the minimum threshold constraint and the boost cap BEFORE writing any feedback-weighting code. These are policy decisions, not implementation details.
-
----
-
-## Moderate Pitfalls
+**Phase to address:** Phase 3 (marketplace grid) and Phase 4 (AI co-pilot). Establish the animation contract — "cards animate in only, sidebar/modal use AnimatePresence" — before writing any motion component code.
 
 ---
 
-### Pitfall 7: Findability Score Used as a Ranking Signal Introduces Circular Bias
+### Pitfall 7: Gemini Function Calling Response Parsed Directly on the Frontend With No Schema Validation
 
 **What goes wrong:**
-The findability score (0–100, based on bio quality, tags, profile completeness) is computed and then used both for admin visibility AND as a retrieval ranking signal. Experts with high findability scores get recommended more often. Those recommendations generate thumbs-up feedback. The feedback further boosts those experts. Meanwhile, experts with low findability scores (incomplete bios, missing tags) get recommended less, never accumulate feedback, and their findability score never improves because the score depends on profile completeness — which only the platform owner can fix, not the algorithm.
+The AI co-pilot sends a user query to the backend, which calls Gemini with a `apply_filters` function definition. Gemini returns a function call response. The frontend JavaScript parses this response and applies the filter values directly to the Zustand store: `setSearchParams(geminiResponse.args)`. There is no validation between Gemini's output and the Zustand store. Gemini can (and does) return:
+
+- Filter values outside valid ranges (e.g., `hourlyRate: -50` or `hourlyRate: 999999`)
+- Field names that don't exist in `searchParams` (Gemini hallucinates field names)
+- Null or undefined for required fields
+- Malformed function calls that partially match the schema but have extra keys
+
+Any of these cause silent store corruption, unexpected UI states, or JavaScript errors that crash the co-pilot panel.
+
+A security concern specific to this architecture: the function schema is defined on the backend, but the execution happens on the frontend. If the frontend trusts Gemini's output without validation, a crafted user prompt could potentially manipulate Gemini into calling `apply_filters` with values that expose unintended UI states (e.g., setting `emailGated: false` if that field is accidentally in scope). This is a form of prompt injection — the user's input influences Gemini's function call arguments.
 
 **Why it happens:**
-Conflating a data quality metric (findability) with a retrieval ranking signal creates a self-reinforcing loop. The score was designed to flag profiles that need improvement, not to function as a quality signal in retrieval.
+Developers trust that Gemini's structured output (with `response_schema`) guarantees correctness. It guarantees syntactic validity (the JSON matches the schema shape) but does not guarantee semantic correctness (the values are within valid business ranges). The official guidance states: "structured output guarantees syntactically correct JSON, it does not guarantee the values are semantically correct."
 
 **How to avoid:**
-- Keep findability score as an admin-facing diagnostic only. Do not use it as a retrieval ranking signal in v1.1.
-- Use findability scores to prioritize which expert profiles to enrich (admin workflow: worst-first queue), not to penalize those experts in search results.
-- If findability must influence retrieval, apply it only as a soft filter (e.g., experts below score 20 are excluded from recommendations until their profile is fixed), never as a continuous ranking modifier.
+Validate every Gemini function call response before applying it to the store. Write a strict `validateFilterArgs` function:
 
-**Phase to address:** Phase 1 (findability scoring) — document explicitly that findability score is an admin data quality metric, not a retrieval ranking signal.
+```typescript
+interface FilterArgs {
+  minRate?: number;
+  maxRate?: number;
+  tags?: string[];
+  query?: string;
+}
+
+const VALID_TAGS = new Set(ALL_KNOWN_TAGS); // loaded from the API or config
+
+function validateFilterArgs(raw: unknown): FilterArgs {
+  if (typeof raw !== 'object' || raw === null) throw new Error('Invalid args');
+  const args = raw as Record<string, unknown>;
+
+  const validated: FilterArgs = {};
+
+  if ('minRate' in args) {
+    const v = Number(args.minRate);
+    if (isFinite(v) && v >= 0 && v <= 10000) validated.minRate = v;
+  }
+  if ('maxRate' in args) {
+    const v = Number(args.maxRate);
+    if (isFinite(v) && v >= 0 && v <= 10000) validated.maxRate = v;
+  }
+  if ('tags' in args && Array.isArray(args.tags)) {
+    validated.tags = args.tags.filter(
+      (t): t is string => typeof t === 'string' && VALID_TAGS.has(t)
+    );
+  }
+  if ('query' in args && typeof args.query === 'string') {
+    validated.query = args.query.slice(0, 500); // length limit
+  }
+
+  return validated;
+}
+```
+
+The function schema given to Gemini must contain only filter-related fields. Do not include `emailGated`, `adminKey`, or any state not meant for user manipulation in scope. Prompt injection risk is proportional to the surface area of the function schema.
+
+**Warning signs:**
+- Co-pilot sets a filter value to a number like `-1` or `NaN`, which breaks the range slider component
+- Co-pilot applies a tag that does not exist in the known tag list, causing zero results (the backend returns nothing for an unknown tag)
+- A cleverly crafted user message causes Gemini to call `apply_filters` with unexpected keys that appear in the Zustand store
+
+**Phase to address:** Phase 4 (AI co-pilot) — write `validateFilterArgs` before wiring Gemini output to any Zustand action. Treat Gemini output as untrusted user input, not trusted structured data.
 
 ---
 
-### Pitfall 8: Re-ingest Script Overwrites Metadata.json Partially on Crash
+### Pitfall 8: React Router v7 Route Replacement Breaks Lazy Loading When Loader and Component Are in the Same File
 
 **What goes wrong:**
-The batch tagging script writes tags back to `metadata.json` as it processes experts, updating the file record-by-record. If the script crashes at expert #800, the file contains 800 tagged experts and 758 untagged experts in a mixed state. The FAISS re-ingest then runs against this partial file, producing an index where half the experts have enriched embeddings and half have impoverished ones. This split-quality index is worse than either the fully-tagged or fully-untagged version because the embedding space is incoherent.
+The current app uses React Router v7 in SPA mode. The homepage (`/`) currently renders the chat UI. For v2.0, the homepage is replaced with the marketplace. The new marketplace route is lazily imported using `React.lazy()` with a dynamic import that references the same file as the route's `loader` function. React Router v7 has a documented incompatibility: when both the component and the loader are exported from the same file and that file is lazily imported, React Router pulls the loader into the main bundle even though the component is lazy. This defeats the point of code splitting for the heaviest route in the app (the marketplace, which includes Zustand, react-virtuoso, and Framer Motion).
+
+A separate issue in SPA mode: React Router v7 SPA mode generates a single `index.html` and only the root route runs at build time. Loaders on child routes do not run during pre-rendering. If the marketplace route uses a `loader` to pre-fetch experts from the backend, that loader only runs in the browser, not at build time — which is fine for this app but must be understood so developers don't accidentally try to use pre-rendered data.
 
 **Why it happens:**
-In-place file updates without transactional semantics mean any crash leaves the file in an intermediate state. The script is not idempotent — re-running it from the beginning may double-tag already-processed experts.
+Developers place the route loader next to the component for co-location convenience. React Router's module graph analysis pulls both into the same chunk when the file is dynamically imported. The official documentation for v7 notes this explicitly: "to get lazy loading to work while fetching in parallel, you need to separate your loader function from the file that has the component."
 
 **How to avoid:**
-- Write a separate staging file during the batch run: `data/tags_staging.json`. Only copy it to `metadata.json` after all 1,558 experts are processed and the count assertion passes.
-- Make the script idempotent: check if each expert already has a valid `tags` field before calling the LLM. Skip if already tagged.
-- Track progress: write a `data/tagging_progress.json` with `{"last_processed_index": 800}` after each expert. On restart, resume from `last_processed_index`.
-- Command pattern:
-  ```bash
-  # Safe run:
-  python scripts/tag_experts.py --resume --output data/tags_staging.json
-  # After verification:
-  python scripts/promote_tags.py  # copies staging → metadata.json
-  ```
+Separate loader and component into different files:
 
-**Phase to address:** Phase 1 (batch tagging) — implement resume/idempotent pattern before starting the batch run on the full 1,558-expert set.
+```
+src/
+  marketplace/
+    MarketplacePage.tsx      ← component only
+    marketplace.loader.ts    ← loader function only
+```
+
+Route definition:
+```typescript
+{
+  path: '/',
+  lazy: () => import('./marketplace/MarketplacePage'),
+  loader: () => import('./marketplace/marketplace.loader').then(m => m.loader),
+}
+```
+
+The chat route (`/chat` or wherever the existing chat UI moves to) must also be updated if its path was `/`. A redirect from `/` to `/chat` for existing bookmarks is needed if the chat UI is preserved at all.
+
+For the `react-router-dom` → `react-router` package rename: v7 consolidates both packages. If any existing imports reference `react-router-dom`, update them to `react-router`. This is a mechanical change, but grep the entire codebase to catch all occurrences.
+
+**Warning signs:**
+- Bundle analysis shows `framer-motion` or `react-virtuoso` in the initial JS bundle even though the marketplace is lazy-loaded
+- Navigating from the old chat URL to `/` shows a blank page without a redirect
+- `loader` data is `undefined` on the first render of the marketplace route in SPA mode (this is normal — the loader runs asynchronously; handle the loading state)
+
+**Phase to address:** Phase 2 (routing restructure) — before refactoring routes, run bundle analysis on the current app as a baseline. Re-run after routing changes and verify the marketplace chunk is not in the initial bundle.
 
 ---
 
-### Pitfall 9: Gemini Rate Limits Block Both Tagging AND User Queries Simultaneously
+### Pitfall 9: OKLCH Colors in Tailwind v3 Are Not Natively Supported — They Pass Through Without Processing
 
 **What goes wrong:**
-The batch tagging script runs on Railway (or locally with the same API key) while the production chatbot is receiving user queries. Both the tagging script and the user query handler share the same Google API project quota. The tagging script exhausts RPM or daily quota, causing user-facing queries to return 429 errors and the chatbot to appear broken — during a planned maintenance task.
+The v2.0 design uses OKLCH color values (e.g., `oklch(70% 0.15 250)`) for the marketplace's color palette. In Tailwind CSS v3 (the current version in this project), OKLCH is not part of the default color palette and is not processed by the Tailwind build pipeline. If OKLCH values are added to `tailwind.config.js` as custom colors, they are passed through to the CSS output as-is. This works in modern browsers (Chrome 111+, Firefox 113+, Safari 15.4+), but fails silently in older browsers with no fallback. Approximately 7% of global browser sessions (per browser compatibility data) do not support OKLCH.
+
+The temptation to "just use Tailwind v4" is not a straightforward fix: Tailwind v4 is a complete rewrite with a new config format, no `tailwind.config.js`, CSS-native configuration, and breaking changes to almost every plugin. Upgrading from v3 to v4 mid-milestone while also adding Zustand, react-virtuoso, and Framer Motion is a recipe for a tangled diff that's impossible to debug.
 
 **Why it happens:**
-Google API rate limits are enforced per project, not per API key. Running a heavy batch job with the same credentials as the production service consumes shared quota.
+OKLCH was introduced as a first-class feature in Tailwind v4 (which ships the entire default palette in OKLCH). Developers see OKLCH used in Tailwind v4 examples and assume it also works the same way in v3. It does not — v3 simply passes the raw value to CSS without transformation or fallback generation.
 
 **How to avoid:**
-- Run the batch tagging script at a time of low user traffic (night/weekend) to minimize overlap.
-- Add explicit rate limiting in the tagging script: never exceed 8 RPM for LLM calls (conservative for free tier), regardless of how fast the API accepts requests.
-- Handle quota errors in the user-facing query handler independently of tagging errors:
-  ```python
-  # In query handler:
-  except Exception as e:
-      if "429" in str(e) or "quota" in str(e).lower():
-          raise HTTPException(503, "Busy — please try again in a moment.")
-  ```
-- Consider using the Gemini Batch API for tagging: batch jobs run asynchronously, have separate rate limits from the interactive API, and cost 50% less. The 24-hour turnaround is acceptable for a one-time tagging job.
+Stay on Tailwind v3 for v2.0. Use OKLCH in `tailwind.config.js` custom colors if the target browsers are acceptable (modern desktop/mobile):
 
-**Phase to address:** Phase 1 (batch tagging) — set the RPM cap in the tagging script before running it against the production API key. Run during off-peak hours.
+```javascript
+// tailwind.config.js
+module.exports = {
+  theme: {
+    extend: {
+      colors: {
+        // OKLCH values pass through in v3 — no Tailwind processing
+        // These work in Chrome 111+, Firefox 113+, Safari 15.4+
+        brand: {
+          500: 'oklch(65% 0.18 250)',
+          600: 'oklch(55% 0.18 250)',
+        }
+      }
+    }
+  }
+}
+```
 
----
+If older browser support is required, add the `tailwindcss-oklch` plugin or use `@csstools/postcss-oklab-function` PostCSS plugin to generate sRGB fallbacks. If the Tinrate user base is primarily professionals on modern browsers, the risk is low and no plugin is needed.
 
-### Pitfall 10: Query Expansion Adds Latency That Breaks the UX Contract
+Do NOT upgrade to Tailwind v4 during v2.0. Schedule it as a separate cleanup milestone after v2.0 ships.
 
-**What goes wrong:**
-Each query expansion round-trips to Gemini to generate reformulations, then runs 2–3 additional FAISS searches, then merges and deduplicates results. Total added latency: 800ms–2s per query. The existing query handler already takes 2–4 seconds (embedding + FAISS + generation). With expansion enabled, queries take 4–6 seconds. Users experience the chatbot as "slow" or "frozen" — especially on mobile. The product's core UX value ("instant match") is compromised.
+**Warning signs:**
+- Colors appear correct in Chrome devtools but are missing/wrong in a browser compatibility test
+- Safari 15.3 or older renders the marketplace with missing accent colors (no visible error)
+- A Tailwind v4 migration attempt mid-milestone causes the entire `tailwind.config.js` to stop working (v4 removed the config file format entirely)
 
-**Why it happens:**
-Query expansion is implemented naively as a synchronous pre-step before the main retrieval, adding serial latency without parallelism.
-
-**How to avoid:**
-- Run expansion and original query in parallel using `asyncio.gather()`:
-  ```python
-  async def search_with_expansion(query: str) -> list:
-      original_task = asyncio.create_task(search(query, k=8))
-      expansion_task = asyncio.create_task(expand_and_search(query, k=4))
-      original_results, expanded_results = await asyncio.gather(
-          original_task, expansion_task
-      )
-      return merge_results(original_results, expanded_results)
-  ```
-- Set a timeout on expansion: if the expansion LLM call takes more than 1 second, skip it and use original results.
-- Log per-query latency before and after enabling expansion. If p95 latency exceeds 5 seconds, disable expansion.
-
-**Phase to address:** Phase 3 (search intelligence) — benchmark latency with and without expansion before enabling in production.
+**Phase to address:** Phase 2 (UI scaffolding) — decide whether OKLCH colors require fallbacks based on the expected user base. Document the decision. If using OKLCH in v3 without a plugin, add a browser support note to the design tokens file.
 
 ---
 
@@ -328,66 +426,87 @@ Shortcuts that seem reasonable but create long-term problems.
 
 | Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
 |----------|-------------------|----------------|-----------------|
-| Write tags directly to `metadata.json` in-place | Simpler code | Partial corruption on crash; non-idempotent | Never — always use staging file |
-| Use same API key for batch tagging and production queries | No extra setup | Batch job exhausts production quota | Never — run batch at low-traffic time or use Batch API |
-| Apply feedback boosts without a minimum interaction threshold | Faster "learning" | Popularity bias, niche expert suppression | Never — always require minimum 10 interactions |
-| Skip FAISS index count assertion after re-ingest | Saves one line | Silent partial index — impossible to detect | Never — costs 1 line of code, prevents major data regression |
-| Hot-swap FAISS index in-process without a lock | Simpler than redeploy | Race condition, undefined behavior under load | Acceptable only with proper threading.Lock — otherwise trigger redeploy |
-| Enable query expansion for all queries regardless of original result quality | Simpler logic | Drift degrades queries that were already accurate | Never — gate expansion on weak original results only |
-| Build findability score as retrieval signal (not just admin diagnostic) | More signals = better? | Circular bias, popular experts dominate niche queries | Never in v1.1 — keep as admin-only diagnostic |
+| Persist entire Zustand store (no partialize) | No decisions needed | Stale results in localStorage, QuotaExceededError risk, returning user state breaks on every deploy | Never — always use partialize |
+| Skip `version` + `migrate` in persist middleware | Faster setup | Returning users get corrupted state on every schema change | Never — add version: 1 from day one |
+| Put loader and component in the same file and use lazy() | Co-location is convenient | Heavy dependencies (Framer Motion, Zustand) end up in the initial bundle | Never for heavy routes |
+| Use `AnimatePresence` with exit animations inside VirtuosoGrid | Consistent animation API | Exit animations never fire; possible layout corruption | Never — AnimatePresence only outside the virtualizer |
+| Apply Gemini function call args directly to Zustand with no validation | Simpler code | Silent store corruption, prompt injection surface | Never — validate every field before applying |
+| Use `margin` on VirtuosoGrid card items instead of `padding` | Standard CSS mental model | Scroll height miscalculated, users can't reach bottom items | Never inside a Virtuoso container |
+| Keep email gate state in localStorage only (not Zustand) | No migration needed | Multiple components re-implement gate logic independently | Acceptable only if no other component reads it — migrate to Zustand for v2.0 |
+| Call `index.remove_ids()` to "filter" FAISS search | Intuitive name suggests filtering | Permanently mutates index, shifts all sequential IDs | Never — use SearchParameters(sel=IDSelectorBatch) |
 
 ---
 
 ## Integration Gotchas
 
-Common mistakes when connecting to external services.
+Common mistakes when connecting the new v2.0 components to the existing system.
 
 | Integration | Common Mistake | Correct Approach |
 |-------------|----------------|------------------|
-| Google GenAI embeddings | Calling `embed_content()` in tight loop, hitting 150-req batch limit | Add `tenacity` retry with exponential backoff; sleep 0.2s between calls; validate count before writing index |
-| Google Gemini LLM (tagging) | No output schema enforcement — tags arrive in mixed formats | Use `response_mime_type="application/json"` + `response_schema` with `min_items`/`max_items` constraints |
-| Railway persistent volume | Writing index in pre-deploy command — volume not mounted there | Write index only in startup/lifespan handler (runtime), not pre-deploy |
-| FAISS in-memory index | Replacing global index variable without a lock during live traffic | Use `threading.Lock` around reassignment, or trigger a redeploy instead |
-| Gemini Batch API | Running two separate identical job submissions (non-idempotent) | Track job ID in a local file; check if job already exists before submitting |
+| FAISS IDSelectorBatch + SQLAlchemy pre-filter | Pre-filtering with `remove_ids` instead of `SearchParameters` | Use `faiss.SearchParameters(sel=faiss.IDSelectorBatch(ids))` — index is never mutated |
+| FTS5 + existing experts table | Creating FTS5 table without running `rebuild` — existing rows not indexed | Always run `INSERT INTO experts_fts(experts_fts) VALUES('rebuild')` after creating the virtual table |
+| Zustand + existing email gate (localStorage) | Leaving localStorage reads in `useState` initializer while Zustand also tracks `emailGated` | Migrate gate state fully into Zustand persist; remove the old `useState` initializer pattern |
+| react-virtuoso + Framer Motion | Wrapping cards in `AnimatePresence` with `exit` animation | Use `animate` (mount only) on cards; reserve `AnimatePresence` for sidebar/modal outside Virtuoso |
+| Gemini function calling + Zustand store | Direct `setSearchParams(geminiResponse.args)` without validation | Validate every field in `geminiResponse.args` against known-valid ranges and tag lists before applying |
+| React Router v7 + lazy marketplace | Co-locating loader and component in the same file | Separate `MarketplacePage.tsx` (component) from `marketplace.loader.ts` (loader) for true code splitting |
+| Tailwind v3 + OKLCH colors | Assuming v3 processes OKLCH like v4 does | OKLCH passes through as raw CSS in v3 — works in modern browsers only; add PostCSS plugin if fallbacks needed |
 
 ---
 
 ## Performance Traps
 
-Patterns that work at small scale but fail as usage grows.
+Patterns that work in development but degrade in production under real data (1,558 experts).
 
 | Trap | Symptoms | Prevention | When It Breaks |
 |------|----------|------------|----------------|
-| Synchronous query expansion as serial pre-step | p95 latency 5–8s; users abandon | Parallelize with `asyncio.gather`; timeout after 1s | At any traffic level — latency is additive |
-| Feedback-weighted ranking without impression normalization | Top 20 experts receive 80% of recommendations | Cap boost to 10–20% of similarity score; require minimum 10 interactions | After ~100 feedback events accumulate |
-| Full FAISS re-ingest at container startup | 5–10 minute startup on rebuild | Pre-compute index offline; write to volume; startup reads from volume | At 1,558 vectors: ~30s acceptable. At 10k+: unacceptable |
-| Expanding all queries regardless of original retrieval quality | Retrieval precision drops 20–30% | Gate expansion on weak original results (below similarity threshold) | From day 1 — drift affects even low-traffic systems |
-| Writing tags to metadata.json record-by-record during batch run | Partial corruption on crash; half-enriched embeddings | Write to staging file; promote atomically after full run | At ~800th record if crash occurs |
+| Framer Motion `motion` wrapper on all 1,558 virtual cards | Frame drops when filter changes re-render the grid | Only animate the first visible render; use `initial={false}` after first mount; limit to `domAnimation` not `domMax` | From day 1 — 30+ animated items simultaneously causes measurable jank |
+| Zustand selector returning new object reference on every render | Every component re-renders on every store change | Use shallow equality or select primitives: `useStore(s => s.searchParams.minRate)` not `useStore(s => s.searchParams)` | From day 1 — visible as excessive re-render warnings in React Devtools |
+| FTS5 query without LIMIT on the expert table | Full-table text search returns all 1,558 rows to Python | Always append `LIMIT 200` to the FTS5 query; Python does further filtering | At 1,558 rows: manageable. At 10K+: query slows to seconds |
+| IDSelectorBatch with batch size > 1 when IDs differ per query | Forced to run batch_size=1 search (several times slower) | For the v2.0 use case (one filter set, one query), batch size is 1 anyway — this trap is not triggered | Only matters if doing multi-query batch search, which v2.0 does not do |
+| VirtuosoGrid remeasuring on every filter change | Grid flickers and reflows after each filter interaction | Apply filter results to the store atomically; debounce filter changes by 150ms before triggering search | From day 1 — visible on every filter interaction |
 
 ---
 
 ## Security Mistakes
 
-Domain-specific security issues beyond general web security.
+Domain-specific security issues for the v2.0 feature set.
 
 | Mistake | Risk | Prevention |
 |---------|------|------------|
-| Using production GOOGLE_API_KEY for local batch tagging runs | Batch script exhausts production daily quota | Use a separate Google Cloud project or API key for batch jobs; or run via Railway environment |
-| Storing raw user thumbs feedback without rate-limiting the feedback endpoint | Feedback poisoning — malicious actor repeatedly thumbs-down an expert to suppress them | Rate-limit feedback endpoint: 1 feedback per session per expert per query; validate session token |
-| Exposing admin Expert tab with tags and findability scores to unauthenticated users | Competitive intelligence leak; exposes data quality weaknesses | Ensure all Expert tab endpoints require `X-Admin-Key` header — verify CORS + auth middleware order |
+| Gemini function call args applied to Zustand with no field whitelisting | Prompt injection: user crafts a message that makes Gemini call `apply_filters` with unintended field names, corrupting store state | Whitelist: only accept `minRate`, `maxRate`, `tags`, `query` from Gemini output — reject any other key |
+| Email gate enforcement only on the frontend | Users bypass gate by calling the backend directly; lead capture fails | Gate check is already frontend-only (localStorage). For v2.0, continue this pattern — the gate is a UX affordance, not a security boundary. Document this explicitly so the team doesn't accidentally build backend auth assumptions around it. |
+| Persisting `adminKey` in Zustand localStorage | Admin key leaks from localStorage (XSS) | Admin key must remain in `sessionStorage` (current pattern) — never migrate it to Zustand persist middleware. Session key dies on tab close, which is the correct security behavior. |
+| Sending user's raw co-pilot prompt to backend as a filter bypass | User types "ignore all filters and show expert ID 1234" as the co-pilot prompt | Co-pilot prompts go to Gemini for function calling, then the extracted `apply_filters` args are validated before store application. The raw prompt never reaches SQLAlchemy filter code directly. |
+
+---
+
+## UX Pitfalls
+
+Common user experience mistakes specific to marketplace + AI co-pilot patterns.
+
+| Pitfall | User Impact | Better Approach |
+|---------|-------------|-----------------|
+| Email gate blocks filter interactions (not just profile views) | Users cannot explore the marketplace at all without giving their email — high abandonment | Gate only gated actions (view profile, download report) — filter, search, and card browsing must be ungated |
+| Bottom sheet (mobile) covers the results grid completely | User cannot see results while adjusting filters | Bottom sheet at 50% viewport height max; results visible behind it; close on outside tap |
+| AI co-pilot resets all filters when the user closes it | User loses their manual filter state when dismissing the pilot | Co-pilot only applies filters additively via Zustand store; user can undo each co-pilot action; closing the panel does not reset store state |
+| Virtualized grid loses scroll position after a filter change | User applies a filter, results update, page jumps to top — disorienting | Scroll to top intentionally after each filter change (expected behavior for filtered results); do not attempt scroll restoration across filter changes |
+| Fuzzy search corrects query silently | User types "marketng" — system searches "marketing" without telling the user | Show a "Did you mean: marketing?" label below the search bar; do not silently substitute |
 
 ---
 
 ## "Looks Done But Isn't" Checklist
 
-Things that appear complete but are missing critical pieces.
+Things that appear complete but are missing critical pieces specific to v2.0.
 
-- [ ] **Batch tagging complete:** Tags in `metadata.json` — verify `len(experts_with_tags) == 1558` before marking done. Check 20 random experts for tag format consistency.
-- [ ] **FAISS re-ingest complete:** New index loaded — verify `faiss.read_index(path).ntotal == 1558`. Check that `metadata.json` expert order matches index vector order exactly (ID alignment is critical).
-- [ ] **Findability scores computed:** Scores visible in admin — verify score distribution is not all 100s (a bug in the scoring function that defaults to max is easy to miss).
-- [ ] **Query expansion enabled:** Expansion logic merged — verify that queries that worked correctly in v1.0 still return the same top-3 experts. Run the 10-query regression test from Phase 2 research.
-- [ ] **Feedback learning live:** Boost code merged — verify that an expert with zero feedback receives the same ranking as in v1.0 (no regression). Verify an expert with 20 thumbs-up receives a measurably higher ranking on relevant queries.
-- [ ] **Admin Expert tab enriched:** Tag and score columns visible — verify that clicking "sort by findability score worst-first" works correctly for scores of 0.
+- [ ] **FTS5 migration:** Virtual table created — verify `SELECT COUNT(*) FROM experts_fts` returns 1,558. Verify `INSERT INTO experts_fts(experts_fts) VALUES('rebuild')` was run. Test three known-good search terms.
+- [ ] **FAISS IDSelectorBatch:** Search returns pre-filtered results — verify `index.ntotal == 1558` (index was not mutated by `remove_ids`). Test that searching with an empty `allowed_ids` list returns zero results, not all results.
+- [ ] **Zustand persist:** Store hydrates on page reload — verify returning users keep `emailGated` state. Verify `results` and `isLoading` are NOT in localStorage (open devtools → Application → localStorage → `tinrate-marketplace-v2`).
+- [ ] **react-virtuoso grid:** Grid renders 1,558 experts — verify scrolling to the last expert works without jitter. Verify CSS uses `padding` not `margin` on card elements.
+- [ ] **Framer Motion lazy loading:** Bundle analysis shows `framer-motion` is NOT in the initial JS bundle. Use `LazyMotion` + `domAnimation` feature set.
+- [ ] **Gemini function calling:** Co-pilot applies filters — verify that sending a rate value of `-999` via a crafted prompt results in the filter NOT being applied (validation rejects it). Verify `adminKey` is NOT in scope of the function schema.
+- [ ] **Email gate v2.0:** Gate works on profile-view and report-download actions — verify that filter and search interactions work without triggering the gate for ungated users.
+- [ ] **React Router routes:** Homepage replaced by marketplace — verify that `/` loads the marketplace, old chat is accessible at its new path, and there is a redirect for any bookmarked old URL. Verify marketplace bundle is NOT in the initial chunk.
+- [ ] **OKLCH colors:** Confirm color decision (with or without PostCSS plugin) — open the deployed app in a browser that does not support OKLCH and verify the page does not look broken (or confirm that the user base does not include those browsers).
 
 ---
 
@@ -397,13 +516,13 @@ When pitfalls occur despite prevention, how to recover.
 
 | Pitfall | Recovery Cost | Recovery Steps |
 |---------|---------------|----------------|
-| Partial FAISS index (silent embedding failure) | MEDIUM | Re-run `scripts/reindex_experts.py` with resume flag; assert count before promoting; redeploy |
-| Schema-drifted tags in `metadata.json` | LOW | Run tag normalization script: lowercase, deduplicate, validate schema; re-run tagging for experts with invalid format |
-| FAISS hot-swap race condition caused bad results | LOW | Trigger Railway redeploy — app restarts with clean index load; race condition resolves on restart |
-| Railway volume write failed (pre-deploy) | LOW | Move write operation to startup lifespan handler; redeploy |
-| Query expansion degraded retrieval quality | LOW | Set `QUERY_EXPANSION_ENABLED=false` env var; redeploy; retrieval reverts to v1.0 behavior immediately |
-| Feedback popularity bias locked in | HIGH | Reset all feedback boost weights to 0; rebuild scoring with higher minimum threshold and lower boost cap; manually audit top-20 most-recommended experts for quality |
-| Gemini daily quota exhausted by batch job | MEDIUM | Wait for quota reset at midnight Pacific; run remaining batch during off-peak hours with tighter RPM cap; upgrade to paid tier if recurring |
+| `remove_ids` accidentally called on FAISS index | HIGH | Restart Railway container — in-memory index is reloaded from `faiss.index` file on startup. If the file was also overwritten: restore from the most recent Railway volume backup, or re-run `scripts/reindex_experts.py` |
+| FTS5 index out of sync with experts table | MEDIUM | Run `INSERT INTO experts_fts(experts_fts) VALUES('rebuild')` via a `/api/admin/maintenance` endpoint or Railway shell. Verify count afterward. |
+| Zustand persist rehydrates corrupted state for all returning users | LOW | Increment `version` in persist config and deploy. On next page load, Zustand detects version mismatch, runs `migrate` function, and resets to default state. Users lose saved preferences but app recovers automatically. |
+| VirtuosoGrid jitter ships to production | MEDIUM | Switch to uniform-height cards (add `min-h-[320px]` and `overflow-hidden` to cards); deploy. This is a one-line CSS fix once the cause is identified. |
+| AnimatePresence exit animations not working | LOW | Remove `exit` prop from all card motion components; keep `animate` for entry only. No user-facing regression — cards simply disappear instantly on unmount (acceptable). |
+| Gemini co-pilot applies invalid filter values | LOW | Validation function prevents bad values from reaching the store. If validation itself has a bug: clear the Zustand store with `useStore.getState().resetFilters()` triggered by a "clear all" button that always exists in the UI. |
+| OKLCH colors invisible in user's browser | LOW | Add `@csstools/postcss-oklab-function` PostCSS plugin; rebuild and deploy. The fix is additive and requires no component changes. |
 
 ---
 
@@ -413,47 +532,61 @@ How roadmap phases should address these pitfalls.
 
 | Pitfall | Prevention Phase | Verification |
 |---------|------------------|--------------|
-| Embedding API throttling → partial FAISS index | Phase 1: batch tagging | Assert `ntotal == 1558` before promoting index |
-| LLM schema drift in tags | Phase 1: batch tagging | Validate tag format on every LLM response; sample 30 random experts before promoting |
-| Crash leaves metadata.json partially updated | Phase 1: batch tagging | Use staging file + idempotent resume logic |
-| Batch tagging exhausts production quota | Phase 1: batch tagging | Set 8 RPM cap; schedule for off-peak; handle 429 in query handler independently |
-| Railway volume not mounted in pre-deploy | Phase 2: FAISS re-ingest | Test index write in lifespan startup handler before automating |
-| FAISS hot-swap race condition | Phase 2: FAISS re-ingest | Use threading.Lock or trigger redeploy; verify no errors under concurrent load after index reload |
-| Findability score misused as retrieval signal | Phase 2: findability scoring | Document as admin-only diagnostic; no retrieval weight assigned in v1.1 |
-| ID alignment between metadata.json and FAISS index | Phase 2: FAISS re-ingest | Assert expert order before embedding; log `(index_position, expert_id)` pairs |
-| Query expansion causing drift | Phase 3: search intelligence | Gate on weak original results; run 10-query regression before enabling; A/B with thumbs rate |
-| Query expansion latency degradation | Phase 3: search intelligence | Parallelize with asyncio.gather; benchmark p95 latency before and after |
-| Feedback cold-start / popularity bias | Phase 3: search intelligence | Require minimum 10 interactions before applying boost; cap boost at 20% of similarity score |
-| Feedback loop suppresses niche experts | Phase 3: search intelligence | Monitor impression distribution; log if top-20 experts receive >70% of impressions |
+| FAISS IDSelectorBatch misused as remove_ids | Phase 1: hybrid search backend | Unit test asserts `index.ntotal == 1558` after every search; code review checks for any `remove_ids` call |
+| FTS5 external content table not rebuilt after creation | Phase 1: hybrid search backend | Migration script includes `rebuild` command; post-migration SQL count check |
+| FTS5 UPDATE trigger bug (AFTER vs correct old/new pattern) | Phase 1: hybrid search backend | Integration test: update an expert's bio, then FTS search for old bio term — must not match |
+| Zustand double source of truth with existing useState | Phase 2: Zustand + state ownership | State ownership table reviewed; grep for any `useState` holding filter/result/gate data |
+| Zustand persist rehydrating stale state | Phase 2: Zustand + state ownership | Check localStorage after deploy: `results` must not appear; `emailGated` must persist correctly across reload |
+| React Router lazy loading puts heavy deps in initial bundle | Phase 2: routing restructure | Bundle analysis after routing refactor; marketplace chunk must not appear in initial load |
+| OKLCH browser support decision | Phase 2: UI scaffolding | Document browser support decision; test with a v3 browser if needed |
+| react-virtuoso grid jitter with variable-height cards | Phase 3: marketplace grid | Manual scroll test with 1,558 experts; no jitter to bottom of list |
+| Framer Motion AnimatePresence incompatible with Virtuoso | Phase 3: marketplace grid | Verify exit animations are not used on card elements; bundle size check |
+| Gemini function calling output not validated | Phase 4: AI co-pilot | Test with crafted out-of-range values; unit test for `validateFilterArgs` with invalid inputs |
+| Email gate blocking filter interactions | Phase 4: email gate v2.0 | Manual test: ungated user can filter and search; gate only appears on profile-view action |
 
 ---
 
 ## Sources
 
-- Google Gemini API rate limits: https://ai.google.dev/gemini-api/docs/rate-limits
-- Google Gemini Batch API documentation: https://ai.google.dev/gemini-api/docs/batch-api
-- google-genai SDK batch embedding rate limit issue (GitHub #427): https://github.com/googleapis/python-genai/issues/427
-- FAISS thread safety documentation: https://github.com/facebookresearch/faiss/wiki/Threads-and-asynchronous-calls
-- FAISS write_index persistence (GitHub issue #2078): https://github.com/facebookresearch/faiss/issues/2078
-- Railway volumes documentation (volumes not mounted during pre-deploy): https://docs.railway.com/volumes
-- Railway pre-deploy command documentation: https://docs.railway.com/guides/pre-deploy-command
-- FastAPI concurrent global variable race conditions: https://datasciocean.com/en/other/fastapi-race-condition/
-- Google Cloud 429 error handling guide: https://cloud.google.com/blog/products/ai-machine-learning/learn-how-to-handle-429-resource-exhausted-errors-in-your-llms
-- LLM batch-sensitive nondeterminism research (Thinking Machines Lab): https://superintelligencenews.com/research/thinking-machines-llm-nondeterminism-inference/
-- Query expansion pitfalls in RAG (query drift): https://medium.com/@sahin.samia/query-expansion-in-enhancing-retrieval-augmented-generation-rag-d41153317383
-- Query expansion challenges (Haystack): https://haystack.deepset.ai/blog/query-expansion
-- Hard negatives degrading RAG performance: https://arxiv.org/html/2506.00054v1
-- Cold start and sparse signals in recommender systems: https://medium.com/data-scientists-handbook/cracking-the-cold-start-problem-in-recommender-systems-a-practitioners-guide-069bfda2b800
-- LLM consistency and output drift 2025: https://www.keywordsai.co/blog/llm_consistency_2025
-- tenacity retry library for Python: https://pypi.org/project/tenacity/
+- FAISS IDSelectorBatch search-time usage (SearchParameters): https://github.com/facebookresearch/faiss/wiki/Setting-search-parameters-for-one-query
+- FAISS IDSelectorBatch struct documentation: https://faiss.ai/cpp_api/struct/structfaiss_1_1IDSelectorBatch.html
+- FAISS remove_ids shifts sequential IDs on IndexFlat (issue #883): https://github.com/facebookresearch/faiss/issues/883
+- FAISS IDSelectorBatch inconsistent retrievals (issue #3112): https://github.com/facebookresearch/faiss/issues/3112
+- FAISS ACCESS VIOLATION with IDSelectorArray (issue #3156): https://github.com/facebookresearch/faiss/issues/3156
+- SQLite FTS5 official documentation (external content tables, triggers, rebuild): https://sqlite.org/fts5.html
+- SQLite forum: corrupt FTS5 table with wrong trigger order: https://sqlite.org/forum/info/da59bf102d7a7951740bd01c4942b1119512a86bfa1b11d4f762056c8eb7fc4e
+- SQLite forum: FTS5 external content update trigger bug: https://sqlite.org/forum/info/dc4aef55640218ba81f158100e3f02cc216ccaa20adbe633a2d83986093c56bf
+- Zustand persist middleware documentation: https://zustand.docs.pmnd.rs/middlewares/persist
+- Zustand persist middleware hydration race condition fix (v5.0.10): https://github.com/pmndrs/zustand/discussions/2556
+- Zustand persist version mismatch and migration: https://github.com/pmndrs/zustand/discussions/1717
+- react-virtuoso VirtuosoGrid CSS grid jitter (issue #479): https://github.com/petyosi/react-virtuoso/issues/479
+- react-virtuoso VirtuosoGrid jittering/flickering (issue #1086): https://github.com/petyosi/react-virtuoso/issues/1086
+- react-virtuoso troubleshooting — margin vs padding: https://virtuoso.dev/react-virtuoso/troubleshooting/
+- react-virtuoso scroll restoration delay (issue #1116): https://github.com/petyosi/react-virtuoso/issues/1116
+- Framer Motion LazyMotion bundle size optimization: https://motion.dev/docs/react-reduce-bundle-size
+- Framer Motion large list performance (issue #1715): https://github.com/motiondivision/motion/issues/1715
+- Framer Motion AnimatePresence exit animation bugs: https://github.com/framer/motion/issues/1682
+- Gemini function calling documentation: https://ai.google.dev/gemini-api/docs/function-calling
+- Gemini structured output — syntax vs. semantic correctness: https://ai.google.dev/gemini-api/docs/structured-output
+- Gemini additionalProperties schema support (November 2025): https://github.com/googleapis/python-genai/issues/1815
+- React Router v7 lazy loading — loader/component separation: https://reacttraining.com/blog/spa-lazy-loading-pitfalls
+- React Router v7 SPA mode documentation: https://reactrouter.com/how-to/spa
+- React Router v6 → v7 upgrade guide: https://reactrouter.com/upgrading/v6
+- Tailwind CSS v3 custom colors documentation: https://tailwindcss.com/docs/customizing-colors
+- Tailwind v4 OKLCH default palette announcement: https://tailwindcss.com/blog/tailwindcss-v4
+- tailwindcss-oklch plugin for v3: https://github.com/MartijnCuppens/tailwindcss-oklch
+- OKLCH browser compatibility issue in Tailwind v4 (issue #16351): https://github.com/tailwindlabs/tailwindcss/issues/16351
 
 **Confidence assessment by area:**
-- LLM rate limiting and batch tagging: HIGH — verified against Google official docs and confirmed SDK bug (GitHub issue)
-- FAISS thread safety and hot-swap: HIGH — verified against FAISS official wiki
-- Railway volume constraints: HIGH — verified against Railway official documentation
-- Query expansion drift: MEDIUM — verified against multiple RAG research papers and practitioner guides
-- Sparse feedback cold-start: MEDIUM — well-established recommender systems literature; specific thresholds (10 interactions, 20% cap) are informed heuristics, not empirically proven for this exact system
+- FAISS IDSelectorBatch pitfalls: HIGH — verified against official FAISS wiki and multiple GitHub issues
+- SQLite FTS5 trigger order bug: HIGH — documented in official SQLite forum by SQLite contributors
+- Zustand persist rehydration and partialize: HIGH — verified against official Zustand docs and confirmed race condition bug fix in v5.0.10
+- react-virtuoso VirtuosoGrid jitter: HIGH — confirmed open GitHub issues; workaround (uniform height) verified
+- Framer Motion + Virtuoso incompatibility: MEDIUM — confirmed via GitHub issues; specific behavior depends on Virtuoso version
+- Gemini function calling validation: MEDIUM — official guidance on semantic correctness; prompt injection risk is community-informed, not officially documented
+- React Router v7 lazy loading: HIGH — documented in official React Training blog by React Router core team
+- Tailwind v3 OKLCH: HIGH — confirmed against official Tailwind v3 and v4 documentation
 
 ---
-*Pitfalls research for: v1.1 Expert Intelligence & Search Quality (Tinrate AI Concierge)*
+*Pitfalls research for: v2.0 Expert Marketplace (brownfield additions to existing production system)*
 *Researched: 2026-02-21*
