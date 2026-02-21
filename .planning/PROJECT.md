@@ -44,17 +44,17 @@ A user describes any problem and instantly gets three expertly matched professio
 - Core AI chat with 3-expert recommendations, email gate, feedback, admin dashboard
 - Archive: `.planning/milestones/v1.0-ROADMAP.md`
 
-## Future Milestone: v2.0 — Extreme Semantic Explorer
+## Current Milestone: v2.0 — Extreme Semantic Explorer
 
 **Goal:** Rearchitect from AI chat into a professional Expert Marketplace with hybrid search, faceted sidebar, virtualized expert grid, and a floating AI co-pilot with function calling.
 
 **Target features:**
-- Hybrid search: pre-filter via SQLAlchemy (rate, tags) → FAISS IDSelectorBatch → HyDE embedding search → feedback re-ranking
-- Zustand global state: searchParams, results, isPilotOpen slices with persist middleware
-- Marketplace grid: react-virtuoso virtualized expert list, high-density expert cards (tags, bio, findability score)
-- Floating AI co-pilot: collapsible panel, Gemini function calling (`apply_filters(criteria)`), context-aware (summarizes visible experts)
-- Performance: <200ms filter-to-grid latency for metadata changes
-- Mobile: sidebar → bottom-sheet, grid → single column
+- Hybrid search backend: `/api/explore` with SQLAlchemy pre-filter → FAISS IDSelectorBatch → FTS5 BM25 weighted fusion + findability/feedback boosts
+- Zustand global state: `useExplorerStore` with filters/results/pilot slices + localStorage persist
+- Marketplace UI: faceted sidebar (rate slider, tag filter, search), react-virtuoso expert grid, Framer Motion entry animations
+- Floating AI co-pilot: FAB → 380px slide-in panel, Gemini function calling (`apply_filters`), full-screen on mobile
+- Value-driven lead capture: gate "View Full Profile" + "Download Match Report" (in-app HTML AI report) behind email modal
+- Robustness: URL filter state, FTS5 fuzzy suggestions, graceful empty states
 
 ## Current State
 
@@ -109,4 +109,4 @@ A user describes any problem and instantly gets three expertly matched professio
 | Search Lab A/B overrides in-memory | Per-run overrides merged in-memory, never written to DB — global settings unchanged | ✓ Good — matches admin mental model |
 
 ---
-*Last updated: 2026-02-21 after v1.2 milestone*
+*Last updated: 2026-02-21 after v2.0 milestone start*
