@@ -34,7 +34,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Re
 from fastapi.responses import StreamingResponse
 from fastapi.security import APIKeyHeader
 from pydantic import BaseModel
-from sqlalchemy import Integer, cast, func, select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
 import structlog
@@ -317,30 +317,23 @@ def get_intelligence_stats(db: Session = Depends(get_db)):
         "avg_score": round(float(avg_score), 3) if avg_score is not None else None,
     }
 
-    # Daily trend — last 30 days
-    # SQLite date extraction: strftime('%Y-%m-%d', created_at)
-    from sqlalchemy import text as _text  # noqa: PLC0415
-    cutoff = datetime.utcnow() - timedelta(days=30)
+    # Daily trend — last 30 days using raw SQL (avoids SQLite cast quirks)
+    cutoff = (datetime.utcnow() - timedelta(days=30)).strftime("%Y-%m-%d")
 
-    daily_rows = db.execute(
-        select(
-            func.strftime("%Y-%m-%d", Conversation.created_at).label("day"),
-            func.count(Conversation.id).label("conversations"),
-            func.sum(cast(Conversation.hyde_triggered, Integer)).label("hyde_triggered"),
-            func.sum(cast(Conversation.feedback_applied, Integer)).label("feedback_applied"),
-            func.sum(
-                cast(
-                    (Conversation.top_match_score < GAP_THRESHOLD)
-                    | (Conversation.response_type == "clarification"),
-                    Integer,
-                )
-            ).label("gaps"),
-            func.avg(Conversation.top_match_score).label("avg_score"),
-        )
-        .where(Conversation.created_at >= cutoff)
-        .group_by(func.strftime("%Y-%m-%d", Conversation.created_at))
-        .order_by(func.strftime("%Y-%m-%d", Conversation.created_at))
-    ).all()
+    from sqlalchemy import text as _text  # noqa: PLC0415
+    daily_rows = db.execute(_text("""
+        SELECT
+            strftime('%Y-%m-%d', created_at) AS day,
+            COUNT(*) AS conversations,
+            SUM(CASE WHEN hyde_triggered = 1 THEN 1 ELSE 0 END) AS hyde_triggered,
+            SUM(CASE WHEN feedback_applied = 1 THEN 1 ELSE 0 END) AS feedback_applied,
+            SUM(CASE WHEN top_match_score < :threshold OR response_type = 'clarification' THEN 1 ELSE 0 END) AS gaps,
+            AVG(top_match_score) AS avg_score
+        FROM conversations
+        WHERE date(created_at) >= :cutoff
+        GROUP BY strftime('%Y-%m-%d', created_at)
+        ORDER BY day
+    """), {"threshold": GAP_THRESHOLD, "cutoff": cutoff}).all()
 
     daily = [
         {
