@@ -155,15 +155,13 @@ async def lifespan(app: FastAPI):
             )
         """))
         _conn.commit()
-        fts_count = _conn.execute(_text("SELECT COUNT(*) FROM experts_fts")).scalar()
-        if fts_count == 0:
-            _conn.execute(_text("""
-                INSERT INTO experts_fts(rowid, first_name, last_name, job_title, company, bio, tags)
-                SELECT id, first_name, last_name, job_title, company, bio, COALESCE(tags, '')
-                FROM experts
-            """))
-            _conn.commit()
-    log.info("startup: FTS5 index created/verified")
+        # Always rebuild the FTS5 content table index at startup.
+        # For content= tables, 'rebuild' re-reads from the source (experts) table and
+        # rebuilds the FTS index atomically. This ensures prefix queries return live data
+        # even if the index was stale from a previous run. Cost is O(n) at startup only.
+        _conn.execute(_text("INSERT INTO experts_fts(experts_fts) VALUES('rebuild')"))
+        _conn.commit()
+    log.info("startup: FTS5 index created/rebuilt")
 
     # Phase 14: FTS5 INSERT trigger (sync new experts automatically)
     with engine.connect() as _conn:
