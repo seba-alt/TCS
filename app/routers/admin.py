@@ -25,16 +25,21 @@ import os
 from datetime import date, datetime
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Security, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Security, status
 from fastapi.responses import StreamingResponse
 from fastapi.security import APIKeyHeader
 from pydantic import BaseModel
 from sqlalchemy import Integer, func, select, update
 from sqlalchemy.orm import Session
 
+import structlog
+
 from app.config import METADATA_PATH
 from app.database import get_db
 from app.models import Conversation, Expert, Feedback
+from app.services.tagging import compute_findability_score, tag_expert_sync
+
+log = structlog.get_logger()
 
 # ── Auth ─────────────────────────────────────────────────────────────────────
 
@@ -466,6 +471,30 @@ def auto_classify_experts(db: Session = Depends(get_db)):
     return {"classified": classified, "categories": categories}
 
 
+def _retry_tag_expert_background(expert_id: int) -> None:
+    """
+    Background retry for auto-tagging when synchronous Gemini call fails.
+    Called by BackgroundTasks — runs after response is sent.
+    Uses sync tagging (tag_expert_sync) which uses the sync google-genai client.
+    """
+    from app.database import SessionLocal  # noqa: PLC0415 — local import avoids circular at module load
+
+    try:
+        with SessionLocal() as db:
+            from sqlalchemy import select  # noqa: PLC0415
+            from app.models import Expert  # noqa: PLC0415
+            expert = db.scalar(select(Expert).where(Expert.id == expert_id))
+            if not expert or not (expert.bio or "").strip():
+                return  # No bio — skip tagging, findability already computed
+            tags = tag_expert_sync(expert)
+            score = compute_findability_score(expert, tags)
+            expert.tags = json.dumps(tags)
+            expert.findability_score = score
+            db.commit()
+    except Exception as e:
+        log.error("background_tag_retry.failed", expert_id=expert_id, error=str(e))
+
+
 class AddExpertBody(BaseModel):
     username: str
     first_name: str
@@ -478,7 +507,7 @@ class AddExpertBody(BaseModel):
 
 
 @router.post("/experts")
-def add_expert(body: AddExpertBody, db: Session = Depends(get_db)):
+def add_expert(body: AddExpertBody, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     """
     Add a new expert to the DB and append to experts.csv for FAISS ingestion.
 
@@ -510,6 +539,28 @@ def add_expert(body: AddExpertBody, db: Session = Depends(get_db)):
     )
     db.add(new_expert)
     db.commit()
+    db.refresh(new_expert)
+
+    # Auto-tag: synchronous Gemini call if expert has a bio
+    if (new_expert.bio or "").strip():
+        try:
+            tags = tag_expert_sync(new_expert)
+            score = compute_findability_score(new_expert, tags)
+            new_expert.tags = json.dumps(tags)
+            new_expert.findability_score = score
+            db.commit()
+        except Exception as e:
+            log.warning(
+                "add_expert.tagging_failed_scheduling_retry",
+                username=body.username,
+                error=str(e),
+            )
+            # Save expert with tags=null; schedule background retry
+            background_tasks.add_task(_retry_tag_expert_background, new_expert.id)
+    else:
+        # No bio — compute findability score only (0 pts for bio + tags components)
+        new_expert.findability_score = compute_findability_score(new_expert, tags=None)
+        db.commit()
 
     # Also append to experts.csv so the FAISS pipeline can pick it up
     csv_exists = EXPERTS_CSV_PATH.exists()
@@ -537,7 +588,12 @@ def add_expert(body: AddExpertBody, db: Session = Depends(get_db)):
             "Created At": datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S"),
         })
 
-    return {"ok": True, "username": body.username}
+    return {
+        "ok": True,
+        "username": body.username,
+        "tags": json.loads(new_expert.tags or "null"),
+        "findability_score": new_expert.findability_score,
+    }
 
 
 # ── CSV Exports ───────────────────────────────────────────────────────────────
