@@ -31,7 +31,7 @@ from sqlalchemy import func, select
 from app.config import FAISS_INDEX_PATH, METADATA_PATH
 from app.database import Base, SessionLocal, engine
 from app.models import Expert
-from app.routers import admin, chat, email_capture, feedback, health
+from app.routers import admin, chat, email_capture, feedback, health, explore
 
 # Load .env for local development — no-op in production (Railway injects env vars)
 load_dotenv()
@@ -140,6 +140,44 @@ async def lifespan(app: FastAPI):
                 pass  # Column already exists — idempotent
     log.info("startup: expert enrichment columns migrated/verified")
 
+    # Phase 14: FTS5 virtual table for BM25 keyword search
+    with engine.connect() as _conn:
+        _conn.execute(_text("""
+            CREATE VIRTUAL TABLE IF NOT EXISTS experts_fts USING fts5(
+                first_name,
+                last_name,
+                job_title,
+                company,
+                bio,
+                tags,
+                content='experts',
+                content_rowid='id'
+            )
+        """))
+        _conn.commit()
+        fts_count = _conn.execute(_text("SELECT COUNT(*) FROM experts_fts")).scalar()
+        if fts_count == 0:
+            _conn.execute(_text("""
+                INSERT INTO experts_fts(rowid, first_name, last_name, job_title, company, bio, tags)
+                SELECT id, first_name, last_name, job_title, company, bio, COALESCE(tags, '')
+                FROM experts
+            """))
+            _conn.commit()
+    log.info("startup: FTS5 index created/verified")
+
+    # Phase 14: FTS5 INSERT trigger (sync new experts automatically)
+    with engine.connect() as _conn:
+        _conn.execute(_text("""
+            CREATE TRIGGER IF NOT EXISTS experts_fts_ai
+            AFTER INSERT ON experts BEGIN
+                INSERT INTO experts_fts(rowid, first_name, last_name, job_title, company, bio, tags)
+                VALUES (new.id, new.first_name, new.last_name, new.job_title,
+                        new.company, new.bio, COALESCE(new.tags, ''));
+            END
+        """))
+        _conn.commit()
+    log.info("startup: FTS5 insert trigger created/verified")
+
     # Phase 11: settings table — created by Base.metadata.create_all() above on fresh DBs;
     # on existing DBs create_all() adds missing tables idempotently without modifying existing ones.
     log.info("startup: settings table created/verified")
@@ -168,6 +206,33 @@ async def lifespan(app: FastAPI):
     with open(METADATA_PATH, "r", encoding="utf-8") as f:
         app.state.metadata = json.load(f)
     log.info("startup: metadata loaded", records=len(app.state.metadata))
+
+    # Phase 14: username → FAISS positional index mapping (covers the 536 embedded experts)
+    _username_to_pos: dict[str, int] = {}
+    for _pos, _row in enumerate(app.state.metadata):
+        _uname = _row.get("Username") or _row.get("username") or ""
+        if _uname:
+            _username_to_pos[_uname] = _pos
+    app.state.username_to_faiss_pos = _username_to_pos
+    log.info(
+        "startup: username-to-FAISS-position mapping built",
+        count=len(_username_to_pos),
+    )
+
+    # Phase 14: category auto-classification (one-time startup migration)
+    from app.routers.admin import _auto_categorize as _categorize  # noqa: PLC0415
+    from sqlalchemy import select as _select  # noqa: PLC0415
+    with SessionLocal() as _db:
+        _uncategorized = _db.scalars(
+            _select(Expert).where(Expert.category == None)  # noqa: E711
+        ).all()
+        for _e in _uncategorized:
+            _cat = _categorize(_e.job_title)
+            if _cat:
+                _e.category = _cat
+        if _uncategorized:
+            _db.commit()
+            log.info("startup: category auto-classification", count=len(_uncategorized))
 
     yield
     # Shutdown: in-memory FAISS index is garbage-collected automatically
@@ -202,3 +267,4 @@ app.include_router(email_capture.router)
 app.include_router(feedback.router)
 app.include_router(admin.auth_router)
 app.include_router(admin.router)
+app.include_router(explore.router)
