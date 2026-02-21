@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-21)
 ## Current Position
 
 Phase: 14 of 19 (Hybrid Search Backend)
-Plan: 2 of 2 in current phase
+Plan: 3 of 3 in current phase
 Status: Phase complete
-Last activity: 2026-02-21 — Phase 14 Plan 02 complete: hybrid search wiring (FTS5 startup migration, router registration, ingest-job FTS5 rebuild)
+Last activity: 2026-02-21 — Phase 14 Plan 03 complete: inline feedback boost in run_explore() closing EXPL-04
 
 Progress: [██████████░░░░░░░░░░] ~50% (v1.0–v1.2 complete, v2.0 phase 14 in progress)
 
@@ -33,6 +33,7 @@ Progress: [██████████░░░░░░░░░░] ~50% (v
 |-------|------|----------|-------|-------|
 | 14 | 01 | 2 min | 2 | 2 |
 | 14 | 02 | 2 min | 2 | 2 |
+| 14 | 03 | 3 min | 1 | 1 |
 
 ## Accumulated Context
 
@@ -52,6 +53,11 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - Explicit FTS5 rebuild in _run_ingest_job (bulk updates require full rebuild, trigger only fires on INSERT)
 - username_to_faiss_pos built from metadata.json "Username" key (capital U, confirmed by RESEARCH.md)
 - Category auto-classification scoped to uncategorized experts only (idempotent; preserves manual overrides)
+
+**Phase 14 Plan 03 decisions (2026-02-21):**
+- Inline feedback boost implementation (not _apply_feedback_boost import): avoids tuple type mismatch with scored list
+- Cold-start threshold: 10 total votes (mirrors search_intelligence formula)
+- boost_factor = 0.40 (FEEDBACK_BOOST_CAP * 2): consistent with search_intelligence._apply_feedback_boost()
 
 Key v2.0 architecture constraints (from .planning/research/):
 - FAISS IDSelectorBatch used as search-time filter only — never `remove_ids`; `username_to_faiss_pos` mapping required at startup
@@ -74,5 +80,5 @@ Key v2.0 architecture constraints (from .planning/research/):
 ## Session Continuity
 
 Last session: 2026-02-21
-Stopped at: Completed 14-02-PLAN.md — hybrid search wiring (FTS5 startup migration, router registration, ingest-job FTS5 rebuild)
+Stopped at: Completed 14-03-PLAN.md — inline feedback boost in run_explore() (EXPL-04 gap closure)
 Resume file: None
