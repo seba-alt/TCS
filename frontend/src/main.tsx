@@ -15,6 +15,7 @@ import LeadsPage from './admin/pages/LeadsPage.tsx'
 import ExpertsPage from './admin/pages/ExpertsPage.tsx'
 import SettingsPage from './admin/pages/SettingsPage.tsx'
 import SearchLabPage from './admin/pages/SearchLabPage.tsx'
+import IntelligenceDashboardPage from './admin/pages/IntelligenceDashboardPage.tsx'
 
 const router = createBrowserRouter([
   {
@@ -40,6 +41,7 @@ const router = createBrowserRouter([
           { path: 'experts', element: <ExpertsPage /> },
           { path: 'settings', element: <SettingsPage /> },
           { path: 'search-lab', element: <SearchLabPage /> },
+          { path: 'intelligence', element: <IntelligenceDashboardPage /> },
         ],
       },
     ],

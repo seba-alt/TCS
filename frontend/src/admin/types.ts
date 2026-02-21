@@ -93,6 +93,30 @@ export interface ExpertsResponse {
   experts: ExpertRow[]
 }
 
+export interface IntelligenceDailyRow {
+  date: string
+  conversations: number
+  hyde_triggered: number
+  feedback_applied: number
+  gaps: number
+  avg_score: number | null
+}
+
+export interface IntelligenceStats {
+  flags: { hyde_enabled: boolean; feedback_enabled: boolean }
+  totals: {
+    conversations: number
+    hyde_triggered: number
+    hyde_rate: number
+    feedback_applied: number
+    feedback_rate: number
+    gaps: number
+    gap_rate: number
+    avg_score: number | null
+  }
+  daily: IntelligenceDailyRow[]
+}
+
 export interface IngestStatus {
   status: 'idle' | 'running' | 'done' | 'error'
   log: string

@@ -8,6 +8,7 @@ import type {
   ExpertsResponse,
   DomainMapResponse,
   IngestStatus,
+  IntelligenceStats,
 } from '../types'
 
 const getAdminKey = () => sessionStorage.getItem('admin_key') ?? ''
@@ -160,6 +161,24 @@ export function useAdminDomainMap() {
   }, [])
 
   return { data, loading, error, fetchData }
+}
+
+export function useIntelligenceStats() {
+  const [data, setData] = useState<IntelligenceStats | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const fetchData = useCallback(() => {
+    setLoading(true)
+    adminFetch<IntelligenceStats>('/intelligence-stats')
+      .then(setData)
+      .catch((e: Error) => setError(e.message))
+      .finally(() => setLoading(false))
+  }, [])
+
+  useEffect(() => { fetchData() }, [fetchData])
+
+  return { data, loading, error, refetch: fetchData }
 }
 
 export function useIngestStatus() {

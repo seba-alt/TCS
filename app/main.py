@@ -116,6 +116,9 @@ async def lifespan(app: FastAPI):
         for _col_ddl in [
             "ALTER TABLE conversations ADD COLUMN top_match_score REAL",
             "ALTER TABLE conversations ADD COLUMN gap_resolved INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE conversations ADD COLUMN hyde_triggered INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE conversations ADD COLUMN feedback_applied INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE conversations ADD COLUMN hyde_bio TEXT",
         ]:
             try:
                 _conn.execute(_text(_col_ddl))

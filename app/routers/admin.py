@@ -26,7 +26,7 @@ import subprocess
 import sys
 import threading
 import time
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import Optional
 
 import faiss
@@ -34,7 +34,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Re
 from fastapi.responses import StreamingResponse
 from fastapi.security import APIKeyHeader
 from pydantic import BaseModel
-from sqlalchemy import Integer, func, select, update
+from sqlalchemy import Integer, cast, func, select, update
 from sqlalchemy.orm import Session
 
 import structlog
@@ -270,6 +270,91 @@ def get_stats(db: Session = Depends(get_db)):
         "top_queries": top_queries,
         "top_feedback": top_feedback,
     }
+
+
+@router.get("/intelligence-stats")
+def get_intelligence_stats(db: Session = Depends(get_db)):
+    """
+    Return search intelligence metrics: HyDE trigger rate, feedback re-ranking rate,
+    gap rate, and daily trends for the last 30 days.
+    """
+    import os as _os
+
+    # Flag status (read env vars that Railway injects)
+    flags = {
+        "hyde_enabled": _os.getenv("QUERY_EXPANSION_ENABLED", "false").lower() in ("true", "1", "yes"),
+        "feedback_enabled": _os.getenv("FEEDBACK_LEARNING_ENABLED", "false").lower() in ("true", "1", "yes"),
+    }
+
+    # Totals
+    total = db.scalar(select(func.count()).select_from(Conversation)) or 0
+    hyde_count = db.scalar(
+        select(func.count()).select_from(Conversation).where(Conversation.hyde_triggered == True)  # noqa: E712
+    ) or 0
+    feedback_count = db.scalar(
+        select(func.count()).select_from(Conversation).where(Conversation.feedback_applied == True)  # noqa: E712
+    ) or 0
+    gap_count = db.scalar(
+        select(func.count()).select_from(Conversation).where(
+            (Conversation.top_match_score < GAP_THRESHOLD)
+            | (Conversation.response_type == "clarification")
+        )
+    ) or 0
+    avg_score = db.scalar(
+        select(func.avg(Conversation.top_match_score)).select_from(Conversation).where(
+            Conversation.top_match_score.is_not(None)
+        )
+    )
+
+    totals = {
+        "conversations": total,
+        "hyde_triggered": hyde_count,
+        "hyde_rate": round(hyde_count / total, 3) if total else 0.0,
+        "feedback_applied": feedback_count,
+        "feedback_rate": round(feedback_count / total, 3) if total else 0.0,
+        "gaps": gap_count,
+        "gap_rate": round(gap_count / total, 3) if total else 0.0,
+        "avg_score": round(float(avg_score), 3) if avg_score is not None else None,
+    }
+
+    # Daily trend — last 30 days
+    # SQLite date extraction: strftime('%Y-%m-%d', created_at)
+    from sqlalchemy import text as _text  # noqa: PLC0415
+    cutoff = datetime.utcnow() - timedelta(days=30)
+
+    daily_rows = db.execute(
+        select(
+            func.strftime("%Y-%m-%d", Conversation.created_at).label("day"),
+            func.count(Conversation.id).label("conversations"),
+            func.sum(cast(Conversation.hyde_triggered, Integer)).label("hyde_triggered"),
+            func.sum(cast(Conversation.feedback_applied, Integer)).label("feedback_applied"),
+            func.sum(
+                cast(
+                    (Conversation.top_match_score < GAP_THRESHOLD)
+                    | (Conversation.response_type == "clarification"),
+                    Integer,
+                )
+            ).label("gaps"),
+            func.avg(Conversation.top_match_score).label("avg_score"),
+        )
+        .where(Conversation.created_at >= cutoff)
+        .group_by(func.strftime("%Y-%m-%d", Conversation.created_at))
+        .order_by(func.strftime("%Y-%m-%d", Conversation.created_at))
+    ).all()
+
+    daily = [
+        {
+            "date": r.day,
+            "conversations": r.conversations,
+            "hyde_triggered": r.hyde_triggered or 0,
+            "feedback_applied": r.feedback_applied or 0,
+            "gaps": r.gaps or 0,
+            "avg_score": round(float(r.avg_score), 3) if r.avg_score is not None else None,
+        }
+        for r in daily_rows
+    ]
+
+    return {"flags": flags, "totals": totals, "daily": daily}
 
 
 # ── Searches ──────────────────────────────────────────────────────────────────

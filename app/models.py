@@ -31,6 +31,9 @@ class Conversation(Base):
     )
     top_match_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     gap_resolved: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="0")
+    hyde_triggered: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="0")
+    feedback_applied: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="0")
+    hyde_bio: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
 class EmailLead(Base):

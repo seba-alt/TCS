@@ -126,6 +126,9 @@ async def _stream_chat(body: ChatRequest, request: Request, db: Session):
             response_narrative=llm_response.narrative,
             response_experts=json.dumps(experts_payload),
             top_match_score=top_score,
+            hyde_triggered=bool(intelligence.get("hyde_triggered", False)),
+            feedback_applied=bool(intelligence.get("feedback_applied", False)),
+            hyde_bio=intelligence.get("hyde_bio"),
         )
         db.add(conversation)
         db.commit()
