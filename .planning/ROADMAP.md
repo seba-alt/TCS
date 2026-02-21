@@ -91,5 +91,5 @@ Plans:
 | 6. Feedback | v1.0 | 3/3 | Complete | 2026-02-20 |
 | 7. Analytics Dashboard v2 | v1.0 | 4/4 | Complete | 2026-02-20 |
 | 8. Data Enrichment Pipeline | 4/4 | Complete   | 2026-02-21 | — |
-| 9. Admin Expert Tab Enhancement | v1.1 | 1/3 | In progress | — |
+| 9. Admin Expert Tab Enhancement | 2/3 | In Progress|  | — |
 | 10. Search Intelligence Layer | v1.1 | 0/? | Not started | — |

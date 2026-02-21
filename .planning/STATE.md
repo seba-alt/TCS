@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-21 after v1.1 milestone started)
 ## Current Position
 
 Phase: 9 of 10 (Admin Expert Tab Enhancement)
-Plan: 09-01 complete
+Plan: 09-02 complete
 Status: In progress
-Last activity: 2026-02-21 — Phase 9 Plan 01 complete (Backend API: tags+findability_score in _serialize_expert(), worst-first sort, GET /api/admin/domain-map)
+Last activity: 2026-02-21 — Phase 9 Plan 02 complete (TypeScript: ExpertRow + tags/findability_score, DomainMapEntry/DomainMapResponse interfaces, useAdminDomainMap lazy hook)
 
 Progress: [████████████████████░░░░░░░░░░] v1.0 complete (7/7 phases) — v1.1 starting Phase 8
 
@@ -36,7 +36,7 @@ Progress: [████████████████████░░░
 |-------|-------|--------|
 | 01–07 (v1.0) | 23 total | Complete |
 | 08 (v1.1) | TBD | In progress |
-| 09 (v1.1) | TBD | Not started |
+| 09 (v1.1) | 2/3 plans | In progress |
 | 10 (v1.1) | TBD | Not started |
 
 ## Accumulated Context
@@ -67,6 +67,9 @@ Recent decisions affecting current work:
 - [09-01]: GET /api/admin/experts sorts by findability_score asc nulls_first — worst experts surface at top for admin review
 - [09-01]: domain-map uses Expert.profile_url.in_() not username — Feedback.expert_ids stores profile URLs
 - [09-01]: Empty url_set guard in domain-map returns early to avoid SQLite empty .in_() query
+- [Phase 09-admin-expert-tab-enhancement]: DomainMapEntry and DomainMapResponse placed after ExpertRow in types.ts — logically grouped with expert data
+- [Phase 09-admin-expert-tab-enhancement]: useAdminDomainMap starts loading=false with no useEffect — lazy pattern for on-demand fetch when domain-map section first opened
+- [Phase 09-admin-expert-tab-enhancement]: DomainMapResponse added to existing import statement in useAdminData.ts — no separate import statement per plan spec
 
 ### Pending Todos
 
@@ -82,5 +85,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-21
-Stopped at: Completed 09-01-PLAN.md — GET /api/admin/experts enriched with tags+findability_score and worst-first sort; GET /api/admin/domain-map added (top-10 downvoted tag domains).
+Stopped at: Completed 09-02-PLAN.md — ExpertRow enriched with tags+findability_score; DomainMapEntry/DomainMapResponse interfaces added; useAdminDomainMap lazy hook added to useAdminData.ts.
 Resume file: None
