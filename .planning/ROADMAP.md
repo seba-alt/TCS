@@ -151,5 +151,5 @@ Plans:
 | 15. Zustand State & Routing | 1/1 | Complete    | 2026-02-21 | - |
 | 16. Marketplace Page & Sidebar | v2.0 | 3/3 | Complete | 2026-02-21 |
 | 17. Expert Grid & Cards | v2.0 | Complete    | 2026-02-21 | - |
-| 18. Floating AI Co-Pilot | 1/4 | In Progress|  | - |
+| 18. Floating AI Co-Pilot | 2/4 | In Progress|  | - |
 | 19. Extended Features | v2.0 | 0/? | Not started | - |
