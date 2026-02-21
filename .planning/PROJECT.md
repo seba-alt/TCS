@@ -2,7 +2,7 @@
 
 ## What This Is
 
-An AI-powered expert discovery experience for the Tinrate platform. Users describe their problem in natural language and the system semantically searches a database of 1,558 vetted experts, then responds with a personalized, conversational recommendation of exactly three best-fit experts — displayed as styled, clickable contact cards that link directly to their Tinrate profile pages. The platform includes an email gate for lead capture, thumbs up/down feedback on results, and a full admin analytics dashboard for monitoring search quality and managing experts.
+An AI-powered expert discovery experience for the Tinrate platform. Users describe their problem in natural language and the system semantically searches a database of 1,558 vetted experts, then responds with a personalized, conversational recommendation of exactly three best-fit experts — displayed as styled, clickable contact cards that link directly to their Tinrate profile pages. The platform includes an email gate for lead capture, thumbs up/down feedback on results, a full admin analytics dashboard, and a live intelligence steering panel where admins can toggle HyDE query expansion and feedback re-ranking flags and tune numeric thresholds without redeploying.
 
 ## Core Value
 
@@ -24,6 +24,13 @@ A user describes any problem and instantly gets three expertly matched professio
 
 ## Shipped Versions
 
+### v1.2 Intelligence Activation & Steering Panel — Shipped 2026-02-21
+- SQLite `settings` table with runtime flag storage — toggle HyDE/feedback without Railway redeploy
+- GET/POST `/api/admin/settings` with SETTINGS_SCHEMA, native-typed values, source field (db/env/default)
+- Admin Intelligence tab rewritten as live steering panel: toggle switches, threshold inputs, dirty tracking, inline save feedback
+- Search Lab A/B comparison: side-by-side configs, amber/blue diff view, delta badges, per-run overrides
+- Archive: `.planning/milestones/v1.2-ROADMAP.md`
+
 ### v1.1 Expert Intelligence & Search Quality — Shipped 2026-02-21
 - AI batch-tagged all 1,558 experts with 3–8 domain tags (Gemini 2.5 Flash)
 - Findability scoring (0–100) per expert, surfaced in admin with color-coded badges
@@ -36,26 +43,6 @@ A user describes any problem and instantly gets three expertly matched professio
 ### v1.0 MVP — Shipped 2026-02-20
 - Core AI chat with 3-expert recommendations, email gate, feedback, admin dashboard
 - Archive: `.planning/milestones/v1.0-ROADMAP.md`
-
-## Current Milestone: v1.2 Intelligence Activation & Steering Panel
-
-**Goal:** Activate the search intelligence layer in production and transform the admin Intelligence tab into a real-time steering panel — live flag toggles, threshold tuning, A/B comparison, and per-run overrides in Search Lab.
-
-**Target features:**
-- SQLite settings table for runtime flag storage (no Railway redeploy needed to toggle HyDE/feedback)
-- Admin Intelligence tab redesigned as steering panel: live flag toggles, similarity threshold slider, HyDE sensitivity tuning, feedback boost cap adjustment
-- Search Lab A/B comparison mode: side-by-side expert ranking with diff view (moved/new/dropped experts)
-- Per-run flag overrides in Search Lab (force-enable a mode for a single test regardless of global setting)
-
-### Active
-
-- [ ] SQLite settings table: `settings` table with key/value pairs, read at runtime by backend
-- [ ] Flag toggle API: `POST /api/admin/settings` to write flag values, `GET /api/admin/settings` to read
-- [ ] Backend reads flags from DB (with env var as fallback default)
-- [ ] Admin Intelligence steering panel: live toggles for QUERY_EXPANSION_ENABLED and FEEDBACK_LEARNING_ENABLED
-- [ ] Admin Intelligence steering panel: threshold inputs (similarity threshold, HyDE min-results trigger, feedback boost cap)
-- [ ] Search Lab A/B mode: run query in multiple configurations, show side-by-side diff
-- [ ] Search Lab per-run overrides: checkbox to force-enable HyDE/feedback for a single test run
 
 ## Future Milestone: v2.0 — Extreme Semantic Explorer
 
@@ -71,9 +58,10 @@ A user describes any problem and instantly gets three expertly matched professio
 
 ## Current State
 
-**Deployed version:** v1.1 (Railway + Vercel, auto-deploys on push to main)
-**Expert pool:** 1,558 experts, all tagged, FAISS index at 1,558 vectors
-**Search intelligence:** HyDE + feedback re-ranking built; flags default off — v1.2 activates them with DB-level control
+**Deployed version:** v1.2 (Railway + Vercel, auto-deploys on push to main)
+**Expert pool:** 1,558 experts, all AI-tagged, FAISS index at 1,558 vectors
+**Search intelligence:** HyDE + feedback re-ranking live; toggled via admin steering panel (DB-backed settings, no redeploy)
+**Admin panel:** Intelligence tab = live steering panel; Search Lab = A/B comparison with diff view
 
 ### Out of Scope
 
@@ -86,12 +74,12 @@ A user describes any problem and instantly gets three expertly matched professio
 
 ## Context
 
-- **Expert data:** SQLite table with 1,558 profiles seeded from experts.csv; FAISS index has 530 vectors (re-ingest needed for full coverage)
-- **AI stack:** Google GenAI (text-embedding-004) for embeddings, Gemini LLM (gemini-2.5-flash) for generation
-- **Codebase:** ~5,000 LOC Python + TypeScript
+- **Expert data:** SQLite table with 1,558 profiles; FAISS index at 1,558 tag-enriched vectors; all experts AI-tagged with 3–8 domain tags + findability scores
+- **AI stack:** Google GenAI (gemini-embedding-001) for embeddings, Gemini 2.5 Flash for generation and expert tagging
+- **Codebase:** ~8,000 LOC Python + TypeScript
 - **Deployed:** Railway (FastAPI + SQLite + FAISS) + Vercel (React/Vite/Tailwind v3)
 - **Live since:** 2026-02-20
-- **Admin dashboard:** Available at /admin — login with ADMIN_SECRET key; includes search analytics, lead tracking, expert management, score explainer
+- **Admin dashboard:** Available at /admin — search analytics, lead tracking, expert management, score explainer, intelligence steering panel, Search Lab A/B comparison
 
 ## Constraints
 
@@ -114,6 +102,11 @@ A user describes any problem and instantly gets three expertly matched professio
 | GAP_THRESHOLD=0.60 | Lowered from 0.65 — was too strict; 0.60 returns results across diverse domains | ✓ Good — clarification rate acceptable |
 | Email gate lazy localStorage | localStorage read in useState initializer (not useEffect) — prevents flash of locked state | ✓ Good — no FOUC for returning visitors |
 | CORS allow_headers: X-Admin-Key | Added to CORSMiddleware to allow Vercel preflight for admin requests | ✓ Good — admin works from browser |
+| DB-backed settings (no caching) | SELECT * on every chat request — 5-row max table; ensures zero-redeploy config changes | ✓ Good — immediate consistency, negligible perf cost |
+| SETTINGS_SCHEMA as source of truth | Single dict powers GET response metadata + POST validation — no duplication | ✓ Good — clean, maintainable pattern |
+| Per-thread SessionLocal in compare | ThreadPoolExecutor workers each create own SessionLocal() — thread-safe DB reads | ✓ Good — fixed race condition from audit |
+| ToggleSwitch as plain button | button[role=switch] + aria-checked, no external library — keeps bundle small | ✓ Good — accessible, dependency-free |
+| Search Lab A/B overrides in-memory | Per-run overrides merged in-memory, never written to DB — global settings unchanged | ✓ Good — matches admin mental model |
 
 ---
-*Last updated: 2026-02-21 after v1.1 milestone started*
+*Last updated: 2026-02-21 after v1.2 milestone*

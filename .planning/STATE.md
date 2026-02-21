@@ -2,19 +2,18 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md
+See: .planning/PROJECT.md (updated 2026-02-21 after v1.2 milestone)
 
 **Core value:** A user describes any problem and instantly gets three expertly matched professionals they can contact — no searching, no filtering, no guesswork.
-**Current focus:** v1.2 — Phase 13: Search Lab A/B Comparison
+**Current focus:** Planning next milestone — run `/gsd:new-milestone` to start
 
 ## Current Position
 
-Phase: 13 — Search Lab A/B Comparison
-Plan: 02 complete — Phase 13 complete (Plan 01: compare endpoint + TS types; Plan 02: SearchLabPage A/B UI)
-Status: Complete — Phase 13 done (POST /api/admin/compare + A/B comparison UI with diff view and per-run overrides)
-Last activity: 2026-02-21 — Phase 13 Plan 02 complete (SearchLabPage rewritten as A/B comparison UI: collapsible config panel, side-by-side ranked columns, diff view, override banner)
+Phase: — (all 13 phases complete)
+Status: v1.2 milestone archived — ready for next milestone planning
+Last activity: 2026-02-21 — v1.2 milestone completed and archived (Phases 11–13: backend settings API, steering panel, Search Lab A/B comparison)
 
-Progress: [███████████████████████████░░░] v1.0 + v1.1 + v1.2 complete (13/13 phases) — Phase 13 done, all planned phases complete
+Progress: [█████████████████████████████████] v1.0 + v1.1 + v1.2 complete (13/13 phases) — all planned phases shipped
 
 ## Live URLs
 

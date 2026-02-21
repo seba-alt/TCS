@@ -20,3 +20,43 @@
 - Requirements: `.planning/milestones/v1.0-REQUIREMENTS.md`
 
 ---
+
+## v1.1 Expert Intelligence & Search Quality (Shipped: 2026-02-21)
+
+**Phases completed:** 3 phases (8–10), 9 plans
+**Timeline:** 2026-02-21 (single day, automated execution)
+
+**Key accomplishments:**
+1. AI batch-tagged all 1,558 experts with 3–8 domain tags via Gemini 2.5 Flash; findability scoring (0–100) per expert
+2. FAISS index rebuilt with all 1,558 experts + tag-enriched embeddings (from 530-vector partial index)
+3. Admin Expert tab overhauled: sort/filter/pagination, domain tag pills, color-coded findability badges, worst-first default sort
+4. HyDE query expansion (weak-query detection + hypothetical bio embedding) + feedback-weighted re-ranking, gated by env var flags
+5. Admin Search Lab (SSE single-query debug) + Intelligence Dashboard (live stats display) for monitoring retrieval quality
+
+**Archive:**
+- Roadmap: `.planning/milestones/v1.1-ROADMAP.md`
+- Requirements: `.planning/milestones/v1.1-REQUIREMENTS.md`
+
+---
+
+## v1.2 Intelligence Activation & Steering Panel (Shipped: 2026-02-21)
+
+**Phases completed:** 3 phases (11–13), 6 plans
+**Timeline:** 2026-02-21 (single day, automated execution)
+**Codebase:** ~8,000 LOC Python + TypeScript
+
+**Key accomplishments:**
+1. SQLite `settings` table — 5 intelligence flags/thresholds stored as DB key/value rows, read on every request with Railway env var fallback
+2. GET/POST `/api/admin/settings` with SETTINGS_SCHEMA validation, native-typed values, and `source` field (db/env/default) showing override hierarchy
+3. Admin Intelligence tab rewritten as live steering panel — toggle switches for HyDE/feedback + 3 numeric threshold inputs + dirty tracking + 4s fade save feedback
+4. Search Lab rewritten as full A/B comparison UI — side-by-side configs, amber/blue rank-change diff view, delta badges, ghost row alignment
+5. Per-run flag overrides in Search Lab — force-enable HyDE/feedback for a single test without mutating global DB settings
+6. ThreadPoolExecutor parallel execution of up to 4 intelligence configurations per `/api/admin/compare` request
+
+**Archive:**
+- Roadmap: `.planning/milestones/v1.2-ROADMAP.md`
+- Requirements: `.planning/milestones/v1.2-REQUIREMENTS.md`
+- Audit: `.planning/milestones/v1.2-MILESTONE-AUDIT.md`
+
+---
+
