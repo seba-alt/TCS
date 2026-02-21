@@ -44,7 +44,7 @@ from sqlalchemy.orm import Session
 import structlog
 
 from app.config import FAISS_INDEX_PATH, METADATA_PATH
-from app.database import get_db
+from app.database import get_db, SessionLocal
 from app.models import Conversation, Expert, Feedback
 from app.services.tagging import compute_findability_score, tag_expert_sync
 from app.services.retriever import retrieve
@@ -1333,12 +1333,17 @@ def compare_configs(
         for name in body.configs
     ]
 
-    # Run all configs in parallel using ThreadPoolExecutor
+    # Run all configs in parallel using ThreadPoolExecutor.
+    # Each thread gets its own Session — SQLAlchemy Sessions are not thread-safe.
     def _run_one(args):
         name, flags = args
-        candidates, intelligence = _retrieve_for_lab(
-            body.query, faiss_index, metadata, db, flags, body.result_count
-        )
+        thread_db = SessionLocal()
+        try:
+            candidates, intelligence = _retrieve_for_lab(
+                body.query, faiss_index, metadata, thread_db, flags, body.result_count
+            )
+        finally:
+            thread_db.close()
         return name, candidates, intelligence
 
     with ThreadPoolExecutor(max_workers=len(config_flag_pairs)) as executor:

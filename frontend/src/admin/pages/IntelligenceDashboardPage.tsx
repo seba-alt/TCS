@@ -54,13 +54,13 @@ function TooltipIcon({ text }: { text: string }) {
 function friendlyLabel(key: string): string {
   switch (key) {
     case 'SIMILARITY_THRESHOLD': return 'Similarity Threshold'
-    case 'HYDE_TRIGGER_SENSITIVITY': return 'HyDE Trigger Sensitivity'
+    case 'STRONG_RESULT_MIN': return 'HyDE Trigger Sensitivity'
     case 'FEEDBACK_BOOST_CAP': return 'Feedback Boost Cap'
     default: return key
   }
 }
 
-const THRESHOLD_ORDER = ['SIMILARITY_THRESHOLD', 'HYDE_TRIGGER_SENSITIVITY', 'FEEDBACK_BOOST_CAP']
+const THRESHOLD_ORDER = ['SIMILARITY_THRESHOLD', 'STRONG_RESULT_MIN', 'FEEDBACK_BOOST_CAP']
 
 export default function IntelligenceDashboardPage() {
   const { data, loading, error, refetch } = useAdminSettings()
