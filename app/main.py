@@ -140,6 +140,10 @@ async def lifespan(app: FastAPI):
                 pass  # Column already exists — idempotent
     log.info("startup: expert enrichment columns migrated/verified")
 
+    # Phase 11: settings table — created by Base.metadata.create_all() above on fresh DBs;
+    # on existing DBs create_all() adds missing tables idempotently without modifying existing ones.
+    log.info("startup: settings table created/verified")
+
     # Seed Expert table from experts.csv on first run
     seeded = _seed_experts_from_csv()
     if seeded:

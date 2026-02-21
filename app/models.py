@@ -103,3 +103,27 @@ class Expert(Base):
     created_at: Mapped[datetime.datetime] = mapped_column(
         DateTime, default=datetime.datetime.utcnow, nullable=False
     )
+
+
+class AppSetting(Base):
+    """
+    Runtime configuration overrides for search intelligence.
+    Key naming matches the env var names (SCREAMING_SNAKE_CASE) for clarity.
+    When a row exists, it overrides the env var fallback.
+    When no row exists for a key, search_intelligence.get_settings() falls back to the env var.
+
+    Valid keys:
+        QUERY_EXPANSION_ENABLED   — bool, env fallback: QUERY_EXPANSION_ENABLED or "false"
+        FEEDBACK_LEARNING_ENABLED — bool, env fallback: FEEDBACK_LEARNING_ENABLED or "false"
+        SIMILARITY_THRESHOLD      — float 0.0-1.0, env fallback: SIMILARITY_THRESHOLD or "0.60"
+        STRONG_RESULT_MIN         — int 1-10, env fallback: STRONG_RESULT_MIN or "3"
+        FEEDBACK_BOOST_CAP        — float 0.0-0.50, env fallback: FEEDBACK_BOOST_CAP or "0.20"
+    """
+
+    __tablename__ = "settings"
+
+    key: Mapped[str] = mapped_column(String(100), primary_key=True, nullable=False)
+    value: Mapped[str] = mapped_column(Text, nullable=False)
+    updated_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow, nullable=False
+    )
