@@ -4,6 +4,7 @@ import { createRoot } from 'react-dom/client'
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import './index.css'
 import App from './App.tsx'
+import MarketplacePage from './pages/MarketplacePage.tsx'
 import AdminApp from './admin/AdminApp.tsx'
 import LoginPage from './admin/LoginPage.tsx'
 import RequireAuth from './admin/RequireAuth.tsx'
@@ -20,6 +21,10 @@ import IntelligenceDashboardPage from './admin/pages/IntelligenceDashboardPage.t
 const router = createBrowserRouter([
   {
     path: '/',
+    element: <MarketplacePage />,
+  },
+  {
+    path: '/chat',
     element: <App />,
   },
   {
