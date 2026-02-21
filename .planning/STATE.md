@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-21)
 ## Current Position
 
 Phase: 14 of 19 (Hybrid Search Backend)
-Plan: 0 of ? in current phase
-Status: Ready to plan
-Last activity: 2026-02-21 — v2.0 roadmap created; phases 14-19 defined; ready to plan Phase 14
+Plan: 1 of 2 in current phase
+Status: In progress
+Last activity: 2026-02-21 — Phase 14 Plan 01 complete: hybrid search pipeline service and router created
 
-Progress: [██████████░░░░░░░░░░] ~50% (v1.0–v1.2 complete, v2.0 not started)
+Progress: [██████████░░░░░░░░░░] ~50% (v1.0–v1.2 complete, v2.0 phase 14 in progress)
 
 ## Live URLs
 
@@ -26,14 +26,25 @@ Progress: [██████████░░░░░░░░░░] ~50% (v
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 38 (phases 1-13)
+- Total plans completed: 39 (phases 1-13 + 14-01)
 - Average duration: ~15 min
+
+| Phase | Plan | Duration | Tasks | Files |
+|-------|------|----------|-------|-------|
+| 14 | 01 | 2 min | 2 | 2 |
 
 ## Accumulated Context
 
 ### Decisions
 
 Decisions are logged in PROJECT.md Key Decisions table.
+
+**Phase 14 Plan 01 decisions (2026-02-21):**
+- FAISS weight 0.7, BM25 weight 0.3 — hardcoded constants (tuning rare; env var overhead not justified)
+- match_reason: tag-intersection label (deterministic, zero latency) — Gemini upgrade deferred to Phase 18
+- Cursor: integer offset (simplest for react-virtuoso; stable corpus, no concurrent inserts)
+- total: pre-filter count — matches "N experts matching your filters" user expectation
+- Findability boost: multiplicative ±20% from 50–100 range (neutral at 75)
 
 Key v2.0 architecture constraints (from .planning/research/):
 - FAISS IDSelectorBatch used as search-time filter only — never `remove_ids`; `username_to_faiss_pos` mapping required at startup
@@ -56,5 +67,5 @@ Key v2.0 architecture constraints (from .planning/research/):
 ## Session Continuity
 
 Last session: 2026-02-21
-Stopped at: v2.0 roadmap created — Phase 14 ready to plan
+Stopped at: Completed 14-01-PLAN.md — hybrid search pipeline service (explorer.py, explore.py router)
 Resume file: None

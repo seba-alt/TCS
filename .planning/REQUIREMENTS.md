@@ -8,10 +8,10 @@
 
 ### EXPL — Hybrid Search Backend
 
-- [ ] **EXPL-01**: System provides `/api/explore` endpoint returning paginated expert results (cursor, total, took_ms)
-- [ ] **EXPL-02**: System pre-filters experts by rate range and domain tags via SQLAlchemy → FAISS IDSelectorBatch before vector search
-- [ ] **EXPL-03**: System fuses FAISS semantic score (0.7) + FTS5 BM25 keyword score (0.3) into a single weighted rank
-- [ ] **EXPL-04**: System applies findability score and feedback boosts to fused rankings
+- [x] **EXPL-01**: System provides `/api/explore` endpoint returning paginated expert results (cursor, total, took_ms)
+- [x] **EXPL-02**: System pre-filters experts by rate range and domain tags via SQLAlchemy → FAISS IDSelectorBatch before vector search
+- [x] **EXPL-03**: System fuses FAISS semantic score (0.7) + FTS5 BM25 keyword score (0.3) into a single weighted rank
+- [x] **EXPL-04**: System applies findability score and feedback boosts to fused rankings
 - [ ] **EXPL-05**: SQLite FTS5 virtual table is created at startup and synced with experts table on writes
 
 ### STATE — Global State & Routing
@@ -72,10 +72,10 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| EXPL-01 | Phase 14 | Pending |
-| EXPL-02 | Phase 14 | Pending |
-| EXPL-03 | Phase 14 | Pending |
-| EXPL-04 | Phase 14 | Pending |
+| EXPL-01 | Phase 14 | Complete |
+| EXPL-02 | Phase 14 | Complete |
+| EXPL-03 | Phase 14 | Complete |
+| EXPL-04 | Phase 14 | Complete |
 | EXPL-05 | Phase 14 | Pending |
 | STATE-01 | Phase 15 | Pending |
 | STATE-02 | Phase 15 | Pending |
