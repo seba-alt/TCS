@@ -102,7 +102,11 @@ Plans:
   2. Calling `GET /api/admin/settings` returns all current setting values with a `source` field indicating whether each came from the DB override or the env var fallback
   3. Calling `POST /api/admin/settings` with a valid admin key writes the new value to the `settings` table; a subsequent `GET` reflects the change immediately
   4. Toggling a flag via `POST /api/admin/settings` causes the next chat request to use the updated value with no Railway redeploy
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 11-01-PLAN.md — AppSetting model + settings table + per-call DB reading in search_intelligence.py (app/models.py, app/main.py, app/services/search_intelligence.py)
+- [ ] 11-02-PLAN.md — GET/POST /api/admin/settings endpoints + .env.example docs (app/routers/admin.py, .env.example)
 
 ### Phase 12: Steering Panel Frontend
 **Goal**: The admin Intelligence tab is a live control panel where an admin can see the current state of all flags and thresholds, flip toggles or adjust numbers, save changes, and get immediate inline confirmation — all without leaving the page or redeploying
@@ -140,6 +144,6 @@ Plans:
 | 8. Data Enrichment Pipeline | v1.1 | 4/4 | Complete | 2026-02-21 |
 | 9. Admin Expert Tab Enhancement | v1.1 | 3/3 | Complete | 2026-02-21 |
 | 10. Search Intelligence Layer | v1.1 | 2/2 | Complete | 2026-02-21 |
-| 11. Backend Settings API | v1.2 | 0/? | Not started | — |
+| 11. Backend Settings API | v1.2 | 0/2 | Not started | — |
 | 12. Steering Panel Frontend | v1.2 | 0/? | Not started | — |
 | 13. Search Lab A/B Comparison | v1.2 | 0/? | Not started | — |
