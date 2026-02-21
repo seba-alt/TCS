@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-21 after v1.1 milestone started)
 ## Current Position
 
 Phase: 8 of 10 (Data Enrichment Pipeline)
-Plan: 08-03 complete
+Plan: 08-04 complete
 Status: In progress
-Last activity: 2026-02-21 — Phase 8 Plan 03 complete (ingest.py rewrite: DB-sourced, tag-enriched, crash-safe)
+Last activity: 2026-02-21 — Phase 8 Plan 04 complete (Auto-tagging on POST /api/admin/experts + "Generating tags..." UI message)
 
 Progress: [████████████████████░░░░░░░░░░] v1.0 complete (7/7 phases) — v1.1 starting Phase 8
 
@@ -35,7 +35,7 @@ Progress: [████████████████████░░░
 | Phase | Plans | Status |
 |-------|-------|--------|
 | 01–07 (v1.0) | 23 total | Complete |
-| 08 (v1.1) | TBD | Not started |
+| 08 (v1.1) | TBD | In progress |
 | 09 (v1.1) | TBD | Not started |
 | 10 (v1.1) | TBD | Not started |
 
@@ -58,6 +58,9 @@ Recent decisions affecting current work:
 - [08-03]: pandas removed from ingest.py; SQLAlchemy SessionLocal replaces CSV loading — Expert table is authoritative source
 - [08-03]: Assertion uses actual_count from DB query (not hardcoded 1558) — future-proof as expert count grows
 - [08-03]: Metadata dicts preserve "First Name"/"Last Name" key names (capital + spaced) for retriever.py/llm.py compatibility
+- [Phase 08]: All DB helper functions sync — no SessionLocal held across await, preventing SQLite thread errors in async batch script
+- [Phase 08]: Async Gemini client (client.aio) used in batch script; sync genai.Client reserved for FastAPI route handlers (tag_expert_sync)
+- [Phase 08]: CONCURRENCY=5 conservative default for Gemini calls; constant at top of file with AI Studio RPM docs link
 
 ### Pending Todos
 
@@ -73,5 +76,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-21
-Stopped at: Completed 08-03-PLAN.md — scripts/ingest.py rewritten: DB-sourced (Expert table), tag-enriched embeddings (Domains: ...), crash-safe staging promotion.
+Stopped at: Completed 08-02-PLAN.md — scripts/tag_experts.py async batch tagging with Gemini 2.5 Flash, CONCURRENCY=5 semaphore, tqdm progress, retry-once-skip, findability scoring for all experts.
 Resume file: None
