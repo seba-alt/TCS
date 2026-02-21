@@ -108,6 +108,13 @@ None — no external service configuration required.
 - Admin can now toggle intelligence features and tune thresholds without redeploying
 - Phase 13 (if planned) can reference IntelligenceDashboardPage pattern for any additional admin settings panels
 
+## Self-Check: PASSED
+
+- FOUND: .planning/phases/12-steering-panel-frontend/12-02-SUMMARY.md
+- FOUND: frontend/src/admin/pages/IntelligenceDashboardPage.tsx
+- FOUND commit 2c6ab0f (Task 1 feat commit)
+- FOUND commit 63b8b94 (docs final commit)
+
 ---
 *Phase: 12-steering-panel-frontend*
 *Completed: 2026-02-21*
