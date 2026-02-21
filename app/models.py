@@ -95,6 +95,8 @@ class Expert(Base):
     profile_url: Mapped[str] = mapped_column(String(500), nullable=False, default="")
     profile_url_utm: Mapped[str] = mapped_column(String(600), nullable=False, default="")
     category: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    tags: Mapped[str | None] = mapped_column(Text, nullable=True)
+    findability_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     created_at: Mapped[datetime.datetime] = mapped_column(
         DateTime, default=datetime.datetime.utcnow, nullable=False
     )

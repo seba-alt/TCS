@@ -124,6 +124,19 @@ async def lifespan(app: FastAPI):
                 pass  # Column already exists — idempotent
     log.info("startup: analytics columns migrated/verified")
 
+    # Phase 8: expert enrichment columns
+    with engine.connect() as _conn:
+        for _col_ddl in [
+            "ALTER TABLE experts ADD COLUMN tags TEXT",
+            "ALTER TABLE experts ADD COLUMN findability_score REAL",
+        ]:
+            try:
+                _conn.execute(_text(_col_ddl))
+                _conn.commit()
+            except Exception:
+                pass  # Column already exists — idempotent
+    log.info("startup: expert enrichment columns migrated/verified")
+
     # Seed Expert table from experts.csv on first run
     seeded = _seed_experts_from_csv()
     if seeded:
