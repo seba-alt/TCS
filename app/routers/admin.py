@@ -426,6 +426,48 @@ def get_experts(db: Session = Depends(get_db)):
     return {"experts": [_serialize_expert(e) for e in experts]}
 
 
+@router.get("/domain-map")
+def get_domain_map(db: Session = Depends(get_db)):
+    """
+    Return top-10 expert tag domains by frequency in downvoted results.
+    Joins downvoted Feedback rows to Expert tags via profile_url lookup.
+    Response: {"domains": [{"domain": str, "count": int}]}
+    """
+    from collections import Counter
+
+    # Fetch only expert_ids column from downvoted feedback rows
+    downvote_expert_ids = db.scalars(
+        select(Feedback.expert_ids).where(Feedback.vote == "down")
+    ).all()
+
+    # Parse URLs/names from each row's JSON list
+    url_set: set[str] = set()
+    for raw in downvote_expert_ids:
+        for entry in json.loads(raw or "[]"):
+            url_set.add(entry)
+
+    if not url_set:
+        return {"domains": []}
+
+    # Look up experts by profile_url — name-only fallback entries will not match (acceptable)
+    experts = db.scalars(
+        select(Expert).where(Expert.profile_url.in_(list(url_set)))
+    ).all()
+
+    # Count tag frequency across all matched experts
+    tag_counter: Counter = Counter()
+    for expert in experts:
+        for tag in json.loads(expert.tags or "[]"):
+            tag_counter[tag.lower().strip()] += 1
+
+    return {
+        "domains": [
+            {"domain": d, "count": c}
+            for d, c in tag_counter.most_common(10)
+        ]
+    }
+
+
 class ClassifyBody(BaseModel):
     category: str
 
