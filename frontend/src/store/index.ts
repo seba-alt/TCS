@@ -61,6 +61,7 @@ export const useFilterSlice = () =>
       setQuery:     state.setQuery,
       setRateRange: state.setRateRange,
       toggleTag:    state.toggleTag,
+      setTags:      state.setTags,
       setSortBy:    state.setSortBy,
       resetFilters: state.resetFilters,
     }))

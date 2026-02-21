@@ -14,6 +14,7 @@ export interface FilterSlice {
   setQuery: (q: string) => void
   setRateRange: (min: number, max: number) => void
   toggleTag: (tag: string) => void
+  setTags: (tags: string[]) => void
   setSortBy: (sortBy: FilterSlice['sortBy']) => void
   resetFilters: () => void
 }
@@ -47,6 +48,8 @@ export const createFilterSlice: StateCreator<
         ? state.tags.filter((t) => t !== tag)
         : [...state.tags, tag],
     })),
+
+  setTags: (tags) => set({ tags }),
 
   setSortBy: (sortBy) => set({ sortBy }),
 
