@@ -72,7 +72,10 @@ Plans:
   2. `useExplorerStore` is importable from any component and exposes filter, results, and pilot slices without a Provider wrapper
   3. Filter preferences (query, rateMin, rateMax, tags) survive a full browser reload via localStorage, while results and pilot messages do not persist
   4. Changing a filter value in any component is immediately reflected in all other components consuming that slice, with no stale state
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 15-01-PLAN.md — Install Zustand, create three-slice store with persist middleware, create MarketplacePage shell, update routing
 
 ### Phase 16: Marketplace Page & Sidebar
 **Goal**: Users see a professional marketplace layout with a functional faceted sidebar that filters the expert pool — the visible frame the grid and co-pilot will attach to
