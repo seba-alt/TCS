@@ -57,7 +57,11 @@ See `.planning/milestones/v1.2-ROADMAP.md`
   3. When a text query is given, results reflect fused FAISS (0.7) + BM25 (0.3) weighted ranking, with findability and feedback boosts applied on top
   4. The FTS5 `experts_fts` virtual table exists in the Railway SQLite database and is populated with all 1,558 experts at startup
   5. The `username_to_faiss_pos` mapping is built at startup and IDSelectorBatch correctly restricts FAISS search to only the SQLAlchemy pre-filtered expert set
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 14-01-PLAN.md — Create explorer.py pipeline service + explore.py router (ExploreResponse data contract, three-stage hybrid search)
+- [ ] 14-02-PLAN.md — Wire into main.py (FTS5 startup, mapping, category classification, router registration) + admin.py FTS5 sync
 
 ### Phase 15: Zustand State & Routing
 **Goal**: The frontend has a single shared state store and the homepage route delivers the marketplace, so every subsequent UI phase builds on a real data contract and shared state layer
@@ -124,7 +128,7 @@ See `.planning/milestones/v1.2-ROADMAP.md`
 | 1-7. MVP Phases | v1.0 | Complete | Complete | 2026-02-20 |
 | 8-10. Intelligence Phases | v1.1 | Complete | Complete | 2026-02-21 |
 | 11-13. Steering Panel Phases | v1.2 | Complete | Complete | 2026-02-21 |
-| 14. Hybrid Search Backend | v2.0 | 0/? | Not started | - |
+| 14. Hybrid Search Backend | v2.0 | 0/2 | Ready to execute | - |
 | 15. Zustand State & Routing | v2.0 | 0/? | Not started | - |
 | 16. Marketplace Page & Sidebar | v2.0 | 0/? | Not started | - |
 | 17. Expert Grid & Cards | v2.0 | 0/? | Not started | - |
