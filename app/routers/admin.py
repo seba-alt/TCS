@@ -1102,7 +1102,7 @@ def get_settings_endpoint(db: Session = Depends(get_db)):
     from app.models import AppSetting  # deferred import avoids circular import at startup
 
     db_rows = {row.key: row.value for row in db.scalars(select(AppSetting)).all()}
-    result = {}
+    result = []
     for key, schema in SETTINGS_SCHEMA.items():
         if key in db_rows:
             raw = db_rows[key]
@@ -1113,13 +1113,19 @@ def get_settings_endpoint(db: Session = Depends(get_db)):
         else:
             raw = schema["env_default"]
             source = "default"
-        result[key] = {
+        entry: dict = {
+            "key": key,
             "value": _coerce_value(key, raw),
             "raw": raw,
             "source": source,
             "type": schema["type"],
             "description": schema["description"],
         }
+        if "min" in schema:
+            entry["min"] = schema["min"]
+        if "max" in schema:
+            entry["max"] = schema["max"]
+        result.append(entry)
     return {"settings": result}
 
 
