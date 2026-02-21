@@ -33,12 +33,12 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Search Intelligence
 
-- [ ] **SEARCH-01**: System generates a hypothetical expert bio matching each user query (HyDE) and blends it with the raw query embedding before FAISS search
-- [ ] **SEARCH-02**: HyDE expansion is controlled by a `QUERY_EXPANSION_ENABLED` environment variable flag (can be disabled without a code change)
-- [ ] **SEARCH-03**: HyDE expansion is skipped when the original query already returns strong results above the similarity threshold — only activates on weak matches
-- [ ] **SEARCH-04**: System applies a soft feedback-weighted boost to retrieval results based on cumulative thumbs up/down votes per expert
-- [ ] **SEARCH-05**: Feedback re-ranking requires a minimum of 10 interactions per expert before applying any boost, capped at 20% of similarity score
-- [ ] **SEARCH-06**: Feedback re-ranking is controlled by a `FEEDBACK_LEARNING_ENABLED` environment variable flag
+- [x] **SEARCH-01**: System generates a hypothetical expert bio matching each user query (HyDE) and blends it with the raw query embedding before FAISS search
+- [x] **SEARCH-02**: HyDE expansion is controlled by a `QUERY_EXPANSION_ENABLED` environment variable flag (can be disabled without a code change)
+- [x] **SEARCH-03**: HyDE expansion is skipped when the original query already returns strong results above the similarity threshold — only activates on weak matches
+- [x] **SEARCH-04**: System applies a soft feedback-weighted boost to retrieval results based on cumulative thumbs up/down votes per expert
+- [x] **SEARCH-05**: Feedback re-ranking requires a minimum of 10 interactions per expert before applying any boost, capped at 20% of similarity score
+- [x] **SEARCH-06**: Feedback re-ranking is controlled by a `FEEDBACK_LEARNING_ENABLED` environment variable flag
 - [x] **SEARCH-07**: Admin can view a domain map endpoint (`GET /api/admin/domain-map`) showing which expert tag domains appear most frequently in downvoted results
 
 ## v2 Requirements
@@ -93,12 +93,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ADMIN-05 | Phase 9 | Complete |
 | ADMIN-06 | Phase 9 | Complete |
 | SEARCH-07 | Phase 9 | Complete |
-| SEARCH-01 | Phase 10 | Pending |
-| SEARCH-02 | Phase 10 | Pending |
-| SEARCH-03 | Phase 10 | Pending |
-| SEARCH-04 | Phase 10 | Pending |
-| SEARCH-05 | Phase 10 | Pending |
-| SEARCH-06 | Phase 10 | Pending |
+| SEARCH-01 | Phase 10 | Complete |
+| SEARCH-02 | Phase 10 | Complete |
+| SEARCH-03 | Phase 10 | Complete |
+| SEARCH-04 | Phase 10 | Complete |
+| SEARCH-05 | Phase 10 | Complete |
+| SEARCH-06 | Phase 10 | Complete |
 
 **Coverage:**
 - v1.1 requirements: 21 total
