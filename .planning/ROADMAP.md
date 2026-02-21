@@ -136,7 +136,15 @@ Plans:
   3. After capturing email and project type, the AI generates and displays a styled in-app HTML match report personalized to the top results
   4. The URL reflects active filters as query params so a filtered view can be bookmarked or shared; loading that URL restores the exact filter state
   5. When search returns no results, the page shows alternative query suggestions and nearby tag options rather than a blank state
-**Plans**: TBD
+**Plans**: 6 plans
+
+Plans:
+- [ ] 19-01-PLAN.md — Backend GET /api/suggest endpoint (FTS5 prefix search for search suggestions)
+- [ ] 19-02-PLAN.md — Shareable filter URLs (useUrlSync hook + Copy link button in FilterSidebar)
+- [ ] 19-03-PLAN.md — Email gate modal (View Full Profile on ExpertCard, ProfileGateModal, useEmailGate reuse)
+- [ ] 19-04-PLAN.md — Enhanced EmptyState (tag suggestion pills + Sage CTA + clear all)
+- [ ] 19-05-PLAN.md — Search suggestions dropdown in SearchInput (calls /api/suggest, AbortController)
+- [ ] 19-06-PLAN.md — Human verify: email gate, URL sync, search suggestions, no-results state
 
 ## Progress
 
