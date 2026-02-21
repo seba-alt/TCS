@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-21 after v1.1 milestone started)
 ## Current Position
 
 Phase: 8 of 10 (Data Enrichment Pipeline)
-Plan: — (not yet planned)
-Status: Ready to plan
-Last activity: 2026-02-21 — v1.1 roadmap created (Phases 8–10 defined)
+Plan: 08-01 complete
+Status: In progress
+Last activity: 2026-02-21 — Phase 8 Plan 01 complete (Expert schema + tagging service)
 
 Progress: [████████████████████░░░░░░░░░░] v1.0 complete (7/7 phases) — v1.1 starting Phase 8
 
@@ -51,6 +51,10 @@ Recent decisions affecting current work:
 - [v1.1 research]: All FAISS index writes must happen in FastAPI lifespan handler only — Railway volume not mounted during pre-deploy
 - [v1.1 research]: tag_experts.py must write to staging file first, promote only after count assertion passes — crash safety
 - [v1.1 research]: Feedback re-ranking: minimum 10 interactions before boost; max 20% of similarity score — prevents cold-start bias
+- [08-01]: TYPE_CHECKING guard in app/services/tagging.py avoids circular imports; Expert type available for type hints without runtime import
+- [08-01]: Deferred google-genai imports inside tag_expert_sync() prevent failures when module loaded without GOOGLE_API_KEY set
+- [08-01]: Sync Gemini client used in tag_expert_sync — asyncio.run() inside FastAPI's running event loop raises RuntimeError
+- [08-01]: compute_findability_score accepts optional tags list to support batch processing where tags not yet committed
 
 ### Pending Todos
 
@@ -66,5 +70,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-21
-Stopped at: v1.1 roadmap created. ROADMAP.md updated with Phases 8–10. STATE.md and REQUIREMENTS.md traceability updated. Ready for `/gsd:plan-phase 8`.
+Stopped at: Completed 08-01-PLAN.md — Expert model extended with tags/findability_score columns, app/services/tagging.py created with compute_findability_score and tag_expert_sync.
 Resume file: None

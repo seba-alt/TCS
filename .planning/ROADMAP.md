@@ -46,7 +46,7 @@ Full phase details: `.planning/milestones/v1.0-ROADMAP.md`
 **Plans**: 4 plans
 
 Plans:
-- [ ] 08-01-PLAN.md — Expert model schema migration + shared tagging service (app/models.py, app/main.py, app/services/tagging.py)
+- [x] 08-01-PLAN.md — Expert model schema migration + shared tagging service (app/models.py, app/main.py, app/services/tagging.py)
 - [ ] 08-02-PLAN.md — Batch tagging script with async concurrency + findability scoring (scripts/tag_experts.py)
 - [ ] 08-03-PLAN.md — Ingest rewrite: DB-sourced + tag enrichment + crash-safe FAISS promotion (scripts/ingest.py)
 - [ ] 08-04-PLAN.md — Auto-tag on expert create: sync Gemini + BackgroundTasks retry + UI status (app/routers/admin.py, ExpertTab.tsx)
@@ -85,6 +85,6 @@ Plans:
 | 5. Email Gate UX | v1.0 | 3/3 | Complete | 2026-02-20 |
 | 6. Feedback | v1.0 | 3/3 | Complete | 2026-02-20 |
 | 7. Analytics Dashboard v2 | v1.0 | 4/4 | Complete | 2026-02-20 |
-| 8. Data Enrichment Pipeline | v1.1 | 0/4 | Not started | — |
+| 8. Data Enrichment Pipeline | v1.1 | 1/4 | In progress | — |
 | 9. Admin Expert Tab Enhancement | v1.1 | 0/? | Not started | — |
 | 10. Search Intelligence Layer | v1.1 | 0/? | Not started | — |
