@@ -37,12 +37,43 @@ A user describes any problem and instantly gets three expertly matched professio
 - Core AI chat with 3-expert recommendations, email gate, feedback, admin dashboard
 - Archive: `.planning/milestones/v1.0-ROADMAP.md`
 
+## Current Milestone: v1.2 Intelligence Activation & Steering Panel
+
+**Goal:** Activate the search intelligence layer in production and transform the admin Intelligence tab into a real-time steering panel — live flag toggles, threshold tuning, A/B comparison, and per-run overrides in Search Lab.
+
+**Target features:**
+- SQLite settings table for runtime flag storage (no Railway redeploy needed to toggle HyDE/feedback)
+- Admin Intelligence tab redesigned as steering panel: live flag toggles, similarity threshold slider, HyDE sensitivity tuning, feedback boost cap adjustment
+- Search Lab A/B comparison mode: side-by-side expert ranking with diff view (moved/new/dropped experts)
+- Per-run flag overrides in Search Lab (force-enable a mode for a single test regardless of global setting)
+
+### Active
+
+- [ ] SQLite settings table: `settings` table with key/value pairs, read at runtime by backend
+- [ ] Flag toggle API: `POST /api/admin/settings` to write flag values, `GET /api/admin/settings` to read
+- [ ] Backend reads flags from DB (with env var as fallback default)
+- [ ] Admin Intelligence steering panel: live toggles for QUERY_EXPANSION_ENABLED and FEEDBACK_LEARNING_ENABLED
+- [ ] Admin Intelligence steering panel: threshold inputs (similarity threshold, HyDE min-results trigger, feedback boost cap)
+- [ ] Search Lab A/B mode: run query in multiple configurations, show side-by-side diff
+- [ ] Search Lab per-run overrides: checkbox to force-enable HyDE/feedback for a single test run
+
+## Future Milestone: v2.0 — Extreme Semantic Explorer
+
+**Goal:** Rearchitect from AI chat into a professional Expert Marketplace with hybrid search, faceted sidebar, virtualized expert grid, and a floating AI co-pilot with function calling.
+
+**Target features:**
+- Hybrid search: pre-filter via SQLAlchemy (rate, tags) → FAISS IDSelectorBatch → HyDE embedding search → feedback re-ranking
+- Zustand global state: searchParams, results, isPilotOpen slices with persist middleware
+- Marketplace grid: react-virtuoso virtualized expert list, high-density expert cards (tags, bio, findability score)
+- Floating AI co-pilot: collapsible panel, Gemini function calling (`apply_filters(criteria)`), context-aware (summarizes visible experts)
+- Performance: <200ms filter-to-grid latency for metadata changes
+- Mobile: sidebar → bottom-sheet, grid → single column
+
 ## Current State
 
 **Deployed version:** v1.1 (Railway + Vercel, auto-deploys on push to main)
 **Expert pool:** 1,558 experts, all tagged, FAISS index at 1,558 vectors
-**Search intelligence:** HyDE + feedback re-ranking available; flags default off until feedback corpus grows
-**Next milestone:** Not started — run `/gsd:new-milestone` to define v1.2 scope
+**Search intelligence:** HyDE + feedback re-ranking built; flags default off — v1.2 activates them with DB-level control
 
 ### Out of Scope
 

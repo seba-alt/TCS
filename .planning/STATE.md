@@ -9,9 +9,10 @@ See: .planning/PROJECT.md
 
 ## Current Position
 
-Phase: 10 of 10 (v1.1 complete)
-Status: v1.1 ARCHIVED — git tag v1.1 created
-Last activity: 2026-02-21 — v1.1 milestone archived; REQUIREMENTS.md deleted; ROADMAP.md collapsed
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements for v1.2
+Last activity: 2026-02-21 — Milestone v1.2 started
 
 Progress: [████████████████████░░░░░░░░░░] v1.0 complete (7/7 phases) — v1.1 starting Phase 8
 
