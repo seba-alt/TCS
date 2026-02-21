@@ -37,7 +37,7 @@ Full phase details: `.planning/milestones/v1.1-ROADMAP.md`
 ### v1.2 Intelligence Activation & Steering Panel
 
 - [x] **Phase 11: Backend Settings API** - SQLite settings table + read/write endpoints so flags and thresholds are DB-controlled at runtime (completed 2026-02-21)
-- [ ] **Phase 12: Steering Panel Frontend** - Admin Intelligence tab redesigned as a live control panel with toggles and threshold inputs
+- [x] **Phase 12: Steering Panel Frontend** - Admin Intelligence tab redesigned as a live control panel with toggles and threshold inputs (completed 2026-02-21)
 - [ ] **Phase 13: Search Lab A/B Comparison** - Side-by-side multi-config query comparison with diff view and per-run flag overrides
 
 ## Phase Details
@@ -120,8 +120,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 12-01-PLAN.md — AdminSetting types + useAdminSettings hook (frontend/src/admin/types.ts, frontend/src/admin/hooks/useAdminData.ts)
-- [ ] 12-02-PLAN.md — Steering panel: rewrite IntelligenceDashboardPage with toggles, threshold inputs, dirty tracking, save flow (frontend/src/admin/pages/IntelligenceDashboardPage.tsx)
+- [x] 12-01-PLAN.md — AdminSetting types + useAdminSettings hook (frontend/src/admin/types.ts, frontend/src/admin/hooks/useAdminData.ts)
+- [x] 12-02-PLAN.md — Steering panel: rewrite IntelligenceDashboardPage with toggles, threshold inputs, dirty tracking, save flow (frontend/src/admin/pages/IntelligenceDashboardPage.tsx)
 
 ### Phase 13: Search Lab A/B Comparison
 **Goal**: Search Lab can run a single query across up to 4 intelligence configurations simultaneously and display results as side-by-side columns with a diff view that highlights rank changes, new appearances, and dropped experts — plus per-run flag overrides that do not affect global settings
@@ -149,5 +149,5 @@ Plans:
 | 9. Admin Expert Tab Enhancement | v1.1 | 3/3 | Complete | 2026-02-21 |
 | 10. Search Intelligence Layer | v1.1 | 2/2 | Complete | 2026-02-21 |
 | 11. Backend Settings API | v1.2 | 2/2 | Complete | 2026-02-21 |
-| 12. Steering Panel Frontend | 1/2 | In Progress|  | — |
+| 12. Steering Panel Frontend | v1.2 | 2/2 | Complete | 2026-02-21 |
 | 13. Search Lab A/B Comparison | v1.2 | 0/? | Not started | — |

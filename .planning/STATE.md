@@ -10,11 +10,11 @@ See: .planning/PROJECT.md
 ## Current Position
 
 Phase: 12 — Steering Panel Frontend
-Plan: 01 complete — ready for Plan 02 (IntelligenceDashboardPage steering panel)
-Status: In progress — Phase 12 Plan 01 complete (AdminSetting types + useAdminSettings hook)
-Last activity: 2026-02-21 — Phase 12 Plan 01 complete (AdminSetting/AdminSettingsResponse types + useAdminSettings hook)
+Plan: 02 complete — Phase 12 complete, ready for Phase 13 (Search Lab A/B Comparison)
+Status: Complete — Phase 12 all 2 plans done (types/hook + IntelligenceDashboardPage steering panel)
+Last activity: 2026-02-21 — Phase 12 Plan 02 complete (IntelligenceDashboardPage steering panel with toggles, threshold inputs, dirty tracking, save flow)
 
-Progress: [████████████████████████░░░░░░] v1.0 + v1.1 complete (10/13 phases) — v1.2 Phase 12 in progress
+Progress: [█████████████████████████░░░░░] v1.0 + v1.1 complete (11/13 phases) — v1.2 Phase 12 done, Phase 13 next
 
 ## Live URLs
 
@@ -39,7 +39,7 @@ Progress: [███████████████████████
 | 09 (v1.1) | 3/3 plans | Complete |
 | 10 (v1.1) | 2/2 plans | Complete |
 | 11 (v1.2) | 2/2 plans | Complete |
-| 12 (v1.2) | TBD | In progress — Plan 01 done |
+| 12 (v1.2) | 2/2 plans | Complete — 2026-02-21 |
 | 13 (v1.2) | TBD | Not started |
 
 ## Accumulated Context
@@ -93,6 +93,10 @@ Recent decisions affecting current work:
 - [11-02]: POST /api/admin/settings uses db.merge() for upsert on AppSetting primary key; value always stored as string
 - [11-02]: Deferred import of AppSetting inside settings endpoint functions — consistent with 11-01 get_settings() pattern
 - [Phase 12-01]: AdminSetting.value typed as boolean|number (native-typed per backend Phase 11 shape); source typed as 'db'|'env'|'default'
+- [12-02]: No loading/disabled state on toggles — near-instant API calls; optimistic update + refetch on error to revert
+- [12-02]: Sequential POST per changed threshold (not parallel) — simpler error attribution to individual key
+- [12-02]: Dirty state detection uses string comparison of local input state vs originalThresholds snapshot (initialized on data load)
+- [12-02]: ToggleSwitch uses button[role=switch] with aria-checked — no external library; TooltipIcon uses native title attribute
 
 ### Pending Todos
 
@@ -107,5 +111,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-21
-Stopped at: Completed 12-01-PLAN.md — AdminSetting/AdminSettingsResponse interfaces in types.ts + useAdminSettings hook in useAdminData.ts. Ready for Phase 12 Plan 02 (IntelligenceDashboardPage steering panel).
+Stopped at: Completed 12-02-PLAN.md — IntelligenceDashboardPage steering panel with toggles, threshold inputs, dirty tracking, and inline save feedback. Phase 12 complete. Ready for Phase 13 (Search Lab A/B Comparison).
 Resume file: None
