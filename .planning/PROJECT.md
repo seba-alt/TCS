@@ -107,6 +107,11 @@ A user describes any problem and instantly gets three expertly matched professio
 | Per-thread SessionLocal in compare | ThreadPoolExecutor workers each create own SessionLocal() — thread-safe DB reads | ✓ Good — fixed race condition from audit |
 | ToggleSwitch as plain button | button[role=switch] + aria-checked, no external library — keeps bundle small | ✓ Good — accessible, dependency-free |
 | Search Lab A/B overrides in-memory | Per-run overrides merged in-memory, never written to DB — global settings unchanged | ✓ Good — matches admin mental model |
+| VirtuosoGrid (not Virtuoso) for expert grid | Cards use fixed h-[180px] height → VirtuosoGrid's uniform-height assumption is correct; listClassName CSS grid handles 2/3-col responsive layout | ✓ Good — correct tool for fixed-height cards |
+| motion from 'motion/react' (not 'framer-motion') | New package name for Framer Motion v12+ — import path changed; entry-only animation on cards (no exit prop) to avoid VirtuosoGrid virtualization conflicts | ✓ Good — confirmed in Phase 17 implementation |
+| Expert interface snake_case | API returns snake_case (first_name, job_title, hourly_rate) — camelCase aliases removed entirely; all components updated to match | ✓ Good — eliminated undefined field bug on cards |
+| Individual Zustand selectors for isFetchingMore/appendResults | Same Phase 16 pattern — individual selectors in useExplore hook prevent stale closure and re-render loops for infinite scroll state | ✓ Good — consistent pattern across hooks |
+| flex-1 min-h-0 container for VirtuosoGrid | VirtuosoGrid requires known-height container; flex-1 min-h-0 within flex column gives measurable height for virtualization | ✓ Good — VirtuosoGrid renders correctly |
 
 ---
-*Last updated: 2026-02-21 after v2.0 milestone start*
+*Last updated: 2026-02-21 after Phase 17 (Expert Grid & Cards)*

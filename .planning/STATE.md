@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-21)
 
 **Core value:** A user describes any problem and instantly gets three expertly matched professionals they can contact — no searching, no filtering, no guesswork.
-**Current focus:** Phase 17 — Expert Grid
+**Current focus:** Phase 18 — Floating AI Co-Pilot
 
 ## Current Position
 
-Phase: 16 of 19 (Marketplace Page Sidebar)
-Plan: 3 of 3 in current phase
-Status: Phase complete
-Last activity: 2026-02-21 — Phase 16 complete: marketplace layout with sticky sidebar, filter chips, skeleton grid, mobile bottom-sheet — human-verified, all 18 checks passed
+Phase: 18 of 19 (Floating AI Co-Pilot)
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-02-21 — Phase 17 complete: Expert Grid & Cards — VirtuosoGrid with ExpertCard, entry animations, infinite scroll, tag pill wiring, EmptyState, wired into MarketplacePage
 
-Progress: [███████████░░░░░░░░░] ~55% (v1.0–v1.2 complete, v2.0 phases 14-16 complete)
+Progress: [████████████████████] 42/42 plans (100% of planned phases; Phases 18-19 TBD plans)
 
 ## Live URLs
 
@@ -26,7 +26,7 @@ Progress: [███████████░░░░░░░░░] ~55% (v
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 39 (phases 1-13 + 14-01)
+- Total plans completed: 42 (phases 1-13 + 14-17)
 - Average duration: ~15 min
 
 | Phase | Plan | Duration | Tasks | Files |
@@ -38,6 +38,9 @@ Progress: [███████████░░░░░░░░░] ~55% (v
 | 16 | 01 | 8 min | 2 | 6 |
 | 16 | 02 | 6 min | 2 | 5 |
 | 16 | 03 | 5 min | 1 | 1 |
+| 17 | 01 | ~10 min | 2 | 5 |
+| 17 | 02 | ~12 min | 2 | 4 |
+| 17 | 03 | ~3 min | 2 | 1 |
 
 ## Accumulated Context
 
@@ -79,6 +82,14 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - MobileFilterSheet uses number inputs for rate on mobile — numeric keyboard is better UX than slider in bottom-sheet
 - snapToSequentialPoint on Drawer.Root — prevents snap points being skipped on high-velocity drag
 
+**Phase 17 decisions (2026-02-21):**
+- VirtuosoGrid (not Virtuoso) — cards use fixed h-[180px] making uniform-height grid correct; listClassName CSS grid for 2/3-col responsive
+- motion from 'motion/react' (new package name for Framer Motion v12+) — entry-only animation, no exit prop on VirtuosoGrid items
+- Expert interface snake_case — API returns snake_case; camelCase aliases removed entirely from resultsSlice
+- Individual Zustand selectors for isFetchingMore/appendResults in useExplore — consistent with Phase 16 pattern
+- flex-1 min-h-0 container for VirtuosoGrid — gives known height for virtualization within flex column layout
+- appendResults uses spread: [...state.experts, ...newExperts] — appends on scroll, setResults replaces on filter change
+
 Key v2.0 architecture constraints (from .planning/research/):
 - FAISS IDSelectorBatch used as search-time filter only — never `remove_ids`; `username_to_faiss_pos` mapping required at startup
 - FTS5 synced via explicit SQL in write paths (not ORM events); `rebuild` required after virtual table creation to populate existing rows
@@ -86,7 +97,7 @@ Key v2.0 architecture constraints (from .planning/research/):
 - AnimatePresence exit animations excluded from react-virtuoso items; entry-only `animate` prop on cards
 - Co-pilot is client-side dispatch — FastAPI is thin Gemini proxy; browser owns all filter state via `useExplorerStore.getState()`
 - Gemini function call output must pass `validateFilterArgs` before any store dispatch
-- Use `Virtuoso` (not `VirtuosoGrid`) — expert cards have variable height; use `padding` not `margin` on cards
+- VirtuosoGrid used (not Virtuoso) — expert cards are fixed height h-[180px]; listClassName CSS grid for responsive columns
 
 ### Pending Todos
 
@@ -100,5 +111,5 @@ Key v2.0 architecture constraints (from .planning/research/):
 ## Session Continuity
 
 Last session: 2026-02-21
-Stopped at: Completed Phase 16 (16-01, 16-02, 16-03) — marketplace layout with sticky sidebar, filter chips, skeleton grid, vaul mobile bottom-sheet, human-verified
+Stopped at: Phase 17 complete, ready to plan Phase 18 (Floating AI Co-Pilot)
 Resume file: None
