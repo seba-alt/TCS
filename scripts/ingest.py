@@ -1,16 +1,21 @@
 #!/usr/bin/env python3
 """
-Offline ingestion: experts.csv -> FAISS index + metadata JSON.
+Offline ingestion: Expert DB table -> FAISS index + metadata JSON.
 
-Run ONCE before starting the API server:
+Run AFTER scripts/tag_experts.py has tagged experts:
   python scripts/ingest.py
 
 NEVER call this at API startup — it takes 60+ seconds and hits the embedding API.
 
-Prerequisites:
-  1. GOOGLE_API_KEY set in environment (or .env file)
-  2. data/experts.csv exists
-  3. Run scripts/validate_csv.py first to confirm column names
+Source: SQLAlchemy Expert table (NOT experts.csv — tags written by tag_experts.py
+are included in the embedding text only when reading from DB).
+
+Only tagged experts (tags IS NOT NULL) are indexed. Experts with no bio are
+excluded from tagging and therefore excluded from the FAISS index.
+
+Index promotion: written to staging path first, count assertion checked,
+then atomically renamed to production path. Prevents a partial write from
+corrupting the production index.
 """
 import json
 import sys
@@ -19,7 +24,6 @@ from pathlib import Path
 
 import faiss
 import numpy as np
-import pandas as pd
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
@@ -28,8 +32,9 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 # Load .env for local development — no-op in production
 load_dotenv()
 
-# Import shared constants — OUTPUT_DIM must match embedder.py
+# Import app modules — must run from repo root
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 from app.config import (  # noqa: E402
     EMBEDDING_MODEL,
     FAISS_INDEX_PATH,
@@ -37,24 +42,57 @@ from app.config import (  # noqa: E402
     METADATA_PATH,
     OUTPUT_DIM,
 )
+from app.database import SessionLocal  # noqa: E402
+from app.models import Expert  # noqa: E402
+from sqlalchemy import select  # noqa: E402
 
 client = genai.Client()
 
+STAGING_PATH = FAISS_INDEX_PATH.with_suffix(".staging")
 
-def expert_to_text(row: dict) -> str:
-    """
-    Construct semantically rich embedding text from a CSV row.
 
-    Columns (actual CSV): First Name, Last Name, Job Title, Company, Bio, Hourly Rate, Link.
-    Bio is the primary semantic signal — use it in full, not truncated.
-    Name + title + company provide context anchoring.
+def load_tagged_experts() -> list[dict]:
     """
-    first = str(row.get("First Name") or "").strip()
-    last = str(row.get("Last Name") or "").strip()
+    Load all Expert rows where tags IS NOT NULL.
+    Returns list of dicts for use in expert_to_text() and metadata.
+    """
+    with SessionLocal() as db:
+        experts = db.scalars(
+            select(Expert).where(Expert.tags.isnot(None))
+        ).all()
+        return [
+            {
+                "id": e.id,
+                "username": e.username,
+                "First Name": e.first_name,
+                "Last Name": e.last_name,
+                "Job Title": e.job_title,
+                "Company": e.company,
+                "Bio": e.bio,
+                "Hourly Rate": e.hourly_rate,
+                "Currency": e.currency,
+                "Profile URL": e.profile_url,
+                "Profile URL with UTM": e.profile_url_utm,
+                "tags": json.loads(e.tags or "[]"),
+                "findability_score": e.findability_score,
+                "category": e.category,
+            }
+            for e in experts
+        ]
+
+
+def expert_to_text(expert: dict) -> str:
+    """
+    Construct semantically rich embedding text from an expert dict.
+    Tags are appended as 'Domains: tag1, tag2, tag3.' for richer semantic signal.
+    """
+    first = str(expert.get("First Name") or "").strip()
+    last = str(expert.get("Last Name") or "").strip()
     name = f"{first} {last}".strip()
-    title = str(row.get("Job Title") or "").strip()
-    company = str(row.get("Company") or "").strip()
-    bio = str(row.get("Bio") or "").strip()
+    title = str(expert.get("Job Title") or "").strip()
+    company = str(expert.get("Company") or "").strip()
+    bio = str(expert.get("Bio") or "").strip()
+    tags: list[str] = expert.get("tags") or []
 
     parts = []
     if name:
@@ -67,8 +105,10 @@ def expert_to_text(row: dict) -> str:
         parts.append(f"Works at {company}.")
     if bio:
         parts.append(bio)
+    if tags:
+        parts.append(f"Domains: {', '.join(tags)}.")
 
-    return " ".join(parts) if parts else name or "Unknown expert"
+    return " ".join(parts) if parts else name or expert.get("username", "Unknown expert")
 
 
 @retry(
@@ -85,25 +125,24 @@ def embed_batch(texts: list[str]) -> list[list[float]]:
         model=EMBEDDING_MODEL,
         contents=texts,
         config=types.EmbedContentConfig(
-            task_type="RETRIEVAL_DOCUMENT",  # Different from RETRIEVAL_QUERY at runtime
+            task_type="RETRIEVAL_DOCUMENT",
             output_dimensionality=OUTPUT_DIM,
         ),
     )
     return [e.values for e in result.embeddings]
 
 
-def build_index(df: pd.DataFrame) -> tuple[faiss.IndexFlatIP, list[dict]]:
+def build_index(experts: list[dict]) -> tuple[faiss.IndexFlatIP, list[dict]]:
     """
     Embed all experts in batches and build a FAISS IndexFlatIP.
     Applies L2 normalization (required for truncated-dim cosine similarity).
     """
     all_vectors: list[list[float]] = []
-    metadata: list[dict] = []
-    total = len(df)
+    total = len(experts)
 
     for i in range(0, total, INGEST_BATCH_SIZE):
-        batch = df.iloc[i:i + INGEST_BATCH_SIZE]
-        texts = [expert_to_text(row.to_dict()) for _, row in batch.iterrows()]
+        batch = experts[i:i + INGEST_BATCH_SIZE]
+        texts = [expert_to_text(e) for e in batch]
 
         try:
             vectors = embed_batch(texts)
@@ -112,69 +151,65 @@ def build_index(df: pd.DataFrame) -> tuple[faiss.IndexFlatIP, list[dict]]:
             raise
 
         all_vectors.extend(vectors)
-        for _, row in batch.iterrows():
-            metadata.append(row.to_dict())
 
         done = min(i + INGEST_BATCH_SIZE, total)
         print(f"  Embedded {done}/{total} experts ({done * 100 // total}%)")
 
-        # Throttle slightly to stay within rate limits
         if i + INGEST_BATCH_SIZE < total:
             time.sleep(0.5)
 
-    # L2 normalize: REQUIRED for cosine similarity via IndexFlatIP on truncated dims.
-    # Full 3072-dim vectors are pre-normalized; 768-dim vectors are NOT.
     matrix = np.array(all_vectors, dtype=np.float32)
     faiss.normalize_L2(matrix)
 
     index = faiss.IndexFlatIP(OUTPUT_DIM)
     index.add(matrix)
 
-    return index, metadata
+    return index, experts  # Return original experts dicts as metadata
 
 
 def main() -> None:
-    csv_path = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("data/experts.csv")
+    # Clean up any stale staging file from a previous crashed run
+    if STAGING_PATH.exists():
+        STAGING_PATH.unlink()
+        print(f"Removed stale staging file: {STAGING_PATH}")
 
-    if not csv_path.exists():
-        print(f"[error] CSV not found: {csv_path}")
-        print("  Place experts.csv in data/ and run: python scripts/validate_csv.py first")
+    print("Loading tagged experts from DB...")
+    experts = load_tagged_experts()
+    actual_count = len(experts)
+
+    if actual_count == 0:
+        print("[error] No tagged experts found in DB. Run scripts/tag_experts.py first.")
         sys.exit(1)
 
-    print(f"Loading CSV: {csv_path}")
-    try:
-        df = pd.read_csv(csv_path, encoding="utf-8-sig")
-    except UnicodeDecodeError:
-        df = pd.read_csv(csv_path, encoding="latin-1")
-
-    print(f"  {len(df)} experts loaded, {len(df.columns)} columns")
-    print(f"  Columns: {list(df.columns)}")
-
-    # Filter: require Hourly Rate AND Bio — without both we can't match or verify relevance
-    before = len(df)
-    has_rate = df["Hourly Rate"].notna() & (df["Hourly Rate"].astype(str).str.strip() != "")
-    has_bio = df["Bio"].notna() & (df["Bio"].astype(str).str.strip() != "")
-    df = df[has_rate & has_bio]
-    print(f"  Filtered to {len(df)} experts with Hourly Rate + Bio (dropped {before - len(df)} incomplete)")
+    print(f"  {actual_count} tagged experts loaded (of 1558 total; {1558 - actual_count} skipped — no bio or untagged)")
     print()
-
-    print(f"Embedding {len(df)} experts in batches of {INGEST_BATCH_SIZE}...")
+    print(f"Embedding {actual_count} experts in batches of {INGEST_BATCH_SIZE}...")
     print(f"  Model: {EMBEDDING_MODEL}, dim: {OUTPUT_DIM}")
     print()
 
-    index, metadata = build_index(df)
+    index, metadata = build_index(experts)
 
-    # Ensure data directory exists
+    # Crash-safe promotion: write to staging, assert count, then rename to production path
     FAISS_INDEX_PATH.parent.mkdir(parents=True, exist_ok=True)
 
     print()
-    print("Writing index to disk...")
-    faiss.write_index(index, str(FAISS_INDEX_PATH))
-    print(f"  FAISS index: {FAISS_INDEX_PATH} ({index.ntotal} vectors)")
+    print("Writing index to staging path...")
+    faiss.write_index(index, str(STAGING_PATH))
+    print(f"  Staging: {STAGING_PATH} ({index.ntotal} vectors)")
 
+    # Assert before promoting — never overwrite production with a mismatched index
+    assert index.ntotal == actual_count, (
+        f"Index count mismatch: {index.ntotal} != {actual_count}. "
+        f"Staging file kept at {STAGING_PATH} for inspection."
+    )
+
+    STAGING_PATH.rename(FAISS_INDEX_PATH)
+    print(f"  Promoted to: {FAISS_INDEX_PATH}")
+
+    # Write metadata.json — includes tags for each expert (preserves retriever.py lookup pattern)
     with open(METADATA_PATH, "w", encoding="utf-8") as f:
         json.dump(metadata, f, ensure_ascii=False, indent=None, default=str)
-    print(f"  Metadata:    {METADATA_PATH} ({len(metadata)} records)")
+    print(f"  Metadata: {METADATA_PATH} ({len(metadata)} records)")
 
     print()
     print(f"Ingestion complete: {index.ntotal} experts indexed at {OUTPUT_DIM} dims.")
