@@ -1,51 +1,68 @@
-import { useState } from 'react'
-import { useAdminExperts, adminPost } from '../hooks/useAdminData'
-import type { ExpertRow } from '../types'
+import { useState, useMemo, useEffect, useCallback } from 'react'
+import { useAdminExperts, useAdminDomainMap, adminPost } from '../hooks/useAdminData'
+import type { ExpertRow, DomainMapEntry } from '../types'
 
-const CATEGORIES = [
-  'Finance', 'Marketing', 'Tech', 'Sales', 'HR', 'Legal',
-  'Operations', 'Sports', 'Healthcare', 'Real Estate', 'Strategy',
-]
+// ─── Score helpers ────────────────────────────────────────────────────────────
 
-function CategoryDropdown({
-  username,
-  current,
-  onChanged,
-}: {
-  username: string
-  current: string | null
-  onChanged: () => void
+function scoreZone(score: number | null | undefined): 'red' | 'yellow' | 'green' | 'none' {
+  if (score === null || score === undefined) return 'none'
+  if (score < 40) return 'red'
+  if (score < 70) return 'yellow'
+  return 'green'
+}
+
+const ZONE_STYLES: Record<string, string> = {
+  red:    'bg-red-500/20 text-red-400 border border-red-500/30',
+  yellow: 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30',
+  green:  'bg-green-500/20 text-green-400 border border-green-500/30',
+  none:   'bg-slate-700/40 text-slate-500 border border-transparent',
+}
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+function SortHeader({ col, label, current, dir, onClick }: {
+  col: string; label: string; current: string; dir: 'asc' | 'desc'; onClick: (col: string) => void
 }) {
-  const [saving, setSaving] = useState(false)
-
-  async function handleChange(e: React.ChangeEvent<HTMLSelectElement>) {
-    const cat = e.target.value
-    if (!cat) return
-    setSaving(true)
-    try {
-      await adminPost(`/experts/${encodeURIComponent(username)}/classify`, { category: cat })
-      onChanged()
-    } catch (err) {
-      alert(`Failed to classify: ${err}`)
-    } finally {
-      setSaving(false)
-    }
-  }
-
+  const active = current === col
   return (
-    <select
-      value={current ?? ''}
-      onChange={handleChange}
-      disabled={saving}
-      className="bg-slate-900 border border-slate-600 text-sm text-white rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50 w-36"
+    <th
+      className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer select-none hover:text-slate-300"
+      onClick={() => onClick(col)}
     >
-      <option value="">Unclassified</option>
-      {CATEGORIES.map(c => (
-        <option key={c} value={c}>{c}</option>
-      ))}
-    </select>
+      {label}
+      {active && <span className="ml-1 opacity-70">{dir === 'asc' ? '\u2191' : '\u2193'}</span>}
+    </th>
   )
 }
+
+function ScoreBadge({ score }: { score: number | null | undefined }) {
+  const zone = scoreZone(score)
+  return (
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${ZONE_STYLES[zone]}`}>
+      {score !== null && score !== undefined ? Math.round(score) : '\u2014'}
+    </span>
+  )
+}
+
+function TagPills({ tags }: { tags: string[] }) {
+  const visible = tags.slice(0, 2)
+  const remaining = tags.length - visible.length
+  return (
+    <div className="flex flex-wrap gap-1 items-center">
+      {visible.map(tag => (
+        <span key={tag} className="px-1.5 py-0.5 bg-slate-700/60 text-slate-300 text-xs rounded-md border border-slate-600/40 whitespace-nowrap">
+          {tag}
+        </span>
+      ))}
+      {remaining > 0 && (
+        <span className="text-xs text-slate-500">+{remaining}</span>
+      )}
+    </div>
+  )
+}
+
+// ─── Add form ─────────────────────────────────────────────────────────────────
+
 
 interface AddFormState {
   first_name: string
@@ -69,15 +86,33 @@ const EMPTY_FORM: AddFormState = {
   profile_url: '',
 }
 
+// ─── Main page ────────────────────────────────────────────────────────────────
+
 export default function ExpertsPage() {
   const { data, loading, error, refetch } = useAdminExperts()
+  const { data: domainData, loading: domainLoading, fetchData: fetchDomainMap } = useAdminDomainMap()
+
+  // Auto-classify state
   const [autoClassifying, setAutoClassifying] = useState(false)
   const [autoResult, setAutoResult] = useState<string | null>(null)
+
+  // Add expert form state
   const [showAddForm, setShowAddForm] = useState(false)
   const [form, setForm] = useState<AddFormState>(EMPTY_FORM)
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
-  const [search, setSearch] = useState('')
+
+  // Sort/filter/pagination state
+  const [sortCol, setSortCol] = useState<string>('score')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
+  const [zoneFilter, setZoneFilter] = useState<'red' | 'yellow' | 'green' | null>(null)
+  const [tagFilter, setTagFilter] = useState<string | null>(null)
+  const [pageIdx, setPageIdx] = useState(0)
+
+  // Domain-map state
+  const [showDomainMap, setShowDomainMap] = useState(false)
+
+  // ── Handlers ──────────────────────────────────────────────────────────────
 
   async function handleAutoClassify() {
     setAutoClassifying(true)
@@ -116,17 +151,54 @@ export default function ExpertsPage() {
     }
   }
 
-  const filtered = data?.experts.filter((e: ExpertRow) => {
-    if (!search) return true
-    const s = search.toLowerCase()
-    return (
-      e.username.toLowerCase().includes(s) ||
-      e.first_name.toLowerCase().includes(s) ||
-      e.last_name.toLowerCase().includes(s) ||
-      e.job_title.toLowerCase().includes(s) ||
-      e.company.toLowerCase().includes(s)
-    )
-  })
+  const handleSort = useCallback((col: string) => {
+    if (col === sortCol) {
+      setSortDir(d => d === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortCol(col)
+      setSortDir('asc')
+    }
+  }, [sortCol])
+
+  const handleToggleDomainMap = useCallback(() => {
+    setShowDomainMap(v => !v)
+    if (!domainData && !domainLoading) fetchDomainMap()
+  }, [domainData, domainLoading, fetchDomainMap])
+
+  // ── Derived data ──────────────────────────────────────────────────────────
+
+  const experts = data?.experts ?? []
+
+  const sorted = useMemo(() => {
+    return [...experts].sort((a, b) => {
+      if (sortCol === 'score') {
+        const aScore = a.findability_score ?? -1
+        const bScore = b.findability_score ?? -1
+        return sortDir === 'asc' ? aScore - bScore : bScore - aScore
+      }
+      if (sortCol === 'name') {
+        const aName = `${a.first_name} ${a.last_name}`.toLowerCase()
+        const bName = `${b.first_name} ${b.last_name}`.toLowerCase()
+        return sortDir === 'asc' ? aName.localeCompare(bName) : bName.localeCompare(aName)
+      }
+      return 0
+    })
+  }, [experts, sortCol, sortDir])
+
+  const filtered = useMemo(() => {
+    let result = sorted
+    if (zoneFilter) result = result.filter(e => scoreZone(e.findability_score) === zoneFilter)
+    if (tagFilter) result = result.filter(e => e.tags?.includes(tagFilter))
+    return result
+  }, [sorted, zoneFilter, tagFilter])
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / 50))
+  const pageData = filtered.slice(pageIdx * 50, (pageIdx + 1) * 50)
+
+  // Reset page on filter/sort change
+  useEffect(() => { setPageIdx(0) }, [zoneFilter, tagFilter, sortCol, sortDir])
+
+  // ── Render ────────────────────────────────────────────────────────────────
 
   return (
     <div className="p-8 space-y-6">
@@ -139,13 +211,6 @@ export default function ExpertsPage() {
 
       {/* Actions bar */}
       <div className="flex flex-wrap items-center gap-3">
-        <input
-          type="text"
-          placeholder="Search by name, title, company…"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          className="bg-slate-800 border border-slate-600 text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 w-64 placeholder-slate-500"
-        />
         <button
           onClick={handleAutoClassify}
           disabled={autoClassifying}
@@ -154,6 +219,40 @@ export default function ExpertsPage() {
           {autoClassifying ? 'Classifying…' : 'Auto-classify all'}
         </button>
         {autoResult && <span className="text-sm text-slate-400">{autoResult}</span>}
+
+        {/* Zone filter */}
+        <div className="flex gap-1">
+          {(['red', 'yellow', 'green'] as const).map(zone => (
+            <button
+              key={zone}
+              onClick={() => setZoneFilter(zoneFilter === zone ? null : zone)}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors ${
+                zoneFilter === zone
+                  ? zone === 'red'    ? 'bg-slate-800 border-red-500/50 text-red-400'
+                  : zone === 'yellow' ? 'bg-slate-800 border-yellow-500/50 text-yellow-400'
+                  :                     'bg-slate-800 border-green-500/50 text-green-400'
+                  : 'border-slate-700 text-slate-500 hover:border-slate-500 hover:text-slate-400'
+              }`}
+            >
+              {zone.charAt(0).toUpperCase() + zone.slice(1)}
+            </button>
+          ))}
+          {(zoneFilter || tagFilter) && (
+            <button
+              onClick={() => { setZoneFilter(null); setTagFilter(null) }}
+              className="px-3 py-1.5 text-xs text-slate-500 hover:text-slate-300 transition-colors"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+
+        {tagFilter && (
+          <span className="text-xs text-slate-400">
+            Filtered by tag: <span className="text-slate-200 font-medium">{tagFilter}</span>
+          </span>
+        )}
+
         <div className="ml-auto">
           <button
             onClick={() => setShowAddForm(!showAddForm)}
@@ -238,76 +337,132 @@ export default function ExpertsPage() {
       {loading && <p className="text-slate-500 text-sm animate-pulse">Loading experts…</p>}
       {error && <p className="text-red-400 text-sm">Error: {error}</p>}
 
-      {filtered && (
+      {data && (
         <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl overflow-hidden">
-          <div className="px-5 py-3 bg-slate-900/40 border-b border-slate-700/60">
-            <span className="text-sm text-slate-400">
-              {filtered.length} of {data?.experts.length} expert{data?.experts.length !== 1 ? 's' : ''}
-            </span>
-          </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-700/60">
-                  <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Name</th>
-                  <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Job Title</th>
-                  <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Company</th>
-                  <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Category</th>
-                  <th className="text-right px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Rate</th>
-                  <th className="text-center px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Profile</th>
+                <tr className="border-b border-slate-800">
+                  <SortHeader col="name"  label="Name"  current={sortCol} dir={sortDir} onClick={handleSort} />
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Bio</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Tags</th>
+                  <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider text-center">Link</th>
+                  <SortHeader col="score" label="Score" current={sortCol} dir={sortDir} onClick={handleSort} />
                 </tr>
               </thead>
               <tbody>
-                {filtered.length === 0 && (
-                  <tr>
-                    <td colSpan={6} className="px-5 py-8 text-center text-slate-500">
-                      No experts found
+                {pageData.map((expert: ExpertRow) => (
+                  <tr key={expert.username} className="border-b border-slate-800/60 hover:bg-slate-800/30 transition-colors">
+                    <td className="px-4 py-3 text-sm text-slate-200 font-medium whitespace-nowrap">
+                      {expert.first_name} {expert.last_name}
                     </td>
-                  </tr>
-                )}
-                {filtered.map((expert: ExpertRow) => (
-                  <tr key={expert.username} className="border-b border-slate-700/40 hover:bg-slate-700/10 transition-colors">
-                    <td className="px-5 py-3">
-                      <p className="text-white font-medium">
-                        {expert.first_name} {expert.last_name}
-                      </p>
-                      <p className="text-xs text-slate-500">@{expert.username}</p>
+                    <td className="px-4 py-3 text-sm text-slate-400 max-w-xs">
+                      <span title={expert.bio || ''}>
+                        {expert.bio ? (expert.bio.length > 120 ? expert.bio.slice(0, 120) + '…' : expert.bio) : ''}
+                      </span>
                     </td>
-                    <td className="px-5 py-3 text-slate-300 max-w-[180px]">
-                      <span className="block truncate" title={expert.job_title}>{expert.job_title}</span>
+                    <td className="px-4 py-3">
+                      <TagPills tags={expert.tags || []} />
                     </td>
-                    <td className="px-5 py-3 text-slate-400 max-w-[140px]">
-                      <span className="block truncate" title={expert.company}>{expert.company}</span>
-                    </td>
-                    <td className="px-5 py-3">
-                      <CategoryDropdown
-                        username={expert.username}
-                        current={expert.category}
-                        onChanged={refetch}
-                      />
-                    </td>
-                    <td className="px-5 py-3 text-right text-slate-400">
-                      {expert.hourly_rate > 0 ? `€${expert.hourly_rate}/h` : '—'}
-                    </td>
-                    <td className="px-5 py-3 text-center">
-                      {expert.profile_url ? (
+                    <td className="px-4 py-3 text-center">
+                      {expert.profile_url && (
                         <a
                           href={expert.profile_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-purple-400 hover:text-purple-300 text-xs"
+                          className="text-slate-400 hover:text-slate-200 transition-colors"
+                          title={expert.profile_url}
                         >
-                          →
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
                         </a>
-                      ) : (
-                        <span className="text-slate-600">—</span>
                       )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <ScoreBadge score={expert.findability_score} />
                     </td>
                   </tr>
                 ))}
+                {pageData.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="px-4 py-8 text-center text-slate-500 text-sm">
+                      {filtered.length === 0 ? 'No experts match the current filters.' : 'Loading experts...'}
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
+
+          {/* Pagination */}
+          <div className="flex items-center justify-between px-4 py-3 border-t border-slate-800">
+            <span className="text-sm text-slate-500">{filtered.length} expert{filtered.length !== 1 ? 's' : ''}</span>
+            <div className="flex items-center gap-3 text-sm text-slate-400">
+              <button
+                disabled={pageIdx === 0}
+                onClick={() => setPageIdx(p => p - 1)}
+                className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg transition-colors"
+              >
+                Prev
+              </button>
+              <span>Page {pageIdx + 1} of {totalPages}</span>
+              <button
+                disabled={pageIdx >= totalPages - 1}
+                onClick={() => setPageIdx(p => p + 1)}
+                className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg transition-colors"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Domain-map section */}
+      {data && (
+        <div className="mt-4">
+          <button
+            onClick={handleToggleDomainMap}
+            className="flex items-center gap-2 text-sm text-slate-400 hover:text-slate-200 transition-colors font-medium"
+          >
+            <span>{showDomainMap ? '\u25BC' : '\u25BA'}</span>
+            Domain Map — Top downvoted expert domains
+          </button>
+
+          {showDomainMap && (
+            <div className="mt-3 bg-slate-800/40 rounded-xl border border-slate-700/50 p-4">
+              {domainLoading && (
+                <p className="text-sm text-slate-500">Loading domain map...</p>
+              )}
+              {!domainLoading && domainData && domainData.domains.length === 0 && (
+                <p className="text-sm text-slate-500">No downvoted results recorded yet.</p>
+              )}
+              {!domainLoading && domainData && domainData.domains.length > 0 && (
+                <div>
+                  <p className="text-xs text-slate-500 mb-3">
+                    Click a domain to filter the expert table. Showing top {domainData.domains.length} domains by downvote count.
+                  </p>
+                  <div className="space-y-1.5">
+                    {domainData.domains.map((d: DomainMapEntry) => (
+                      <button
+                        key={d.domain}
+                        onClick={() => setTagFilter(tagFilter === d.domain ? null : d.domain)}
+                        className={`flex items-center justify-between w-full px-3 py-1.5 rounded-lg text-sm transition-colors text-left ${
+                          tagFilter === d.domain
+                            ? 'bg-slate-700 text-slate-200'
+                            : 'hover:bg-slate-700/50 text-slate-300'
+                        }`}
+                      >
+                        <span className="capitalize">{d.domain}</span>
+                        <span className="text-xs text-slate-500 ml-4">{d.count} downvote{d.count !== 1 ? 's' : ''}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>
