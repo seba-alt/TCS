@@ -86,7 +86,12 @@ Plans:
   2. Adjusting any sidebar control triggers a debounced fetch to `/api/explore` and updates the results area
   3. Clearing all filters resets the sidebar controls and refetches the unfiltered expert pool
   4. On mobile viewports, the sidebar is hidden by default and accessible via a bottom-sheet drawer
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 16-01-PLAN.md — Install deps + useExplore hook + leaf filter components (SearchInput, RateSlider, TagMultiSelect)
+- [ ] 16-02-PLAN.md — FilterSidebar + FilterChips + SkeletonGrid + MobileFilterSheet + MarketplacePage wiring
+- [ ] 16-03-PLAN.md — Human verify checkpoint: sidebar interactions, mobile bottom-sheet, filter/fetch flow
 
 ### Phase 17: Expert Grid & Cards
 **Goal**: Users can browse all 1,558 experts in a performant, animated grid with rich cards — the core browsing experience of the marketplace
