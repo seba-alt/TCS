@@ -24,7 +24,7 @@ from pydantic import BaseModel
 from sqlalchemy import and_, select, text
 from sqlalchemy.orm import Session
 
-from app.models import Expert
+from app.models import Expert, Feedback
 from app.services.embedder import embed_query
 
 log = structlog.get_logger()
@@ -247,6 +247,59 @@ def run_explore(
             fused = (fs * FAISS_WEIGHT) + (bs * BM25_WEIGHT)
             final = _apply_findability_boost(fused, expert.findability_score)
             scored.append((final, fs, bs, expert))
+
+        # --- Feedback boost (inline — type-compatible with scored list) ---
+        # Mirrors the formula in search_intelligence._apply_feedback_boost().
+        # Graceful degradation: any DB error logs a warning and returns scored unchanged.
+        try:
+            url_set = {
+                e.profile_url_utm or e.profile_url
+                for _, _, _, e in scored
+                if e.profile_url_utm or e.profile_url
+            }
+            if url_set:
+                feedback_rows = db.scalars(
+                    select(Feedback).where(Feedback.vote.in_(["up", "down"]))
+                ).all()
+
+                counts: dict[str, dict[str, int]] = {u: {"up": 0, "down": 0} for u in url_set}
+                for row in feedback_rows:
+                    expert_ids = json.loads(row.expert_ids or "[]")
+                    for eid in expert_ids:
+                        if eid in url_set:
+                            counts[eid][row.vote] = counts[eid].get(row.vote, 0) + 1
+
+                FEEDBACK_BOOST_CAP = 0.20
+                boost_factor = FEEDBACK_BOOST_CAP * 2  # 0.40 — mirrors search_intelligence formula
+
+                multipliers: dict[str, float] = {}
+                for url in url_set:
+                    up = counts[url]["up"]
+                    down = counts[url]["down"]
+                    total_votes = up + down
+                    if total_votes < 10:
+                        continue  # cold-start guard — skip sparse feedback
+                    ratio = up / total_votes
+                    if ratio > 0.5:
+                        multipliers[url] = 1.0 + (ratio - 0.5) * boost_factor
+                    elif ratio < 0.5:
+                        multipliers[url] = 1.0 - (0.5 - ratio) * boost_factor
+
+                if multipliers:
+                    scored = [
+                        (
+                            final_s * multipliers.get(
+                                e.profile_url_utm or e.profile_url, 1.0
+                            ),
+                            faiss_s,
+                            bm25_s,
+                            e,
+                        )
+                        for final_s, faiss_s, bm25_s, e in scored
+                    ]
+        except Exception as exc:
+            log.warning("explore.feedback_boost_failed", error=str(exc))
+            # scored unchanged — degrade gracefully, never raise
 
         scored.sort(key=lambda x: x[0], reverse=True)
 
