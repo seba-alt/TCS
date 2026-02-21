@@ -62,24 +62,24 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CONF-01 | — | Pending |
-| CONF-02 | — | Pending |
-| CONF-03 | — | Pending |
-| CONF-04 | — | Pending |
-| PANEL-01 | — | Pending |
-| PANEL-02 | — | Pending |
-| PANEL-03 | — | Pending |
-| PANEL-04 | — | Pending |
-| LAB-01 | — | Pending |
-| LAB-02 | — | Pending |
-| LAB-03 | — | Pending |
-| LAB-04 | — | Pending |
+| CONF-01 | Phase 11 | Pending |
+| CONF-02 | Phase 11 | Pending |
+| CONF-03 | Phase 11 | Pending |
+| CONF-04 | Phase 11 | Pending |
+| PANEL-01 | Phase 12 | Pending |
+| PANEL-02 | Phase 12 | Pending |
+| PANEL-03 | Phase 12 | Pending |
+| PANEL-04 | Phase 12 | Pending |
+| LAB-01 | Phase 13 | Pending |
+| LAB-02 | Phase 13 | Pending |
+| LAB-03 | Phase 13 | Pending |
+| LAB-04 | Phase 13 | Pending |
 
 **Coverage:**
 - v1.2 requirements: 12 total
-- Mapped to phases: 0 (roadmap pending)
-- Unmapped: 12 ⚠️
+- Mapped to phases: 12
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-02-21*
-*Last updated: 2026-02-21 — initial definition*
+*Last updated: 2026-02-21 — traceability filled after roadmap creation*

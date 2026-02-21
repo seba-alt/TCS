@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md
 
 **Core value:** A user describes any problem and instantly gets three expertly matched professionals they can contact — no searching, no filtering, no guesswork.
-**Current focus:** v1.1 COMPLETE — v1.2 not yet defined
+**Current focus:** v1.2 — Phase 11: Backend Settings API
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 11 — Backend Settings API
 Plan: —
-Status: Defining requirements for v1.2
-Last activity: 2026-02-21 — Milestone v1.2 started
+Status: Roadmap defined; ready to plan Phase 11
+Last activity: 2026-02-21 — v1.2 roadmap created (Phases 11–13)
 
-Progress: [████████████████████░░░░░░░░░░] v1.0 complete (7/7 phases) — v1.1 starting Phase 8
+Progress: [████████████████████████░░░░░░] v1.0 + v1.1 complete (10/13 phases) — v1.2 Phase 11 next
 
 ## Live URLs
 
@@ -26,18 +26,21 @@ Progress: [████████████████████░░░
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 23 (v1.0)
+- Total plans completed: 23 (v1.0) + 9 (v1.1) = 32 total
 - Average duration: ~2.1 min/plan (automated tasks)
-- Total execution time: ~48 min automated
+- Total execution time: ~67 min automated
 
-**By Phase (v1.0 summary):**
+**By Phase:**
 
 | Phase | Plans | Status |
 |-------|-------|--------|
 | 01–07 (v1.0) | 23 total | Complete |
-| 08 (v1.1) | TBD | In progress |
+| 08 (v1.1) | 4/4 plans | Complete |
 | 09 (v1.1) | 3/3 plans | Complete |
 | 10 (v1.1) | 2/2 plans | Complete |
+| 11 (v1.2) | TBD | Not started |
+| 12 (v1.2) | TBD | Not started |
+| 13 (v1.2) | TBD | Not started |
 
 ## Accumulated Context
 
@@ -90,10 +93,9 @@ Recent decisions affecting current work:
 ### Blockers/Concerns
 
 - CORS not wired: Railway preflight returns "Disallowed CORS origin" for Vercel domain — fix before running any Phase 8 validation that calls the live API
-- Phase 10 feedback threshold depends on real feedback corpus size — check DB before planning Phase 10
 
 ## Session Continuity
 
 Last session: 2026-02-21
-Stopped at: Completed 10-02-PLAN.md — chat.py wired to retrieve_with_intelligence (a95beea), .env.example updated (aea6420). Phase 10 and v1.1 complete.
+Stopped at: v1.2 roadmap created — Phases 11, 12, 13 defined. Ready to plan Phase 11 (Backend Settings API).
 Resume file: None

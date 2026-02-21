@@ -4,6 +4,7 @@
 
 - ✅ **v1.0 MVP** — Phases 1–7 (shipped 2026-02-20)
 - ✅ **v1.1 Expert Intelligence & Search Quality** — Phases 8–10 (shipped 2026-02-21)
+- 🔄 **v1.2 Intelligence Activation & Steering Panel** — Phases 11–13 (in progress)
 
 ## Phases
 
@@ -32,6 +33,12 @@ Full phase details: `.planning/milestones/v1.0-ROADMAP.md`
 Full phase details: `.planning/milestones/v1.1-ROADMAP.md`
 
 </details>
+
+### v1.2 Intelligence Activation & Steering Panel
+
+- [ ] **Phase 11: Backend Settings API** - SQLite settings table + read/write endpoints so flags and thresholds are DB-controlled at runtime
+- [ ] **Phase 12: Steering Panel Frontend** - Admin Intelligence tab redesigned as a live control panel with toggles and threshold inputs
+- [ ] **Phase 13: Search Lab A/B Comparison** - Side-by-side multi-config query comparison with diff view and per-run flag overrides
 
 ## Phase Details
 
@@ -86,6 +93,39 @@ Plans:
 - [x] 10-01-PLAN.md — Create search_intelligence.py service: HyDE expansion + feedback re-ranking (app/services/search_intelligence.py)
 - [ ] 10-02-PLAN.md — Wire chat.py + env docs + human verification (app/routers/chat.py, .env.example)
 
+### Phase 11: Backend Settings API
+**Goal**: Search intelligence flags and numeric thresholds are stored in a SQLite `settings` table and read at runtime by the backend, with Railway env vars as fallback — so HyDE and feedback re-ranking can be toggled or tuned without any redeploy
+**Depends on**: Phase 10 (search intelligence layer must exist to be configured)
+**Requirements**: CONF-01, CONF-02, CONF-03, CONF-04
+**Success Criteria** (what must be TRUE):
+  1. A `settings` table exists in SQLite with key/value rows; backend reads `QUERY_EXPANSION_ENABLED`, `FEEDBACK_LEARNING_ENABLED`, similarity threshold, HyDE trigger sensitivity, and feedback boost cap from it on every request — falling back to Railway env vars when no DB row exists for a key
+  2. Calling `GET /api/admin/settings` returns all current setting values with a `source` field indicating whether each came from the DB override or the env var fallback
+  3. Calling `POST /api/admin/settings` with a valid admin key writes the new value to the `settings` table; a subsequent `GET` reflects the change immediately
+  4. Toggling a flag via `POST /api/admin/settings` causes the next chat request to use the updated value with no Railway redeploy
+**Plans**: TBD
+
+### Phase 12: Steering Panel Frontend
+**Goal**: The admin Intelligence tab is a live control panel where an admin can see the current state of all flags and thresholds, flip toggles or adjust numbers, save changes, and get immediate inline confirmation — all without leaving the page or redeploying
+**Depends on**: Phase 11 (settings API must exist to read from and write to)
+**Requirements**: PANEL-01, PANEL-02, PANEL-03, PANEL-04
+**Success Criteria** (what must be TRUE):
+  1. Admin opens the Intelligence tab and sees two toggle switches labeled "HyDE Query Expansion" and "Feedback Re-ranking", each reflecting the current live runtime state (DB override shown first, env var fallback labeled as such)
+  2. Admin flips a toggle; the UI calls `POST /api/admin/settings`, the toggle updates to the new state, and the next chat request uses the new flag value — no page reload required
+  3. Admin sees three editable numeric inputs for similarity threshold (0.0–1.0), HyDE trigger sensitivity (1–10), and feedback boost cap (0–50%); inputs are pre-filled with current values from `GET /api/admin/settings`
+  4. Admin changes a threshold value and clicks Save; the UI shows an inline success or error message without a full page reload, and `GET /api/admin/settings` reflects the new value
+**Plans**: TBD
+
+### Phase 13: Search Lab A/B Comparison
+**Goal**: Search Lab can run a single query across up to 4 intelligence configurations simultaneously and display results as side-by-side columns with a diff view that highlights rank changes, new appearances, and dropped experts — plus per-run flag overrides that do not affect global settings
+**Depends on**: Phase 11 (settings API for per-run override structure), Phase 12 (Search Lab UI context)
+**Requirements**: LAB-01, LAB-02, LAB-03, LAB-04
+**Success Criteria** (what must be TRUE):
+  1. Admin enters a query in Search Lab and selects "Compare modes"; the UI runs the query against up to 4 configurations (baseline, HyDE only, feedback only, full intelligence) and returns all results within a single request cycle
+  2. Results render as labeled side-by-side columns, one per active configuration, each showing the ranked list of expert names and scores for that mode
+  3. The diff view highlights experts that moved rank between configurations (e.g., rank 2 in baseline vs rank 5 in full), experts present in one mode but absent in another, and experts that dropped out entirely
+  4. Admin checks a per-run override checkbox to force-enable HyDE or feedback for that single Search Lab run; the global settings in the DB are not modified and `GET /api/admin/settings` returns unchanged values after the run
+**Plans**: TBD
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -97,6 +137,9 @@ Plans:
 | 5. Email Gate UX | v1.0 | 3/3 | Complete | 2026-02-20 |
 | 6. Feedback | v1.0 | 3/3 | Complete | 2026-02-20 |
 | 7. Analytics Dashboard v2 | v1.0 | 4/4 | Complete | 2026-02-20 |
-| 8. Data Enrichment Pipeline | 4/4 | Complete   | 2026-02-21 | — |
-| 9. Admin Expert Tab Enhancement | 3/3 | Complete   | 2026-02-21 | — |
-| 10. Search Intelligence Layer | 2/2 | Complete    | 2026-02-21 | — |
+| 8. Data Enrichment Pipeline | v1.1 | 4/4 | Complete | 2026-02-21 |
+| 9. Admin Expert Tab Enhancement | v1.1 | 3/3 | Complete | 2026-02-21 |
+| 10. Search Intelligence Layer | v1.1 | 2/2 | Complete | 2026-02-21 |
+| 11. Backend Settings API | v1.2 | 0/? | Not started | — |
+| 12. Steering Panel Frontend | v1.2 | 0/? | Not started | — |
+| 13. Search Lab A/B Comparison | v1.2 | 0/? | Not started | — |
