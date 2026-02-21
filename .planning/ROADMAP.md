@@ -27,7 +27,7 @@ Full phase details: `.planning/milestones/v1.0-ROADMAP.md`
 **Milestone Goal:** Transform the expert layer — auto-tag all 1,558 experts, score findability, enhance the admin Expert tab — then systematically improve retrieval using feedback signals and query expansion.
 
 - [x] **Phase 8: Data Enrichment Pipeline** — AI batch-tag all 1,558 experts, compute findability scores, rebuild the full FAISS index — **4 plans** (completed 2026-02-21)
-- [ ] **Phase 9: Admin Expert Tab Enhancement** — Surface enriched data in the admin UI; human quality gate before retrieval changes go live
+- [x] **Phase 9: Admin Expert Tab Enhancement** — Surface enriched data in the admin UI; human quality gate before retrieval changes go live (completed 2026-02-21)
 - [ ] **Phase 10: Search Intelligence Layer** — HyDE query expansion and feedback-weighted re-ranking on the enriched index, gated by env var flags
 
 ## Phase Details
@@ -91,5 +91,5 @@ Plans:
 | 6. Feedback | v1.0 | 3/3 | Complete | 2026-02-20 |
 | 7. Analytics Dashboard v2 | v1.0 | 4/4 | Complete | 2026-02-20 |
 | 8. Data Enrichment Pipeline | 4/4 | Complete   | 2026-02-21 | — |
-| 9. Admin Expert Tab Enhancement | 2/3 | In Progress|  | — |
+| 9. Admin Expert Tab Enhancement | 3/3 | Complete   | 2026-02-21 | — |
 | 10. Search Intelligence Layer | v1.1 | 0/? | Not started | — |

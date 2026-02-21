@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-21 after v1.1 milestone started)
 ## Current Position
 
 Phase: 9 of 10 (Admin Expert Tab Enhancement)
-Plan: 09-02 complete
-Status: In progress
-Last activity: 2026-02-21 — Phase 9 Plan 02 complete (TypeScript: ExpertRow + tags/findability_score, DomainMapEntry/DomainMapResponse interfaces, useAdminDomainMap lazy hook)
+Plan: 09-03 complete (awaiting human-verify checkpoint)
+Status: In progress — checkpoint:human-verify pending
+Last activity: 2026-02-21 — Phase 9 Plan 03 complete (ExpertsPage rebuilt with sort/filter/pagination/domain-map; awaiting human verification)
 
 Progress: [████████████████████░░░░░░░░░░] v1.0 complete (7/7 phases) — v1.1 starting Phase 8
 
@@ -36,7 +36,7 @@ Progress: [████████████████████░░░
 |-------|-------|--------|
 | 01–07 (v1.0) | 23 total | Complete |
 | 08 (v1.1) | TBD | In progress |
-| 09 (v1.1) | 2/3 plans | In progress |
+| 09 (v1.1) | 3/3 plans | Complete (pending human-verify) |
 | 10 (v1.1) | TBD | Not started |
 
 ## Accumulated Context
@@ -70,6 +70,9 @@ Recent decisions affecting current work:
 - [Phase 09-admin-expert-tab-enhancement]: DomainMapEntry and DomainMapResponse placed after ExpertRow in types.ts — logically grouped with expert data
 - [Phase 09-admin-expert-tab-enhancement]: useAdminDomainMap starts loading=false with no useEffect — lazy pattern for on-demand fetch when domain-map section first opened
 - [Phase 09-admin-expert-tab-enhancement]: DomainMapResponse added to existing import statement in useAdminData.ts — no separate import statement per plan spec
+- [09-03]: CategoryDropdown removed from rebuilt ExpertsPage — new 5-column layout has no category column; auto-classify button remains in actions bar
+- [09-03]: scoreZone and sub-components (SortHeader, ScoreBadge, TagPills) defined at module level — avoids re-creation on every render
+- [09-03]: Domain-map section guarded with {data &&} — only renders after experts load, preventing stale toggle state
 
 ### Pending Todos
 
@@ -85,5 +88,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-21
-Stopped at: Completed 09-02-PLAN.md — ExpertRow enriched with tags+findability_score; DomainMapEntry/DomainMapResponse interfaces added; useAdminDomainMap lazy hook added to useAdminData.ts.
+Stopped at: Completed 09-03-PLAN.md Task 1 — ExpertsPage rebuilt with sort/filter/pagination/domain-map. Awaiting human-verify checkpoint (Task 2).
 Resume file: None
