@@ -2,17 +2,16 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-21 after v1.1 milestone started)
+See: .planning/PROJECT.md
 
 **Core value:** A user describes any problem and instantly gets three expertly matched professionals they can contact — no searching, no filtering, no guesswork.
-**Current focus:** v1.1 — Phase 8: Data Enrichment Pipeline
+**Current focus:** v1.1 COMPLETE — v1.2 not yet defined
 
 ## Current Position
 
-Phase: 10 of 10 (Search Intelligence Layer)
-Plan: 10-02 complete
-Status: Phase 10 complete — 2/2 plans complete — v1.1 DONE
-Last activity: 2026-02-21 — Phase 10 Plan 02 complete; chat.py wired to retrieve_with_intelligence, SSE result event includes intelligence field, .env.example updated
+Phase: 10 of 10 (v1.1 complete)
+Status: v1.1 ARCHIVED — git tag v1.1 created
+Last activity: 2026-02-21 — v1.1 milestone archived; REQUIREMENTS.md deleted; ROADMAP.md collapsed
 
 Progress: [████████████████████░░░░░░░░░░] v1.0 complete (7/7 phases) — v1.1 starting Phase 8
 

@@ -22,25 +22,27 @@ A user describes any problem and instantly gets three expertly matched professio
 - ✓ Admin dashboard with login, search analytics, lead tracking, expert management — v1.0
 - ✓ Application deployed publicly — Railway backend, Vercel frontend — v1.0
 
-## Current Milestone: v1.1 Expert Intelligence & Search Quality
+## Shipped Versions
 
-**Goal:** Transform the expert layer — auto-tag all 1,558 experts, score findability, enhance the admin Expert tab — then systematically improve retrieval using feedback signals, domain mapping, and query expansion.
+### v1.1 Expert Intelligence & Search Quality — Shipped 2026-02-21
+- AI batch-tagged all 1,558 experts with 3–8 domain tags (Gemini 2.5 Flash)
+- Findability scoring (0–100) per expert, surfaced in admin with color-coded badges
+- FAISS rebuilt with all 1,558 experts + tag-enriched embeddings
+- Admin Expert tab overhauled: sort/filter/pagination, domain tag pills, worst-first findability sort
+- HyDE query expansion + feedback-weighted re-ranking, gated by env var flags
+- Admin Search Lab + Intelligence Dashboard for monitoring retrieval quality
+- Archive: `.planning/milestones/v1.1-ROADMAP.md`
 
-**Target features:**
-- Multi-tag system: AI auto-generates domain tags for all 1,558 experts (covering all domains); tags feed into FAISS search
-- Enhanced admin Expert tab: first + last name, bio, profile URL, tags, findability score (color-coded, sorted worst-first)
-- Findability score (0–100): based on bio presence/quality, profile link, tags, topic description
-- FAISS re-ingest: all 1,558 experts with enhanced data (tags included in embedding text)
-- Search intelligence: feedback learning from thumbs up/down, expert pool domain mapping, query expansion, test lab
+### v1.0 MVP — Shipped 2026-02-20
+- Core AI chat with 3-expert recommendations, email gate, feedback, admin dashboard
+- Archive: `.planning/milestones/v1.0-ROADMAP.md`
 
-### Active
+## Current State
 
-- [ ] CORS fully wired: set `ALLOWED_ORIGINS=https://tcs-three-sigma.vercel.app` in Railway env vars
-- [ ] Auto-generate domain tags for all 1,558 experts using AI
-- [ ] Compute findability scores for all experts; surface worst profiles in admin Expert tab
-- [ ] Enhance admin Expert tab: first+last name, bio, profile URL, tags, findability score
-- [ ] Re-ingest FAISS with all 1,558 experts + tags in embedding text
-- [ ] Search intelligence: feedback learning, domain mapping, query expansion, test lab evaluation
+**Deployed version:** v1.1 (Railway + Vercel, auto-deploys on push to main)
+**Expert pool:** 1,558 experts, all tagged, FAISS index at 1,558 vectors
+**Search intelligence:** HyDE + feedback re-ranking available; flags default off until feedback corpus grows
+**Next milestone:** Not started — run `/gsd:new-milestone` to define v1.2 scope
 
 ### Out of Scope
 

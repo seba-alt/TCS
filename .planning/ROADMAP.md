@@ -3,7 +3,7 @@
 ## Milestones
 
 - ✅ **v1.0 MVP** — Phases 1–7 (shipped 2026-02-20)
-- 🚧 **v1.1 Expert Intelligence & Search Quality** — Phases 8–10 (in progress)
+- ✅ **v1.1 Expert Intelligence & Search Quality** — Phases 8–10 (shipped 2026-02-21)
 
 ## Phases
 
@@ -22,13 +22,16 @@ Full phase details: `.planning/milestones/v1.0-ROADMAP.md`
 
 </details>
 
-### 🚧 v1.1 Expert Intelligence & Search Quality (In Progress)
+<details>
+<summary>✅ v1.1 Expert Intelligence & Search Quality (Phases 8–10) — SHIPPED 2026-02-21</summary>
 
-**Milestone Goal:** Transform the expert layer — auto-tag all 1,558 experts, score findability, enhance the admin Expert tab — then systematically improve retrieval using feedback signals and query expansion.
+- [x] Phase 8: Data Enrichment Pipeline (4/4 plans) — completed 2026-02-21
+- [x] Phase 9: Admin Expert Tab Enhancement (3/3 plans) — completed 2026-02-21
+- [x] Phase 10: Search Intelligence Layer (2/2 plans) — completed 2026-02-21
 
-- [x] **Phase 8: Data Enrichment Pipeline** — AI batch-tag all 1,558 experts, compute findability scores, rebuild the full FAISS index — **4 plans** (completed 2026-02-21)
-- [x] **Phase 9: Admin Expert Tab Enhancement** — Surface enriched data in the admin UI; human quality gate before retrieval changes go live (completed 2026-02-21)
-- [x] **Phase 10: Search Intelligence Layer** — HyDE query expansion and feedback-weighted re-ranking on the enriched index, gated by env var flags (completed 2026-02-21)
+Full phase details: `.planning/milestones/v1.1-ROADMAP.md`
+
+</details>
 
 ## Phase Details
 
