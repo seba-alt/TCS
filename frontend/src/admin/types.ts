@@ -76,6 +76,17 @@ export interface ExpertRow {
   hourly_rate: number
   profile_url: string
   category: string | null
+  tags: string[]
+  findability_score: number | null
+}
+
+export interface DomainMapEntry {
+  domain: string
+  count: number
+}
+
+export interface DomainMapResponse {
+  domains: DomainMapEntry[]
 }
 
 export interface ExpertsResponse {
