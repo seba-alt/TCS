@@ -1,159 +1,156 @@
-import { useIntelligenceStats } from '../hooks/useAdminData'
-import type { IntelligenceDailyRow } from '../types'
+import { useState, useEffect, useRef } from 'react'
+import { useAdminSettings, adminPost } from '../hooks/useAdminData'
+import type { AdminSetting } from '../types'
 
-function FlagPill({ enabled, label }: { enabled: boolean; label: string }) {
+function SourceBadge({ source }: { source: AdminSetting['source'] }) {
+  if (source === 'db') return (
+    <span className="text-xs font-mono bg-purple-900/50 text-purple-300 border border-purple-700/40 px-1.5 py-0.5 rounded">DB</span>
+  )
+  if (source === 'env') return (
+    <span className="text-xs font-mono bg-slate-700/60 text-slate-400 border border-slate-600/40 px-1.5 py-0.5 rounded">env</span>
+  )
   return (
-    <div className={`flex items-center gap-3 px-4 py-3 rounded-xl border ${
-      enabled
-        ? 'bg-purple-900/30 border-purple-700/50 text-purple-300'
-        : 'bg-slate-800/60 border-slate-700/50 text-slate-500'
-    }`}>
-      <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${enabled ? 'bg-purple-400 shadow-[0_0_6px_rgba(168,85,247,0.8)]' : 'bg-slate-600'}`} />
-      <div className="min-w-0">
-        <p className="text-xs font-mono truncate">{label}</p>
-        <p className={`text-xs font-semibold mt-0.5 ${enabled ? 'text-purple-200' : 'text-slate-600'}`}>
-          {enabled ? 'ENABLED' : 'DISABLED'}
-        </p>
-      </div>
-    </div>
+    <span className="text-xs font-mono bg-slate-800/60 text-slate-600 border border-slate-700/40 px-1.5 py-0.5 rounded">default</span>
   )
 }
 
-function MetricCard({ label, value, sub, accent }: {
-  label: string
-  value: string
-  sub?: string
-  accent?: 'purple' | 'green' | 'yellow' | 'red'
+function ToggleSwitch({
+  checked,
+  onChange,
+}: {
+  checked: boolean
+  onChange: (val: boolean) => void
 }) {
-  const colors = {
-    purple: 'text-purple-400',
-    green: 'text-emerald-400',
-    yellow: 'text-yellow-400',
-    red: 'text-red-400',
+  return (
+    <button
+      role="switch"
+      aria-checked={checked}
+      onClick={() => onChange(!checked)}
+      className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors focus:outline-none ${
+        checked ? 'bg-purple-600' : 'bg-slate-600'
+      }`}
+    >
+      <span
+        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+          checked ? 'translate-x-5' : 'translate-x-0'
+        }`}
+      />
+    </button>
+  )
+}
+
+function TooltipIcon({ text }: { text: string }) {
+  return (
+    <span
+      title={text}
+      className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-slate-700 text-slate-400 text-xs cursor-help hover:bg-slate-600 hover:text-slate-200 transition-colors flex-shrink-0"
+      aria-label={text}
+    >
+      i
+    </span>
+  )
+}
+
+function friendlyLabel(key: string): string {
+  switch (key) {
+    case 'SIMILARITY_THRESHOLD': return 'Similarity Threshold'
+    case 'HYDE_TRIGGER_SENSITIVITY': return 'HyDE Trigger Sensitivity'
+    case 'FEEDBACK_BOOST_CAP': return 'Feedback Boost Cap'
+    default: return key
   }
-  return (
-    <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl p-5">
-      <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">{label}</p>
-      <p className={`text-3xl font-bold ${accent ? colors[accent] : 'text-white'}`}>{value}</p>
-      {sub && <p className="text-xs text-slate-600 mt-1">{sub}</p>}
-    </div>
-  )
 }
 
-function MiniBar({ value, max, color }: { value: number; max: number; color: string }) {
-  const pct = max > 0 ? Math.round((value / max) * 100) : 0
-  return (
-    <div className="flex items-center gap-2">
-      <div className="flex-1 bg-slate-700/50 rounded-full h-1.5 overflow-hidden">
-        <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
-      </div>
-      <span className="text-xs font-mono text-slate-400 w-6 text-right">{value}</span>
-    </div>
-  )
-}
-
-function DailyTable({ rows }: { rows: IntelligenceDailyRow[] }) {
-  if (rows.length === 0) {
-    return (
-      <p className="text-slate-600 text-sm text-center py-8">
-        No data yet — conversations will appear here once users start querying.
-      </p>
-    )
-  }
-
-  const maxConv = Math.max(...rows.map(r => r.conversations), 1)
-
-  return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="text-xs text-slate-500 uppercase tracking-wider border-b border-slate-700/50">
-            <th className="text-left pb-3 pr-4">Date</th>
-            <th className="text-right pb-3 px-4">Queries</th>
-            <th className="pb-3 px-4 text-left">Volume</th>
-            <th className="text-right pb-3 px-4">HyDE</th>
-            <th className="text-right pb-3 px-4">Feedback</th>
-            <th className="text-right pb-3 px-4">Gaps</th>
-            <th className="text-right pb-3 pl-4">Avg Score</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-slate-700/30">
-          {[...rows].reverse().map(r => {
-            const hydeRate = r.conversations > 0 ? r.hyde_triggered / r.conversations : 0
-            const gapRate = r.conversations > 0 ? r.gaps / r.conversations : 0
-            return (
-              <tr key={r.date} className="hover:bg-slate-700/20 transition-colors">
-                <td className="py-2.5 pr-4 text-slate-400 font-mono text-xs whitespace-nowrap">
-                  {r.date}
-                </td>
-                <td className="py-2.5 px-4 text-right text-white font-medium">
-                  {r.conversations}
-                </td>
-                <td className="py-2.5 px-4 min-w-[100px]">
-                  <MiniBar value={r.conversations} max={maxConv} color="bg-slate-500" />
-                </td>
-                <td className="py-2.5 px-4 text-right">
-                  {r.hyde_triggered > 0 ? (
-                    <span className="text-purple-400 font-medium">
-                      {r.hyde_triggered}
-                      <span className="text-slate-600 font-normal text-xs ml-1">
-                        ({Math.round(hydeRate * 100)}%)
-                      </span>
-                    </span>
-                  ) : (
-                    <span className="text-slate-600">—</span>
-                  )}
-                </td>
-                <td className="py-2.5 px-4 text-right">
-                  {r.feedback_applied > 0 ? (
-                    <span className="text-blue-400 font-medium">{r.feedback_applied}</span>
-                  ) : (
-                    <span className="text-slate-600">—</span>
-                  )}
-                </td>
-                <td className="py-2.5 px-4 text-right">
-                  {r.gaps > 0 ? (
-                    <span className={gapRate > 0.3 ? 'text-red-400 font-medium' : 'text-yellow-400'}>
-                      {r.gaps}
-                      <span className="text-slate-600 font-normal text-xs ml-1">
-                        ({Math.round(gapRate * 100)}%)
-                      </span>
-                    </span>
-                  ) : (
-                    <span className="text-emerald-400 text-xs">0</span>
-                  )}
-                </td>
-                <td className="py-2.5 pl-4 text-right font-mono text-xs">
-                  {r.avg_score !== null ? (
-                    <span className={
-                      r.avg_score >= 0.8 ? 'text-emerald-400' :
-                      r.avg_score >= 0.6 ? 'text-yellow-400' : 'text-red-400'
-                    }>
-                      {r.avg_score.toFixed(3)}
-                    </span>
-                  ) : (
-                    <span className="text-slate-600">—</span>
-                  )}
-                </td>
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
-    </div>
-  )
-}
+const THRESHOLD_ORDER = ['SIMILARITY_THRESHOLD', 'HYDE_TRIGGER_SENSITIVITY', 'FEEDBACK_BOOST_CAP']
 
 export default function IntelligenceDashboardPage() {
-  const { data, loading, error } = useIntelligenceStats()
+  const { data, loading, error, refetch } = useAdminSettings()
+
+  // Local threshold state — initialized from fetched data
+  const [thresholds, setThresholds] = useState<Record<string, string>>({})
+  // Track original fetched values to detect dirty state
+  const [originalThresholds, setOriginalThresholds] = useState<Record<string, string>>({})
+
+  // Inline save feedback
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle')
+  const [saveMessage, setSaveMessage] = useState('')
+  const fadeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Initialize threshold state when data loads
+  useEffect(() => {
+    if (!data) return
+    const vals: Record<string, string> = {}
+    for (const s of data.settings) {
+      if (s.type !== 'bool') {
+        vals[s.key] = String(s.raw)
+      }
+    }
+    setThresholds(vals)
+    setOriginalThresholds(vals)
+  }, [data])
+
+  // Cleanup on unmount
+  useEffect(() => () => { if (fadeTimer.current) clearTimeout(fadeTimer.current) }, [])
+
+  function showSaveResult(status: 'success' | 'error', message: string) {
+    if (fadeTimer.current) clearTimeout(fadeTimer.current)
+    setSaveStatus(status)
+    setSaveMessage(message)
+    fadeTimer.current = setTimeout(() => setSaveStatus('idle'), 4000)
+  }
+
+  async function handleToggle(key: string, newValue: boolean) {
+    try {
+      await adminPost('/settings', { key, value: newValue })
+      refetch()
+    } catch (e) {
+      // On error, refetch to restore original state (revert)
+      refetch()
+      showSaveResult('error', `Failed to update ${key}: ${e instanceof Error ? e.message : 'Unknown error'}`)
+    }
+  }
+
+  const isDirty = Object.keys(thresholds).some(
+    key => thresholds[key] !== originalThresholds[key]
+  )
+
+  async function handleSave() {
+    const changed = Object.keys(thresholds).filter(
+      key => thresholds[key] !== originalThresholds[key]
+    )
+    if (changed.length === 0) return
+
+    try {
+      for (const key of changed) {
+        const setting = data!.settings.find(s => s.key === key)!
+        const numVal = setting.type === 'int'
+          ? parseInt(thresholds[key], 10)
+          : parseFloat(thresholds[key])
+        if (isNaN(numVal)) throw new Error(`Invalid value for ${key}`)
+        await adminPost('/settings', { key, value: numVal })
+      }
+      await refetch()
+      showSaveResult('success', `${changed.length} setting${changed.length > 1 ? 's' : ''} saved`)
+    } catch (e) {
+      showSaveResult('error', e instanceof Error ? e.message : 'Save failed')
+    }
+  }
+
+  // Derive categorized settings from data
+  const hydeSetting = data?.settings.find(s => s.key === 'QUERY_EXPANSION_ENABLED')
+  const feedbackSetting = data?.settings.find(s => s.key === 'FEEDBACK_LEARNING_ENABLED')
+  const thresholdSettings = data
+    ? THRESHOLD_ORDER
+        .map(key => data.settings.find(s => s.key === key))
+        .filter((s): s is AdminSetting => s !== undefined)
+    : []
 
   return (
-    <div className="p-8 space-y-8 max-w-5xl">
+    <div className="p-8 space-y-8 max-w-2xl">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-white">Search Intelligence</h1>
         <p className="text-slate-500 text-sm mt-1">
-          Track HyDE query expansion and feedback re-ranking performance over time.
+          Manage feature flags and retrieval thresholds in real time. Changes take effect on the next chat request without redeploying.
         </p>
       </div>
 
@@ -167,85 +164,106 @@ export default function IntelligenceDashboardPage() {
         </div>
       )}
 
-      {data && (
+      {data && hydeSetting && feedbackSetting && (
         <>
-          {/* Flag status */}
-          <div>
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
-              Feature Flags (Railway env vars)
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <FlagPill enabled={data.flags.hyde_enabled} label="QUERY_EXPANSION_ENABLED" />
-              <FlagPill enabled={data.flags.feedback_enabled} label="FEEDBACK_LEARNING_ENABLED" />
+          {/* Feature Flags card */}
+          <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl p-5 space-y-4">
+            <div>
+              <h2 className="text-sm font-semibold text-white">Feature Flags</h2>
+              <p className="text-xs text-slate-500 mt-1">Changes apply immediately — no redeploy needed.</p>
             </div>
-            {(!data.flags.hyde_enabled || !data.flags.feedback_enabled) && (
-              <p className="text-xs text-slate-600 mt-2">
-                Flags are off by default. Enable in Railway → Variables when ready.
-              </p>
+
+            {/* HyDE toggle row */}
+            <div className="flex items-center justify-between py-3 border-b border-slate-700/40">
+              <div className="flex flex-col gap-0.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-white">HyDE Query Expansion</span>
+                  <SourceBadge source={hydeSetting.source} />
+                </div>
+                <span className="text-xs text-slate-500">Generates a hypothetical expert bio for weak queries before re-searching FAISS</span>
+              </div>
+              <ToggleSwitch
+                checked={hydeSetting.value as boolean}
+                onChange={val => handleToggle(hydeSetting.key, val)}
+              />
+            </div>
+
+            {/* Feedback toggle row */}
+            <div className="flex items-center justify-between py-3">
+              <div className="flex flex-col gap-0.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-white">Feedback Re-ranking</span>
+                  <SourceBadge source={feedbackSetting.source} />
+                </div>
+                <span className="text-xs text-slate-500">Boosts experts with 10+ interactions and positive feedback ratio (up to cap)</span>
+              </div>
+              <ToggleSwitch
+                checked={feedbackSetting.value as boolean}
+                onChange={val => handleToggle(feedbackSetting.key, val)}
+              />
+            </div>
+          </div>
+
+          {/* Thresholds card */}
+          <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl p-5 space-y-5">
+            <div>
+              <h2 className="text-sm font-semibold text-white">Thresholds</h2>
+              <p className="text-xs text-slate-500 mt-1">Numeric tuning parameters for search intelligence.</p>
+            </div>
+
+            {/* One row per threshold setting */}
+            {thresholdSettings.map(s => (
+              <div key={s.key} className="flex items-center gap-4">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <label className="text-sm font-medium text-white">{friendlyLabel(s.key)}</label>
+                    <TooltipIcon text={s.description} />
+                    <SourceBadge source={s.source} />
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    Range: {s.min} to {s.max}{s.key === 'FEEDBACK_BOOST_CAP' ? '%' : ''}
+                  </p>
+                </div>
+                <input
+                  type="number"
+                  value={thresholds[s.key] ?? ''}
+                  onChange={e => setThresholds(prev => ({ ...prev, [s.key]: e.target.value }))}
+                  min={s.min}
+                  max={s.max}
+                  step={s.type === 'float' ? 0.05 : 1}
+                  className="w-24 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white text-right font-mono focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-transparent"
+                />
+              </div>
+            ))}
+
+            {/* Save row */}
+            <div className="pt-3 border-t border-slate-700/40 flex items-center gap-4">
+              <button
+                onClick={handleSave}
+                disabled={!isDirty}
+                className={`px-5 py-2 text-sm font-semibold rounded-lg transition-all ${
+                  isDirty
+                    ? 'bg-purple-600 hover:bg-purple-500 text-white shadow-lg shadow-purple-500/25'
+                    : 'bg-slate-700 text-slate-500 cursor-not-allowed'
+                }`}
+              >
+                Save Changes
+              </button>
+              {isDirty && (
+                <span className="text-xs text-purple-400">Unsaved changes</span>
+              )}
+            </div>
+
+            {/* Inline save feedback — fades after 4s */}
+            {saveStatus !== 'idle' && (
+              <div className={`rounded-lg px-4 py-3 text-sm ${
+                saveStatus === 'success'
+                  ? 'bg-green-950/40 border border-green-800/50 text-green-300'
+                  : 'bg-red-950/40 border border-red-800/50 text-red-400'
+              }`}>
+                {saveMessage}
+              </div>
             )}
-          </div>
-
-          {/* Key metrics */}
-          <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-            <MetricCard
-              label="Total queries"
-              value={data.totals.conversations.toLocaleString()}
-              sub="all time"
-            />
-            <MetricCard
-              label="HyDE trigger rate"
-              value={`${Math.round(data.totals.hyde_rate * 100)}%`}
-              sub={`${data.totals.hyde_triggered} of ${data.totals.conversations}`}
-              accent="purple"
-            />
-            <MetricCard
-              label="Gap rate"
-              value={`${Math.round(data.totals.gap_rate * 100)}%`}
-              sub={`${data.totals.gaps} unresolved`}
-              accent={data.totals.gap_rate > 0.3 ? 'red' : data.totals.gap_rate > 0.15 ? 'yellow' : 'green'}
-            />
-            <MetricCard
-              label="Avg similarity score"
-              value={data.totals.avg_score !== null ? data.totals.avg_score.toFixed(3) : '—'}
-              sub="across all matches"
-              accent={
-                data.totals.avg_score === null ? undefined :
-                data.totals.avg_score >= 0.75 ? 'green' :
-                data.totals.avg_score >= 0.6 ? 'yellow' : 'red'
-              }
-            />
-          </div>
-
-          {/* Feedback re-ranking note if enabled */}
-          {data.totals.feedback_applied > 0 && (
-            <div className="bg-blue-950/30 border border-blue-800/40 rounded-xl px-5 py-3 text-sm text-blue-300">
-              Feedback re-ranking applied to <strong>{data.totals.feedback_applied}</strong> queries
-              ({Math.round(data.totals.feedback_rate * 100)}% of total).
-            </div>
-          )}
-
-          {/* Daily trend */}
-          <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl p-5">
-            <h2 className="text-sm font-semibold text-white mb-5">
-              Daily Trend — Last 30 Days
-            </h2>
-            <DailyTable rows={data.daily} />
-          </div>
-
-          {/* How to read this */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs text-slate-500">
-            <div className="bg-slate-800/40 border border-slate-700/40 rounded-xl p-4">
-              <p className="text-slate-400 font-semibold mb-1">HyDE trigger rate</p>
-              <p>Queries where FAISS returned fewer than 3 results above 0.60 similarity — HyDE generated a hypothetical bio and re-searched. Higher rate = more weak queries.</p>
-            </div>
-            <div className="bg-slate-800/40 border border-slate-700/40 rounded-xl p-4">
-              <p className="text-slate-400 font-semibold mb-1">Gap rate</p>
-              <p>Queries where no expert exceeded the 0.60 similarity threshold, or the AI asked a clarification. Lower is better. Track this over time to measure retrieval improvement.</p>
-            </div>
-            <div className="bg-slate-800/40 border border-slate-700/40 rounded-xl p-4">
-              <p className="text-slate-400 font-semibold mb-1">Avg score</p>
-              <p>Mean similarity score across all matched conversations. Should trend upward as the expert pool and FAISS index improve. Above 0.75 is healthy.</p>
-            </div>
           </div>
         </>
       )}
