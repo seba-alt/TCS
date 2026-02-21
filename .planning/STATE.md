@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-21 after v1.1 milestone started)
 ## Current Position
 
 Phase: 10 of 10 (Search Intelligence Layer)
-Plan: 10-01 complete
-Status: Phase 10 in progress — 1/2 plans complete
-Last activity: 2026-02-21 — Phase 10 Plan 01 complete; search_intelligence.py created with HyDE + feedback re-ranking
+Plan: 10-02 complete
+Status: Phase 10 complete — 2/2 plans complete — v1.1 DONE
+Last activity: 2026-02-21 — Phase 10 Plan 02 complete; chat.py wired to retrieve_with_intelligence, SSE result event includes intelligence field, .env.example updated
 
 Progress: [████████████████████░░░░░░░░░░] v1.0 complete (7/7 phases) — v1.1 starting Phase 8
 
@@ -37,7 +37,7 @@ Progress: [████████████████████░░░
 | 01–07 (v1.0) | 23 total | Complete |
 | 08 (v1.1) | TBD | In progress |
 | 09 (v1.1) | 3/3 plans | Complete |
-| 10 (v1.1) | 1/2 plans | In progress |
+| 10 (v1.1) | 2/2 plans | Complete |
 
 ## Accumulated Context
 
@@ -78,6 +78,8 @@ Recent decisions affecting current work:
 - [10-01]: HyDE fires only when fewer than STRONG_RESULT_MIN (3) candidates score >= SIMILARITY_THRESHOLD
 - [10-01]: faiss.normalize_L2 mandatory after embedding average — averaged vectors are NOT unit length, corrupts IndexFlatIP without it
 - [10-01]: Empty url_set guard in _apply_feedback_boost returns early to avoid SQLite empty .in_() query (same pattern as 09-01)
+- [Phase 10-02]: asyncio.wait_for(timeout=12.0) wraps run_in_executor — 5s HyDE + 2s embed + margin; TimeoutError caught by existing except block
+- [Phase 10-02]: intelligence field added additively to SSE result event — existing frontend consumers unaffected
 
 ### Pending Todos
 
@@ -93,5 +95,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-21
-Stopped at: Completed 10-01-PLAN.md — search_intelligence.py created and committed (83eda27). Phase 10 Plan 02 is next.
+Stopped at: Completed 10-02-PLAN.md — chat.py wired to retrieve_with_intelligence (a95beea), .env.example updated (aea6420). Phase 10 and v1.1 complete.
 Resume file: None
