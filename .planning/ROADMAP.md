@@ -61,7 +61,12 @@ Plans:
   3. Each expert row shows domain tags as visual pills and a color-coded findability score badge: red for 0–39, yellow for 40–69, green for 70–100
   4. The Expert tab defaults to ascending findability score order so the worst-quality profiles (lowest scores) appear at the top of the list
   5. Admin can call `GET /api/admin/domain-map` and receive a ranked list of expert tag domains sorted by frequency of appearance in downvoted results
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 09-01-PLAN.md — Backend: enrich _serialize_expert() with tags+score, fix default sort, add GET /api/admin/domain-map (app/routers/admin.py)
+- [ ] 09-02-PLAN.md — Frontend types + hook: update ExpertRow, add DomainMap interfaces, add useAdminDomainMap hook (types.ts, useAdminData.ts)
+- [ ] 09-03-PLAN.md — Frontend table overhaul: sort/filter/pagination/domain-map section + human verification (ExpertsPage.tsx)
 
 ### Phase 10: Search Intelligence Layer
 **Goal**: The retrieval pipeline applies HyDE query expansion on weak queries and feedback-weighted re-ranking on all results — both gated by environment variable flags so they can be enabled or disabled without a code change
@@ -86,5 +91,5 @@ Plans:
 | 6. Feedback | v1.0 | 3/3 | Complete | 2026-02-20 |
 | 7. Analytics Dashboard v2 | v1.0 | 4/4 | Complete | 2026-02-20 |
 | 8. Data Enrichment Pipeline | 4/4 | Complete   | 2026-02-21 | — |
-| 9. Admin Expert Tab Enhancement | v1.1 | 0/? | Not started | — |
+| 9. Admin Expert Tab Enhancement | v1.1 | 0/3 | Not started | — |
 | 10. Search Intelligence Layer | v1.1 | 0/? | Not started | — |
