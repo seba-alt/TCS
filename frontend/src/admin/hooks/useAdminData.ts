@@ -6,6 +6,7 @@ import type {
   SearchFilters,
   LeadsResponse,
   ExpertsResponse,
+  DomainMapResponse,
 } from '../types'
 
 const getAdminKey = () => sessionStorage.getItem('admin_key') ?? ''
@@ -131,4 +132,20 @@ export function useAdminExperts() {
   useEffect(() => { fetchData() }, [fetchData])
 
   return { data, loading, error, refetch: fetchData }
+}
+
+export function useAdminDomainMap() {
+  const [data, setData] = useState<DomainMapResponse | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const fetchData = useCallback(() => {
+    setLoading(true)
+    adminFetch<DomainMapResponse>('/domain-map')
+      .then(setData)
+      .catch((e: Error) => setError(e.message))
+      .finally(() => setLoading(false))
+  }, [])
+
+  return { data, loading, error, fetchData }
 }
