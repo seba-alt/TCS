@@ -42,7 +42,7 @@ See `.planning/milestones/v1.2-ROADMAP.md`
 - [x] **Phase 15: Zustand State & Routing** - Create `useExplorerStore` and swap homepage to `MarketplacePage` (completed 2026-02-21)
 - [x] **Phase 16: Marketplace Page & Sidebar** - Page layout, faceted filter sidebar, mobile bottom-sheet (completed 2026-02-21)
 - [x] **Phase 17: Expert Grid & Cards** - Virtualized grid, high-density cards, Framer Motion entry animations (completed 2026-02-21)
-- [ ] **Phase 18: Floating AI Co-Pilot** - FAB panel, Gemini function calling, mobile full-screen overlay
+- [x] **Phase 18: Floating AI Co-Pilot** - FAB panel, Gemini function calling, mobile full-screen overlay (completed 2026-02-21)
 - [ ] **Phase 19: Extended Features** - Lead capture, match report, URL state, fuzzy suggestions, empty states
 
 ## Phase Details
@@ -151,5 +151,5 @@ Plans:
 | 15. Zustand State & Routing | 1/1 | Complete    | 2026-02-21 | - |
 | 16. Marketplace Page & Sidebar | v2.0 | 3/3 | Complete | 2026-02-21 |
 | 17. Expert Grid & Cards | v2.0 | Complete    | 2026-02-21 | - |
-| 18. Floating AI Co-Pilot | 3/4 | In Progress|  | - |
+| 18. Floating AI Co-Pilot | 4/4 | Complete   | 2026-02-21 | - |
 | 19. Extended Features | v2.0 | 0/? | Not started | - |
