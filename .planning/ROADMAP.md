@@ -36,7 +36,7 @@ Full phase details: `.planning/milestones/v1.1-ROADMAP.md`
 
 ### v1.2 Intelligence Activation & Steering Panel
 
-- [ ] **Phase 11: Backend Settings API** - SQLite settings table + read/write endpoints so flags and thresholds are DB-controlled at runtime
+- [x] **Phase 11: Backend Settings API** - SQLite settings table + read/write endpoints so flags and thresholds are DB-controlled at runtime (completed 2026-02-21)
 - [ ] **Phase 12: Steering Panel Frontend** - Admin Intelligence tab redesigned as a live control panel with toggles and threshold inputs
 - [ ] **Phase 13: Search Lab A/B Comparison** - Side-by-side multi-config query comparison with diff view and per-run flag overrides
 
@@ -144,6 +144,6 @@ Plans:
 | 8. Data Enrichment Pipeline | v1.1 | 4/4 | Complete | 2026-02-21 |
 | 9. Admin Expert Tab Enhancement | v1.1 | 3/3 | Complete | 2026-02-21 |
 | 10. Search Intelligence Layer | v1.1 | 2/2 | Complete | 2026-02-21 |
-| 11. Backend Settings API | 1/2 | In Progress|  | — |
+| 11. Backend Settings API | 2/2 | Complete   | 2026-02-21 | — |
 | 12. Steering Panel Frontend | v1.2 | 0/? | Not started | — |
 | 13. Search Lab A/B Comparison | v1.2 | 0/? | Not started | — |

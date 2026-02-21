@@ -12,8 +12,8 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 - [x] **CONF-01**: Backend reads `QUERY_EXPANSION_ENABLED` and `FEEDBACK_LEARNING_ENABLED` flags from a SQLite `settings` table at runtime; Railway env vars serve as the fallback default when no DB override exists
 - [x] **CONF-02**: Backend reads similarity threshold, HyDE trigger sensitivity (minimum strong results before HyDE is skipped), and feedback boost cap from the `settings` table at runtime
-- [ ] **CONF-03**: `GET /api/admin/settings` endpoint returns all current setting values (DB value or env var fallback) labeled by source
-- [ ] **CONF-04**: `POST /api/admin/settings` endpoint writes setting values to the SQLite `settings` table (admin-auth required)
+- [x] **CONF-03**: `GET /api/admin/settings` endpoint returns all current setting values (DB value or env var fallback) labeled by source
+- [x] **CONF-04**: `POST /api/admin/settings` endpoint writes setting values to the SQLite `settings` table (admin-auth required)
 
 ### Steering Panel
 
@@ -64,8 +64,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | CONF-01 | Phase 11 | Complete |
 | CONF-02 | Phase 11 | Complete |
-| CONF-03 | Phase 11 | Pending |
-| CONF-04 | Phase 11 | Pending |
+| CONF-03 | Phase 11 | Complete |
+| CONF-04 | Phase 11 | Complete |
 | PANEL-01 | Phase 12 | Pending |
 | PANEL-02 | Phase 12 | Pending |
 | PANEL-03 | Phase 12 | Pending |

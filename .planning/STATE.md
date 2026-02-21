@@ -10,9 +10,9 @@ See: .planning/PROJECT.md
 ## Current Position
 
 Phase: 11 — Backend Settings API
-Plan: 01 complete — ready for Plan 02 (admin CRUD endpoints)
-Status: In progress — Plan 01 complete
-Last activity: 2026-02-21 — Phase 11 Plan 01 complete (AppSetting model + per-request DB settings)
+Plan: 02 complete — ready for Phase 12 (admin settings UI)
+Status: In progress — Phase 11 complete (both plans done)
+Last activity: 2026-02-21 — Phase 11 Plan 02 complete (GET + POST /api/admin/settings endpoints)
 
 Progress: [████████████████████████░░░░░░] v1.0 + v1.1 complete (10/13 phases) — v1.2 Phase 11 next
 
@@ -38,7 +38,7 @@ Progress: [███████████████████████
 | 08 (v1.1) | 4/4 plans | Complete |
 | 09 (v1.1) | 3/3 plans | Complete |
 | 10 (v1.1) | 2/2 plans | Complete |
-| 11 (v1.2) | 1+ plans | Plan 01 complete |
+| 11 (v1.2) | 2/2 plans | Complete |
 | 12 (v1.2) | TBD | Not started |
 | 13 (v1.2) | TBD | Not started |
 
@@ -88,6 +88,10 @@ Recent decisions affecting current work:
 - [11-01]: HYDE_TIMEOUT_SECONDS=5.0 kept hardcoded in search_intelligence — safety constant (hang-protection), not a tuneable setting
 - [11-01]: _is_weak_query() and _apply_feedback_boost() now accept settings as parameters; no module-level flag constants remain
 - [11-01]: DB settings read on every chat request (SELECT * from 5-row max table) — no caching ensures zero-redeploy config changes
+- [11-02]: SETTINGS_SCHEMA dict is single source of truth for all 5 intelligence setting metadata (type, env_default, min, max, description)
+- [11-02]: GET /api/admin/settings returns native-typed value (bool/float/int) and source field ("db" | "env" | "default") for override hierarchy
+- [11-02]: POST /api/admin/settings uses db.merge() for upsert on AppSetting primary key; value always stored as string
+- [11-02]: Deferred import of AppSetting inside settings endpoint functions — consistent with 11-01 get_settings() pattern
 
 ### Pending Todos
 
@@ -102,5 +106,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-21
-Stopped at: Completed 11-01-PLAN.md — AppSetting model, settings table, and per-request DB settings in search_intelligence.py. Ready for Plan 02 (admin CRUD API).
+Stopped at: Completed 11-02-PLAN.md — GET + POST /api/admin/settings endpoints with SETTINGS_SCHEMA validation and db.merge() upsert. Phase 11 complete. Ready for Phase 12 (admin settings UI).
 Resume file: None
