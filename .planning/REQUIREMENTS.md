@@ -11,15 +11,15 @@ Requirements for this milestone. Each maps to roadmap phases.
 ### Expert Tagging
 
 - [ ] **TAGS-01**: Admin can run an offline batch script that generates 3-8 domain tags for every one of the 1,558 experts using Gemini 2.5 Flash structured output (e.g., "crypto", "veterinary", "tax law", "machine learning")
-- [ ] **TAGS-02**: Tags are stored per expert in the SQLite Expert table as a JSON text column, validated against a structured schema on every LLM response
+- [x] **TAGS-02**: Tags are stored per expert in the SQLite Expert table as a JSON text column, validated against a structured schema on every LLM response
 - [ ] **TAGS-03**: The FAISS ingest script reads from the Expert DB table (not experts.csv) and includes tag text in each expert's embedding input
 - [ ] **TAGS-04**: FAISS index is rebuilt with all 1,558 experts (up from 530 currently indexed), validated by count assertion before promotion to production
 - [ ] **TAGS-05**: When an admin adds a new expert via the admin dashboard, the system automatically generates domain tags and computes a findability score for that expert immediately (no manual batch run required)
 
 ### Findability Scoring
 
-- [ ] **FIND-01**: System computes a 0–100 findability score per expert based on a deterministic formula: bio presence/length (40 pts), tags present (25 pts), profile URL present (15 pts), job title present (10 pts), hourly rate present (10 pts)
-- [ ] **FIND-02**: Findability score is stored as a Float column on the Expert table in SQLite, added via idempotent schema migration
+- [x] **FIND-01**: System computes a 0–100 findability score per expert based on a deterministic formula: bio presence/length (40 pts), tags present (25 pts), profile URL present (15 pts), job title present (10 pts), hourly rate present (10 pts)
+- [x] **FIND-02**: Findability score is stored as a Float column on the Expert table in SQLite, added via idempotent schema migration
 - [ ] **FIND-03**: Score computation runs automatically as part of the batch tagging script after tags are written
 
 ### Admin Expert Tab
@@ -79,12 +79,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | TAGS-01 | Phase 8 | Pending |
-| TAGS-02 | Phase 8 | Pending |
+| TAGS-02 | Phase 8 | Complete |
 | TAGS-03 | Phase 8 | Pending |
 | TAGS-04 | Phase 8 | Pending |
 | TAGS-05 | Phase 8 | Pending |
-| FIND-01 | Phase 8 | Pending |
-| FIND-02 | Phase 8 | Pending |
+| FIND-01 | Phase 8 | Complete |
+| FIND-02 | Phase 8 | Complete |
 | FIND-03 | Phase 8 | Pending |
 | ADMIN-01 | Phase 9 | Pending |
 | ADMIN-02 | Phase 9 | Pending |
