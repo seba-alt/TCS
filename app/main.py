@@ -31,7 +31,7 @@ from sqlalchemy import func, select
 from app.config import FAISS_INDEX_PATH, METADATA_PATH
 from app.database import Base, SessionLocal, engine
 from app.models import Expert
-from app.routers import admin, chat, email_capture, feedback, health, explore
+from app.routers import admin, chat, email_capture, feedback, health, explore, pilot
 
 # Load .env for local development — no-op in production (Railway injects env vars)
 load_dotenv()
@@ -268,3 +268,4 @@ app.include_router(feedback.router)
 app.include_router(admin.auth_router)
 app.include_router(admin.router)
 app.include_router(explore.router)
+app.include_router(pilot.router)
