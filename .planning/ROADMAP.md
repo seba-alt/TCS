@@ -105,9 +105,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 17-01-PLAN.md — Fix Expert type (snake_case), extend resultsSlice (appendResults, isFetchingMore), extend useExplore (loadNextPage), install react-virtuoso + motion
-- [ ] 17-02-PLAN.md — Create ExpertCard + EmptyState + ExpertGrid components, wire into MarketplacePage
-- [ ] 17-03-PLAN.md — Human verify checkpoint: cards, animations, infinite scroll, tag pill wiring, empty state
+- [x] 17-01-PLAN.md — Fix Expert type (snake_case), extend resultsSlice (appendResults, isFetchingMore), extend useExplore (loadNextPage), install react-virtuoso + motion
+- [x] 17-02-PLAN.md — Create ExpertCard + EmptyState + ExpertGrid components, wire into MarketplacePage
+- [x] 17-03-PLAN.md — Human verify checkpoint: cards, animations, infinite scroll, tag pill wiring, empty state
 
 ### Phase 18: Floating AI Co-Pilot
 **Goal**: Users can describe what they need in natural language and the co-pilot translates that into filter updates, making the marketplace intelligently navigable via conversation
@@ -118,7 +118,13 @@ Plans:
   2. Typing a natural-language request (e.g. "show marketing experts under €100/hr") causes the co-pilot to call `apply_filters`, update the Zustand store, and trigger a grid re-fetch — all without the user touching the sidebar
   3. The co-pilot responds with a confirmation message reflecting the filters it applied and the resulting expert count
   4. On mobile viewports, the co-pilot panel expands to full-screen
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+- [ ] 18-01-PLAN.md — FastAPI pilot service + POST /api/pilot endpoint (Gemini two-turn function calling)
+- [ ] 18-02-PLAN.md — filterSlice setTags + useSage hook + SageFAB + SagePanel + SageMessage + SageInput
+- [ ] 18-03-PLAN.md — Wire SageFAB/SagePanel into MarketplacePage + wire EmptyState CTA
+- [ ] 18-04-PLAN.md — Human verify: FAB, panel animation, filter dispatch, mobile, conversation persistence
 
 ### Phase 19: Extended Features
 **Goal**: Users can share filtered views, get fuzzy search help, download a personalized match report, and never hit a dead end — making the marketplace robust and conversion-ready
