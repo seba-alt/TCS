@@ -40,7 +40,7 @@ See `.planning/milestones/v1.2-ROADMAP.md`
 
 - [x] **Phase 14: Hybrid Search Backend** - Deploy `/api/explore` with three-stage hybrid pipeline and FTS5 index
 - [x] **Phase 15: Zustand State & Routing** - Create `useExplorerStore` and swap homepage to `MarketplacePage` (completed 2026-02-21)
-- [ ] **Phase 16: Marketplace Page & Sidebar** - Page layout, faceted filter sidebar, mobile bottom-sheet
+- [x] **Phase 16: Marketplace Page & Sidebar** - Page layout, faceted filter sidebar, mobile bottom-sheet (completed 2026-02-21)
 - [ ] **Phase 17: Expert Grid & Cards** - Virtualized grid, high-density cards, Framer Motion entry animations
 - [ ] **Phase 18: Floating AI Co-Pilot** - FAB panel, Gemini function calling, mobile full-screen overlay
 - [ ] **Phase 19: Extended Features** - Lead capture, match report, URL state, fuzzy suggestions, empty states
@@ -75,7 +75,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 15-01-PLAN.md — Install Zustand, create three-slice store with persist middleware, create MarketplacePage shell, update routing
+- [x] 15-01-PLAN.md — Install Zustand, create three-slice store with persist middleware, create MarketplacePage shell, update routing
 
 ### Phase 16: Marketplace Page & Sidebar
 **Goal**: Users see a professional marketplace layout with a functional faceted sidebar that filters the expert pool — the visible frame the grid and co-pilot will attach to
@@ -89,9 +89,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 16-01-PLAN.md — Install deps + useExplore hook + leaf filter components (SearchInput, RateSlider, TagMultiSelect)
-- [ ] 16-02-PLAN.md — FilterSidebar + FilterChips + SkeletonGrid + MobileFilterSheet + MarketplacePage wiring
-- [ ] 16-03-PLAN.md — Human verify checkpoint: sidebar interactions, mobile bottom-sheet, filter/fetch flow
+- [x] 16-01-PLAN.md — Install deps + useExplore hook + leaf filter components (SearchInput, RateSlider, TagMultiSelect)
+- [x] 16-02-PLAN.md — FilterSidebar + FilterChips + SkeletonGrid + MobileFilterSheet + MarketplacePage wiring
+- [x] 16-03-PLAN.md — Human verify checkpoint: sidebar interactions, mobile bottom-sheet, filter/fetch flow
 
 ### Phase 17: Expert Grid & Cards
 **Goal**: Users can browse all 1,558 experts in a performant, animated grid with rich cards — the core browsing experience of the marketplace
@@ -138,7 +138,7 @@ Plans:
 | 11-13. Steering Panel Phases | v1.2 | Complete | Complete | 2026-02-21 |
 | 14. Hybrid Search Backend | 3/3 | Complete    | 2026-02-21 | 2026-02-21 |
 | 15. Zustand State & Routing | 1/1 | Complete    | 2026-02-21 | - |
-| 16. Marketplace Page & Sidebar | v2.0 | 0/? | Not started | - |
+| 16. Marketplace Page & Sidebar | v2.0 | 3/3 | Complete | 2026-02-21 |
 | 17. Expert Grid & Cards | v2.0 | 0/? | Not started | - |
 | 18. Floating AI Co-Pilot | v2.0 | 0/? | Not started | - |
 | 19. Extended Features | v2.0 | 0/? | Not started | - |

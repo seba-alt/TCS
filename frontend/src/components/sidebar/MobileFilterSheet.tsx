@@ -114,7 +114,7 @@ export function MobileFilterSheet({ open, onClose }: MobileFilterSheetProps) {
     >
       <Drawer.Portal>
         <Drawer.Overlay className="fixed inset-0 bg-black/40" />
-        <Drawer.Content className="fixed bottom-0 left-0 right-0 bg-white rounded-t-2xl flex flex-col">
+        <Drawer.Content className="fixed bottom-0 left-0 right-0 h-full max-h-[97%] bg-white rounded-t-2xl flex flex-col">
           {/* Drag handle */}
           <div className="mx-auto w-10 h-1 rounded-full bg-gray-300 mt-3 mb-2" />
 

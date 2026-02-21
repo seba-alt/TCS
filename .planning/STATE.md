@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-21)
 
 **Core value:** A user describes any problem and instantly gets three expertly matched professionals they can contact — no searching, no filtering, no guesswork.
-**Current focus:** Phase 15 — Zustand State and Routing
+**Current focus:** Phase 17 — Expert Grid
 
 ## Current Position
 
-Phase: 15 of 19 (Zustand State and Routing)
-Plan: 1 of 1 in current phase
+Phase: 16 of 19 (Marketplace Page Sidebar)
+Plan: 3 of 3 in current phase
 Status: Phase complete
-Last activity: 2026-02-21 — Phase 15 Plan 01 complete: three-slice Zustand store with persist middleware and MarketplacePage routing
+Last activity: 2026-02-21 — Phase 16 complete: marketplace layout with sticky sidebar, filter chips, skeleton grid, mobile bottom-sheet — human-verified, all 18 checks passed
 
-Progress: [██████████░░░░░░░░░░] ~50% (v1.0–v1.2 complete, v2.0 phase 14 in progress)
+Progress: [███████████░░░░░░░░░] ~55% (v1.0–v1.2 complete, v2.0 phases 14-16 complete)
 
 ## Live URLs
 
@@ -35,6 +35,9 @@ Progress: [██████████░░░░░░░░░░] ~50% (v
 | 14 | 02 | 2 min | 2 | 2 |
 | 14 | 03 | 3 min | 1 | 1 |
 | 15 | 01 | 2 min | 2 | 6 |
+| 16 | 01 | 8 min | 2 | 6 |
+| 16 | 02 | 6 min | 2 | 5 |
+| 16 | 03 | 5 min | 1 | 1 |
 
 ## Accumulated Context
 
@@ -66,6 +69,16 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - useShallow from 'zustand/react/shallow' (v5 path, not 'zustand/shallow') for all slice hooks
 - '/chat' route preserves old App interface but is not linked from new marketplace UI
 
+**Phase 16 decisions (2026-02-21):**
+- Individual Zustand selectors for useExplore (not useShallow) — prevents tags array identity causing infinite re-render loop
+- AbortError caught silently; setLoading(false) NOT called on abort — next fetch manages loading state
+- onValueCommit (not onValueChange) for RateSlider — single API call on drag-release, not per pixel
+- Top-30 tags hardcoded — no /api/tags endpoint; stable list from metadata.json
+- No overflow on MarketplacePage root div — critical for sticky sidebar (position:sticky fails with overflow ancestor)
+- Vaul Drawer.Content requires h-full max-h-[97%] for snap-point sizing to render correctly
+- MobileFilterSheet uses number inputs for rate on mobile — numeric keyboard is better UX than slider in bottom-sheet
+- snapToSequentialPoint on Drawer.Root — prevents snap points being skipped on high-velocity drag
+
 Key v2.0 architecture constraints (from .planning/research/):
 - FAISS IDSelectorBatch used as search-time filter only — never `remove_ids`; `username_to_faiss_pos` mapping required at startup
 - FTS5 synced via explicit SQL in write paths (not ORM events); `rebuild` required after virtual table creation to populate existing rows
@@ -87,5 +100,5 @@ Key v2.0 architecture constraints (from .planning/research/):
 ## Session Continuity
 
 Last session: 2026-02-21
-Stopped at: Completed 15-01-PLAN.md — Zustand three-slice store with persist middleware and MarketplacePage routing (STATE-01, STATE-02, STATE-03)
+Stopped at: Completed Phase 16 (16-01, 16-02, 16-03) — marketplace layout with sticky sidebar, filter chips, skeleton grid, vaul mobile bottom-sheet, human-verified
 Resume file: None
