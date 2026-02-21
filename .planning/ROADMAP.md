@@ -26,7 +26,7 @@ Full phase details: `.planning/milestones/v1.0-ROADMAP.md`
 
 **Milestone Goal:** Transform the expert layer — auto-tag all 1,558 experts, score findability, enhance the admin Expert tab — then systematically improve retrieval using feedback signals and query expansion.
 
-- [ ] **Phase 8: Data Enrichment Pipeline** — AI batch-tag all 1,558 experts, compute findability scores, rebuild the full FAISS index
+- [ ] **Phase 8: Data Enrichment Pipeline** — AI batch-tag all 1,558 experts, compute findability scores, rebuild the full FAISS index — **4 plans**
 - [ ] **Phase 9: Admin Expert Tab Enhancement** — Surface enriched data in the admin UI; human quality gate before retrieval changes go live
 - [ ] **Phase 10: Search Intelligence Layer** — HyDE query expansion and feedback-weighted re-ranking on the enriched index, gated by env var flags
 
@@ -43,7 +43,13 @@ Full phase details: `.planning/milestones/v1.0-ROADMAP.md`
   4. A sample of 30 random experts in the DB shows tags that correctly reflect their domain (e.g., a "machine learning" expert has an "machine learning" or "AI" tag, not generic filler)
   5. Each Expert row has a findability_score Float between 0 and 100, and experts with no bio and no profile URL score below 40
   6. When admin adds a new expert via the dashboard, that expert immediately receives auto-generated tags and a findability score (no manual batch run required)
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+- [ ] 08-01-PLAN.md — Expert model schema migration + shared tagging service (app/models.py, app/main.py, app/services/tagging.py)
+- [ ] 08-02-PLAN.md — Batch tagging script with async concurrency + findability scoring (scripts/tag_experts.py)
+- [ ] 08-03-PLAN.md — Ingest rewrite: DB-sourced + tag enrichment + crash-safe FAISS promotion (scripts/ingest.py)
+- [ ] 08-04-PLAN.md — Auto-tag on expert create: sync Gemini + BackgroundTasks retry + UI status (app/routers/admin.py, ExpertTab.tsx)
 
 ### Phase 9: Admin Expert Tab Enhancement
 **Goal**: The admin Expert tab surfaces first name, last name, bio preview, profile URL, domain tags, and a color-coded findability score for every expert — sorted worst-first so the lowest-quality profiles are immediately visible
@@ -79,6 +85,6 @@ Full phase details: `.planning/milestones/v1.0-ROADMAP.md`
 | 5. Email Gate UX | v1.0 | 3/3 | Complete | 2026-02-20 |
 | 6. Feedback | v1.0 | 3/3 | Complete | 2026-02-20 |
 | 7. Analytics Dashboard v2 | v1.0 | 4/4 | Complete | 2026-02-20 |
-| 8. Data Enrichment Pipeline | v1.1 | 0/? | Not started | — |
+| 8. Data Enrichment Pipeline | v1.1 | 0/4 | Not started | — |
 | 9. Admin Expert Tab Enhancement | v1.1 | 0/? | Not started | — |
 | 10. Search Intelligence Layer | v1.1 | 0/? | Not started | — |
