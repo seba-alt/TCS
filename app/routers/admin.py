@@ -111,6 +111,8 @@ def _serialize_expert(e: Expert) -> dict:
         "hourly_rate": e.hourly_rate,
         "profile_url": e.profile_url,
         "category": e.category,
+        "tags": json.loads(e.tags or "[]"),
+        "findability_score": e.findability_score,
     }
 
 
@@ -419,7 +421,7 @@ def get_experts(db: Session = Depends(get_db)):
                     hourly_rate, profile_url, category}]}
     """
     experts = db.scalars(
-        select(Expert).order_by(Expert.last_name, Expert.first_name)
+        select(Expert).order_by(Expert.findability_score.asc().nulls_first())
     ).all()
     return {"experts": [_serialize_expert(e) for e in experts]}
 
