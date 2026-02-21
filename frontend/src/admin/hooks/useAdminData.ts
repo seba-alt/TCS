@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import type {
   AdminStats,
   SearchesResponse,
@@ -7,6 +7,7 @@ import type {
   LeadsResponse,
   ExpertsResponse,
   DomainMapResponse,
+  IngestStatus,
 } from '../types'
 
 const getAdminKey = () => sessionStorage.getItem('admin_key') ?? ''
@@ -40,6 +41,17 @@ export async function adminPost<T>(path: string, body: unknown): Promise<T> {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(body),
+  })
+  if (!res.ok) throw new Error(`Admin API error ${res.status}: ${await res.text()}`)
+  return res.json() as Promise<T>
+}
+
+export async function adminPostFormData<T>(path: string, formData: FormData): Promise<T> {
+  const url = new URL(`${API_URL}/api/admin${path}`)
+  const res = await fetch(url.toString(), {
+    method: 'POST',
+    headers: { 'X-Admin-Key': getAdminKey() },
+    body: formData,
   })
   if (!res.ok) throw new Error(`Admin API error ${res.status}: ${await res.text()}`)
   return res.json() as Promise<T>
@@ -148,4 +160,44 @@ export function useAdminDomainMap() {
   }, [])
 
   return { data, loading, error, fetchData }
+}
+
+export function useIngestStatus() {
+  const [ingest, setIngest] = useState<IngestStatus>({
+    status: 'idle',
+    log: '',
+    error: null,
+    started_at: null,
+  })
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  const stopPolling = useCallback(() => {
+    if (pollRef.current !== null) {
+      clearInterval(pollRef.current)
+      pollRef.current = null
+    }
+  }, [])
+
+  const startPolling = useCallback(() => {
+    stopPolling()
+    pollRef.current = setInterval(() => {
+      adminFetch<IngestStatus>('/ingest/status')
+        .then(s => {
+          setIngest(s)
+          if (s.status !== 'running') stopPolling()
+        })
+        .catch(() => stopPolling())
+    }, 3000)
+  }, [stopPolling])
+
+  // Clean up on unmount
+  useEffect(() => () => stopPolling(), [stopPolling])
+
+  const triggerRun = useCallback(async () => {
+    await adminPost<{ status: string }>('/ingest/run', {})
+    setIngest(prev => ({ ...prev, status: 'running' }))
+    startPolling()
+  }, [startPolling])
+
+  return { ingest, triggerRun }
 }

@@ -1,5 +1,5 @@
-import { useState, useMemo, useEffect, useCallback } from 'react'
-import { useAdminExperts, useAdminDomainMap, adminPost } from '../hooks/useAdminData'
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
+import { useAdminExperts, useAdminDomainMap, useIngestStatus, adminPost, adminPostFormData } from '../hooks/useAdminData'
 import type { ExpertRow, DomainMapEntry } from '../types'
 
 // ─── Score helpers ────────────────────────────────────────────────────────────
@@ -91,10 +91,16 @@ const EMPTY_FORM: AddFormState = {
 export default function ExpertsPage() {
   const { data, loading, error, refetch } = useAdminExperts()
   const { data: domainData, loading: domainLoading, fetchData: fetchDomainMap } = useAdminDomainMap()
+  const { ingest, triggerRun } = useIngestStatus()
 
   // Auto-classify state
   const [autoClassifying, setAutoClassifying] = useState(false)
   const [autoResult, setAutoResult] = useState<string | null>(null)
+
+  // CSV import state
+  const csvInputRef = useRef<HTMLInputElement>(null)
+  const [csvImporting, setCsvImporting] = useState(false)
+  const [csvResult, setCsvResult] = useState<string | null>(null)
 
   // Add expert form state
   const [showAddForm, setShowAddForm] = useState(false)
@@ -165,6 +171,34 @@ export default function ExpertsPage() {
     if (!domainData && !domainLoading) fetchDomainMap()
   }, [domainData, domainLoading, fetchDomainMap])
 
+  async function handleCsvUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setCsvImporting(true)
+    setCsvResult(null)
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      const res = await adminPostFormData<{ inserted: number; updated: number; skipped: number }>(
+        '/experts/import-csv',
+        fd,
+      )
+      setCsvResult(`Imported: ${res.inserted} added, ${res.updated} updated, ${res.skipped} skipped`)
+      refetch()
+    } catch (err) {
+      setCsvResult(`Error: ${err}`)
+    } finally {
+      setCsvImporting(false)
+      // Reset input so same file can be re-uploaded
+      if (csvInputRef.current) csvInputRef.current.value = ''
+    }
+  }
+
+  // Auto-refresh expert list when ingest completes
+  useEffect(() => {
+    if (ingest.status === 'done') refetch()
+  }, [ingest.status, refetch])
+
   // ── Derived data ──────────────────────────────────────────────────────────
 
   const experts = data?.experts ?? []
@@ -180,6 +214,11 @@ export default function ExpertsPage() {
         const aName = `${a.first_name} ${a.last_name}`.toLowerCase()
         const bName = `${b.first_name} ${b.last_name}`.toLowerCase()
         return sortDir === 'asc' ? aName.localeCompare(bName) : bName.localeCompare(aName)
+      }
+      if (sortCol === 'company') {
+        const aC = (a.company || '').toLowerCase()
+        const bC = (b.company || '').toLowerCase()
+        return sortDir === 'asc' ? aC.localeCompare(bC) : bC.localeCompare(aC)
       }
       return 0
     })
@@ -219,6 +258,49 @@ export default function ExpertsPage() {
           {autoClassifying ? 'Classifying…' : 'Auto-classify all'}
         </button>
         {autoResult && <span className="text-sm text-slate-400">{autoResult}</span>}
+
+        {/* Rebuild Index button */}
+        <button
+          onClick={triggerRun}
+          disabled={ingest.status === 'running'}
+          title={ingest.status === 'error' ? (ingest.error ?? 'Unknown error') : undefined}
+          className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors disabled:opacity-50 ${
+            ingest.status === 'done'
+              ? 'bg-green-700/40 text-green-300 border border-green-600/40'
+              : ingest.status === 'error'
+              ? 'bg-red-700/40 text-red-300 border border-red-600/40'
+              : 'bg-slate-700 hover:bg-slate-600 text-white'
+          }`}
+        >
+          {ingest.status === 'running' ? (
+            <span className="flex items-center gap-2">
+              <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+              </svg>
+              Rebuilding…
+            </span>
+          ) : ingest.status === 'done' ? '✓ Done'
+            : ingest.status === 'error' ? '✗ Failed'
+            : 'Rebuild Index'}
+        </button>
+
+        {/* CSV Import button */}
+        <input
+          ref={csvInputRef}
+          type="file"
+          accept=".csv"
+          className="hidden"
+          onChange={handleCsvUpload}
+        />
+        <button
+          onClick={() => csvInputRef.current?.click()}
+          disabled={csvImporting}
+          className="px-4 py-2 bg-slate-700 hover:bg-slate-600 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors"
+        >
+          {csvImporting ? 'Importing…' : 'Import CSV'}
+        </button>
+        {csvResult && <span className="text-sm text-slate-400">{csvResult}</span>}
 
         {/* Zone filter */}
         <div className="flex gap-1">
@@ -343,11 +425,12 @@ export default function ExpertsPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-800">
-                  <SortHeader col="name"  label="Name"  current={sortCol} dir={sortDir} onClick={handleSort} />
+                  <SortHeader col="name"    label="Name"    current={sortCol} dir={sortDir} onClick={handleSort} />
                   <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Bio</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Tags</th>
+                  <SortHeader col="company" label="Company" current={sortCol} dir={sortDir} onClick={handleSort} />
                   <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider text-center">Link</th>
-                  <SortHeader col="score" label="Score" current={sortCol} dir={sortDir} onClick={handleSort} />
+                  <SortHeader col="score"   label="Score"   current={sortCol} dir={sortDir} onClick={handleSort} />
                 </tr>
               </thead>
               <tbody>
@@ -363,6 +446,9 @@ export default function ExpertsPage() {
                     </td>
                     <td className="px-4 py-3">
                       <TagPills tags={expert.tags || []} />
+                    </td>
+                    <td className="px-4 py-3 text-sm text-slate-400 max-w-[120px] truncate" title={expert.company || ''}>
+                      {expert.company || '—'}
                     </td>
                     <td className="px-4 py-3 text-center">
                       {expert.profile_url && (
@@ -386,7 +472,7 @@ export default function ExpertsPage() {
                 ))}
                 {pageData.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="px-4 py-8 text-center text-slate-500 text-sm">
+                    <td colSpan={6} className="px-4 py-8 text-center text-slate-500 text-sm">
                       {filtered.length === 0 ? 'No experts match the current filters.' : 'Loading experts...'}
                     </td>
                   </tr>

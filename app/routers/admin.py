@@ -22,10 +22,15 @@ import csv
 import io
 import json
 import os
+import subprocess
+import sys
+import threading
+import time
 from datetime import date, datetime
 from typing import Optional
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Security, status
+import faiss
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Request, Security, UploadFile, status
 from fastapi.responses import StreamingResponse
 from fastapi.security import APIKeyHeader
 from pydantic import BaseModel
@@ -34,12 +39,60 @@ from sqlalchemy.orm import Session
 
 import structlog
 
-from app.config import METADATA_PATH
+from app.config import FAISS_INDEX_PATH, METADATA_PATH
 from app.database import get_db
 from app.models import Conversation, Expert, Feedback
 from app.services.tagging import compute_findability_score, tag_expert_sync
 
 log = structlog.get_logger()
+
+# ── Ingest job state ──────────────────────────────────────────────────────────
+
+# admin.py lives at app/routers/admin.py → parent.parent.parent = project root
+PROJECT_ROOT = METADATA_PATH.parent.parent
+
+_ingest: dict = {"status": "idle", "log": "", "error": None, "started_at": None}
+
+
+def _run_ingest_job(app) -> None:
+    """Background thread: run tag_experts.py + ingest.py then hot-reload FAISS+metadata."""
+    global _ingest
+    _ingest["log"] = ""
+    _ingest["error"] = None
+    _ingest["started_at"] = time.time()
+    try:
+        # Step 1: tag experts with Gemini
+        r1 = subprocess.run(
+            [sys.executable, "scripts/tag_experts.py"],
+            cwd=str(PROJECT_ROOT),
+            capture_output=True,
+            text=True,
+        )
+        _ingest["log"] += r1.stdout + r1.stderr
+        if r1.returncode != 0:
+            raise RuntimeError(f"tag_experts.py exited {r1.returncode}:\n{r1.stderr}")
+
+        # Step 2: rebuild FAISS index
+        r2 = subprocess.run(
+            [sys.executable, "scripts/ingest.py"],
+            cwd=str(PROJECT_ROOT),
+            capture_output=True,
+            text=True,
+        )
+        _ingest["log"] += r2.stdout + r2.stderr
+        if r2.returncode != 0:
+            raise RuntimeError(f"ingest.py exited {r2.returncode}:\n{r2.stderr}")
+
+        # Step 3: hot-reload app.state
+        app.state.faiss_index = faiss.read_index(str(FAISS_INDEX_PATH))
+        with open(METADATA_PATH, "r", encoding="utf-8") as f:
+            app.state.metadata = json.load(f)
+
+        _ingest["status"] = "done"
+    except Exception as exc:
+        _ingest["status"] = "error"
+        _ingest["error"] = str(exc)
+
 
 # ── Auth ─────────────────────────────────────────────────────────────────────
 
@@ -426,6 +479,27 @@ def get_experts(db: Session = Depends(get_db)):
     return {"experts": [_serialize_expert(e) for e in experts]}
 
 
+@router.post("/ingest/run")
+def ingest_run(request: Request):
+    """
+    Trigger tag_experts.py + ingest.py in a background thread, then hot-reload FAISS.
+    Returns 409 if a job is already running.
+    """
+    global _ingest
+    if _ingest["status"] == "running":
+        raise HTTPException(status_code=409, detail="Ingest job already running")
+    _ingest["status"] = "running"
+    thread = threading.Thread(target=_run_ingest_job, args=(request.app,), daemon=True)
+    thread.start()
+    return {"status": "started"}
+
+
+@router.get("/ingest/status")
+def ingest_status():
+    """Return the current ingest job state."""
+    return _ingest
+
+
 @router.get("/domain-map")
 def get_domain_map(db: Session = Depends(get_db)):
     """
@@ -638,6 +712,76 @@ def add_expert(body: AddExpertBody, background_tasks: BackgroundTasks, db: Sessi
         "tags": json.loads(new_expert.tags or "null"),
         "findability_score": new_expert.findability_score,
     }
+
+
+@router.post("/experts/import-csv")
+async def import_experts_csv(file: UploadFile = File(...), db: Session = Depends(get_db)):
+    """
+    Bulk-import experts from a CSV file with upsert behaviour.
+
+    Accepts the same column layout as data/experts.csv:
+        Email, Username, First Name, Last Name, Job Title, Company, Bio,
+        Hourly Rate, Currency, Profile URL, Profile URL with UTM
+
+    For existing usernames: updates basic fields, preserves tags + findability_score.
+    For new usernames: inserts new Expert row.
+    Rows with no Username are skipped.
+
+    Response: {"inserted": N, "updated": N, "skipped": N}
+    """
+    content = await file.read()
+    text = content.decode("utf-8-sig")  # handles UTF-8 BOM from Excel exports
+    reader = csv.DictReader(io.StringIO(text))
+
+    inserted = updated = skipped = 0
+
+    for row in reader:
+        username = (row.get("Username") or "").strip()
+        if not username:
+            skipped += 1
+            continue
+
+        try:
+            hourly_rate = float(row.get("Hourly Rate") or 0)
+        except (ValueError, TypeError):
+            hourly_rate = 0.0
+
+        existing = db.scalar(select(Expert).where(Expert.username == username))
+
+        if existing:
+            existing.email = (row.get("Email") or "").strip()
+            existing.first_name = (row.get("First Name") or "").strip()
+            existing.last_name = (row.get("Last Name") or "").strip()
+            existing.job_title = (row.get("Job Title") or "").strip()
+            existing.company = (row.get("Company") or "").strip()
+            existing.bio = (row.get("Bio") or "").strip()
+            existing.hourly_rate = hourly_rate
+            existing.currency = (row.get("Currency") or "EUR").strip()
+            existing.profile_url = (row.get("Profile URL") or "").strip()
+            existing.profile_url_utm = (row.get("Profile URL with UTM") or "").strip()
+            # Intentionally preserve existing.tags and existing.findability_score
+            updated += 1
+        else:
+            profile_url = (row.get("Profile URL") or f"https://tinrate.com/u/{username}").strip()
+            profile_url_utm = (row.get("Profile URL with UTM") or "").strip()
+            db.add(Expert(
+                username=username,
+                email=(row.get("Email") or "").strip(),
+                first_name=(row.get("First Name") or "").strip(),
+                last_name=(row.get("Last Name") or "").strip(),
+                job_title=(row.get("Job Title") or "").strip(),
+                company=(row.get("Company") or "").strip(),
+                bio=(row.get("Bio") or "").strip(),
+                hourly_rate=hourly_rate,
+                currency=(row.get("Currency") or "EUR").strip(),
+                profile_url=profile_url,
+                profile_url_utm=profile_url_utm,
+                category=_auto_categorize((row.get("Job Title") or "").strip()),
+            ))
+            inserted += 1
+
+    db.commit()
+    return {"inserted": inserted, "updated": updated, "skipped": skipped}
 
 
 # ── CSV Exports ───────────────────────────────────────────────────────────────

@@ -92,3 +92,10 @@ export interface DomainMapResponse {
 export interface ExpertsResponse {
   experts: ExpertRow[]
 }
+
+export interface IngestStatus {
+  status: 'idle' | 'running' | 'done' | 'error'
+  log: string
+  error: string | null
+  started_at: number | null
+}
