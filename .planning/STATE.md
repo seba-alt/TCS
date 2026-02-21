@@ -9,10 +9,10 @@ See: .planning/PROJECT.md (updated 2026-02-21 after v1.1 milestone started)
 
 ## Current Position
 
-Phase: 9 of 10 (Admin Expert Tab Enhancement)
-Plan: 09-03 complete (human-verify approved)
-Status: Phase 9 complete — ready for Phase 10
-Last activity: 2026-02-21 — Phase 9 Plan 03 human verification approved; all Phase 9 plans complete
+Phase: 10 of 10 (Search Intelligence Layer)
+Plan: 10-01 complete
+Status: Phase 10 in progress — 1/2 plans complete
+Last activity: 2026-02-21 — Phase 10 Plan 01 complete; search_intelligence.py created with HyDE + feedback re-ranking
 
 Progress: [████████████████████░░░░░░░░░░] v1.0 complete (7/7 phases) — v1.1 starting Phase 8
 
@@ -37,7 +37,7 @@ Progress: [████████████████████░░░
 | 01–07 (v1.0) | 23 total | Complete |
 | 08 (v1.1) | TBD | In progress |
 | 09 (v1.1) | 3/3 plans | Complete |
-| 10 (v1.1) | TBD | Not started |
+| 10 (v1.1) | 1/2 plans | In progress |
 
 ## Accumulated Context
 
@@ -73,6 +73,11 @@ Recent decisions affecting current work:
 - [09-03]: CategoryDropdown removed from rebuilt ExpertsPage — new 5-column layout has no category column; auto-classify button remains in actions bar
 - [09-03]: scoreZone and sub-components (SortHeader, ScoreBadge, TagPills) defined at module level — avoids re-creation on every render
 - [09-03]: Domain-map section guarded with {data &&} — only renders after experts load, preventing stale toggle state
+- [10-01]: retrieve_with_intelligence() is synchronous — genai.Client() and embed_query() are sync; asyncio.wait_for HyDE timeout handled by chat.py caller (Plan 02)
+- [10-01]: Both QUERY_EXPANSION_ENABLED and FEEDBACK_LEARNING_ENABLED default False at module level — Railway explicitly enables after validation
+- [10-01]: HyDE fires only when fewer than STRONG_RESULT_MIN (3) candidates score >= SIMILARITY_THRESHOLD
+- [10-01]: faiss.normalize_L2 mandatory after embedding average — averaged vectors are NOT unit length, corrupts IndexFlatIP without it
+- [10-01]: Empty url_set guard in _apply_feedback_boost returns early to avoid SQLite empty .in_() query (same pattern as 09-01)
 
 ### Pending Todos
 
@@ -88,5 +93,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-21
-Stopped at: Completed 09-03-PLAN.md — human verification approved. Phase 9 fully complete.
+Stopped at: Completed 10-01-PLAN.md — search_intelligence.py created and committed (83eda27). Phase 10 Plan 02 is next.
 Resume file: None

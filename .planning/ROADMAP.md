@@ -80,7 +80,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 10-01-PLAN.md — Create search_intelligence.py service: HyDE expansion + feedback re-ranking (app/services/search_intelligence.py)
+- [x] 10-01-PLAN.md — Create search_intelligence.py service: HyDE expansion + feedback re-ranking (app/services/search_intelligence.py)
 - [ ] 10-02-PLAN.md — Wire chat.py + env docs + human verification (app/routers/chat.py, .env.example)
 
 ## Progress
@@ -96,4 +96,4 @@ Plans:
 | 7. Analytics Dashboard v2 | v1.0 | 4/4 | Complete | 2026-02-20 |
 | 8. Data Enrichment Pipeline | 4/4 | Complete   | 2026-02-21 | — |
 | 9. Admin Expert Tab Enhancement | 3/3 | Complete   | 2026-02-21 | — |
-| 10. Search Intelligence Layer | v1.1 | 0/2 | Not started | — |
+| 10. Search Intelligence Layer | v1.1 | 1/2 | In progress | — |
