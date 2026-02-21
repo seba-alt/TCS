@@ -77,7 +77,11 @@ Plans:
   2. A query that already returns 3 strong results above the similarity threshold does NOT trigger HyDE expansion (expansion is skipped, not applied unnecessarily)
   3. Setting `FEEDBACK_LEARNING_ENABLED=true` causes experts with 10+ feedback interactions and a positive thumbs ratio to receive a soft similarity score boost (capped at 20%), surfacing them higher in results — setting it to `false` disables re-ranking entirely
   4. An expert with fewer than 10 feedback interactions receives no boost regardless of thumbs ratio (cold-start threshold enforced)
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 10-01-PLAN.md — Create search_intelligence.py service: HyDE expansion + feedback re-ranking (app/services/search_intelligence.py)
+- [ ] 10-02-PLAN.md — Wire chat.py + env docs + human verification (app/routers/chat.py, .env.example)
 
 ## Progress
 
@@ -92,4 +96,4 @@ Plans:
 | 7. Analytics Dashboard v2 | v1.0 | 4/4 | Complete | 2026-02-20 |
 | 8. Data Enrichment Pipeline | 4/4 | Complete   | 2026-02-21 | — |
 | 9. Admin Expert Tab Enhancement | 3/3 | Complete   | 2026-02-21 | — |
-| 10. Search Intelligence Layer | v1.1 | 0/? | Not started | — |
+| 10. Search Intelligence Layer | v1.1 | 0/2 | Not started | — |
