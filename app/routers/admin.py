@@ -19,6 +19,7 @@ Endpoints:
     GET  /api/admin/export/gaps.csv             — CSV download of gap aggregates
     GET  /api/admin/settings                    — all 5 intelligence settings with value + source
     POST /api/admin/settings                    — write a setting to DB (immediate, no redeploy)
+    POST /api/admin/compare                     — run query through up to 4 intelligence configs in parallel
 """
 import csv
 import io
@@ -28,6 +29,7 @@ import subprocess
 import sys
 import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timedelta
 from typing import Optional
 
@@ -35,7 +37,7 @@ import faiss
 from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Request, Security, UploadFile, status
 from fastapi.responses import StreamingResponse
 from fastapi.security import APIKeyHeader
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import Integer, func, select, update
 from sqlalchemy.orm import Session
 
@@ -45,6 +47,16 @@ from app.config import FAISS_INDEX_PATH, METADATA_PATH
 from app.database import get_db
 from app.models import Conversation, Expert, Feedback
 from app.services.tagging import compute_findability_score, tag_expert_sync
+from app.services.retriever import retrieve
+from app.services.search_intelligence import (  # noqa: PLC2701
+    get_settings,
+    _is_weak_query,
+    _generate_hypothetical_bio,
+    _blend_embeddings,
+    _search_with_vector,
+    _merge_candidates,
+    _apply_feedback_boost,
+)
 
 log = structlog.get_logger()
 
@@ -1191,3 +1203,158 @@ def export_gaps_csv(db: Session = Depends(get_db)):
         media_type="text/csv",
         headers={"Content-Disposition": f"attachment; filename={filename}"},
     )
+
+
+# ── Search Lab A/B Compare ────────────────────────────────────────────────────
+
+_LAB_CONFIGS = {
+    "baseline": {"QUERY_EXPANSION_ENABLED": False, "FEEDBACK_LEARNING_ENABLED": False},
+    "hyde":     {"QUERY_EXPANSION_ENABLED": True,  "FEEDBACK_LEARNING_ENABLED": False},
+    "feedback": {"QUERY_EXPANSION_ENABLED": False, "FEEDBACK_LEARNING_ENABLED": True},
+    "full":     {"QUERY_EXPANSION_ENABLED": True,  "FEEDBACK_LEARNING_ENABLED": True},
+}
+
+_LAB_LABELS = {
+    "baseline": "Baseline",
+    "hyde":     "HyDE Only",
+    "feedback": "Feedback Only",
+    "full":     "Full Intelligence",
+}
+
+
+class CompareRequest(BaseModel):
+    query: str = Field(..., min_length=1, max_length=2000)
+    configs: list[str] = Field(
+        default=["baseline", "hyde", "feedback", "full"],
+        description="Which preset configs to run. Valid values: baseline, hyde, feedback, full.",
+    )
+    result_count: int = Field(default=20, ge=1, le=50)
+    overrides: dict[str, bool] = Field(
+        default_factory=dict,
+        description=(
+            "Per-run flag overrides applied on top of DB settings. "
+            "Keys: QUERY_EXPANSION_ENABLED, FEEDBACK_LEARNING_ENABLED."
+        ),
+    )
+
+
+def _retrieve_for_lab(
+    query: str,
+    faiss_index,
+    metadata: list[dict],
+    db,
+    config_flags: dict,
+    result_count: int,
+) -> tuple[list, dict]:
+    """
+    Run retrieval for a single lab config without writing to the DB.
+
+    1. Reads current DB settings via get_settings(db).
+    2. Merges config_flags on top (preset + per-run overrides). DB is NOT written.
+    3. Runs the same logic as retrieve_with_intelligence() but uses the merged
+       settings dict directly instead of reading the DB a second time.
+    4. Returns (candidates[:result_count], intelligence_meta).
+    """
+    settings = get_settings(db)
+    settings.update(config_flags)
+
+    # Step 1: Initial FAISS retrieval
+    candidates = retrieve(query, faiss_index, metadata)
+    intelligence: dict = {
+        "hyde_triggered": False,
+        "hyde_bio": None,
+        "feedback_applied": False,
+    }
+
+    # Step 2: HyDE expansion — only when enabled and query is weak
+    if settings["QUERY_EXPANSION_ENABLED"] and _is_weak_query(  # noqa: PLC2701
+        candidates, settings["STRONG_RESULT_MIN"], settings["SIMILARITY_THRESHOLD"]
+    ):
+        bio = _generate_hypothetical_bio(query)  # noqa: PLC2701
+        if bio is not None:
+            from app.services.embedder import embed_query  # noqa: PLC0415
+            original_vec = embed_query(query)
+            blended_vec = _blend_embeddings(original_vec, bio)  # noqa: PLC2701
+            hyde_candidates = _search_with_vector(blended_vec, faiss_index, metadata)  # noqa: PLC2701
+            candidates = _merge_candidates(candidates, hyde_candidates)  # noqa: PLC2701
+            intelligence["hyde_triggered"] = True
+            intelligence["hyde_bio"] = bio
+
+    # Step 3: Feedback re-ranking — only when enabled
+    if settings["FEEDBACK_LEARNING_ENABLED"]:
+        candidates = _apply_feedback_boost(candidates, db, settings["FEEDBACK_BOOST_CAP"])  # noqa: PLC2701
+        intelligence["feedback_applied"] = True
+
+    return candidates[:result_count], intelligence
+
+
+@router.post("/compare")
+def compare_configs(
+    body: CompareRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """
+    Run a query through up to 4 intelligence configs in parallel and return
+    ranked expert results for each config without writing to the DB.
+
+    Request body:
+        query        — natural language query (1-2000 chars)
+        configs      — list of preset names (default: all 4)
+        result_count — max experts to return per config (1-50, default 20)
+        overrides    — per-run flag overrides (applied on top of each preset)
+
+    Response shape:
+        {"columns": [...], "query": str, "overrides_applied": {}}
+
+    Each column:
+        {"config": str, "label": str, "experts": [...], "intelligence": {...}}
+    """
+    # Validate config names
+    unknown = [c for c in body.configs if c not in _LAB_CONFIGS]
+    if unknown:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unknown config(s): {unknown}. Valid values: {list(_LAB_CONFIGS.keys())}",
+        )
+
+    faiss_index = request.app.state.faiss_index
+    metadata = request.app.state.metadata
+
+    # Build per-config flag dicts: preset merged with per-run overrides
+    config_flag_pairs = [
+        (name, {**_LAB_CONFIGS[name], **body.overrides})
+        for name in body.configs
+    ]
+
+    # Run all configs in parallel using ThreadPoolExecutor
+    def _run_one(args):
+        name, flags = args
+        candidates, intelligence = _retrieve_for_lab(
+            body.query, faiss_index, metadata, db, flags, body.result_count
+        )
+        return name, candidates, intelligence
+
+    with ThreadPoolExecutor(max_workers=len(config_flag_pairs)) as executor:
+        results = list(executor.map(_run_one, config_flag_pairs))
+
+    # Serialize columns
+    columns = []
+    for name, candidates, intelligence in results:
+        columns.append({
+            "config": name,
+            "label": _LAB_LABELS[name],
+            "experts": [
+                {
+                    "rank": i + 1,
+                    "name": c.name,
+                    "title": c.title,
+                    "score": round(c.score, 4),
+                    "profile_url": c.profile_url,
+                }
+                for i, c in enumerate(candidates)
+            ],
+            "intelligence": intelligence,
+        })
+
+    return {"columns": columns, "query": body.query, "overrides_applied": body.overrides}
