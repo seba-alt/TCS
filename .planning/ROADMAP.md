@@ -132,7 +132,11 @@ Plans:
   2. Results render as labeled side-by-side columns, one per active configuration, each showing the ranked list of expert names and scores for that mode
   3. The diff view highlights experts that moved rank between configurations (e.g., rank 2 in baseline vs rank 5 in full), experts present in one mode but absent in another, and experts that dropped out entirely
   4. Admin checks a per-run override checkbox to force-enable HyDE or feedback for that single Search Lab run; the global settings in the DB are not modified and `GET /api/admin/settings` returns unchanged values after the run
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 13-01-PLAN.md — Backend compare endpoint + TypeScript A/B types (app/routers/admin.py, frontend/src/admin/types.ts)
+- [ ] 13-02-PLAN.md — SearchLabPage A/B comparison UI with columns, diff view, overrides (frontend/src/admin/pages/SearchLabPage.tsx)
 
 ## Progress
 
@@ -149,5 +153,5 @@ Plans:
 | 9. Admin Expert Tab Enhancement | v1.1 | 3/3 | Complete | 2026-02-21 |
 | 10. Search Intelligence Layer | v1.1 | 2/2 | Complete | 2026-02-21 |
 | 11. Backend Settings API | v1.2 | 2/2 | Complete | 2026-02-21 |
-| 12. Steering Panel Frontend | v1.2 | Complete    | 2026-02-21 | 2026-02-21 |
-| 13. Search Lab A/B Comparison | v1.2 | 0/? | Not started | — |
+| 12. Steering Panel Frontend | v1.2 | 2/2 | Complete | 2026-02-21 |
+| 13. Search Lab A/B Comparison | v1.2 | 0/2 | Not started | — |
