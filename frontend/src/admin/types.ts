@@ -138,3 +138,42 @@ export interface AdminSetting {
 export interface AdminSettingsResponse {
   settings: AdminSetting[]
 }
+
+// ── Search Lab A/B Comparison ─────────────────────────────────────────────────
+
+/** One expert result row in a comparison column. */
+export interface CompareExpert {
+  rank: number
+  name: string
+  title: string | null
+  score: number
+  profile_url: string | null
+}
+
+/** One config column result from POST /api/admin/compare. */
+export interface CompareColumn {
+  config: 'baseline' | 'hyde' | 'feedback' | 'full'
+  label: string   // e.g. "Baseline", "HyDE Only", "Feedback Only", "Full Intelligence"
+  experts: CompareExpert[]
+  intelligence: {
+    hyde_triggered: boolean
+    hyde_bio: string | null
+    feedback_applied: boolean
+  }
+}
+
+/** Full response from POST /api/admin/compare. */
+export interface CompareResponse {
+  columns: CompareColumn[]
+  query: string
+  overrides_applied: Record<string, boolean>
+}
+
+/** Which preset configs are selected for a lab run. */
+export type LabConfigKey = 'baseline' | 'hyde' | 'feedback' | 'full'
+
+/** Per-run flag overrides (applied on top of each preset, do not change global DB settings). */
+export interface LabOverrides {
+  QUERY_EXPANSION_ENABLED?: boolean
+  FEEDBACK_LEARNING_ENABLED?: boolean
+}
