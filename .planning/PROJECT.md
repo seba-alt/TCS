@@ -112,6 +112,11 @@ A user describes any problem and instantly gets three expertly matched professio
 | Expert interface snake_case | API returns snake_case (first_name, job_title, hourly_rate) — camelCase aliases removed entirely; all components updated to match | ✓ Good — eliminated undefined field bug on cards |
 | Individual Zustand selectors for isFetchingMore/appendResults | Same Phase 16 pattern — individual selectors in useExplore hook prevent stale closure and re-render loops for infinite scroll state | ✓ Good — consistent pattern across hooks |
 | flex-1 min-h-0 container for VirtuosoGrid | VirtuosoGrid requires known-height container; flex-1 min-h-0 within flex column gives measurable height for virtualization | ✓ Good — VirtuosoGrid renders correctly |
+| filterSlice.setTags (not toggleTag) for Sage | Sage needs to replace tags array entirely; toggleTag is designed for human one-at-a-time interaction only | ✓ Good — clean separation of programmatic vs human filter dispatch |
+| useExplorerStore.getState() snapshot in useSage | Async handler captures store state at call time; reactive selectors cause stale closure in async context | ✓ Good — consistent with Phase 14 explore.py async pattern |
+| Gemini role mapping: 'assistant' → 'model' | pilotSlice uses 'user'/'assistant' (React convention); Gemini API requires 'user'/'model' — toGeminiRole() handles mapping in useSage | ✓ Good — prevents Gemini API 400 errors on history |
+| Two-turn Gemini pattern for Sage | Turn 1: extract apply_filters args; Turn 2: send function result back for confirmation text — keeps confirmation contextually accurate | ✓ Good — aligns with Gemini function calling spec |
+| FAB hides when panel is open | AnimatePresence with {!isOpen && <SageFAB>} — cleaner than FAB+panel coexisting; avoids z-index conflicts on mobile | ✓ Good — locked in CONTEXT.md before Phase 18 |
 
 ---
-*Last updated: 2026-02-21 after Phase 17 (Expert Grid & Cards)*
+*Last updated: 2026-02-21 after Phase 18 (Floating AI Co-Pilot)*

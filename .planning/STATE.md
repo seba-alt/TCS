@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-21)
 
 **Core value:** A user describes any problem and instantly gets three expertly matched professionals they can contact — no searching, no filtering, no guesswork.
-**Current focus:** Phase 18 — Floating AI Co-Pilot
+**Current focus:** Phase 19 — Extended Features
 
 ## Current Position
 
-Phase: 18 of 19 (Floating AI Co-Pilot)
+Phase: 19 of 19 (Extended Features)
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-02-21 — Phase 17 complete: Expert Grid & Cards — VirtuosoGrid with ExpertCard, entry animations, infinite scroll, tag pill wiring, EmptyState, wired into MarketplacePage
+Last activity: 2026-02-21 — Phase 18 complete: Floating AI Co-Pilot — SageFAB, SagePanel, Gemini two-turn function calling, filter dispatch, mobile full-screen, EmptyState CTA wired
 
-Progress: [████████████████████] 42/42 plans (100% of planned phases; Phases 18-19 TBD plans)
+Progress: [████████████████████] 46/46 plans (100% of planned phases; Phase 19 TBD plans)
 
 ## Live URLs
 
@@ -90,6 +90,13 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - flex-1 min-h-0 container for VirtuosoGrid — gives known height for virtualization within flex column layout
 - appendResults uses spread: [...state.experts, ...newExperts] — appends on scroll, setResults replaces on filter change
 
+**Phase 18 decisions (2026-02-21):**
+- filterSlice.setTags (not toggleTag) for Sage — Sage replaces tags array entirely; toggleTag is for human one-at-a-time interaction
+- useExplorerStore.getState() snapshot in useSage async handler — prevents stale closure in async context
+- Gemini role mapping: 'assistant' → 'model' — toGeminiRole() in useSage; pilotSlice uses 'assistant', Gemini API requires 'model'
+- Two-turn Gemini pattern — Turn 1 extracts apply_filters args, Turn 2 sends function result back for contextually accurate confirmation
+- FAB hides when panel is open — AnimatePresence with {!isOpen && <SageFAB>} — cleaner than coexisting; avoids z-index conflicts
+
 Key v2.0 architecture constraints (from .planning/research/):
 - FAISS IDSelectorBatch used as search-time filter only — never `remove_ids`; `username_to_faiss_pos` mapping required at startup
 - FTS5 synced via explicit SQL in write paths (not ORM events); `rebuild` required after virtual table creation to populate existing rows
@@ -106,10 +113,11 @@ Key v2.0 architecture constraints (from .planning/research/):
 
 ### Blockers/Concerns
 
-- [Phase 18]: Gemini two-turn proxy pattern (FastAPI forwarding function call, frontend executing, second Gemini call for confirmation) has no official FastAPI+Gemini reference implementation. Validate during Phase 18 planning or early spike.
+- Set `ALLOWED_ORIGINS=https://tcs-three-sigma.vercel.app` in Railway environment variables (carried over from v1.1)
+- Verify FTS5 availability on Railway SQLite at startup: `conn.execute(text("SELECT fts5('test')"))`
 
 ## Session Continuity
 
 Last session: 2026-02-21
-Stopped at: Phase 17 complete, ready to plan Phase 18 (Floating AI Co-Pilot)
+Stopped at: Phase 18 complete, ready to plan Phase 19 (Extended Features)
 Resume file: None
