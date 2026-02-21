@@ -9,6 +9,7 @@ import type {
   DomainMapResponse,
   IngestStatus,
   IntelligenceStats,
+  AdminSettingsResponse,
 } from '../types'
 
 const getAdminKey = () => sessionStorage.getItem('admin_key') ?? ''
@@ -219,4 +220,22 @@ export function useIngestStatus() {
   }, [startPolling])
 
   return { ingest, triggerRun }
+}
+
+export function useAdminSettings() {
+  const [data, setData] = useState<AdminSettingsResponse | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const fetchData = useCallback(() => {
+    setLoading(true)
+    adminFetch<AdminSettingsResponse>('/settings')
+      .then(setData)
+      .catch((e: Error) => setError(e.message))
+      .finally(() => setLoading(false))
+  }, [])
+
+  useEffect(() => { fetchData() }, [fetchData])
+
+  return { data, loading, error, refetch: fetchData }
 }
