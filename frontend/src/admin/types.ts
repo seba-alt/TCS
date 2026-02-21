@@ -123,3 +123,18 @@ export interface IngestStatus {
   error: string | null
   started_at: number | null
 }
+
+export interface AdminSetting {
+  key: string
+  value: boolean | number         // native typed (bool for flags, float/int for thresholds)
+  raw: string                     // original string value from DB or env var
+  source: 'db' | 'env' | 'default'  // override hierarchy indicator from backend
+  type: 'bool' | 'float' | 'int'
+  description: string
+  min?: number
+  max?: number
+}
+
+export interface AdminSettingsResponse {
+  settings: AdminSetting[]
+}
