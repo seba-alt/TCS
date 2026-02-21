@@ -1,6 +1,9 @@
 import { Search } from 'lucide-react'
+import { useExplorerStore } from '../../store'
 
 export function EmptyState() {
+  const setOpen = useExplorerStore((s) => s.setOpen)
+
   return (
     <div className="flex flex-col items-center justify-center h-full min-h-[400px] gap-4 text-center px-8">
       <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center">
@@ -12,10 +15,9 @@ export function EmptyState() {
           Try adjusting your filters, or describe what you need to the AI co-pilot.
         </p>
       </div>
-      {/* Phase 18 will wire this CTA to open the co-pilot panel */}
       <button
         className="text-sm text-brand-purple font-medium border border-brand-purple rounded-lg px-4 py-2 hover:bg-brand-purple hover:text-white transition-colors"
-        onClick={() => {/* co-pilot CTA — will be wired in Phase 18 */}}
+        onClick={() => setOpen(true)}
       >
         Try the AI Co-Pilot
       </button>

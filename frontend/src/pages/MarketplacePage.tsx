@@ -1,16 +1,23 @@
 import { useEffect, useState } from 'react'
 import { SlidersHorizontal } from 'lucide-react'
+import { AnimatePresence } from 'motion/react'
 import { useExplorerStore, useFilterSlice } from '../store'
 import { useExplore } from '../hooks/useExplore'
 import { FilterSidebar } from '../components/sidebar/FilterSidebar'
 import { FilterChips } from '../components/marketplace/FilterChips'
 import { ExpertGrid } from '../components/marketplace/ExpertGrid'
 import { MobileFilterSheet } from '../components/sidebar/MobileFilterSheet'
+import { SageFAB } from '../components/pilot/SageFAB'
+import { SagePanel } from '../components/pilot/SagePanel'
 
 export default function MarketplacePage() {
   // Fetch hook — reads filter state from store, calls /api/explore, writes results back
   // Returns loadNextPage for VirtuosoGrid endReached (infinite scroll)
   const { loadNextPage } = useExplore()
+
+  // Pilot panel state
+  const isOpen = useExplorerStore((s) => s.isOpen)
+  const setOpen = useExplorerStore((s) => s.setOpen)
 
   // Preserve Phase 15 pilot reset behavior
   const resetPilot = useExplorerStore((s) => s.resetPilot)
@@ -77,6 +84,26 @@ export default function MarketplacePage() {
 
       {/* Mobile filter bottom-sheet */}
       <MobileFilterSheet open={sheetOpen} onClose={() => setSheetOpen(false)} />
+
+      {/* Sage Co-Pilot — FAB hides when panel is open (per CONTEXT.md locked decision) */}
+      <AnimatePresence>
+        {!isOpen && <SageFAB key="sage-fab" />}
+      </AnimatePresence>
+
+      {/* Sage Panel + mobile backdrop */}
+      <AnimatePresence>
+        {isOpen && (
+          <>
+            {/* Mobile backdrop — click to close (desktop panel doesn't need full backdrop) */}
+            <div
+              key="sage-backdrop"
+              className="fixed inset-0 z-30 bg-black/20 md:hidden"
+              onClick={() => setOpen(false)}
+            />
+            <SagePanel key="sage-panel" />
+          </>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
