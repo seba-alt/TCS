@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react'
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
-const TEST_EMAIL = 'testlab@admin.local'
+const TEST_EMAIL = 'testlab@tinrate.com'
 
 interface Expert {
   name?: string
@@ -108,7 +108,8 @@ export default function SearchLabPage() {
       if (status !== 'error') setStatus('done')
     } catch (err: unknown) {
       if ((err as { name?: string }).name === 'AbortError') return
-      setError('Request failed — is the backend running?')
+      const msg = err instanceof Error ? err.message : String(err)
+      setError(`Request failed: ${msg}`)
       setStatus('error')
     }
   }
