@@ -30,7 +30,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import Conversation
 from app.services.llm import generate_response
-from app.services.retriever import retrieve
+from app.services.search_intelligence import retrieve_with_intelligence
 
 log = structlog.get_logger()
 router = APIRouter()
@@ -71,15 +71,24 @@ async def _stream_chat(body: ChatRequest, request: Request, db: Session):
     try:
         # Retrieve candidates (sync — run in thread pool)
         history_dicts = [{"role": h.role, "content": h.content} for h in body.history]
-        candidates = await loop.run_in_executor(
-            None,
-            lambda: retrieve(
-                query=body.query,
-                faiss_index=request.app.state.faiss_index,
-                metadata=request.app.state.metadata,
+        candidates, intelligence = await asyncio.wait_for(
+            loop.run_in_executor(
+                None,
+                lambda: retrieve_with_intelligence(
+                    query=body.query,
+                    faiss_index=request.app.state.faiss_index,
+                    metadata=request.app.state.metadata,
+                    db=db,
+                ),
             ),
+            timeout=12.0,  # 5s HyDE LLM + 2s embed + safety margin; overall request must not hang
         )
-        log.info("chat.retrieved", candidate_count=len(candidates))
+        log.info(
+            "chat.retrieved",
+            candidate_count=len(candidates),
+            hyde_triggered=intelligence.get("hyde_triggered", False),
+            feedback_applied=intelligence.get("feedback_applied", False),
+        )
 
         # Capture top FAISS score for gap analytics (None if no candidates)
         top_score = candidates[0].score if candidates else None
@@ -127,6 +136,7 @@ async def _stream_chat(body: ChatRequest, request: Request, db: Session):
             "narrative": llm_response.narrative,
             "experts": experts_payload,
             "conversation_id": conversation.id,
+            "intelligence": intelligence,  # Admin Test Lab: hyde_triggered, hyde_bio, feedback_applied
         })
 
     except Exception as exc:
