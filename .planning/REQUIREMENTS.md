@@ -16,9 +16,9 @@
 
 ### STATE — Global State & Routing
 
-- [ ] **STATE-01**: Zustand `useExplorerStore` manages filters, results, and pilot conversation slices
-- [ ] **STATE-02**: Filter slice persists to localStorage via `persist` middleware with `partialize` (results and pilot excluded)
-- [ ] **STATE-03**: Homepage `/` renders `MarketplacePage`; chat interface is removed
+- [x] **STATE-01**: Zustand `useExplorerStore` manages filters, results, and pilot conversation slices
+- [x] **STATE-02**: Filter slice persists to localStorage via `persist` middleware with `partialize` (results and pilot excluded)
+- [x] **STATE-03**: Homepage `/` renders `MarketplacePage`; chat interface is removed
 
 ### MARKET — Marketplace UI
 
@@ -77,9 +77,9 @@
 | EXPL-03 | Phase 14 | Complete |
 | EXPL-04 | Phase 14 | Complete |
 | EXPL-05 | Phase 14 | Complete |
-| STATE-01 | Phase 15 | Pending |
-| STATE-02 | Phase 15 | Pending |
-| STATE-03 | Phase 15 | Pending |
+| STATE-01 | Phase 15 | Complete |
+| STATE-02 | Phase 15 | Complete |
+| STATE-03 | Phase 15 | Complete |
 | MARKET-01 | Phase 16 | Pending |
 | MARKET-02 | Phase 17 | Pending |
 | MARKET-03 | Phase 17 | Pending |

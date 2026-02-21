@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-21)
 
 **Core value:** A user describes any problem and instantly gets three expertly matched professionals they can contact — no searching, no filtering, no guesswork.
-**Current focus:** Phase 14 — Hybrid Search Backend
+**Current focus:** Phase 15 — Zustand State and Routing
 
 ## Current Position
 
-Phase: 14 of 19 (Hybrid Search Backend)
-Plan: 3 of 3 in current phase
+Phase: 15 of 19 (Zustand State and Routing)
+Plan: 1 of 1 in current phase
 Status: Phase complete
-Last activity: 2026-02-21 — Phase 14 Plan 03 complete: inline feedback boost in run_explore() closing EXPL-04
+Last activity: 2026-02-21 — Phase 15 Plan 01 complete: three-slice Zustand store with persist middleware and MarketplacePage routing
 
 Progress: [██████████░░░░░░░░░░] ~50% (v1.0–v1.2 complete, v2.0 phase 14 in progress)
 
@@ -34,6 +34,7 @@ Progress: [██████████░░░░░░░░░░] ~50% (v
 | 14 | 01 | 2 min | 2 | 2 |
 | 14 | 02 | 2 min | 2 | 2 |
 | 14 | 03 | 3 min | 1 | 1 |
+| 15 | 01 | 2 min | 2 | 6 |
 
 ## Accumulated Context
 
@@ -59,6 +60,12 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - Cold-start threshold: 10 total votes (mirrors search_intelligence formula)
 - boost_factor = 0.40 (FEEDBACK_BOOST_CAP * 2): consistent with search_intelligence._apply_feedback_boost()
 
+**Phase 15 Plan 01 decisions (2026-02-21):**
+- Zustand v5 pattern: type goes on create<T>() not on persist — combined with (...a) spread for slice composition
+- StateCreator typed with [['zustand/persist', unknown]] in slice files to avoid circular reference with ExplorerStore type in index.ts
+- useShallow from 'zustand/react/shallow' (v5 path, not 'zustand/shallow') for all slice hooks
+- '/chat' route preserves old App interface but is not linked from new marketplace UI
+
 Key v2.0 architecture constraints (from .planning/research/):
 - FAISS IDSelectorBatch used as search-time filter only — never `remove_ids`; `username_to_faiss_pos` mapping required at startup
 - FTS5 synced via explicit SQL in write paths (not ORM events); `rebuild` required after virtual table creation to populate existing rows
@@ -80,5 +87,5 @@ Key v2.0 architecture constraints (from .planning/research/):
 ## Session Continuity
 
 Last session: 2026-02-21
-Stopped at: Completed 14-03-PLAN.md — inline feedback boost in run_explore() (EXPL-04 gap closure)
+Stopped at: Completed 15-01-PLAN.md — Zustand three-slice store with persist middleware and MarketplacePage routing (STATE-01, STATE-02, STATE-03)
 Resume file: None
