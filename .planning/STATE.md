@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-21)
 ## Current Position
 
 Phase: 14 of 19 (Hybrid Search Backend)
-Plan: 1 of 2 in current phase
-Status: In progress
-Last activity: 2026-02-21 — Phase 14 Plan 01 complete: hybrid search pipeline service and router created
+Plan: 2 of 2 in current phase
+Status: Phase complete
+Last activity: 2026-02-21 — Phase 14 Plan 02 complete: hybrid search wiring (FTS5 startup migration, router registration, ingest-job FTS5 rebuild)
 
 Progress: [██████████░░░░░░░░░░] ~50% (v1.0–v1.2 complete, v2.0 phase 14 in progress)
 
@@ -32,6 +32,7 @@ Progress: [██████████░░░░░░░░░░] ~50% (v
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
 | 14 | 01 | 2 min | 2 | 2 |
+| 14 | 02 | 2 min | 2 | 2 |
 
 ## Accumulated Context
 
@@ -45,6 +46,12 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - Cursor: integer offset (simplest for react-virtuoso; stable corpus, no concurrent inserts)
 - total: pre-filter count — matches "N experts matching your filters" user expectation
 - Findability boost: multiplicative ±20% from 50–100 range (neutral at 75)
+
+**Phase 14 Plan 02 decisions (2026-02-21):**
+- FTS5 INSERT trigger for add_expert sync (SQLite-level); avoids duplicate rowid with explicit INSERT
+- Explicit FTS5 rebuild in _run_ingest_job (bulk updates require full rebuild, trigger only fires on INSERT)
+- username_to_faiss_pos built from metadata.json "Username" key (capital U, confirmed by RESEARCH.md)
+- Category auto-classification scoped to uncategorized experts only (idempotent; preserves manual overrides)
 
 Key v2.0 architecture constraints (from .planning/research/):
 - FAISS IDSelectorBatch used as search-time filter only — never `remove_ids`; `username_to_faiss_pos` mapping required at startup
@@ -67,5 +74,5 @@ Key v2.0 architecture constraints (from .planning/research/):
 ## Session Continuity
 
 Last session: 2026-02-21
-Stopped at: Completed 14-01-PLAN.md — hybrid search pipeline service (explorer.py, explore.py router)
+Stopped at: Completed 14-02-PLAN.md — hybrid search wiring (FTS5 startup migration, router registration, ingest-job FTS5 rebuild)
 Resume file: None

@@ -38,7 +38,7 @@ See `.planning/milestones/v1.2-ROADMAP.md`
 
 ## Phase Checklist (v2.0)
 
-- [ ] **Phase 14: Hybrid Search Backend** - Deploy `/api/explore` with three-stage hybrid pipeline and FTS5 index
+- [x] **Phase 14: Hybrid Search Backend** - Deploy `/api/explore` with three-stage hybrid pipeline and FTS5 index
 - [ ] **Phase 15: Zustand State & Routing** - Create `useExplorerStore` and swap homepage to `MarketplacePage`
 - [ ] **Phase 16: Marketplace Page & Sidebar** - Page layout, faceted filter sidebar, mobile bottom-sheet
 - [ ] **Phase 17: Expert Grid & Cards** - Virtualized grid, high-density cards, Framer Motion entry animations
@@ -60,8 +60,8 @@ See `.planning/milestones/v1.2-ROADMAP.md`
 **Plans**: 2 plans
 
 Plans:
-- [ ] 14-01-PLAN.md — Create explorer.py pipeline service + explore.py router (ExploreResponse data contract, three-stage hybrid search)
-- [ ] 14-02-PLAN.md — Wire into main.py (FTS5 startup, mapping, category classification, router registration) + admin.py FTS5 sync
+- [x] 14-01-PLAN.md — Create explorer.py pipeline service + explore.py router (ExploreResponse data contract, three-stage hybrid search)
+- [x] 14-02-PLAN.md — Wire into main.py (FTS5 startup, mapping, category classification, router registration) + admin.py FTS5 sync
 
 ### Phase 15: Zustand State & Routing
 **Goal**: The frontend has a single shared state store and the homepage route delivers the marketplace, so every subsequent UI phase builds on a real data contract and shared state layer
@@ -128,7 +128,7 @@ Plans:
 | 1-7. MVP Phases | v1.0 | Complete | Complete | 2026-02-20 |
 | 8-10. Intelligence Phases | v1.1 | Complete | Complete | 2026-02-21 |
 | 11-13. Steering Panel Phases | v1.2 | Complete | Complete | 2026-02-21 |
-| 14. Hybrid Search Backend | 1/2 | In Progress|  | - |
+| 14. Hybrid Search Backend | v2.0 | 2/2 | Complete | 2026-02-21 |
 | 15. Zustand State & Routing | v2.0 | 0/? | Not started | - |
 | 16. Marketplace Page & Sidebar | v2.0 | 0/? | Not started | - |
 | 17. Expert Grid & Cards | v2.0 | 0/? | Not started | - |
