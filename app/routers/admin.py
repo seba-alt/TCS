@@ -54,6 +54,28 @@ PROJECT_ROOT = METADATA_PATH.parent.parent
 _ingest: dict = {"status": "idle", "log": "", "error": None, "started_at": None}
 
 
+def _run_tag_job() -> None:
+    """Background thread: run only tag_experts.py (tags + scores, no FAISS rebuild)."""
+    global _ingest
+    _ingest["log"] = ""
+    _ingest["error"] = None
+    _ingest["started_at"] = time.time()
+    try:
+        r = subprocess.run(
+            [sys.executable, "scripts/tag_experts.py"],
+            cwd=str(PROJECT_ROOT),
+            capture_output=True,
+            text=True,
+        )
+        _ingest["log"] += r.stdout + r.stderr
+        if r.returncode != 0:
+            raise RuntimeError(f"tag_experts.py exited {r.returncode}:\n{r.stderr}")
+        _ingest["status"] = "done"
+    except Exception as exc:
+        _ingest["status"] = "error"
+        _ingest["error"] = str(exc)
+
+
 def _run_ingest_job(app) -> None:
     """Background thread: run tag_experts.py + ingest.py then hot-reload FAISS+metadata."""
     global _ingest
@@ -477,6 +499,21 @@ def get_experts(db: Session = Depends(get_db)):
         select(Expert).order_by(Expert.findability_score.asc().nulls_first())
     ).all()
     return {"experts": [_serialize_expert(e) for e in experts]}
+
+
+@router.post("/experts/tag-all")
+def tag_all(request: Request):
+    """
+    Run tag_experts.py in a background thread (tags + findability scores only, no FAISS rebuild).
+    Returns 409 if a job is already running.
+    """
+    global _ingest
+    if _ingest["status"] == "running":
+        raise HTTPException(status_code=409, detail="Job already running")
+    _ingest["status"] = "running"
+    thread = threading.Thread(target=_run_tag_job, daemon=True)
+    thread.start()
+    return {"status": "started"}
 
 
 @router.post("/ingest/run")

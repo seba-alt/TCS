@@ -113,6 +113,7 @@ export default function ExpertsPage() {
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
   const [zoneFilter, setZoneFilter] = useState<'red' | 'yellow' | 'green' | null>(null)
   const [tagFilter, setTagFilter] = useState<string | null>(null)
+  const [hideNoBio, setHideNoBio] = useState(false)
   const [pageIdx, setPageIdx] = useState(0)
 
   // Domain-map state
@@ -124,12 +125,15 @@ export default function ExpertsPage() {
     setAutoClassifying(true)
     setAutoResult(null)
     try {
+      // 1. Instant keyword-based category classification
       const res = await adminPost<{ classified: number; categories: Record<string, string> }>(
         '/experts/auto-classify',
         {},
       )
-      setAutoResult(`Classified ${res.classified} expert${res.classified !== 1 ? 's' : ''}`)
+      setAutoResult(`Classified ${res.classified} expert${res.classified !== 1 ? 's' : ''} — tagging in background…`)
       refetch()
+      // 2. Kick off background AI tagging + scoring (tag_experts.py)
+      await triggerRun('/experts/tag-all')
     } catch (err) {
       setAutoResult(`Error: ${err}`)
     } finally {
@@ -226,16 +230,17 @@ export default function ExpertsPage() {
 
   const filtered = useMemo(() => {
     let result = sorted
+    if (hideNoBio) result = result.filter(e => e.bio && e.bio.trim())
     if (zoneFilter) result = result.filter(e => scoreZone(e.findability_score) === zoneFilter)
     if (tagFilter) result = result.filter(e => e.tags?.includes(tagFilter))
     return result
-  }, [sorted, zoneFilter, tagFilter])
+  }, [sorted, hideNoBio, zoneFilter, tagFilter])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / 50))
   const pageData = filtered.slice(pageIdx * 50, (pageIdx + 1) * 50)
 
   // Reset page on filter/sort change
-  useEffect(() => { setPageIdx(0) }, [zoneFilter, tagFilter, sortCol, sortDir])
+  useEffect(() => { setPageIdx(0) }, [hideNoBio, zoneFilter, tagFilter, sortCol, sortDir])
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -328,6 +333,18 @@ export default function ExpertsPage() {
             </button>
           )}
         </div>
+
+        {/* Hide no-bio toggle */}
+        <button
+          onClick={() => setHideNoBio(v => !v)}
+          className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors ${
+            hideNoBio
+              ? 'bg-slate-800 border-slate-400/50 text-slate-200'
+              : 'border-slate-700 text-slate-500 hover:border-slate-500 hover:text-slate-400'
+          }`}
+        >
+          {hideNoBio ? 'Showing with bio' : 'Hide no bio'}
+        </button>
 
         {tagFilter && (
           <span className="text-xs text-slate-400">

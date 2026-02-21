@@ -193,8 +193,8 @@ export function useIngestStatus() {
   // Clean up on unmount
   useEffect(() => () => stopPolling(), [stopPolling])
 
-  const triggerRun = useCallback(async () => {
-    await adminPost<{ status: string }>('/ingest/run', {})
+  const triggerRun = useCallback(async (path = '/ingest/run') => {
+    await adminPost<{ status: string }>(path, {})
     setIngest(prev => ({ ...prev, status: 'running' }))
     startPolling()
   }, [startPolling])
