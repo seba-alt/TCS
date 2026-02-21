@@ -1,4 +1,4 @@
-import { useAdminExperts } from '../hooks/useAdminData'
+import { useAdminExperts, useIngestStatus } from '../hooks/useAdminData'
 import { useNavigate } from 'react-router-dom'
 import pkgJson from '../../../package.json'
 
@@ -13,6 +13,7 @@ function InfoRow({ label, value, mono = false }: { label: string; value: React.R
 
 export default function SettingsPage() {
   const { data, loading } = useAdminExperts()
+  const { ingest, triggerRun } = useIngestStatus()
   const navigate = useNavigate()
 
   function handleLogout() {
@@ -36,7 +37,6 @@ export default function SettingsPage() {
             label="Experts in index"
             value={loading ? <span className="text-slate-500 animate-pulse">Loading…</span> : (data?.experts.length ?? '—')}
           />
-          <InfoRow label="Embedding model" value="gemini-embedding-001" mono />
           <InfoRow label="Vector dimensions" value="768" mono />
         </div>
       </div>
@@ -59,14 +59,39 @@ export default function SettingsPage() {
         <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">FAISS Index</h2>
         <div>
           <InfoRow label="Index file" value="data/faiss.index" mono />
-          <InfoRow
-            label="Re-indexing"
-            value="Automatically re-built by running scripts/ingest.py after adding experts"
-          />
-          <InfoRow
-            label="Note"
-            value="Adding experts via the API appends to metadata.json + experts.csv. Restart the server and re-run ingest.py to include them in FAISS search results."
-          />
+          <InfoRow label="Embedding model" value="gemini-embedding-001" mono />
+        </div>
+        <div className="mt-4 pt-4 border-t border-slate-700/50 flex items-center gap-4">
+          <button
+            onClick={() => triggerRun('/ingest/run')}
+            disabled={ingest.status === 'running'}
+            title={ingest.status === 'error' ? (ingest.error ?? 'Unknown error') : undefined}
+            className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors disabled:opacity-50 ${
+              ingest.status === 'done'
+                ? 'bg-green-700/40 text-green-300 border border-green-600/40'
+                : ingest.status === 'error'
+                ? 'bg-red-700/40 text-red-300 border border-red-600/40'
+                : 'bg-slate-700 hover:bg-slate-600 text-white border border-transparent'
+            }`}
+          >
+            {ingest.status === 'running' ? (
+              <span className="flex items-center gap-2">
+                <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                </svg>
+                Rebuilding…
+              </span>
+            ) : ingest.status === 'done' ? '✓ Rebuild complete'
+              : ingest.status === 'error' ? '✗ Failed — click to retry'
+              : 'Rebuild Index'}
+          </button>
+          {ingest.status === 'running' && (
+            <span className="text-xs text-slate-500">Running tag_experts.py + ingest.py — this takes a few minutes</span>
+          )}
+          {ingest.status === 'error' && ingest.error && (
+            <span className="text-xs text-red-400 max-w-sm truncate" title={ingest.error}>{ingest.error}</span>
+          )}
         </div>
       </div>
 

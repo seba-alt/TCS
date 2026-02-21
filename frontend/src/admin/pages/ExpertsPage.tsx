@@ -230,7 +230,9 @@ export default function ExpertsPage() {
 
   const filtered = useMemo(() => {
     let result = sorted
-    if (hideNoBio) result = result.filter(e => e.bio && e.bio.trim())
+    // Always hide experts with no name
+    result = result.filter(e => (e.first_name || '').trim() || (e.last_name || '').trim())
+    if (hideNoBio) result = result.filter(e => (e.bio || '').trim())
     if (zoneFilter) result = result.filter(e => scoreZone(e.findability_score) === zoneFilter)
     if (tagFilter) result = result.filter(e => e.tags?.includes(tagFilter))
     return result
@@ -263,32 +265,6 @@ export default function ExpertsPage() {
           {autoClassifying ? 'Classifying…' : 'Auto-classify all'}
         </button>
         {autoResult && <span className="text-sm text-slate-400">{autoResult}</span>}
-
-        {/* Rebuild Index button */}
-        <button
-          onClick={triggerRun}
-          disabled={ingest.status === 'running'}
-          title={ingest.status === 'error' ? (ingest.error ?? 'Unknown error') : undefined}
-          className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors disabled:opacity-50 ${
-            ingest.status === 'done'
-              ? 'bg-green-700/40 text-green-300 border border-green-600/40'
-              : ingest.status === 'error'
-              ? 'bg-red-700/40 text-red-300 border border-red-600/40'
-              : 'bg-slate-700 hover:bg-slate-600 text-white'
-          }`}
-        >
-          {ingest.status === 'running' ? (
-            <span className="flex items-center gap-2">
-              <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-              </svg>
-              Rebuilding…
-            </span>
-          ) : ingest.status === 'done' ? '✓ Done'
-            : ingest.status === 'error' ? '✗ Failed'
-            : 'Rebuild Index'}
-        </button>
 
         {/* CSV Import button */}
         <input
