@@ -10,9 +10,9 @@ See: .planning/PROJECT.md
 ## Current Position
 
 Phase: 11 — Backend Settings API
-Plan: —
-Status: Roadmap defined; ready to plan Phase 11
-Last activity: 2026-02-21 — v1.2 roadmap created (Phases 11–13)
+Plan: 01 complete — ready for Plan 02 (admin CRUD endpoints)
+Status: In progress — Plan 01 complete
+Last activity: 2026-02-21 — Phase 11 Plan 01 complete (AppSetting model + per-request DB settings)
 
 Progress: [████████████████████████░░░░░░] v1.0 + v1.1 complete (10/13 phases) — v1.2 Phase 11 next
 
@@ -38,7 +38,7 @@ Progress: [███████████████████████
 | 08 (v1.1) | 4/4 plans | Complete |
 | 09 (v1.1) | 3/3 plans | Complete |
 | 10 (v1.1) | 2/2 plans | Complete |
-| 11 (v1.2) | TBD | Not started |
+| 11 (v1.2) | 1+ plans | Plan 01 complete |
 | 12 (v1.2) | TBD | Not started |
 | 13 (v1.2) | TBD | Not started |
 
@@ -83,6 +83,11 @@ Recent decisions affecting current work:
 - [10-01]: Empty url_set guard in _apply_feedback_boost returns early to avoid SQLite empty .in_() query (same pattern as 09-01)
 - [Phase 10-02]: asyncio.wait_for(timeout=12.0) wraps run_in_executor — 5s HyDE + 2s embed + margin; TimeoutError caught by existing except block
 - [Phase 10-02]: intelligence field added additively to SSE result event — existing frontend consumers unaffected
+- [11-01]: AppSetting ORM model with SCREAMING_SNAKE_CASE keys matching env var names; settings table auto-created by Base.metadata.create_all()
+- [11-01]: get_settings(db) uses deferred import of AppSetting inside function to avoid circular import at module load time
+- [11-01]: HYDE_TIMEOUT_SECONDS=5.0 kept hardcoded in search_intelligence — safety constant (hang-protection), not a tuneable setting
+- [11-01]: _is_weak_query() and _apply_feedback_boost() now accept settings as parameters; no module-level flag constants remain
+- [11-01]: DB settings read on every chat request (SELECT * from 5-row max table) — no caching ensures zero-redeploy config changes
 
 ### Pending Todos
 
@@ -97,5 +102,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-21
-Stopped at: v1.2 roadmap created — Phases 11, 12, 13 defined. Ready to plan Phase 11 (Backend Settings API).
+Stopped at: Completed 11-01-PLAN.md — AppSetting model, settings table, and per-request DB settings in search_intelligence.py. Ready for Plan 02 (admin CRUD API).
 Resume file: None
