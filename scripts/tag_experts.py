@@ -145,7 +145,7 @@ async def run_batch() -> None:
         async with semaphore:
             try:
                 tags = await _call_gemini_for_tags(client, expert)
-            except Exception as e:
+            except Exception:
                 # Retry once on failure
                 try:
                     tags = await _call_gemini_for_tags(client, expert)
