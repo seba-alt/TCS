@@ -5,7 +5,7 @@
 - [x] **v1.0 MVP** - Phases 1-7 (shipped 2026-02-20)
 - [x] **v1.1 Expert Intelligence & Search Quality** - Phases 8-10 (shipped 2026-02-21)
 - [x] **v1.2 Intelligence Activation & Steering Panel** - Phases 11-13 (shipped 2026-02-21)
-- [ ] **v2.0 Extreme Semantic Explorer** - Phases 14-19 (in progress)
+- [x] **v2.0 Extreme Semantic Explorer** - Phases 14-19 (shipped 2026-02-21)
 
 ## Phases
 
@@ -32,7 +32,7 @@ See `.planning/milestones/v1.2-ROADMAP.md`
 
 ---
 
-### v2.0 Extreme Semantic Explorer (In Progress)
+### v2.0 Extreme Semantic Explorer (SHIPPED 2026-02-21)
 
 **Milestone Goal:** Rearchitect from AI chat into a professional Expert Marketplace with hybrid search (SQLAlchemy + FAISS IDSelectorBatch + FTS5 BM25 fusion), Zustand global state, virtualized expert grid, floating AI co-pilot with Gemini function calling, and value-driven lead capture.
 
@@ -43,7 +43,7 @@ See `.planning/milestones/v1.2-ROADMAP.md`
 - [x] **Phase 16: Marketplace Page & Sidebar** - Page layout, faceted filter sidebar, mobile bottom-sheet (completed 2026-02-21)
 - [x] **Phase 17: Expert Grid & Cards** - Virtualized grid, high-density cards, Framer Motion entry animations (completed 2026-02-21)
 - [x] **Phase 18: Floating AI Co-Pilot** - FAB panel, Gemini function calling, mobile full-screen overlay (completed 2026-02-21)
-- [ ] **Phase 19: Extended Features** - Lead capture, match report, URL state, fuzzy suggestions, empty states
+- [x] **Phase 19: Extended Features** - Lead capture, match report, URL state, fuzzy suggestions, empty states (completed 2026-02-21)
 
 ## Phase Details
 
@@ -121,10 +121,10 @@ Plans:
 **Plans**: 4 plans
 
 Plans:
-- [ ] 18-01-PLAN.md — FastAPI pilot service + POST /api/pilot endpoint (Gemini two-turn function calling)
-- [ ] 18-02-PLAN.md — filterSlice setTags + useSage hook + SageFAB + SagePanel + SageMessage + SageInput
-- [ ] 18-03-PLAN.md — Wire SageFAB/SagePanel into MarketplacePage + wire EmptyState CTA
-- [ ] 18-04-PLAN.md — Human verify: FAB, panel animation, filter dispatch, mobile, conversation persistence
+- [x] 18-01-PLAN.md — FastAPI pilot service + POST /api/pilot endpoint (Gemini two-turn function calling)
+- [x] 18-02-PLAN.md — filterSlice setTags + useSage hook + SageFAB + SagePanel + SageMessage + SageInput
+- [x] 18-03-PLAN.md — Wire SageFAB/SagePanel into MarketplacePage + wire EmptyState CTA
+- [x] 18-04-PLAN.md — Human verify: FAB, panel animation, filter dispatch, mobile, conversation persistence
 
 ### Phase 19: Extended Features
 **Goal**: Users can share filtered views, get fuzzy search help, download a personalized match report, and never hit a dead end — making the marketplace robust and conversion-ready
@@ -139,12 +139,12 @@ Plans:
 **Plans**: 6 plans
 
 Plans:
-- [ ] 19-01-PLAN.md — Backend GET /api/suggest endpoint (FTS5 prefix search for search suggestions)
-- [ ] 19-02-PLAN.md — Shareable filter URLs (useUrlSync hook + Copy link button in FilterSidebar)
-- [ ] 19-03-PLAN.md — Email gate modal (View Full Profile on ExpertCard, ProfileGateModal, useEmailGate reuse)
-- [ ] 19-04-PLAN.md — Enhanced EmptyState (tag suggestion pills + Sage CTA + clear all)
-- [ ] 19-05-PLAN.md — Search suggestions dropdown in SearchInput (calls /api/suggest, AbortController)
-- [ ] 19-06-PLAN.md — Human verify: email gate, URL sync, search suggestions, no-results state
+- [x] 19-01-PLAN.md — Backend GET /api/suggest endpoint (FTS5 prefix search for search suggestions)
+- [x] 19-02-PLAN.md — Shareable filter URLs (useUrlSync hook + Copy link button in FilterSidebar)
+- [x] 19-03-PLAN.md — Email gate modal (View Full Profile on ExpertCard, ProfileGateModal, useEmailGate reuse)
+- [x] 19-04-PLAN.md — Enhanced EmptyState (tag suggestion pills + Sage CTA + clear all)
+- [x] 19-05-PLAN.md — Search suggestions dropdown in SearchInput (calls /api/suggest, AbortController)
+- [x] 19-06-PLAN.md — Human verify: email gate, URL sync, search suggestions, no-results state
 
 ## Progress
 
@@ -160,4 +160,4 @@ Plans:
 | 16. Marketplace Page & Sidebar | v2.0 | 3/3 | Complete | 2026-02-21 |
 | 17. Expert Grid & Cards | v2.0 | Complete    | 2026-02-21 | - |
 | 18. Floating AI Co-Pilot | 4/4 | Complete    | 2026-02-21 | - |
-| 19. Extended Features | v2.0 | 0/? | Not started | - |
+| 19. Extended Features | v2.0 | 6/6 | Complete | 2026-02-21 |

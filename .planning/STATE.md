@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-21)
 
 **Core value:** A user describes any problem and instantly gets three expertly matched professionals they can contact — no searching, no filtering, no guesswork.
-**Current focus:** Phase 19 — Extended Features
+**Current focus:** v2.0 COMPLETE — All phases 14-19 shipped
 
 ## Current Position
 
-Phase: 19 of 19 (Extended Features)
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-02-21 — Phase 18 complete: Floating AI Co-Pilot — SageFAB, SagePanel, Gemini two-turn function calling, filter dispatch, mobile full-screen, EmptyState CTA wired
+Phase: 19 of 19 (Extended Features) — COMPLETE
+Plan: 6/6 (all complete)
+Status: v2.0 Extreme Semantic Explorer milestone SHIPPED
+Last activity: 2026-02-21 — Phase 19 complete: Extended Features — GET /api/suggest, URL sync, email gate modal, enhanced EmptyState, search suggestions dropdown, FTS5 rebuild fix
 
-Progress: [████████████████████] 46/46 plans (100% of planned phases; Phase 19 TBD plans)
+Progress: [████████████████████] 52/52 plans (100% — all phases complete)
 
 ## Live URLs
 
@@ -97,6 +97,14 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - Two-turn Gemini pattern — Turn 1 extracts apply_filters args, Turn 2 sends function result back for contextually accurate confirmation
 - FAB hides when panel is open — AnimatePresence with {!isOpen && <SageFAB>} — cleaner than coexisting; avoids z-index conflicts
 
+**Phase 19 decisions (2026-02-21):**
+- FTS5 content table requires `INSERT INTO experts_fts(experts_fts) VALUES('rebuild')` at startup — conditional populate (count=0) leaves stale index; always rebuild is O(n) but correct
+- `_safe_prefix_query` separate from `_safe_fts_query` in explorer.py — explorer strips `*`, suggest appends `*`; can't share
+- `useUrlSync` initialized ref pattern: URL→Store runs once on mount (ref guard); Store→URL skips first render (skipFirst ref) to avoid overwriting URL before init
+- `pendingProfileUrl` at MarketplacePage level — ExpertCard `h-[180px] overflow-hidden` clips modals; gate state MUST be in parent
+- `onMouseDown={(e) => e.preventDefault()}` on suggestion buttons — cleaner than 150ms blurTimer for blur/click race
+- `setTags([tag])` replace semantics in EmptyState (not toggleTag) — suggestions are redirects, not additions
+
 Key v2.0 architecture constraints (from .planning/research/):
 - FAISS IDSelectorBatch used as search-time filter only — never `remove_ids`; `username_to_faiss_pos` mapping required at startup
 - FTS5 synced via explicit SQL in write paths (not ORM events); `rebuild` required after virtual table creation to populate existing rows
@@ -119,5 +127,5 @@ Key v2.0 architecture constraints (from .planning/research/):
 ## Session Continuity
 
 Last session: 2026-02-21
-Stopped at: Phase 18 complete, ready to plan Phase 19 (Extended Features)
+Stopped at: Phase 19 complete — v2.0 milestone SHIPPED
 Resume file: None
