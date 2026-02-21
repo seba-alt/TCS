@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { useExplorerStore } from '../store'
 
 const API_BASE = import.meta.env.VITE_API_URL ?? ''
@@ -17,6 +17,13 @@ export function useExplore() {
   const setResults = useExplorerStore((s) => s.setResults)
   const setError = useExplorerStore((s) => s.setError)
   const resetResults = useExplorerStore((s) => s.resetResults)
+
+  // Infinite scroll state + actions — individual selectors (Phase 16 pattern)
+  const cursor = useExplorerStore((s) => s.cursor)
+  const loading = useExplorerStore((s) => s.loading)
+  const isFetchingMore = useExplorerStore((s) => s.isFetchingMore)
+  const appendResults = useExplorerStore((s) => s.appendResults)
+  const setFetchingMore = useExplorerStore((s) => s.setFetchingMore)
 
   const controllerRef = useRef<AbortController | null>(null)
 
@@ -67,4 +74,29 @@ export function useExplore() {
     // sortBy is in dep array even though /api/explore doesn't currently use it —
     // ensures re-fetch when sort is added later; avoids stale-closure bug
   }, [query, rateMin, rateMax, tags, sortBy, setLoading, setResults, setError, resetResults])
+
+  // loadNextPage — passed to VirtuosoGrid endReached prop
+  // Guard: don't fetch if no more pages (cursor null), already fetching more, or initial load in progress
+  const loadNextPage = useCallback(async () => {
+    if (cursor === null || isFetchingMore || loading) return
+    setFetchingMore(true)
+    try {
+      const params = new URLSearchParams()
+      if (query) params.set('q', query)
+      params.set('rate_min', String(rateMin))
+      params.set('rate_max', String(rateMax))
+      tags.forEach((t) => params.append('tags', t))
+      params.set('cursor', String(cursor))
+      const res = await fetch(`${API_BASE}/api/explore?${params}`)
+      if (!res.ok) return
+      const data = await res.json()
+      appendResults(data.experts, data.cursor ?? null)
+    } catch {
+      // silent — VirtuosoGrid will retry on next endReached trigger
+    } finally {
+      setFetchingMore(false)
+    }
+  }, [cursor, isFetchingMore, loading, query, rateMin, rateMax, tags, appendResults, setFetchingMore])
+
+  return { loadNextPage }
 }

@@ -69,15 +69,18 @@ export const useFilterSlice = () =>
 export const useResultsSlice = () =>
   useExplorerStore(
     useShallow((state) => ({
-      experts:      state.experts,
-      total:        state.total,
-      cursor:       state.cursor,
-      loading:      state.loading,
-      error:        state.error,
-      setResults:   state.setResults,
-      setLoading:   state.setLoading,
-      setError:     state.setError,
-      resetResults: state.resetResults,
+      experts:          state.experts,
+      total:            state.total,
+      cursor:           state.cursor,
+      loading:          state.loading,
+      error:            state.error,
+      isFetchingMore:   state.isFetchingMore,
+      setResults:       state.setResults,
+      setLoading:       state.setLoading,
+      setError:         state.setError,
+      resetResults:     state.resetResults,
+      appendResults:    state.appendResults,
+      setFetchingMore:  state.setFetchingMore,
     }))
   )
 
