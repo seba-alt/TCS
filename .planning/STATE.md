@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-21 after v1.1 milestone started)
 ## Current Position
 
 Phase: 8 of 10 (Data Enrichment Pipeline)
-Plan: 08-01 complete
+Plan: 08-03 complete
 Status: In progress
-Last activity: 2026-02-21 — Phase 8 Plan 01 complete (Expert schema + tagging service)
+Last activity: 2026-02-21 — Phase 8 Plan 03 complete (ingest.py rewrite: DB-sourced, tag-enriched, crash-safe)
 
 Progress: [████████████████████░░░░░░░░░░] v1.0 complete (7/7 phases) — v1.1 starting Phase 8
 
@@ -55,6 +55,9 @@ Recent decisions affecting current work:
 - [08-01]: Deferred google-genai imports inside tag_expert_sync() prevent failures when module loaded without GOOGLE_API_KEY set
 - [08-01]: Sync Gemini client used in tag_expert_sync — asyncio.run() inside FastAPI's running event loop raises RuntimeError
 - [08-01]: compute_findability_score accepts optional tags list to support batch processing where tags not yet committed
+- [08-03]: pandas removed from ingest.py; SQLAlchemy SessionLocal replaces CSV loading — Expert table is authoritative source
+- [08-03]: Assertion uses actual_count from DB query (not hardcoded 1558) — future-proof as expert count grows
+- [08-03]: Metadata dicts preserve "First Name"/"Last Name" key names (capital + spaced) for retriever.py/llm.py compatibility
 
 ### Pending Todos
 
@@ -70,5 +73,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-21
-Stopped at: Completed 08-01-PLAN.md — Expert model extended with tags/findability_score columns, app/services/tagging.py created with compute_findability_score and tag_expert_sync.
+Stopped at: Completed 08-03-PLAN.md — scripts/ingest.py rewritten: DB-sourced (Expert table), tag-enriched embeddings (Domains: ...), crash-safe staging promotion.
 Resume file: None
