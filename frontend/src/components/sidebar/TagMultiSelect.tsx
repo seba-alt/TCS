@@ -1,39 +1,6 @@
 import { useState } from 'react'
 import { useFilterSlice } from '../../store'
-
-// Top-30 tags by frequency from metadata.json (stable — hardcoded per RESEARCH.md recommendation)
-const TOP_TAGS = [
-  'fundraising',
-  'real estate',
-  'entrepreneurship',
-  'digital marketing',
-  'marketing strategy',
-  'saas',
-  'digital transformation',
-  'go-to-market strategy',
-  'brand strategy',
-  'venture capital',
-  'artificial intelligence',
-  'supply chain',
-  'business development',
-  'private equity',
-  'change management',
-  'business scaling',
-  'sales strategy',
-  'mergers & acquisitions',
-  'web development',
-  'product development',
-  'e-commerce',
-  'ai strategy',
-  'corporate finance',
-  'event management',
-  'growth marketing',
-  'process optimization',
-  'startup scaling',
-  'commercial strategy',
-  'leadership coaching',
-  'financial planning',
-]
+import { TOP_TAGS } from '../../constants/tags'
 
 export function TagMultiSelect() {
   const { tags, toggleTag } = useFilterSlice()

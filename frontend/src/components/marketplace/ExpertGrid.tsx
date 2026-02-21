@@ -9,6 +9,7 @@ interface ExpertGridProps {
   loading: boolean
   isFetchingMore: boolean
   onEndReached: () => void
+  onViewProfile: (url: string) => void
 }
 
 // Skeleton footer row — 3 pulsing cards shown while next page loads
@@ -22,7 +23,7 @@ function SkeletonFooter() {
   )
 }
 
-export function ExpertGrid({ experts, loading, isFetchingMore, onEndReached }: ExpertGridProps) {
+export function ExpertGrid({ experts, loading, isFetchingMore, onEndReached, onViewProfile }: ExpertGridProps) {
   // Initial load: show skeleton grid (built in Phase 16)
   if (loading && experts.length === 0) {
     return <SkeletonGrid />
@@ -45,7 +46,7 @@ export function ExpertGrid({ experts, loading, isFetchingMore, onEndReached }: E
       itemClassName="min-h-0"
       computeItemKey={(_, expert) => expert.username}
       itemContent={(index, expert) => (
-        <ExpertCard expert={expert} index={index} />
+        <ExpertCard expert={expert} index={index} onViewProfile={onViewProfile} />
       )}
       components={{
         // Footer renders skeleton row while fetching next page

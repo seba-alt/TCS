@@ -3,14 +3,20 @@ import { SlidersHorizontal } from 'lucide-react'
 import { AnimatePresence } from 'motion/react'
 import { useExplorerStore, useFilterSlice } from '../store'
 import { useExplore } from '../hooks/useExplore'
+import { useUrlSync } from '../hooks/useUrlSync'
+import { useEmailGate } from '../hooks/useEmailGate'
 import { FilterSidebar } from '../components/sidebar/FilterSidebar'
 import { FilterChips } from '../components/marketplace/FilterChips'
 import { ExpertGrid } from '../components/marketplace/ExpertGrid'
 import { MobileFilterSheet } from '../components/sidebar/MobileFilterSheet'
 import { SageFAB } from '../components/pilot/SageFAB'
 import { SagePanel } from '../components/pilot/SagePanel'
+import { ProfileGateModal } from '../components/marketplace/ProfileGateModal'
 
 export default function MarketplacePage() {
+  // Sync filter state to/from URL query params (ROBUST-01)
+  useUrlSync()
+
   // Fetch hook — reads filter state from store, calls /api/explore, writes results back
   // Returns loadNextPage for VirtuosoGrid endReached (infinite scroll)
   const { loadNextPage } = useExplore()
@@ -36,6 +42,26 @@ export default function MarketplacePage() {
   // Filter summary for mobile toolbar badge
   const { tags, query } = useFilterSlice()
   const activeFilterCount = tags.length + (query ? 1 : 0)
+
+  // Email gate state — LEAD-01/02/04
+  const { isUnlocked, submitEmail } = useEmailGate()
+  const [pendingProfileUrl, setPendingProfileUrl] = useState<string | null>(null)
+
+  function handleViewProfile(url: string) {
+    if (isUnlocked) {
+      window.open(url, '_blank', 'noopener,noreferrer')
+    } else {
+      setPendingProfileUrl(url)
+    }
+  }
+
+  async function handleEmailSubmit(email: string) {
+    await submitEmail(email)
+    if (pendingProfileUrl) {
+      window.open(pendingProfileUrl, '_blank', 'noopener,noreferrer')
+      setPendingProfileUrl(null)
+    }
+  }
 
   return (
     // CRITICAL: No overflow wrapper around FilterSidebar — sticky fails with ancestor overflow (Pitfall 1)
@@ -78,6 +104,7 @@ export default function MarketplacePage() {
             loading={loading}
             isFetchingMore={isFetchingMore}
             onEndReached={loadNextPage}
+            onViewProfile={handleViewProfile}
           />
         </div>
       </main>
@@ -102,6 +129,17 @@ export default function MarketplacePage() {
             />
             <SagePanel key="sage-panel" />
           </>
+        )}
+      </AnimatePresence>
+
+      {/* Email gate modal — rendered at page level to avoid ExpertCard overflow-hidden constraint */}
+      <AnimatePresence>
+        {pendingProfileUrl && (
+          <ProfileGateModal
+            key="profile-gate"
+            onSubmit={handleEmailSubmit}
+            onDismiss={() => setPendingProfileUrl(null)}
+          />
         )}
       </AnimatePresence>
     </div>

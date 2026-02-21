@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { PanelLeftClose, PanelRightOpen, Search, DollarSign, Tag } from 'lucide-react'
+import { PanelLeftClose, PanelRightOpen, Search, DollarSign, Tag, Link } from 'lucide-react'
 import { SearchInput } from './SearchInput'
 import { RateSlider } from './RateSlider'
 import { TagMultiSelect } from './TagMultiSelect'
@@ -21,6 +21,17 @@ function IconStrip() {
 }
 
 function FilterControls() {
+  const [copied, setCopied] = useState(false)
+
+  function handleCopyLink() {
+    navigator.clipboard.writeText(window.location.href).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }).catch(() => {
+      // Clipboard API unavailable (e.g., HTTP) — silently ignore
+    })
+  }
+
   return (
     <div className="flex flex-col gap-4 overflow-y-auto flex-1 py-3">
       <div className="flex flex-col gap-1.5 px-4">
@@ -34,6 +45,15 @@ function FilterControls() {
       <div className="flex flex-col gap-1.5 px-4">
         <span className="text-xs font-medium text-gray-500 uppercase">Domain Tags</span>
         <TagMultiSelect />
+      </div>
+      <div className="px-4 pt-2 border-t border-gray-100">
+        <button
+          onClick={handleCopyLink}
+          className="w-full text-xs text-gray-500 flex items-center justify-center gap-1.5 py-2 hover:text-brand-purple transition-colors"
+        >
+          <Link size={12} />
+          {copied ? 'Copied!' : 'Copy link'}
+        </button>
       </div>
     </div>
   )

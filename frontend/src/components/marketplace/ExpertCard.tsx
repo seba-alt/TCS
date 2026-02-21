@@ -5,6 +5,7 @@ import { useExplorerStore } from '../../store'
 interface ExpertCardProps {
   expert: Expert
   index: number  // Required for stagger delay
+  onViewProfile: (url: string) => void
 }
 
 // Findability badge label — thresholds from Phase 14 (score range 50-100, neutral at 75)
@@ -15,7 +16,7 @@ function findabilityLabel(score: number | null): 'Top Match' | 'Good Match' | nu
   return null
 }
 
-export function ExpertCard({ expert, index }: ExpertCardProps) {
+export function ExpertCard({ expert, index, onViewProfile }: ExpertCardProps) {
   const toggleTag = useExplorerStore((s) => s.toggleTag)
   const badgeLabel = findabilityLabel(expert.findability_score)
 
@@ -72,6 +73,17 @@ export function ExpertCard({ expert, index }: ExpertCardProps) {
           {expert.match_reason}
         </p>
       )}
+
+      {/* View Full Profile — triggers email gate or direct open */}
+      <button
+        onClick={(e) => {
+          e.stopPropagation()
+          onViewProfile(expert.profile_url)
+        }}
+        className="mt-auto text-xs text-brand-purple font-medium hover:underline self-start"
+      >
+        View Full Profile →
+      </button>
     </motion.div>
   )
 }
