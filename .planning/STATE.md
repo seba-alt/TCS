@@ -61,6 +61,8 @@ Recent decisions affecting current work:
 - [Phase 08]: All DB helper functions sync — no SessionLocal held across await, preventing SQLite thread errors in async batch script
 - [Phase 08]: Async Gemini client (client.aio) used in batch script; sync genai.Client reserved for FastAPI route handlers (tag_expert_sync)
 - [Phase 08]: CONCURRENCY=5 conservative default for Gemini calls; constant at top of file with AI Studio RPM docs link
+- [08-04]: Auto-tagging synchronous on POST /api/admin/experts — expert fully enriched before response; BackgroundTasks retry fires only on Gemini failure
+- [08-04]: No-bio experts skip Gemini but still get findability_score computed; creation never fails due to AI error
 
 ### Pending Todos
 
@@ -76,5 +78,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-21
-Stopped at: Completed 08-02-PLAN.md — scripts/tag_experts.py async batch tagging with Gemini 2.5 Flash, CONCURRENCY=5 semaphore, tqdm progress, retry-once-skip, findability scoring for all experts.
+Stopped at: Completed 08-04-PLAN.md — POST /api/admin/experts extended with synchronous auto-tagging (BackgroundTasks retry on failure), ExpertsPage.tsx updated to show "Generating tags..." during submission.
 Resume file: None
