@@ -124,6 +124,22 @@ def _run_ingest_job(app) -> None:
         with open(METADATA_PATH, "r", encoding="utf-8") as f:
             app.state.metadata = json.load(f)
 
+        # Phase 14: rebuild FTS5 index after bulk tag update
+        from sqlalchemy import text as _fts_text  # noqa: PLC0415
+        with SessionLocal() as _fts_db:
+            _fts_db.execute(_fts_text("INSERT INTO experts_fts(experts_fts) VALUES('rebuild')"))
+            _fts_db.commit()
+        log.info("fts5.rebuild_complete")
+
+        # Phase 14: refresh username-to-FAISS-position mapping after hot-reload
+        _new_mapping: dict[str, int] = {}
+        for _pos, _row in enumerate(app.state.metadata):
+            _uname = _row.get("Username") or _row.get("username") or ""
+            if _uname:
+                _new_mapping[_uname] = _pos
+        app.state.username_to_faiss_pos = _new_mapping
+        log.info("fts5.username_mapping_refreshed", count=len(_new_mapping))
+
         _ingest["status"] = "done"
     except Exception as exc:
         _ingest["status"] = "error"
