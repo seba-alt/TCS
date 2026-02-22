@@ -116,7 +116,7 @@ Plans:
   2. While the rebuild runs, users can perform expert searches without receiving errors or degraded results
   3. On completion, the admin panel shows a "complete" status with a timestamp of when the rebuild finished
   4. If the rebuild fails, the admin panel shows a "failed" status and the previous index continues serving requests
-**Plans**: TBD
+**Plans**: 2 plans
 
 **Planning notes (from research):**
 - Frontend-only phase: backend swap already exists in `_run_ingest_job` (admin.py lines 93–146)
@@ -126,8 +126,8 @@ Plans:
 - Frontend polls existing `GET /api/admin/ingest/status` — no new backend endpoints needed
 
 Plans:
-- [ ] 24-01: TBD
-- [ ] 24-02: TBD
+- [ ] 24-01-PLAN.md — Backend surgical additions (asyncio.Lock, _ingest dict extension, tsne_cache init) + TypeScript contract extension
+- [ ] 24-02-PLAN.md — IndexPage.tsx admin UI + route registration + sidebar nav item; human visual verification
 
 ### Phase 25: Admin Intelligence Metrics
 **Goal**: The admin Intelligence dashboard surfaces OTR@K (On-Topic Rate) as a 7-day rolling average per search query and shows Index Drift status — time since last rebuild and expert count change — giving operators actionable signal on retrieval health.
