@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-22)
 
 **Core value:** A user describes any problem and instantly gets expertly matched professionals they can browse, filter, and contact — no searching, no guesswork.
-**Current focus:** v2.3 — Sage Evolution & Marketplace Intelligence (Phase 31 in progress, 31-01 complete)
+**Current focus:** v2.3 — Sage Evolution & Marketplace Intelligence (Phase 31 complete — awaiting human-verify checkpoint on 31-02)
 
 ## Current Position
 
 Phase: 31 of 31 (Marketplace Intelligence)
-Plan: 2 of 2 in current phase (31-01 complete, 31-02 next)
-Status: Phase 31 in progress — 31-01 backend endpoints complete, 31-02 frontend next
-Last activity: 2026-02-22 — 31-01 demand/exposure/trend aggregation endpoints + CSV exports complete
+Plan: 2 of 2 in current phase (31-01 and 31-02 implementation complete)
+Status: Phase 31 implementation done — awaiting human-verify checkpoint (Task 3) before phase sign-off
+Last activity: 2026-02-22 — 31-02 AdminMarketplacePage frontend built and committed; pushed to main for Vercel deploy
 
-Progress: [████████████████████] 52/52 plans (100% through Phase 31-01) | v2.3: 6/7 plans
+Progress: [████████████████████] 53/53 plans (100% through Phase 31-02) | v2.3: 7/7 plans
 
 ## Live URLs
 
@@ -32,6 +32,7 @@ Progress: [████████████████████] 52/52 p
 | Phase-Plan | Duration | Tasks | Files |
 |------------|----------|-------|-------|
 | 31-01 | 2 min | 2 | 1 |
+| 31-02 | 2 min | 2 | 5 |
 
 ## Accumulated Context
 
@@ -59,6 +60,8 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - Phase 31: New `MarketplacePage.tsx` at `/admin/marketplace` — does NOT modify `GapsPage.tsx`. Two new admin endpoints: `GET /api/admin/events/demand` + `/events/exposure`. Build empty state BEFORE data-loading logic (cold-start pitfall). Both endpoints return `data_since` field.
 - [Phase 31]: All 5 marketplace intelligence endpoints added to existing router object — inherits _require_admin, no main.py changes needed
 - [Phase 31]: json_extract boolean comparisons use = 1 not = true — SQLite stores JSON booleans as integers
+- [Phase 31]: Custom downloadMarketplaceCsv helper instead of extending useAdminExport — keeps AdminMarketplacePage self-contained without modifying shared hook ExportSection type
+- [Phase 31]: AdminSidebar slice updated (0,3)/(3+) to (0,4)/(4+) — Marketplace inserted at Analytics index 2, between Searches and Gaps
 
 ### Pending Todos
 
@@ -72,6 +75,6 @@ Decisions are logged in PROJECT.md Key Decisions table.
 ## Session Continuity
 
 Last session: 2026-02-22
-Stopped at: Completed 31-01-PLAN.md (demand/exposure/trend + CSV export endpoints in admin.py)
-Resume signal: N/A
-Resume file: None
+Stopped at: Checkpoint 31-02 Task 3 (human-verify) — AdminMarketplacePage implemented; waiting for visual confirmation at /admin/marketplace
+Resume signal: Type "approved" if all checks pass, or describe any issues found
+Resume file: .planning/phases/31-admin-marketplace-intelligence/31-02-PLAN.md
