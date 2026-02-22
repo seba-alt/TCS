@@ -209,6 +209,6 @@ Plans:
 | 22. Visual Infrastructure | 2/2 | Complete   | 2026-02-22 | - |
 | 23. Discovery Engine | v2.2 | 0/3 | Not started | - |
 | 24. Atomic Index Swap UI | 2/2 | Complete   | 2026-02-22 | - |
-| 25. Admin Intelligence Metrics | v2.2 | 0/2 | Not started | - |
+| 25. Admin Intelligence Metrics | 1/2 | In Progress|  | - |
 | 26. Embedding Heatmap | v2.2 | 0/2 | Not started | - |
 | 27. Newsletter Gate + Easter Egg | v2.2 | 0/3 | Not started | - |

@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-02-22)
 
 ## Current Position
 
-Phase: 24 of 27 (Atomic Index Swap + UI)
-Plan: 24-02 complete (all plans done)
-Status: Phase complete
-Last activity: 2026-02-22 — Phase 24 all plans executed + human verified (IndexPage UI + backend atomics)
+Phase: 25 of 27 (Admin Intelligence Metrics)
+Plan: 25-01 complete (1/2 plans done)
+Status: Wave 1 complete, Wave 2 in progress
+Last activity: 2026-02-22 — Phase 25 plan 01 executed (OTR@K backend + /api/admin/intelligence endpoint)
 
-Progress: [████████████████████] 2/2 plans (100%)
+Progress: [██████████░░░░░░░░░░] 1/2 plans (50%)
 
 ## Live URLs
 
