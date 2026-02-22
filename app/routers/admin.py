@@ -36,7 +36,7 @@ from typing import Optional
 
 import faiss
 from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Request, Security, UploadFile, status
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.security import APIKeyHeader
 from pydantic import BaseModel, Field
 from sqlalchemy import Integer, func, select, update
@@ -427,6 +427,25 @@ def get_intelligence_metrics(request: Request, db: Session = Depends(get_db)):
                 if expert_count_at_rebuild is not None else None
             ),
         },
+    }
+
+
+# ── Embedding map ─────────────────────────────────────────────────────────────
+
+@router.get("/embedding-map")
+def get_embedding_map(request: Request):
+    """
+    Return t-SNE 2D projection of all expert embeddings.
+    Returns HTTP 202 with {status: computing} while background task runs (up to ~30s post-startup).
+    Returns HTTP 200 with {status: ready, points: [...], count: N} when ready.
+    Each point: {x: float, y: float, name: str, category: str, username: str}
+    """
+    if not getattr(request.app.state, "tsne_ready", False):
+        return JSONResponse({"status": "computing"}, status_code=202)
+    return {
+        "status": "ready",
+        "points": request.app.state.embedding_map,
+        "count": len(request.app.state.embedding_map),
     }
 
 
