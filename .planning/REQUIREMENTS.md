@@ -23,7 +23,7 @@ Requirements for milestone v2.2 "Evolved Discovery Engine". Phases continue from
 
 ### DISC — Discovery Engine
 
-- [ ] **DISC-01**: TagMultiSelect replaced with animated interactive tag cloud using Framer Motion layout animations
+- [x] **DISC-01**: TagMultiSelect replaced with animated interactive tag cloud using Framer Motion layout animations
 - [ ] **DISC-02**: Tag cloud items exhibit proximity-based scale increase (claymorphism) on cursor hover/approach
 - [ ] **DISC-03**: "Everything is possible" animated element renders beneath tag cloud with example quirky tags
 - [ ] **DISC-04**: Tag cloud remains keyboard-navigable and aria-labeled (selection behavior unchanged)
@@ -89,7 +89,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CARD-01 | Phase 23 | Pending |
 | CARD-02 | Phase 23 | Pending |
 | CARD-03 | Phase 23 | Pending |
-| DISC-01 | Phase 23 | Pending |
+| DISC-01 | Phase 23 | Complete |
 | DISC-02 | Phase 23 | Pending |
 | DISC-03 | Phase 23 | Pending |
 | DISC-04 | Phase 23 | Pending |

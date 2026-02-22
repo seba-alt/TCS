@@ -52,7 +52,7 @@ See `.planning/milestones/v2.0-ROADMAP.md`
 **Milestone Goal:** Evolve the marketplace from a functional grid into an immersive, high-fidelity discovery engine — aurora aesthetics, glassmorphism depth, animated tag cloud, atomic index management, admin embedding heatmap, and newsletter-gated lead capture.
 
 - [x] **Phase 22: Visual Infrastructure** - Aurora mesh gradient + OKLCH tokens + glassmorphism on all surfaces (completed 2026-02-22)
-- [ ] **Phase 23: Discovery Engine** - Bento ExpertCard redesign + animated claymorphic tag cloud
+- [x] **Phase 23: Discovery Engine** - Bento ExpertCard redesign + animated claymorphic tag cloud (completed 2026-02-22)
 - [x] **Phase 24: Atomic Index Swap UI** - Admin rebuild trigger + status polling frontend (completed 2026-02-22)
 - [x] **Phase 25: Admin Intelligence Metrics** - OTR@K computation + Index Drift display (completed 2026-02-22)
 - [x] **Phase 26: Embedding Heatmap** - t-SNE projection endpoint + admin scatter plot (completed 2026-02-22)
@@ -207,7 +207,7 @@ Plans:
 | 11-13. Steering Panel Phases | v1.2 | Complete | Complete | 2026-02-21 |
 | 14-21. Marketplace Phases | v2.0 | 23/23 | Complete | 2026-02-22 |
 | 22. Visual Infrastructure | 2/2 | Complete   | 2026-02-22 | - |
-| 23. Discovery Engine | v2.2 | 0/3 | Not started | - |
+| 23. Discovery Engine | 3/3 | Complete   | 2026-02-22 | - |
 | 24. Atomic Index Swap UI | 2/2 | Complete   | 2026-02-22 | - |
 | 25. Admin Intelligence Metrics | 2/2 | Complete   | 2026-02-22 | - |
 | 26. Embedding Heatmap | 2/2 | Complete    | 2026-02-22 | - |

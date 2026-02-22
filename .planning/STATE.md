@@ -35,6 +35,7 @@ Progress: [████████████████████] 44/44 p
 | 27-newsletter-gate-easter-egg | 01 | 2min | 3/3 | 5 |
 | 27-newsletter-gate-easter-egg | 02 | 2min | 2/2 | 2 |
 | 27-newsletter-gate-easter-egg | 03 | 12min | 3/3 | 6 |
+| Phase 23-discovery-engine P03 | 5min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -53,6 +54,8 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - [Phase 27-02]: showGate is local boolean state (not derived from pendingProfileUrl) — modal re-arms on next click after dismiss
 - [Phase 27-02]: ProfileGateModal.tsx left in place untouched — no longer used in MarketplacePage but preserved for potential other consumers
 - [Phase 27-03]: Barrel roll uses animate() from motion/react (not motion component) — wrapper div preserves VirtuosoGrid scroll/height. Rotation resets with duration:0 after animation. useSage adds user message to history even for barrel roll (chat continuity). CSV export in LeadsPage uses sessionStorage.getItem('admin_key') matching getAdminKey() helper.
+- [Phase 23-discovery-engine]: TagMultiSelect left in place (not deleted) — MobileFilterSheet may still reference it
+- [Phase 23-discovery-engine]: Domain Tags label updated to text-white/60 for glass surface text consistency (Phase 22 pattern)
 
 ### Pending Todos
 
