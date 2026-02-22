@@ -1,11 +1,10 @@
-// frontend/src/admin/pages/IndexPage.tsx
 import { useIngestStatus } from '../hooks/useAdminData'
 
 const STATUS_CONFIG = {
-  idle:    { label: 'Idle',         cls: 'text-slate-400 bg-slate-700/40 border-slate-600/40' },
-  running: { label: 'Rebuilding\u2026',  cls: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/30 animate-pulse' },
-  done:    { label: 'Complete',     cls: 'text-green-400 bg-green-500/10 border-green-500/30' },
-  error:   { label: 'Failed',       cls: 'text-red-400 bg-red-500/10 border-red-500/30' },
+  idle:    { label: 'Idle',           cls: 'text-slate-400 bg-slate-700/40 border-slate-600/40' },
+  running: { label: 'Rebuilding\u2026', cls: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/30 animate-pulse' },
+  done:    { label: 'Complete',       cls: 'text-green-400 bg-green-500/10 border-green-500/30' },
+  error:   { label: 'Failed',         cls: 'text-red-400 bg-red-500/10 border-red-500/30' },
 } as const
 
 function formatTs(ts: number | null): string {
@@ -13,7 +12,7 @@ function formatTs(ts: number | null): string {
   return new Date(ts * 1000).toLocaleString()
 }
 
-export default function IndexPage() {
+export default function IndexManagementPanel() {
   const { ingest, triggerRun } = useIngestStatus()
   const cfg = STATUS_CONFIG[ingest.status]
 
@@ -22,14 +21,7 @@ export default function IndexPage() {
   }
 
   return (
-    <div className="p-8 space-y-6 max-w-2xl">
-      <div>
-        <h1 className="text-2xl font-bold text-white">Index</h1>
-        <p className="text-slate-500 text-sm mt-1">
-          Rebuild the FAISS expert index. Live search continues uninterrupted during rebuild.
-        </p>
-      </div>
-
+    <div className="space-y-6 max-w-2xl">
       {/* Rebuild Status card */}
       <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl p-5 space-y-4">
         <div className="flex items-center justify-between">

@@ -9,16 +9,13 @@ import AdminApp from './admin/AdminApp.tsx'
 import LoginPage from './admin/LoginPage.tsx'
 import RequireAuth from './admin/RequireAuth.tsx'
 import OverviewPage from './admin/pages/OverviewPage.tsx'
-import SearchesPage from './admin/pages/SearchesPage.tsx'
 import GapsPage from './admin/pages/GapsPage.tsx'
-import ScoreExplainerPage from './admin/pages/ScoreExplainerPage.tsx'
 import LeadsPage from './admin/pages/LeadsPage.tsx'
 import ExpertsPage from './admin/pages/ExpertsPage.tsx'
 import SettingsPage from './admin/pages/SettingsPage.tsx'
-import SearchLabPage from './admin/pages/SearchLabPage.tsx'
 import IntelligenceDashboardPage from './admin/pages/IntelligenceDashboardPage.tsx'
-import IndexPage from './admin/pages/IndexPage.tsx'
-import AdminMarketplacePage from './admin/pages/AdminMarketplacePage.tsx'
+import ToolsPage from './admin/pages/ToolsPage.tsx'
+import DataPage from './admin/pages/DataPage.tsx'
 
 const router = createBrowserRouter([
   {
@@ -45,16 +42,20 @@ const router = createBrowserRouter([
         element: <AdminApp />,
         children: [
           { index: true, element: <OverviewPage /> },
-          { path: 'searches', element: <SearchesPage /> },
           { path: 'gaps', element: <GapsPage /> },
-          { path: 'score-explainer', element: <ScoreExplainerPage /> },
           { path: 'leads', element: <LeadsPage /> },
           { path: 'experts', element: <ExpertsPage /> },
           { path: 'settings', element: <SettingsPage /> },
-          { path: 'search-lab', element: <SearchLabPage /> },
           { path: 'intelligence', element: <IntelligenceDashboardPage /> },
-          { path: 'index', element: <IndexPage /> },
-          { path: 'marketplace', element: <AdminMarketplacePage /> },
+          // New consolidated pages
+          { path: 'tools', element: <ToolsPage /> },
+          { path: 'data',  element: <DataPage /> },
+          // Redirects from old standalone URLs
+          { path: 'search-lab',      element: <Navigate to="/admin/tools" replace /> },
+          { path: 'score-explainer', element: <Navigate to="/admin/tools" replace /> },
+          { path: 'index',           element: <Navigate to="/admin/tools" replace /> },
+          { path: 'searches',        element: <Navigate to="/admin/data" replace /> },
+          { path: 'marketplace',     element: <Navigate to="/admin/data" replace /> },
         ],
       },
     ],
