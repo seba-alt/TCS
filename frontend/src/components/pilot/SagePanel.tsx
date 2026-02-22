@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { motion } from 'motion/react'
 import { X } from 'lucide-react'
 import { useExplorerStore } from '../../store'
@@ -7,12 +7,13 @@ import { SageMessage } from './SageMessage'
 import { SageInput } from './SageInput'
 
 // Greeting shown when conversation is empty (first open)
-const SAGE_GREETING = "Hi! I'm Sage. Tell me what kind of expert you're looking for and I'll update the results for you."
+const SAGE_GREETING = "Hey! I'm Sage — tell me what kind of expert you need and I'll find the right people."
 
 export function SagePanel() {
   const setOpen = useExplorerStore((s) => s.setOpen)
   const { messages, isStreaming, handleSend } = useSage()
   const scrollRef = useRef<HTMLDivElement>(null)
+  const [panelGlow, setPanelGlow] = useState(false)
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -20,6 +21,17 @@ export function SagePanel() {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight
     }
   }, [messages, isStreaming])
+
+  // Panel border glow when Sage finishes responding (FAB is hidden while panel is open)
+  const prevStreamingRef = useRef(isStreaming)
+  useEffect(() => {
+    if (prevStreamingRef.current === true && isStreaming === false) {
+      setPanelGlow(true)
+      const t = setTimeout(() => setPanelGlow(false), 1500)
+      return () => clearTimeout(t)
+    }
+    prevStreamingRef.current = isStreaming
+  }, [isStreaming])
 
   return (
     <motion.div
@@ -29,6 +41,15 @@ export function SagePanel() {
       transition={{ type: 'spring', stiffness: 300, damping: 28 }}
       className="fixed bottom-6 right-6 z-40 pointer-events-none"
     >
+      <motion.div
+        animate={{
+          boxShadow: panelGlow
+            ? '0 0 28px 8px rgba(139, 92, 246, 0.5)'
+            : '0 0 0px 0px rgba(139, 92, 246, 0)',
+        }}
+        transition={{ duration: 0.4, ease: 'easeOut' }}
+        className="rounded-2xl"
+      >
       <div
         className="pointer-events-auto w-[380px] rounded-2xl border border-white/10 shadow-2xl flex flex-col overflow-hidden"
         style={{
@@ -82,6 +103,7 @@ export function SagePanel() {
           <SageInput onSend={handleSend} disabled={isStreaming} />
         </div>
       </div>
+      </motion.div>
     </motion.div>
   )
 }
