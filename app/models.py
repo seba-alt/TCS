@@ -6,7 +6,7 @@ Email is required — the chat endpoint enforces this at request validation time
 """
 import datetime
 
-from sqlalchemy import Boolean, DateTime, Float, String, Text
+from sqlalchemy import Boolean, DateTime, Float, Index, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -120,6 +120,28 @@ class NewsletterSubscriber(Base):
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     email: Mapped[str] = mapped_column(String(320), unique=True, nullable=False, index=True)
     source: Mapped[str] = mapped_column(String(50), nullable=False, default="gate")
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime, default=datetime.datetime.utcnow, nullable=False
+    )
+
+
+class UserEvent(Base):
+    """
+    Records user behavior events for marketplace intelligence (Phase 30).
+    event_type allowlist: card_click, sage_query, filter_change.
+    Auto-created by Base.metadata.create_all at startup — no migration needed.
+    Composite index on (event_type, created_at) for Phase 31 aggregation queries.
+    """
+    __tablename__ = "user_events"
+    __table_args__ = (
+        Index("ix_user_events_type_created", "event_type", "created_at"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    session_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    event_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    # payload: JSON blob — shape varies by event_type (see events.py for schema)
+    payload: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
     created_at: Mapped[datetime.datetime] = mapped_column(
         DateTime, default=datetime.datetime.utcnow, nullable=False
     )
