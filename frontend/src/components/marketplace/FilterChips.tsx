@@ -1,4 +1,6 @@
+import { motion } from 'motion/react'
 import { useFilterSlice, useResultsSlice } from '../../store'
+import { useExplorerStore } from '../../store'
 
 const DEFAULT_RATE_MIN = 0
 const DEFAULT_RATE_MAX = 5000
@@ -12,6 +14,7 @@ export function FilterChips() {
   const { query, rateMin, rateMax, tags, setQuery, setRateRange, toggleTag, resetFilters } =
     useFilterSlice()
   const { total } = useResultsSlice()
+  const sageMode = useExplorerStore((s) => s.sageMode)
 
   const chips: Chip[] = []
 
@@ -35,6 +38,16 @@ export function FilterChips() {
 
   return (
     <div className="flex items-center gap-2 flex-wrap px-4 py-2 border-b border-gray-100">
+      {/* Sage mode indicator — fades in/out with opacity transition */}
+      <motion.img
+        src="/icon.png"
+        alt="Sage results"
+        animate={{ opacity: sageMode ? 1 : 0 }}
+        transition={{ duration: 0.3 }}
+        className="w-4 h-4 object-contain"
+        style={{ pointerEvents: 'none' }}
+      />
+
       <span className="text-sm text-gray-500 shrink-0">{total} experts found</span>
 
       {chips.map((chip) => (
