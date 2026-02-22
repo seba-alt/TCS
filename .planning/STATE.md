@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-02-22)
 
 ## Current Position
 
-Phase: 32 of 32+ (Sage Direct Search) — IN PROGRESS
-Plan: 2 of 3 in current phase (32-01 and 32-02 complete)
-Status: 32-02 complete — sageMode state machine wired; Sage discovery results inject directly into grid without polluting search bar
-Last activity: 2026-02-22 — 32-02 complete
+Phase: 32 of 32+ (Sage Direct Search) — COMPLETE
+Plan: 3 of 3 in current phase (32-01, 32-02, and 32-03 complete)
+Status: 32-03 complete — Sage UX layer, result count fix, and explore race condition fix deployed
+Last activity: 2026-02-22 — 32-03 complete
 
-Progress: [████████████████████] 55/56 plans | v2.4 in progress
+Progress: [████████████████████] 56/56 plans | v2.4 complete
 
 ## Live URLs
 
@@ -35,7 +35,7 @@ Progress: [████████████████████] 55/56 p
 | 31-02 | 2 min | 3 | 5 |
 | 32-01 | 3 min | 1 | 1 |
 | 32-02 | 3 min | 2 | 5 |
-| Phase 32 P03 | 12 | 2 tasks | 4 files |
+| Phase 32 P03 | 25 | 4 tasks (2 planned + 2 bug fixes) | 6 files |
 
 ## Accumulated Context
 
@@ -76,8 +76,13 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - setSortBy intentionally does NOT call setSageMode(false) — sorting Sage results is valid without exiting sage mode
 - useExplore guard is the FIRST statement in useEffect (before abort/setLoading) to prevent loading flash
 - store.setLoading(false) called before store.setResults in useSage to avoid skeleton flash from mid-flight prior fetch
-- [Phase 32-03]: motion.img always in DOM with animate={{ opacity }} for smooth sage icon fade — avoids abrupt conditional render
-- [Phase 32-03]: Sage confirmation handlers call setQuery/setRateRange directly — setSageMode(false) fires internally via filterSlice, no double-calling
+
+**Phase 32-03 key decisions:**
+- motion.img always in DOM with animate={{ opacity }} for smooth sage icon fade — avoids abrupt conditional render
+- Sage confirmation handlers call setQuery/setRateRange directly — setSageMode(false) fires internally via filterSlice, no double-calling
+- total = len(scored) for text queries — pre-filter pool (len(filtered_experts)) is the full DB when no rate/tag filters active; only scored experts are meaningful results
+- Pure filter mode total = len(filtered_experts) — all filtered experts ARE the results there, no FAISS/BM25 scoring
+- Abort controllerRef.current when sageMode becomes true — previous guard prevented new fetch but mid-flight .then() still called setResults(), overwriting sage results
 
 ### Pending Todos
 
@@ -91,5 +96,5 @@ None active.
 ## Session Continuity
 
 Last session: 2026-02-22
-Stopped at: Completed 32-02-PLAN.md — sageMode state machine fully wired across store, hooks
-Resume signal: Continue with 32-03-PLAN.md (UI affordances for sage mode)
+Stopped at: Completed 32-03-PLAN.md — Phase 32 Sage Direct Search fully complete
+Resume signal: Phase 32 complete. Plan next phase.
