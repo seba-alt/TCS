@@ -160,7 +160,7 @@ Plans:
   2. The admin Intelligence tab displays a scatter plot within 30 seconds of app startup, with points colored by expert category
   3. Hovering a scatter plot point shows the expert's name in a tooltip
   4. After an admin triggers an index rebuild (Phase 24), the scatter plot recomputes and updates to reflect the new index
-**Plans**: TBD
+**Plans**: 2 plans
 
 **Planning notes (from research):**
 - CRITICAL: t-SNE `fit_transform` MUST run post-yield via `asyncio.create_task(_compute_tsne_background(app))` — placing it above the `yield` in FastAPI lifespan blocks Railway healthcheck and causes infinite restart loop
@@ -171,8 +171,8 @@ Plans:
 - Add `scikit-learn==1.8.0` and `scipy==1.15.1` to requirements.txt; use `max_iter` (not `n_iter` — removed in sklearn 1.7)
 
 Plans:
-- [ ] 26-01: TBD
-- [ ] 26-02: TBD
+- [ ] 26-01-PLAN.md — Backend: scikit-learn + scipy deps, _compute_tsne_background coroutine (post-yield), GET /api/admin/embedding-map endpoint with 202 guard
+- [ ] 26-02-PLAN.md — Frontend: recharts install, EmbeddingPoint types, useEmbeddingMap polling hook, ScatterChart with jewel-tone category colors in IntelligenceDashboardPage; human visual verification
 
 ### Phase 27: Newsletter Gate + Easter Egg
 **Goal**: The email gate is redesigned as a newsletter subscription CTA with value-exchange framing, subscription state persists via Zustand, admins can see subscriber counts and lists, and users who type playful queries trigger a delightful barrel roll animation.
