@@ -35,21 +35,21 @@ function FilterControls() {
   return (
     <div className="flex flex-col gap-4 overflow-y-auto flex-1 py-3">
       <div className="flex flex-col gap-1.5 px-4">
-        <span className="text-xs font-medium text-gray-500 uppercase">Search</span>
+        <span className="text-xs font-medium text-white/60 uppercase">Search</span>
         <SearchInput />
       </div>
       <div className="flex flex-col gap-1.5 px-4">
-        <span className="text-xs font-medium text-gray-500 uppercase">Hourly Rate</span>
+        <span className="text-xs font-medium text-white/60 uppercase">Hourly Rate</span>
         <RateSlider />
       </div>
       <div className="flex flex-col gap-1.5 px-4">
-        <span className="text-xs font-medium text-gray-500 uppercase">Domain Tags</span>
+        <span className="text-xs font-medium text-white/60 uppercase">Domain Tags</span>
         <TagMultiSelect />
       </div>
-      <div className="px-4 pt-2 border-t border-gray-100">
+      <div className="px-4 pt-2 border-t border-white/10">
         <button
           onClick={handleCopyLink}
-          className="w-full text-xs text-gray-500 flex items-center justify-center gap-1.5 py-2 hover:text-brand-purple transition-colors"
+          className="w-full text-xs text-white/50 flex items-center justify-center gap-1.5 py-2 hover:text-brand-purple transition-colors"
         >
           <Link size={12} />
           {copied ? 'Copied!' : 'Copy link'}
@@ -67,7 +67,7 @@ export function FilterSidebar() {
       className={`
         hidden md:flex flex-col
         sticky top-0 h-screen
-        bg-gray-50 border-r border-gray-200
+        glass-surface border-r border-[var(--glass-border)]
         transition-all duration-200
         ${collapsed ? 'w-16' : 'w-64'}
       `}
@@ -75,7 +75,7 @@ export function FilterSidebar() {
       {/* Toggle button */}
       <button
         onClick={() => setCollapsed((c) => !c)}
-        className="flex items-center justify-center h-10 w-full border-b border-gray-200"
+        className="flex items-center justify-center h-10 w-full border-b border-white/10"
         aria-label={collapsed ? 'Expand filters' : 'Collapse filters'}
       >
         {collapsed ? <PanelRightOpen size={18} /> : <PanelLeftClose size={18} />}

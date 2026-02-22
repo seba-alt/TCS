@@ -5,6 +5,7 @@ import { useExplorerStore, useFilterSlice } from '../store'
 import { useExplore } from '../hooks/useExplore'
 import { useUrlSync } from '../hooks/useUrlSync'
 import { useEmailGate } from '../hooks/useEmailGate'
+import { AuroraBackground } from '../components/AuroraBackground'
 import { FilterSidebar } from '../components/sidebar/FilterSidebar'
 import { FilterChips } from '../components/marketplace/FilterChips'
 import { ExpertGrid } from '../components/marketplace/ExpertGrid'
@@ -65,7 +66,9 @@ export default function MarketplacePage() {
 
   return (
     // CRITICAL: No overflow wrapper around FilterSidebar — sticky fails with ancestor overflow (Pitfall 1)
-    <div className="flex min-h-screen bg-white">
+    // AuroraBackground renders relative min-h-screen wrapper — does NOT add overflow:hidden
+    <AuroraBackground>
+    <div className="flex min-h-screen">
       {/* Desktop sticky sidebar — hidden on mobile */}
       <FilterSidebar />
 
@@ -143,5 +146,6 @@ export default function MarketplacePage() {
         )}
       </AnimatePresence>
     </div>
+    </AuroraBackground>
   )
 }
