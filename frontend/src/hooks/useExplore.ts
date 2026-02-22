@@ -82,7 +82,7 @@ export function useExplore() {
     setFetchingMore(true)
     try {
       const params = new URLSearchParams()
-      if (query) params.set('q', query)
+      if (query) params.set('query', query)
       params.set('rate_min', String(rateMin))
       params.set('rate_max', String(rateMax))
       tags.forEach((t) => params.append('tags', t))

@@ -1,7 +1,7 @@
 import { useFilterSlice, useResultsSlice } from '../../store'
 
 const DEFAULT_RATE_MIN = 0
-const DEFAULT_RATE_MAX = 2000
+const DEFAULT_RATE_MAX = 5000
 
 interface Chip {
   label: string

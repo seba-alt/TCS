@@ -24,7 +24,7 @@ export function RateSlider() {
       <Slider.Root
         className="relative flex items-center select-none touch-none w-full h-5"
         min={0}
-        max={2000}
+        max={5000}
         step={10}
         minStepsBetweenThumbs={1}
         value={localValue}

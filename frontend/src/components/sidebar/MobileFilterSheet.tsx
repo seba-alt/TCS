@@ -1,40 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Drawer } from 'vaul'
 import { useExplorerStore } from '../../store'
-
-// Top-30 tags — same list as TagMultiSelect (staged draft version for mobile)
-const TOP_TAGS = [
-  'fundraising',
-  'real estate',
-  'entrepreneurship',
-  'digital marketing',
-  'marketing strategy',
-  'saas',
-  'digital transformation',
-  'go-to-market strategy',
-  'brand strategy',
-  'venture capital',
-  'artificial intelligence',
-  'supply chain',
-  'business development',
-  'private equity',
-  'change management',
-  'business scaling',
-  'sales strategy',
-  'mergers & acquisitions',
-  'web development',
-  'product development',
-  'e-commerce',
-  'ai strategy',
-  'corporate finance',
-  'event management',
-  'growth marketing',
-  'process optimization',
-  'startup scaling',
-  'commercial strategy',
-  'leadership coaching',
-  'financial planning',
-]
+import { TOP_TAGS } from '../../constants/tags'
 
 interface Draft {
   query: string
@@ -50,7 +17,7 @@ interface MobileFilterSheetProps {
 
 export function MobileFilterSheet({ open, onClose }: MobileFilterSheetProps) {
   const [snap, setSnap] = useState<number | string | null>(0.5)
-  const [draft, setDraft] = useState<Draft>({ query: '', rateMin: 0, rateMax: 2000, tags: [] })
+  const [draft, setDraft] = useState<Draft>({ query: '', rateMin: 0, rateMax: 5000, tags: [] })
   const [tagSearch, setTagSearch] = useState('')
 
   // Initialize draft from store when sheet opens
@@ -150,7 +117,7 @@ export function MobileFilterSheet({ open, onClose }: MobileFilterSheetProps) {
                 <input
                   type="number"
                   min={0}
-                  max={2000}
+                  max={5000}
                   value={draft.rateMin}
                   onChange={(e) => setDraft((d) => ({ ...d, rateMin: Number(e.target.value) }))}
                   className="w-full text-sm border border-gray-300 rounded-md px-2 py-1.5"
@@ -159,7 +126,7 @@ export function MobileFilterSheet({ open, onClose }: MobileFilterSheetProps) {
                 <input
                   type="number"
                   min={0}
-                  max={2000}
+                  max={5000}
                   value={draft.rateMax}
                   onChange={(e) => setDraft((d) => ({ ...d, rateMax: Number(e.target.value) }))}
                   className="w-full text-sm border border-gray-300 rounded-md px-2 py-1.5"
