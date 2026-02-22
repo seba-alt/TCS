@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite'
+import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import { sentryVitePlugin } from "@sentry/vite-plugin"
 
@@ -13,4 +13,8 @@ export default defineConfig({
       disable: !process.env.SENTRY_AUTH_TOKEN, // skip in local dev
     }),
   ],
+  test: {
+    environment: 'node',
+    globals: true,
+  },
 })
