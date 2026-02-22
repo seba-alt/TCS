@@ -170,9 +170,9 @@ Plans:
 - Frontend: Recharts `ScatterChart` — points colored by category, hover tooltips with expert name
 - Add `scikit-learn==1.8.0` and `scipy==1.15.1` to requirements.txt; use `max_iter` (not `n_iter` — removed in sklearn 1.7)
 
-Plans:
-- [ ] 26-01-PLAN.md — Backend: scikit-learn + scipy deps, _compute_tsne_background coroutine (post-yield), GET /api/admin/embedding-map endpoint with 202 guard
-- [ ] 26-02-PLAN.md — Frontend: recharts install, EmbeddingPoint types, useEmbeddingMap polling hook, ScatterChart with jewel-tone category colors in IntelligenceDashboardPage; human visual verification
+Plans: 2/2 complete
+- [x] 26-01-PLAN.md — Backend: scikit-learn + scipy deps, _compute_tsne_background coroutine (post-yield), GET /api/admin/embedding-map endpoint with 202 guard
+- [x] 26-02-PLAN.md — Frontend: recharts install, EmbeddingPoint types, useEmbeddingMap polling hook, ScatterChart with jewel-tone category colors in IntelligenceDashboardPage; human visual verification
 
 ### Phase 27: Newsletter Gate + Easter Egg
 **Goal**: The email gate is redesigned as a newsletter subscription CTA with value-exchange framing, subscription state persists via Zustand, admins can see subscriber counts and lists, and users who type playful queries trigger a delightful barrel roll animation.
