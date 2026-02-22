@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-22)
 ## Current Position
 
 Phase: 27 of 27 (Newsletter / Next Phase)
-Plan: 27-02 complete — advancing to 27-03
+Plan: 27-03 tasks 1-2 complete — at checkpoint:human-verify (Task 3)
 Status: Active
-Last activity: 2026-02-22 — Phase 27-02 completed: NewsletterGateModal, MarketplacePage gate migration to useNltrStore; human verification auto-approved
+Last activity: 2026-02-22 — Phase 27-03 Tasks 1-2 completed: barrel roll easter egg, admin newsletter subscriber view
 
 Progress: [████████████████████] 44/44 plans (100%)
 
@@ -34,6 +34,7 @@ Progress: [████████████████████] 44/44 p
 | 26-embedding-heatmap | 02 | 20min | 3/3 | 5 |
 | 27-newsletter-gate-easter-egg | 01 | 2min | 3/3 | 5 |
 | 27-newsletter-gate-easter-egg | 02 | 2min | 2/2 | 2 |
+| 27-newsletter-gate-easter-egg | 03 | 12min | 2/3 | 6 |
 
 ## Accumulated Context
 
@@ -51,6 +52,7 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - Phase 27: `useNltrStore` with persist key `'tinrate-newsletter-v1'`. Do NOT modify `useExplorerStore` or its `partialize`. `localStorage['tcs_email_unlocked']` bypass is unchanged. Barrel roll on VirtuosoGrid container (not ExpertCards).
 - [Phase 27-02]: showGate is local boolean state (not derived from pendingProfileUrl) — modal re-arms on next click after dismiss
 - [Phase 27-02]: ProfileGateModal.tsx left in place untouched — no longer used in MarketplacePage but preserved for potential other consumers
+- [Phase 27-03]: Barrel roll uses animate() from motion/react (not motion component) — wrapper div preserves VirtuosoGrid scroll/height. Rotation resets with duration:0 after animation. useSage adds user message to history even for barrel roll (chat continuity). CSV export in LeadsPage uses sessionStorage.getItem('admin_key') matching getAdminKey() helper.
 
 ### Pending Todos
 
@@ -66,6 +68,6 @@ Decisions are logged in PROJECT.md Key Decisions table.
 ## Session Continuity
 
 Last session: 2026-02-22
-Stopped at: Completed 27-02-PLAN.md — checkpoint:human-verify auto-approved; ready for 27-03
-Resume signal: N/A — proceeding to 27-03-PLAN.md
+Stopped at: Completed 27-03 tasks 1-2 — at checkpoint:human-verify (Task 3 — visual verification of barrel roll and admin newsletter subscriber view)
+Resume signal: Type "approved" or describe issues found
 Resume file: None
