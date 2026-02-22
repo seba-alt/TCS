@@ -88,4 +88,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-02-22*
-*Last updated: 2026-02-22 after initial v2.3 definition*
+*Last updated: 2026-02-22 — traceability finalized after roadmap creation (Phases 28-31)*

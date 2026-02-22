@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-22)
 
 **Core value:** A user describes any problem and instantly gets expertly matched professionals they can browse, filter, and contact — no searching, no guesswork.
-**Current focus:** v2.3 — Sage Evolution & Marketplace Intelligence
+**Current focus:** v2.3 — Sage Evolution & Marketplace Intelligence (Phase 28 ready to plan)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-02-22 — Milestone v2.3 started
+Phase: 28 of 31 (Sage Search Engine)
+Plan: 0 of 2 in current phase
+Status: Ready to plan
+Last activity: 2026-02-22 — v2.3 roadmap created (Phases 28-31)
 
-Progress: [████████████████████] 44/44 plans (100%)
+Progress: [████████████████████] 44/44 plans (100% through v2.2) | v2.3: 0/7 plans
 
 ## Live URLs
 
@@ -26,16 +26,8 @@ Progress: [████████████████████] 44/44 p
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 56 (phases 1-21 + 26-01 + 26-02)
+- Total plans completed: 44 (through v2.2)
 - Average duration: ~15 min
-
-| Phase | Plan | Duration | Tasks | Files |
-|-------|------|----------|-------|-------|
-| 26-embedding-heatmap | 02 | 20min | 3/3 | 5 |
-| 27-newsletter-gate-easter-egg | 01 | 2min | 3/3 | 5 |
-| 27-newsletter-gate-easter-egg | 02 | 2min | 2/2 | 2 |
-| 27-newsletter-gate-easter-egg | 03 | 12min | 3/3 | 6 |
-| Phase 23-discovery-engine P03 | 5min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -43,34 +35,27 @@ Progress: [████████████████████] 44/44 p
 
 Decisions are logged in PROJECT.md Key Decisions table.
 
-**v2.2 critical constraints (encode in every phase plan):**
-- Phase 22: Glassmorphism uses `before:` pseudo-element hack — do NOT apply backdrop-filter to overflow:hidden containers. Start with ancestor audit. OKLCH tokens as CSS custom properties only (not Tailwind JS config).
-- Phase 23: Tag cloud limit to top 30 tags. Proximity scale via `useMotionValue`+`useTransform`+`useSpring` (never useState). ExpertCard has NO Framer Motion import — CSS hover only (Phase 17 decision). Bento card preserves `h-[180px]`.
-- Phase 24: Frontend-only. Backend swap already in admin.py `_run_ingest_job`. Extend `_ingest` dict with `last_rebuild_at` + `expert_count_at_rebuild`. Add `asyncio.Lock` for double-rebuild OOM prevention.
-- Phase 25: OTR@K computed post `scored.sort()` in `run_explore()`. `ALTER TABLE conversations ADD COLUMN otr_at_k REAL` via inline migration. Admin-only metric — not in public ExploreResponse.
-- Phase 26: t-SNE MUST run post-yield via `asyncio.create_task` — NEVER above yield (Railway healthcheck failure). PCA(50) then TSNE(perplexity=30, max_iter=1000, init='pca', random_state=42, metric='cosine'). Cache in `app.state.embedding_map`.
-- Phase 26-02: Use raw fetch (not adminFetch) for 202-polling because adminFetch throws on non-ok status codes. recharts@3.7.0 requires react-is explicit install for Vite/Rollup. One <Scatter> per category for recharts Legend support.
-- Phase 27: `useNltrStore` with persist key `'tinrate-newsletter-v1'`. Do NOT modify `useExplorerStore` or its `partialize`. `localStorage['tcs_email_unlocked']` bypass is unchanged. Barrel roll on VirtuosoGrid container (not ExpertCards).
-- [Phase 27-02]: showGate is local boolean state (not derived from pendingProfileUrl) — modal re-arms on next click after dismiss
-- [Phase 27-02]: ProfileGateModal.tsx left in place untouched — no longer used in MarketplacePage but preserved for potential other consumers
-- [Phase 27-03]: Barrel roll uses animate() from motion/react (not motion component) — wrapper div preserves VirtuosoGrid scroll/height. Rotation resets with duration:0 after animation. useSage adds user message to history even for barrel roll (chat continuity). CSV export in LeadsPage uses sessionStorage.getItem('admin_key') matching getAdminKey() helper.
-- [Phase 23-discovery-engine]: TagMultiSelect left in place (not deleted) — MobileFilterSheet may still reference it
-- [Phase 23-discovery-engine]: Domain Tags label updated to text-white/60 for glass surface text consistency (Phase 22 pattern)
+**v2.3 critical constraints (encode in every phase plan):**
+- Phase 28: `search_experts` calls `run_explore()` via direct Python import — NOT HTTP self-call. `pilot.py` injects `db` + `app_state`. Sage dispatches to `filterSlice` via `validateAndApplyFilters()` for grid sync — NEVER calls `setResults` directly. Function descriptions MUST be mutually exclusive. Test 20 real queries from `conversations` table; assert `fn_call.name` in Railway logs before ship.
+- Phase 29: System prompt rewrite in `pilot_service.py` — one-file change, instant rollback. Outer `motion.div` for `boxShadow` animation ONLY; inner `motion.button` retains `whileHover`/`whileTap` scale — never animate `scale` on the wrapper.
+- Phase 30: `UserEvent` is a NEW table — `create_all` handles it safely, no `ALTER TABLE` needed. `trackEvent()` is a module function (not a hook) using `fetch` with `keepalive: true` — NEVER `await` in click path. Filter tracking debounced 1000ms; rate slider on drag-end only. Verify table creation in Railway logs within 60s of first deploy.
+- Phase 31: New `MarketplacePage.tsx` at `/admin/marketplace` — does NOT modify `GapsPage.tsx`. Two new admin endpoints: `GET /api/admin/events/demand` + `/events/exposure`. Build empty state BEFORE data-loading logic (cold-start pitfall). Both endpoints return `data_since` field.
 
 ### Pending Todos
 
 - Set `ALLOWED_ORIGINS=https://tcs-three-sigma.vercel.app` in Railway environment variables (carried over from v1.1)
 - Verify FTS5 availability on Railway SQLite at startup
-- Before Phase 23: confirm framer-motion import path (`cat frontend/package.json | grep -i motion`)
-- Before Phase 27: confirm exact localStorage key name from `frontend/src/hooks/useEmailGate.ts`
+- Before Phase 28: confirm `run_explore()` import path in `pilot_service.py`
+- Before Phase 30: confirm `onViewProfile` handler location in `ExpertCard.tsx` for tracking injection point
 
 ### Blockers/Concerns
 
-- Phase 23 medium confidence: proximity scale pattern confirmed but no v12-specific tag cloud example exists. Phase spec must include exact `useMotionValue`/`useTransform` code to prevent useState temptation.
+- Phase 28 medium confidence: Gemini function routing between `search_experts` and `apply_filters` requires empirical validation. Budget one iteration of description tuning after the 20-query test.
+- Phase 30: Confirm `conversations.response_experts` column existence before relying on it for Phase 31 exposure backfill.
 
 ## Session Continuity
 
 Last session: 2026-02-22
-Stopped at: v2.2 milestone archived — ready for /gsd:new-milestone
+Stopped at: v2.3 roadmap created — Phases 28-31 defined, ready to plan Phase 28
 Resume signal: N/A
 Resume file: None

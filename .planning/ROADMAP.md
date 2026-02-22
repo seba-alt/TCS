@@ -7,6 +7,7 @@
 - [x] **v1.2 Intelligence Activation & Steering Panel** - Phases 11-13 (shipped 2026-02-21)
 - [x] **v2.0 Extreme Semantic Explorer** - Phases 14-21 (shipped 2026-02-22)
 - [x] **v2.2 Evolved Discovery Engine** - Phases 22-27 (shipped 2026-02-22)
+- [ ] **v2.3 Sage Evolution & Marketplace Intelligence** - Phases 28-31 (in progress)
 
 ## Phases
 
@@ -61,6 +62,107 @@ See `.planning/milestones/v2.2-ROADMAP.md`
 
 </details>
 
+### v2.3 Sage Evolution & Marketplace Intelligence (In Progress)
+
+**Milestone Goal:** Evolve Sage from a filter adjuster into an active search engine with full personality, instrument user behavior across the marketplace, and surface demand and exposure signals in a new admin intelligence page.
+
+- [ ] **Phase 28: Sage Search Engine** - Add `search_experts` Gemini function; Sage finds experts, narrates results, syncs main grid
+- [ ] **Phase 29: Sage Personality + FAB Reactions** - Rewrite system prompt for warmer/wittier tone; animated FAB boxShadow pulse on activity
+- [ ] **Phase 30: Behavior Tracking** - `UserEvent` DB model + `POST /api/events` backend + frontend `trackEvent()` instrumentation for card clicks, Sage queries, and filter changes
+- [ ] **Phase 31: Admin Marketplace Intelligence** - New `/admin/marketplace` page showing unmet demand, expert exposure, daily Sage trend, and cold-start empty state
+
+## Phase Details
+
+### Phase 28: Sage Search Engine
+**Goal**: Sage can actively find experts by calling `/api/explore` in-process, narrate results in the panel, and sync the main expert grid
+**Depends on**: Phase 27 (v2.2 shipped system)
+**Requirements**: SAGE-01, SAGE-02, SAGE-03, SAGE-04
+**Success Criteria** (what must be TRUE):
+  1. User asks Sage "find me fintech experts" and sees matching experts appear in the main grid without touching any filter
+  2. Sage responds with a natural-language summary ("I found 8 fintech experts who...") after every search — the grid never updates silently
+  3. When a Sage search returns zero results, Sage acknowledges it explicitly and either suggests an alternative or asks a clarifying question
+  4. Gemini correctly routes browsing-refinement queries to `apply_filters` and discovery queries to `search_experts` across 20 real test queries (verified in Railway logs before ship)
+**Plans**: TBD
+
+**Architecture notes (encode in plan):**
+- `search_experts` calls `run_explore()` via direct Python import in `pilot_service.py` — NOT an HTTP self-call to `/api/explore`
+- `pilot.py` router injects `db: Session = Depends(get_db)` and `app_state = request.app.state` into `run_pilot()`
+- Grid sync: `useSage` calls `validateAndApplyFilters(data.filters)` which updates `filterSlice` and triggers `useExplore` reactive re-fetch — NEVER calls `setResults` directly
+- `pilotSlice.PilotMessage` gains `experts?: Expert[]` for panel display; `resultsSlice` is NEVER written by `useSage`
+- Function descriptions must be mutually exclusive: `apply_filters` = "narrow or refine current results"; `search_experts` = "discover experts, find me X, who can help with Y"
+- `fn_call.args` is a protobuf Struct — wrap in `dict()` before use
+- Test 20 real queries from `conversations` table; assert `fn_call.name` in logs before shipping
+
+Plans:
+- [ ] 28-01: Backend — `search_experts` FunctionDeclaration + `run_explore()` in-process call in `pilot_service.py`
+- [ ] 28-02: Frontend — `useSage` dual-function dispatch, grid sync via `validateAndApplyFilters`, zero-result handling
+
+### Phase 29: Sage Personality + FAB Reactions
+**Goal**: Sage speaks with a warmer, wittier voice and the FAB pulses/glows on user activity
+**Depends on**: Phase 27 (independent of Phase 28 — can ship in either order)
+**Requirements**: SAGE-05, FAB-01
+**Success Criteria** (what must be TRUE):
+  1. Sage responses use contractions, warm language, and concise result summaries — no clinical filter-confirm tone
+  2. Sage asks at most one clarifying question per conversation; after the user replies to any question, Sage always calls a function (never asks a second question)
+  3. The Sage FAB displays a visible boxShadow pulse/glow animation in response to user activity
+  4. FAB hover (scale up) and tap (scale down) gestures continue to work without conflict alongside the glow animation
+**Plans**: TBD
+
+**Architecture notes (encode in plan):**
+- System prompt rewrite lives entirely in `pilot_service.py` — one-file change, instant rollback via `git push`
+- Hard-limit in system prompt: "You may ask at most ONE clarifying question per conversation. After the user responds to any question, always call a function."
+- FAB animation: outer `motion.div` animates `boxShadow` ONLY; inner `motion.button` retains `whileHover={{ scale: 1.05 }}` and `whileTap={{ scale: 0.95 }}` — NEVER animate `scale` on the wrapper div
+
+Plans:
+- [ ] 29-01: System prompt rewrite + FAB animated `motion.div` wrapper
+
+### Phase 30: Behavior Tracking
+**Goal**: Expert card clicks, Sage query interactions, and filter changes are durably recorded in the database without blocking any user interaction
+**Depends on**: Phase 28 (Sage must exist to emit `sage_query` events; card tracking is independent but grouped here)
+**Requirements**: TRACK-01, TRACK-02, TRACK-03
+**Success Criteria** (what must be TRUE):
+  1. Clicking an expert card in the grid or Sage panel records a `card_click` event in the DB with expert ID, timestamp, and context (grid vs sage_panel) — the profile gate opens without any perceptible delay
+  2. Each Sage interaction records a `sage_query` event with query text, which function was called, and result count — emitted after the pilot response, never before
+  3. Settling a filter (rate slider released, tag selected) records a `filter_change` event — exactly one event per settled change, not per slider tick
+  4. The `POST /api/events` endpoint returns 202, requires no authentication, and rejects unknown `event_type` values with 422
+**Plans**: TBD
+
+**Architecture notes (encode in plan):**
+- `UserEvent` SQLAlchemy model is a NEW table — `Base.metadata.create_all()` handles creation safely; no `ALTER TABLE` needed
+- Event types allowlist: `card_click`, `sage_query`, `filter_change` — Pydantic validation rejects arbitrary strings with 422
+- Frontend: `tracking.ts` exports `trackEvent()` as a module function (not a hook); uses `fetch` with `keepalive: true`; ALWAYS `void fetch(...)` — NEVER `await` in click path
+- Filter tracking: debounced 1000ms after settled state; rate slider tracks on `onMouseUp`/`onTouchEnd` only — not per pixel of movement
+- `useSage` emits `sage_query` with explicit `function_called` field from `PilotResponse` (not inferred from `data.filters` presence)
+- Composite index on `(event_type, created_at)` in `UserEvent` model
+- Verify `user_events` table creation in Railway logs within 60 seconds of first deploy
+
+Plans:
+- [ ] 30-01: Backend — `UserEvent` model + `events.py` router (`POST /api/events`, 202, no auth, Pydantic allowlist)
+- [ ] 30-02: Frontend — `tracking.ts` module + instrumentation in `ExpertCard.tsx`, `useSage.ts`, `filterSlice.ts`
+
+### Phase 31: Admin Marketplace Intelligence
+**Goal**: Admins can see which searches go unmet, which experts are invisible, and how Sage usage trends over time
+**Depends on**: Phase 30 (events must be accumulating in the DB)
+**Requirements**: INTEL-01, INTEL-02, INTEL-03, INTEL-04
+**Success Criteria** (what must be TRUE):
+  1. Admin navigates to `/admin/marketplace` and sees a table of zero-result Sage queries sorted by frequency, plus underserved filter combinations
+  2. Admin sees an expert exposure table showing appears and click counts per expert, broken down by grid vs Sage panel context
+  3. Admin sees a Recharts BarChart of daily Sage query volume
+  4. When the `user_events` table is empty (cold start), the page shows an explicit message with the tracking start timestamp and guidance that insights appear after approximately 50 page views — no blank or broken state
+**Plans**: TBD
+
+**Architecture notes (encode in plan):**
+- New admin page `MarketplacePage.tsx` at `/admin/marketplace` — does NOT modify existing `GapsPage.tsx` or any other admin page
+- Two new backend endpoints under `_require_admin` dep: `GET /api/admin/events/demand` and `GET /api/admin/events/exposure`
+- Both endpoints return `data_since` field (timestamp of earliest event or null) for cold-start display
+- Build empty state UI BEFORE data-loading logic (cold-start Pitfall 9 — prevents confusing blank tab during cold start)
+- `AdminSidebar.tsx` gains Marketplace nav entry
+- SQL aggregations use standard `GROUP BY` + `ORDER BY COUNT DESC` with existing SQLAlchemy `text()` pattern
+
+Plans:
+- [ ] 31-01: Backend — `GET /api/admin/events/demand` + `/events/exposure` endpoints with cold-start `data_since`
+- [ ] 31-02: Frontend — `MarketplacePage.tsx` with DemandTable, ExposureTable, BarChart, empty state + sidebar nav entry
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -70,3 +172,7 @@ See `.planning/milestones/v2.2-ROADMAP.md`
 | 11-13. Steering Panel Phases | v1.2 | Complete | Complete | 2026-02-21 |
 | 14-21. Marketplace Phases | v2.0 | 23/23 | Complete | 2026-02-22 |
 | 22-27. Evolved Discovery Engine | v2.2 | 14/14 | Complete | 2026-02-22 |
+| 28. Sage Search Engine | v2.3 | 0/2 | Not started | - |
+| 29. Sage Personality + FAB Reactions | v2.3 | 0/1 | Not started | - |
+| 30. Behavior Tracking | v2.3 | 0/2 | Not started | - |
+| 31. Admin Marketplace Intelligence | v2.3 | 0/2 | Not started | - |
