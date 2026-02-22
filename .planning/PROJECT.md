@@ -34,14 +34,14 @@ A user describes any problem and instantly gets expertly matched professionals t
 - ✓ FTS5 prefix-matching `/api/suggest` endpoint; SearchInput shows suggestions dropdown with AbortController — v2.0
 - ✓ Infinite scroll with active text query sends correct `query` param (pagination bug fixed) — v2.0
 - ✓ Rate filter chip reflects actual filter state on page load; RateSlider max=5000 aligned with store defaults — v2.0
+- ✓ Atomic FAISS index swap with admin rebuild trigger (IDX-01 – IDX-04) — Phase 24
+- ✓ OTR@K + Index Drift metrics + t-SNE embedding heatmap (INTEL-01 – INTEL-06) — Phases 24–26
 
 ### Active
 
 - [ ] Aurora mesh gradient background + glassmorphism surfaces (VIS-01 – VIS-05)
 - [ ] Bento-style ExpertCard redesign (CARD-01 – CARD-03)
 - [ ] Animated claymorphic tag cloud + "Everything is possible" element (DISC-01 – DISC-04)
-- [ ] Atomic FAISS index swap with admin rebuild trigger (IDX-01 – IDX-04)
-- [ ] OTR@K + Index Drift metrics + t-SNE embedding heatmap (INTEL-01 – INTEL-06)
 - [ ] Newsletter subscription gate, Zustand-persisted (NLTR-01 – NLTR-04)
 - [ ] Easter egg barrel roll on playful queries (FUN-01)
 
@@ -158,6 +158,9 @@ A user describes any problem and instantly gets expertly matched professionals t
 | loadNextPage pagination: `query` param (not `q`) | useExplore.ts loadNextPage was sending `?q=` while backend expected `?query=`; fixed in Phase 20 gap closure | ✓ Good — pagination with active text query now correct |
 | DEFAULT_RATE_MAX=5000 aligned across all components | FilterChips, RateSlider, and MobileFilterSheet all align to store default of 5000; fixed spurious chip on page load | ✓ Good — rate filter chip only appears when user has actively filtered |
 | LEAD-03 deferred to v2.1 | In-app match report requires significant new backend + UI work; email gate alone is sufficient lead capture for v2.0 | — Deferred — capture as v2.1 requirement |
+| asyncio.create_task post-yield for t-SNE | Background CPU-bound computation MUST fire after lifespan yield — pre-yield blocks Railway healthcheck causing infinite restart loop | ✓ Good — healthcheck passes, t-SNE computes in ~30s post-startup |
+| Raw fetch for 202-aware polling | adminFetch throws on non-2xx; polling endpoint returns 202 (computing) which must be handled without throwing — raw fetch with status code inspection required | ✓ Good — useEmbeddingMap hook correctly handles 202→200 transition |
+| recharts requires react-is explicit install | recharts@3.7.0 declares react-is as peer dep but Vite/Rollup fails if not in node_modules — must npm install react-is alongside recharts | ✓ Good — documented in SUMMARY; blocked CI otherwise |
 
 ---
-*Last updated: 2026-02-22 after v2.2 milestone initialization (Evolved Discovery Engine)*
+*Last updated: 2026-02-22 after Phase 26 (Embedding Heatmap)*
