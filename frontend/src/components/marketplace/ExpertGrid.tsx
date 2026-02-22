@@ -45,8 +45,8 @@ export function ExpertGrid({ experts, loading, isFetchingMore, onEndReached, onV
       // itemClassName: min-h-0 prevents grid row blowout on fixed card height
       itemClassName="min-h-0"
       computeItemKey={(_, expert) => expert.username}
-      itemContent={(index, expert) => (
-        <ExpertCard expert={expert} index={index} onViewProfile={onViewProfile} />
+      itemContent={(_index, expert) => (
+        <ExpertCard expert={expert} onViewProfile={onViewProfile} />
       )}
       components={{
         // Footer renders skeleton row while fetching next page
