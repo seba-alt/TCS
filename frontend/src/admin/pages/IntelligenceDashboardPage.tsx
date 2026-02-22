@@ -1,6 +1,15 @@
-import { useState, useEffect, useRef } from 'react'
-import { useAdminSettings, useIntelligenceMetrics, adminPost } from '../hooks/useAdminData'
-import type { AdminSetting } from '../types'
+import { useState, useEffect, useRef, useMemo } from 'react'
+import { useAdminSettings, useIntelligenceMetrics, adminPost, useEmbeddingMap } from '../hooks/useAdminData'
+import type { AdminSetting, EmbeddingPoint } from '../types'
+import {
+  ScatterChart,
+  Scatter,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from 'recharts'
 
 function otrColor(avg: number | null): string {
   if (avg === null) return 'text-slate-400'
@@ -78,9 +87,49 @@ function friendlyLabel(key: string): string {
 
 const THRESHOLD_ORDER = ['SIMILARITY_THRESHOLD', 'STRONG_RESULT_MIN', 'FEEDBACK_BOOST_CAP']
 
+// Aurora-adjacent jewel-tone palette — complement the v2.2 purple/teal/green/pink aurora
+const CATEGORY_COLORS: Record<string, string> = {
+  'Tech':         '#a855f7',   // vivid purple
+  'Finance':      '#06b6d4',   // cyan-teal
+  'Marketing':    '#10b981',   // emerald green
+  'Sales':        '#f472b6',   // hot pink
+  'Strategy':     '#818cf8',   // indigo-purple
+  'HR':           '#34d399',   // mint green
+  'Operations':   '#2dd4bf',   // teal
+  'Legal':        '#c084fc',   // lavender purple
+  'Healthcare':   '#38bdf8',   // sky blue
+  'Real Estate':  '#fb7185',   // rose pink
+  'Sports':       '#a3e635',   // lime green
+  'Unknown':      '#475569',   // slate neutral
+}
+
+const DEFAULT_COLOR = '#6366f1'  // fallback indigo for uncategorized
+
+function EmbeddingTooltip({ active, payload }: { active?: boolean; payload?: { payload: EmbeddingPoint }[] }) {
+  if (!active || !payload?.length) return null
+  const pt = payload[0].payload
+  return (
+    <div className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs shadow-lg">
+      <p className="text-white font-medium">{pt.name || pt.username}</p>
+      <p className="text-slate-400">{pt.category}</p>
+    </div>
+  )
+}
+
 export default function IntelligenceDashboardPage() {
   const { data: metrics, loading: metricsLoading } = useIntelligenceMetrics()
   const { data, loading, error, refetch } = useAdminSettings()
+  const { data: embeddingData, status: embeddingStatus } = useEmbeddingMap()
+
+  const byCategory = useMemo(() => {
+    const groups: Record<string, EmbeddingPoint[]> = {}
+    for (const pt of embeddingData?.points ?? []) {
+      const cat = pt.category || 'Unknown'
+      if (!groups[cat]) groups[cat] = []
+      groups[cat].push(pt)
+    }
+    return groups
+  }, [embeddingData])
 
   // Local threshold state — initialized from fetched data
   const [thresholds, setThresholds] = useState<Record<string, string>>({})
@@ -205,6 +254,53 @@ export default function IntelligenceDashboardPage() {
             </p>
           )}
         </div>
+      </div>
+
+      {/* Embedding Map — t-SNE scatter plot of expert embeddings */}
+      <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl p-5 space-y-4">
+        <div>
+          <h2 className="text-sm font-semibold text-white">Expert Embedding Map</h2>
+          <p className="text-xs text-slate-500 mt-1">
+            t-SNE projection of all {embeddingData?.count ?? '—'} expert embeddings — clusters indicate semantic similarity. Recomputes after index rebuild.
+          </p>
+        </div>
+
+        {embeddingStatus === 'loading' || embeddingStatus === 'computing' ? (
+          <div className="flex items-center gap-3 py-12 justify-center">
+            <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+            <span className="text-sm text-slate-400">
+              {embeddingStatus === 'computing' ? 'Computing t-SNE projection… (up to 30s)' : 'Loading…'}
+            </span>
+          </div>
+        ) : embeddingStatus === 'error' ? (
+          <div className="py-8 text-center text-sm text-slate-500">
+            Failed to load embedding map. Refresh to retry.
+          </div>
+        ) : embeddingData && Object.keys(byCategory).length > 0 ? (
+          <ResponsiveContainer width="100%" height={480}>
+            <ScatterChart margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+              <XAxis dataKey="x" type="number" domain={['auto', 'auto']} hide />
+              <YAxis dataKey="y" type="number" domain={['auto', 'auto']} hide />
+              <Tooltip content={<EmbeddingTooltip />} />
+              <Legend
+                wrapperStyle={{ fontSize: '11px', paddingTop: '12px' }}
+                iconSize={8}
+              />
+              {Object.entries(byCategory).map(([cat, pts]) => (
+                <Scatter
+                  key={cat}
+                  name={cat}
+                  data={pts}
+                  fill={CATEGORY_COLORS[cat] ?? DEFAULT_COLOR}
+                  opacity={0.85}
+                  r={4}
+                />
+              ))}
+            </ScatterChart>
+          </ResponsiveContainer>
+        ) : (
+          <div className="py-8 text-center text-sm text-slate-500">No embedding data available.</div>
+        )}
       </div>
 
       {/* Header */}
