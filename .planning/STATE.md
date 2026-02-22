@@ -9,10 +9,10 @@ See: .planning/PROJECT.md (updated 2026-02-22)
 
 ## Current Position
 
-Phase: 32 of 32+ (Sage Direct Search) — COMPLETE
-Plan: 3 of 3 in current phase (32-01, 32-02, and 32-03 complete)
-Status: 32-03 complete — Sage UX layer, result count fix, and explore race condition fix deployed
-Last activity: 2026-02-22 — 32-03 complete
+Phase: 33 of 33+ (Command Center Header) — IN PROGRESS
+Plan: 1 of 2 in current phase (33-01 complete, 33-02 pending)
+Status: 33-01 complete — useHeaderSearch hook + Header.tsx glassmorphic component built and committed
+Last activity: 2026-02-22 — 33-01 complete
 
 Progress: [████████████████████] 56/56 plans | v2.4 complete
 
@@ -84,6 +84,12 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - Pure filter mode total = len(filtered_experts) — all filtered experts ARE the results there, no FAISS/BM25 scoring
 - Abort controllerRef.current when sageMode becomes true — previous guard prevented new fetch but mid-flight .then() still called setResults(), overwriting sage results
 
+**Phase 33-01 key decisions:**
+- Easter egg (tinrate) fires on every match — no one-shot guard, always rewarding per CONTEXT.md
+- particlePositions stored in useRef so positions are stable and not regenerated on re-renders
+- springCount subscription cleanup via returned unsub function in useEffect to avoid stale listeners
+- Placeholder rotation useEffect includes `localValue` in dep array so it re-evaluates pause condition when input changes
+
 ### Pending Todos
 
 - Set `ALLOWED_ORIGINS=https://tcs-three-sigma.vercel.app` in Railway environment variables (carried over from v1.1)
@@ -96,5 +102,5 @@ None active.
 ## Session Continuity
 
 Last session: 2026-02-22
-Stopped at: Completed 32-03-PLAN.md — Phase 32 Sage Direct Search fully complete
-Resume signal: Phase 32 complete. Plan next phase.
+Stopped at: Completed 33-01-PLAN.md — useHeaderSearch + Header.tsx built, 33-02 (MarketplacePage wiring + deploy) pending
+Resume signal: 33-01 complete. Execute 33-02 (wire Header into MarketplacePage, delete SearchInput.tsx, deploy).
