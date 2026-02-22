@@ -4,7 +4,7 @@ import { AnimatePresence } from 'motion/react'
 import { useExplorerStore, useFilterSlice } from '../store'
 import { useExplore } from '../hooks/useExplore'
 import { useUrlSync } from '../hooks/useUrlSync'
-import { useEmailGate } from '../hooks/useEmailGate'
+import { useNltrStore } from '../store/nltrStore'
 import { AuroraBackground } from '../components/AuroraBackground'
 import { FilterSidebar } from '../components/sidebar/FilterSidebar'
 import { SearchInput } from '../components/sidebar/SearchInput'
@@ -13,7 +13,9 @@ import { ExpertGrid } from '../components/marketplace/ExpertGrid'
 import { MobileFilterSheet } from '../components/sidebar/MobileFilterSheet'
 import { SageFAB } from '../components/pilot/SageFAB'
 import { SagePanel } from '../components/pilot/SagePanel'
-import { ProfileGateModal } from '../components/marketplace/ProfileGateModal'
+import { NewsletterGateModal } from '../components/marketplace/NewsletterGateModal'
+
+const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
 
 export default function MarketplacePage() {
   // Sync filter state to/from URL query params (ROBUST-01)
@@ -45,8 +47,17 @@ export default function MarketplacePage() {
   const { tags, query } = useFilterSlice()
   const activeFilterCount = tags.length + (query ? 1 : 0)
 
-  // Email gate state — LEAD-01/02/04
-  const { isUnlocked, submitEmail } = useEmailGate()
+  // Newsletter gate state — NLTR-01/03
+  const { subscribed, setSubscribed } = useNltrStore()
+
+  // Legacy bypass: check BOTH possible keys from v2.0 returning users
+  const legacyUnlocked =
+    localStorage.getItem('tcs_gate_email') !== null ||
+    localStorage.getItem('tcs_email_unlocked') !== null
+
+  const isUnlocked = subscribed || legacyUnlocked
+
+  const [showGate, setShowGate] = useState(false)
   const [pendingProfileUrl, setPendingProfileUrl] = useState<string | null>(null)
 
   function handleViewProfile(url: string) {
@@ -54,15 +65,33 @@ export default function MarketplacePage() {
       window.open(url, '_blank', 'noopener,noreferrer')
     } else {
       setPendingProfileUrl(url)
+      setShowGate(true)
     }
   }
 
-  async function handleEmailSubmit(email: string) {
-    await submitEmail(email)
+  async function handleSubscribe(email: string) {
+    // Write Zustand store FIRST — this is the source of truth for unlock
+    setSubscribed(email)
+    setShowGate(false)
+
+    // Fire-and-forget backend call (silent failure — user already unlocked via Zustand)
+    fetch(`${API_URL}/api/newsletter/subscribe`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    }).catch(() => {})
+
+    // Open the pending profile
     if (pendingProfileUrl) {
       window.open(pendingProfileUrl, '_blank', 'noopener,noreferrer')
       setPendingProfileUrl(null)
     }
+  }
+
+  function handleDismiss() {
+    setShowGate(false)
+    // DO NOT clear pendingProfileUrl — next click will re-open modal
+    // DO NOT set any session storage — modal re-appears on next "View Full Profile" click
   }
 
   return (
@@ -146,16 +175,12 @@ export default function MarketplacePage() {
         )}
       </AnimatePresence>
 
-      {/* Email gate modal */}
-      <AnimatePresence>
-        {pendingProfileUrl && (
-          <ProfileGateModal
-            key="profile-gate"
-            onSubmit={handleEmailSubmit}
-            onDismiss={() => setPendingProfileUrl(null)}
-          />
-        )}
-      </AnimatePresence>
+      {/* Newsletter gate modal */}
+      <NewsletterGateModal
+        isOpen={showGate}
+        onSubscribe={handleSubscribe}
+        onDismiss={handleDismiss}
+      />
     </div>
     </AuroraBackground>
   )
