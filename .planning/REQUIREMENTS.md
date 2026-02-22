@@ -46,7 +46,7 @@ Requirements for milestone v2.2 "Evolved Discovery Engine". Phases continue from
 
 ### NLTR — Newsletter Gate
 
-- [ ] **NLTR-01**: Email gate redesigned as newsletter subscription CTA ("Get expert insights to your inbox. Unlock profiles.")
+- [x] **NLTR-01**: Email gate redesigned as newsletter subscription CTA ("Get expert insights to your inbox. Unlock profiles.")
 - [x] **NLTR-02**: Email submission creates record in new `newsletter_subscribers` table (email, created_at, source)
 - [x] **NLTR-03**: Newsletter subscription state (subscribed, email) persists via Zustand + localStorage
 - [x] **NLTR-04**: Admin Leads page shows newsletter subscriber count and subscriber list
@@ -103,7 +103,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | INTEL-04 | Phase 25 | Pending |
 | INTEL-05 | Phase 26 | Complete |
 | INTEL-06 | Phase 26 | Complete |
-| NLTR-01 | Phase 27 | Pending |
+| NLTR-01 | Phase 27 | Complete |
 | NLTR-02 | Phase 27 | Complete |
 | NLTR-03 | Phase 27 | Complete |
 | NLTR-04 | Phase 27 | Complete |

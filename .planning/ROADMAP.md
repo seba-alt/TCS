@@ -211,4 +211,4 @@ Plans:
 | 24. Atomic Index Swap UI | 2/2 | Complete   | 2026-02-22 | - |
 | 25. Admin Intelligence Metrics | 2/2 | Complete   | 2026-02-22 | - |
 | 26. Embedding Heatmap | 2/2 | Complete    | 2026-02-22 | - |
-| 27. Newsletter Gate + Easter Egg | 1/3 | In Progress|  | - |
+| 27. Newsletter Gate + Easter Egg | 2/3 | In Progress|  | - |

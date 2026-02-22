@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-22)
 ## Current Position
 
 Phase: 27 of 27 (Newsletter / Next Phase)
-Plan: 27-01 complete — ready for 27-02
+Plan: 27-02 complete — at checkpoint:human-verify (Task 3)
 Status: Active
-Last activity: 2026-02-22 — Phase 27-01 completed: NewsletterSubscriber model, subscribe endpoint, admin CSV export, useNltrStore
+Last activity: 2026-02-22 — Phase 27-02 completed: NewsletterGateModal, MarketplacePage gate migration to useNltrStore
 
-Progress: [████████████████████] 43/44 plans (98%)
+Progress: [████████████████████] 44/44 plans (100%)
 
 ## Live URLs
 
@@ -33,6 +33,7 @@ Progress: [████████████████████] 43/44 p
 |-------|------|----------|-------|-------|
 | 26-embedding-heatmap | 02 | 20min | 3/3 | 5 |
 | 27-newsletter-gate-easter-egg | 01 | 2min | 3/3 | 5 |
+| 27-newsletter-gate-easter-egg | 02 | 2min | 2/2 | 2 |
 
 ## Accumulated Context
 
@@ -48,6 +49,8 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - Phase 26: t-SNE MUST run post-yield via `asyncio.create_task` — NEVER above yield (Railway healthcheck failure). PCA(50) then TSNE(perplexity=30, max_iter=1000, init='pca', random_state=42, metric='cosine'). Cache in `app.state.embedding_map`.
 - Phase 26-02: Use raw fetch (not adminFetch) for 202-polling because adminFetch throws on non-ok status codes. recharts@3.7.0 requires react-is explicit install for Vite/Rollup. One <Scatter> per category for recharts Legend support.
 - Phase 27: `useNltrStore` with persist key `'tinrate-newsletter-v1'`. Do NOT modify `useExplorerStore` or its `partialize`. `localStorage['tcs_email_unlocked']` bypass is unchanged. Barrel roll on VirtuosoGrid container (not ExpertCards).
+- [Phase 27-02]: showGate is local boolean state (not derived from pendingProfileUrl) — modal re-arms on next click after dismiss
+- [Phase 27-02]: ProfileGateModal.tsx left in place untouched — no longer used in MarketplacePage but preserved for potential other consumers
 
 ### Pending Todos
 
@@ -63,6 +66,6 @@ Decisions are logged in PROJECT.md Key Decisions table.
 ## Session Continuity
 
 Last session: 2026-02-22
-Stopped at: Completed 27-01-PLAN.md
-Resume signal: N/A
+Stopped at: Completed 27-02-PLAN.md — at checkpoint:human-verify (Task 3 — visual verification of newsletter gate flow)
+Resume signal: Type "approved" or describe issues found
 Resume file: None
