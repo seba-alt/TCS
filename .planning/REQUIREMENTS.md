@@ -1,79 +1,65 @@
-# Requirements: Tinrate AI Concierge
+# Requirements: Tinrate AI Concierge Chatbot
 
 **Defined:** 2026-02-22
+**Milestone:** v2.3 Sage Evolution & Marketplace Intelligence
 **Core Value:** A user describes any problem and instantly gets expertly matched professionals they can browse, filter, and contact — no searching, no guesswork.
 
-## v2.2 Requirements
+## v1 Requirements
 
-Requirements for milestone v2.2 "Evolved Discovery Engine". Phases continue from Phase 22 (v2.0 ended at Phase 21).
+Requirements for v2.3 release. Each maps to roadmap phases.
 
-### VIS — Visual Metamorphosis
+### Sage Search
 
-- [ ] **VIS-01**: Marketplace renders with OKLCH-defined aurora mesh gradient background and slow ambient CSS keyframe animation
-- [ ] **VIS-02**: FilterSidebar renders with glassmorphism surface (backdrop-filter: blur, translucent bg, subtle border)
-- [ ] **VIS-03**: SearchInput renders with glassmorphism surface matching sidebar style
-- [ ] **VIS-04**: SagePanel renders with glassmorphism surface
-- [ ] **VIS-05**: All glass surfaces maintain legibility (contrast ≥ 4.5:1) and degrade gracefully on unsupported browsers
+- [ ] **SAGE-01**: Sage can find experts via a `search_experts` Gemini function that calls `/api/explore` in-process (direct Python import, no HTTP self-call)
+- [ ] **SAGE-02**: Sage search updates the main expert grid via filterSlice dispatch — single-ownership rule: `resultsSlice` written only by `useExplore`
+- [ ] **SAGE-03**: Sage narrates results in natural language after every function call ("I found 8 fintech experts who…" — no silent grid updates)
+- [ ] **SAGE-04**: Sage acknowledges zero-result searches and suggests alternatives or asks a clarifying question
 
-### CARD — Bento Expert Cards
+### Sage Personality
 
-- [ ] **CARD-01**: ExpertCard redesigned as bento-style card with distinct visual zones (name/role, rate+badge, tags, match reason)
-- [ ] **CARD-02**: ExpertCard maintains h-[180px] fixed height (VirtuosoGrid compatibility)
-- [ ] **CARD-03**: ExpertCard hover animation updated to complement aurora palette (glow shifts to match new tokens)
+- [ ] **SAGE-05**: Sage system prompt rewritten for warmer, wittier tone — hard cap of max 1 clarifying question per conversation; after any user reply to a question, Sage must call a function
 
-### DISC — Discovery Engine
+### Sage FAB
 
-- [x] **DISC-01**: TagMultiSelect replaced with animated interactive tag cloud using Framer Motion layout animations
-- [ ] **DISC-02**: Tag cloud items exhibit proximity-based scale increase (claymorphism) on cursor hover/approach
-- [ ] **DISC-03**: "Everything is possible" animated element renders beneath tag cloud with example quirky tags
-- [ ] **DISC-04**: Tag cloud remains keyboard-navigable and aria-labeled (selection behavior unchanged)
+- [ ] **FAB-01**: Sage FAB displays animated boxShadow pulse/glow on user activity via an outer `motion.div` wrapper (inner `motion.button` retains scale gesture props — no animation conflict)
 
-### IDX — Atomic Index Swap
+### Tracking
 
-- [ ] **IDX-01**: Admin can trigger FAISS index rebuild from admin panel
-- [ ] **IDX-02**: Index rebuild runs in `asyncio.to_thread` — live index serves requests without interruption
-- [ ] **IDX-03**: On completion, `app.state.faiss_index` swaps atomically (no inconsistency window)
-- [ ] **IDX-04**: Rebuild progress status (idle/running/complete/failed + timestamp) is visible in admin panel
+- [ ] **TRACK-01**: Expert card click events tracked to DB (expert_id, context: grid or sage_panel) — fire-and-forget, never awaited in click path
+- [ ] **TRACK-02**: Sage query interaction events tracked to DB (query_text, function_called, result_count) — emitted after each pilot response
+- [ ] **TRACK-03**: Filter change events tracked to DB (filter name + value) — debounced 1s after settled state, not per slider tick
 
-### INTEL — Admin Findability Intelligence
+### Admin Intelligence
 
-- [ ] **INTEL-01**: OTR@K (On-Topic Rate, K=10) computed per search query and stored in `conversations` table
-- [ ] **INTEL-02**: Admin Intelligence dashboard displays OTR@K 7-day rolling average
-- [ ] **INTEL-03**: Index Drift metric tracks time since last rebuild and expert count delta since rebuild
-- [ ] **INTEL-04**: Admin Intelligence dashboard displays Index Drift status with last-rebuilt timestamp
-- [x] **INTEL-05**: Backend exposes `/api/admin/embedding-map` returning t-SNE 2D projection (scikit-learn, computed at startup from FAISS index, cached in `app.state`)
-- [x] **INTEL-06**: Admin displays interactive embedding scatter plot (points colored by category, expert name on hover)
+- [ ] **INTEL-01**: Admin Marketplace page shows unmet demand table (zero-result Sage queries sorted by frequency + underserved filter combos)
+- [ ] **INTEL-02**: Admin Marketplace page shows expert exposure distribution (appears + click counts per expert, grid vs Sage context breakdown)
+- [ ] **INTEL-03**: Admin Marketplace page shows daily Sage usage trend (Recharts BarChart)
+- [ ] **INTEL-04**: Admin Marketplace page shows cold-start empty state with tracking start timestamp when `user_events` table is empty
 
-### NLTR — Newsletter Gate
+## v2 Requirements
 
-- [x] **NLTR-01**: Email gate redesigned as newsletter subscription CTA ("Get expert insights to your inbox. Unlock profiles.")
-- [x] **NLTR-02**: Email submission creates record in new `newsletter_subscribers` table (email, created_at, source)
-- [x] **NLTR-03**: Newsletter subscription state (subscribed, email) persists via Zustand + localStorage
-- [x] **NLTR-04**: Admin Leads page shows newsletter subscriber count and subscriber list
+Deferred to future release. Tracked but not in current roadmap.
 
-### FUN — Easter Egg
+### Sage UX
 
-- [x] **FUN-01**: Sage query or search containing playful trigger phrases (e.g. "barrel roll", "do a flip") triggers 360° card animation via Framer Motion on ExpertCards
+- **SAGE-06**: Compact SageExpertCard mini-cards displayed inside the Sage 380px panel after a search_experts call
+- **SAGE-07**: Proactive empty-state nudge — Sage FAB pulses and auto-injects a message when expert grid hits zero results and panel is closed (requires hasFetchedOnce + debounce guards)
+- **SAGE-08**: Quick-reply chips for Sage clarifying questions (plain text questions acceptable for v2.3 fallback)
 
-## Future Requirements (v2.3+)
+### Admin
 
-### HEATMAP — Advanced Visualisation
-
-- **UMAP**: Runtime UMAP projection (umap-learn) for higher-quality embedding layout — deferred (heavy Railway dep)
-
-### LEAD — Match Reports
-
-- **LEAD-03**: In-app match report download — deferred from v2.0, re-evaluate after v2.2 newsletter data
+- **INTEL-05**: Real-time Gaps dashboard (WebSocket/SSE polling) — retrospective analysis sufficient for v2.3
+- **INTEL-06**: UMAP visualization for embedding space — heavy Railway build dependency, deferred
 
 ## Out of Scope
 
 | Feature | Reason |
 |---------|--------|
-| Tailwind v4 migration | Breaking config change, zero visual benefit over v3 with OKLCH tokens |
-| SQLModel migration | SQLAlchemy is fully capable; refactoring risks regressions across 6 routers |
-| External newsletter service (Mailchimp, etc.) | SQLite capture sufficient; export to service manually if needed |
-| Cursor-reactive aurora (JS mousemove) | CSS keyframe animation achieves ambient motion with zero JS cost |
-| Re-implementing hybrid scoring | FAISS 0.7 + BM25 0.3 already live in explorer.py since v2.0 Phase 14 |
+| Third-party analytics SDK (PostHog, Mixpanel, Segment) | SQLite user_events table sufficient at current scale (<10K daily events) |
+| navigator.sendBeacon for tracking | Cannot send Content-Type: application/json; use fetch + keepalive: true |
+| Alembic migrations | create_all handles new tables; ALTER TABLE in lifespan for existing table columns |
+| Compact cards inside Sage panel (v2.3) | Text narrative + grid update is cleaner UX; compact cards deferred to v2 |
+| Proactive empty-state nudge (v2.3) | Requires careful guard conditions; deferred to v2 |
 
 ## Traceability
 
@@ -81,39 +67,25 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| VIS-01 | Phase 22 | Pending |
-| VIS-02 | Phase 22 | Pending |
-| VIS-03 | Phase 22 | Pending |
-| VIS-04 | Phase 22 | Pending |
-| VIS-05 | Phase 22 | Pending |
-| CARD-01 | Phase 23 | Pending |
-| CARD-02 | Phase 23 | Pending |
-| CARD-03 | Phase 23 | Pending |
-| DISC-01 | Phase 23 | Complete |
-| DISC-02 | Phase 23 | Pending |
-| DISC-03 | Phase 23 | Pending |
-| DISC-04 | Phase 23 | Pending |
-| IDX-01 | Phase 24 | Pending |
-| IDX-02 | Phase 24 | Pending |
-| IDX-03 | Phase 24 | Pending |
-| IDX-04 | Phase 24 | Pending |
-| INTEL-01 | Phase 25 | Pending |
-| INTEL-02 | Phase 25 | Pending |
-| INTEL-03 | Phase 25 | Pending |
-| INTEL-04 | Phase 25 | Pending |
-| INTEL-05 | Phase 26 | Complete |
-| INTEL-06 | Phase 26 | Complete |
-| NLTR-01 | Phase 27 | Complete |
-| NLTR-02 | Phase 27 | Complete |
-| NLTR-03 | Phase 27 | Complete |
-| NLTR-04 | Phase 27 | Complete |
-| FUN-01 | Phase 27 | Complete |
+| SAGE-01 | Phase 28 | Pending |
+| SAGE-02 | Phase 28 | Pending |
+| SAGE-03 | Phase 28 | Pending |
+| SAGE-04 | Phase 28 | Pending |
+| SAGE-05 | Phase 29 | Pending |
+| FAB-01 | Phase 29 | Pending |
+| TRACK-01 | Phase 30 | Pending |
+| TRACK-02 | Phase 30 | Pending |
+| TRACK-03 | Phase 30 | Pending |
+| INTEL-01 | Phase 31 | Pending |
+| INTEL-02 | Phase 31 | Pending |
+| INTEL-03 | Phase 31 | Pending |
+| INTEL-04 | Phase 31 | Pending |
 
 **Coverage:**
-- v2.2 requirements: 27 total
-- Mapped to phases: 27
-- Unmapped: 0
+- v1 requirements: 13 total
+- Mapped to phases: 13
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-02-22*
-*Last updated: 2026-02-22 after v2.2 roadmap creation*
+*Last updated: 2026-02-22 after initial v2.3 definition*
