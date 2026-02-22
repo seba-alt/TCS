@@ -110,10 +110,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FUN-01 | Phase 27 | Pending |
 
 **Coverage:**
-- v2.2 requirements: 24 total
-- Mapped to phases: 24
-- Unmapped: 0 ✓
+- v2.2 requirements: 27 total
+- Mapped to phases: 27
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-22*
-*Last updated: 2026-02-22 after v2.2 milestone initialization*
+*Last updated: 2026-02-22 after v2.2 roadmap creation*
