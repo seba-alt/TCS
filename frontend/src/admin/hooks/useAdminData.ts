@@ -9,6 +9,7 @@ import type {
   DomainMapResponse,
   IngestStatus,
   IntelligenceStats,
+  IntelligenceMetrics,
   AdminSettingsResponse,
 } from '../types'
 
@@ -172,6 +173,24 @@ export function useIntelligenceStats() {
   const fetchData = useCallback(() => {
     setLoading(true)
     adminFetch<IntelligenceStats>('/intelligence-stats')
+      .then(setData)
+      .catch((e: Error) => setError(e.message))
+      .finally(() => setLoading(false))
+  }, [])
+
+  useEffect(() => { fetchData() }, [fetchData])
+
+  return { data, loading, error, refetch: fetchData }
+}
+
+export function useIntelligenceMetrics() {
+  const [data, setData] = useState<IntelligenceMetrics | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const fetchData = useCallback(() => {
+    setLoading(true)
+    adminFetch<IntelligenceMetrics>('/intelligence')
       .then(setData)
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false))

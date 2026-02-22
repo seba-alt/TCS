@@ -117,6 +117,19 @@ export interface IntelligenceStats {
   daily: IntelligenceDailyRow[]
 }
 
+export interface IntelligenceMetrics {
+  otr: {
+    rolling_avg_7d: number | null
+    query_count_7d: number
+  }
+  index_drift: {
+    last_rebuild_at: number | null           // Unix timestamp seconds
+    expert_count_at_rebuild: number | null
+    current_expert_count: number
+    expert_delta: number | null
+  }
+}
+
 export interface IngestStatus {
   status: 'idle' | 'running' | 'done' | 'error'
   log: string
