@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-22)
 ## Current Position
 
 Phase: 32 of 32+ (Sage Direct Search) — IN PROGRESS
-Plan: 1 of 3 in current phase (32-01 complete)
-Status: 32-01 complete — pilot API now returns populated experts array for search_experts
-Last activity: 2026-02-22 — 32-01 complete
+Plan: 2 of 3 in current phase (32-01 and 32-02 complete)
+Status: 32-02 complete — sageMode state machine wired; Sage discovery results inject directly into grid without polluting search bar
+Last activity: 2026-02-22 — 32-02 complete
 
-Progress: [████████████████████] 54/56 plans | v2.4 in progress
+Progress: [████████████████████] 55/56 plans | v2.4 in progress
 
 ## Live URLs
 
@@ -34,6 +34,7 @@ Progress: [████████████████████] 54/56 p
 | 31-01 | 2 min | 2 | 1 |
 | 31-02 | 2 min | 3 | 5 |
 | 32-01 | 3 min | 1 | 1 |
+| 32-02 | 3 min | 2 | 5 |
 
 ## Accumulated Context
 
@@ -69,6 +70,12 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - Zero-result paths produce experts: [] automatically — result.experts is already [] from run_explore(), no special casing needed
 - No PilotResponse schema changes needed — existing `experts: list[dict] | None = None` field already accepts serialized list
 
+**Phase 32-02 key decisions:**
+- sageMode is NOT added to partialize allowlist — ephemeral display state must reset to false on page refresh
+- setSortBy intentionally does NOT call setSageMode(false) — sorting Sage results is valid without exiting sage mode
+- useExplore guard is the FIRST statement in useEffect (before abort/setLoading) to prevent loading flash
+- store.setLoading(false) called before store.setResults in useSage to avoid skeleton flash from mid-flight prior fetch
+
 ### Pending Todos
 
 - Set `ALLOWED_ORIGINS=https://tcs-three-sigma.vercel.app` in Railway environment variables (carried over from v1.1)
@@ -81,5 +88,5 @@ None active.
 ## Session Continuity
 
 Last session: 2026-02-22
-Stopped at: Completed 32-01-PLAN.md — pilot API now returns experts array in search_experts response
-Resume signal: Continue with 32-02-PLAN.md (frontend wiring)
+Stopped at: Completed 32-02-PLAN.md — sageMode state machine fully wired across store, hooks
+Resume signal: Continue with 32-03-PLAN.md (UI affordances for sage mode)

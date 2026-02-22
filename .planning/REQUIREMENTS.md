@@ -40,7 +40,7 @@ Requirements for v2.3 release. Each maps to roadmap phases.
 
 - [x] **SAGE-DX-01**: Sage discovery queries inject results directly into the grid via `store.setResults()` — search bar stays empty, filters unchanged
 - [x] **SAGE-DX-02**: Header expert count reflects Sage's actual FAISS result count; zero-result queries render empty-state UI
-- [ ] **SAGE-DX-03**: Any manual sidebar interaction (search, rate, tags, reset) exits Sage mode and restores normal filter-driven results
+- [x] **SAGE-DX-03**: Any manual sidebar interaction (search, rate, tags, reset) exits Sage mode and restores normal filter-driven results
 
 ## v2 Requirements
 
