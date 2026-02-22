@@ -1,811 +1,991 @@
 # Architecture Research
 
-**Domain:** v2.2 Evolved Discovery Engine — integration points for new features
+**Domain:** AI-powered Expert Marketplace — v2.3 Sage Evolution & Marketplace Intelligence
 **Researched:** 2026-02-22
-**Confidence:** HIGH (all findings grounded in actual codebase files, FAISS index type confirmed by local load)
+**Confidence:** HIGH (all findings based on direct codebase inspection)
 
 ---
 
 ## Context: Subsequent Milestone Research
 
-This document answers the five concrete integration questions for v2.2. The v2.0 system is ground truth. All existing components listed in the v2.0 architecture document remain unchanged unless explicitly noted here. This document focuses only on new integration points.
-
-**FAISS index confirmed:** `IndexFlatIP` with 536 vectors, 768 dimensions. Loaded from `data/faiss.index` and verified by running `faiss.read_index()` locally.
+This document answers the five concrete integration questions for v2.3. The v2.2 system is ground truth. All components not explicitly listed in the "Modified/New" table below remain unchanged. This document focuses exclusively on the three new feature areas: Sage `search_experts`, user event tracking, and the Admin Gaps tab for marketplace intelligence.
 
 ---
 
-## Q1: Atomic FAISS Swap — Lock Strategy and Mapping
-
-### Short answer: no new lock needed; the pattern already exists in admin.py
-
-The atomic swap pattern is fully implemented in `_run_ingest_job()` in `app/routers/admin.py` (lines 93–146). IDX-01..04 is an admin UI trigger and status polling task, not a new concurrency design task.
-
-### Why asyncio.Lock is not needed
-
-Railway runs a **single-process Uvicorn worker** by default (no `--workers N` flag). Within one process, CPython's GIL ensures that Python object reference assignment (`app.state.faiss_index = new_index`) is atomic at the bytecode level. Concurrent coroutines in the event loop cannot observe a partially-written object reference.
-
-`asyncio.Lock` only serializes coroutines sharing the same event loop. The FAISS rebuild runs in `threading.Thread` (not an asyncio coroutine). Acquiring an asyncio.Lock from a thread requires `asyncio.run_coroutine_threadsafe()` — adding complexity that provides no correctness benefit for single-process deployments.
-
-### What already exists (do not duplicate)
-
-```python
-# app/routers/admin.py lines 93–146 (_run_ingest_job)
-
-# Step 1: subprocess runs tag_experts.py
-# Step 2: subprocess runs ingest.py (writes faiss.index to disk atomically via staging rename)
-# Step 3: HOT-RELOAD — three sequential attribute assignments:
-
-app.state.faiss_index = faiss.read_index(str(FAISS_INDEX_PATH))          # line 123
-with open(METADATA_PATH, "r", encoding="utf-8") as f:
-    app.state.metadata = json.load(f)                                      # line 125
-
-# Phase 14: rebuild username → FAISS position mapping
-_new_mapping: dict[str, int] = {}
-for _pos, _row in enumerate(app.state.metadata):
-    _uname = _row.get("Username") or _row.get("username") or ""
-    if _uname:
-        _new_mapping[_uname] = _pos
-app.state.username_to_faiss_pos = _new_mapping                            # line 140
-```
-
-This code already swaps all three state objects. The `_ingest` module-level dict already tracks `status/log/error/started_at` for IDX-04 status polling. The existing `GET /api/admin/ingest/status` endpoint exposes it.
-
-### The one real risk: 3-statement swap window
-
-Between the `faiss_index` assignment and the `username_to_faiss_pos` assignment, a concurrent `/api/explore` call could read the new index but the old mapping. In `run_explore()` (explorer.py line 196), the guard `if e.username in username_to_pos` skips unmapped experts gracefully — they get `faiss_score=0.0` and are excluded from hybrid results. This is acceptable degradation during a rebuild that takes 60+ seconds overall.
-
-If zero-inconsistency is required: bundle all three as a single dataclass and replace the entire object atomically:
-```python
-from dataclasses import dataclass
-
-@dataclass
-class IndexState:
-    faiss_index: faiss.Index
-    metadata: list[dict]
-    username_to_faiss_pos: dict[str, int]
-
-# Single atomic assignment — one attribute, one bytecode STORE_ATTR:
-app.state.index_state = IndexState(new_index, new_metadata, new_mapping)
-```
-Callers then access `app_state.index_state.faiss_index` etc. This requires updating `run_explore()` and the `compare_configs()` endpoint — moderate refactor.
-
-**Recommendation:** Keep the existing three-line pattern. The graceful degradation is sufficient. The rebuild window is ~60s but the inconsistency window is microseconds (three sequential stores).
-
-### v2.2 additions needed (IDX-01..04)
-
-IDX-01/02: The existing `POST /api/admin/ingest/run` endpoint already triggers `_run_ingest_job` in a background thread. The admin frontend needs a button that calls this endpoint — no new backend endpoint required.
-
-IDX-03: Already implemented (the three-line swap above).
-
-IDX-04: The existing `GET /api/admin/ingest/status` exposes `_ingest` dict. The admin frontend needs to poll this endpoint and display status. Add `last_rebuild_at` and `expert_count_at_rebuild` to `_ingest` for the Index Drift metric (INTEL-03).
-
-### After atomic swap: invalidate t-SNE cache
-
-Add one line to `_run_ingest_job` after the username mapping rebuild:
-```python
-app.state.tsne_cache = []   # signals stale; background recompute optional
-log.info("atomic_swap.complete", vectors=app.state.faiss_index.ntotal)
-```
-
----
-
-## Q2: t-SNE Heatmap — reconstruct_n Compatibility
-
-### Index type: IndexFlatIP — reconstruct_n works directly
-
-**Confirmed by local load:**
-```
-faiss.read_index('data/faiss.index') → IndexFlatIP, ntotal=536, d=768
-```
-
-`IndexFlatIP` stores all vectors verbatim in a dense float32 matrix. `reconstruct_n(start, n, recons)` copies them back out. No special flags, no direct map needed.
-
-```python
-import numpy as np
-import faiss
-
-index = app.state.faiss_index  # IndexFlatIP confirmed
-vectors = np.zeros((index.ntotal, index.d), dtype=np.float32)
-index.reconstruct_n(0, index.ntotal, vectors)
-# vectors.shape == (536, 768) — exact vectors that were added via index.add()
-```
-
-### Compatibility matrix (for future reference if index type changes)
-
-| Index Type | reconstruct_n Support | Condition |
-|------------|----------------------|-----------|
-| `IndexFlatIP` / `IndexFlatL2` | YES — always | None — flat indices store verbatim |
-| `IndexIVFFlat` | YES — with caveat | Must call `index.make_direct_map()` before saving; or call it after loading |
-| `IndexIVFPQ` | APPROXIMATE only | `make_direct_map()` required; returns quantized approximation (not exact vectors) |
-| `IndexHNSWFlat` | NO | HNSW graph does not support reconstruct |
-
-For this codebase: no caveat applies. `IndexFlatIP` reconstruct_n is unconditional.
-
-### t-SNE computation and startup integration
-
-Compute once at startup in `main.py` lifespan, after the `username_to_faiss_pos` block (line 214):
-
-```python
-# Phase 26: t-SNE 2D projection — computed at startup from FAISS index, cached in app.state
-# scikit-learn must be in requirements.txt; fails gracefully if absent
-try:
-    import numpy as _np
-    from sklearn.manifold import TSNE as _TSNE
-
-    _vecs = _np.zeros((app.state.faiss_index.ntotal, app.state.faiss_index.d), dtype=_np.float32)
-    app.state.faiss_index.reconstruct_n(0, app.state.faiss_index.ntotal, _vecs)
-
-    _coords = _TSNE(
-        n_components=2,
-        random_state=42,
-        perplexity=min(30, app.state.faiss_index.ntotal - 1),
-        n_iter=1000,
-        metric="cosine",   # vectors are L2-normalized → cosine = inner product
-    ).fit_transform(_vecs)
-
-    app.state.tsne_cache = [
-        {
-            "x": float(_coords[i, 0]),
-            "y": float(_coords[i, 1]),
-            "username": app.state.metadata[i].get("Username", ""),
-            "category": app.state.metadata[i].get("category", None),
-        }
-        for i in range(len(_coords))
-    ]
-    log.info("startup: tsne_cache built", points=len(app.state.tsne_cache))
-except Exception as _exc:
-    app.state.tsne_cache = []
-    log.warning("startup: tsne_cache failed", error=str(_exc))
-```
-
-**Runtime:** TSNE on 536 × 768 typically completes in 2–8 seconds on a Railway shared CPU. This extends startup time but is acceptable — the Railway health check endpoint responds during lifespan (FastAPI yields after lifespan completes, so the first request is gated until TSNE finishes). If startup time becomes a concern, move TSNE to an `asyncio.to_thread` background task and set `tsne_cache = None` until ready.
-
-**New admin endpoint (INTEL-05):**
-```python
-# In app/routers/admin.py, add to `router`:
-@router.get("/embedding-map")
-def get_embedding_map(request: Request):
-    """Return cached t-SNE 2D projection. Empty list if cache is building."""
-    return {"points": request.app.state.tsne_cache or []}
-```
-
-**Dependency:** Add `scikit-learn` to `requirements.txt`. It is a large package (~50MB) but Railway caches pip installs between deploys.
-
----
-
-## Q3: Newsletter Table — SQLAlchemy Model and Email Gate Integration
-
-### Minimal SQLAlchemy model (following models.py conventions exactly)
-
-```python
-# In app/models.py — add after the AppSetting class
-
-class NewsletterSubscriber(Base):
-    """
-    Newsletter subscription captures created when user submits email via
-    the redesigned ProfileGateModal (NLTR-01).
-
-    source values (stored as plain string, validated at router layer):
-        "profile_gate" — submitted via email gate unlock modal
-        "sage_prompt"  — submitted via Sage co-pilot CTA
-        "direct"       — submitted via a standalone subscribe form
-
-    Unique constraint on email: use on_conflict_do_nothing at the query layer
-    for idempotency, matching the EmailLead pattern in email_capture.py.
-    """
-    __tablename__ = "newsletter_subscribers"
-
-    id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    email: Mapped[str] = mapped_column(String(320), unique=True, nullable=False, index=True)
-    created_at: Mapped[datetime.datetime] = mapped_column(
-        DateTime, default=datetime.datetime.utcnow, nullable=False
-    )
-    source: Mapped[str] = mapped_column(
-        String(50), nullable=False, default="profile_gate"
-    )
-```
-
-**No ALTER TABLE needed.** `Base.metadata.create_all(bind=engine)` in the lifespan already runs on every startup and creates missing tables idempotently. Add the model class, redeploy — the table is created automatically on first Railway startup.
-
-**Why String not Python Enum for source:** SQLite has no native enum type. Python Enum columns require Alembic or manual `CHECK` constraints. String(50) validated at the Pydantic layer is simpler and consistent with all other categorical fields in models.py (e.g., `Feedback.vote` is `String(4)` with `"up"|"down"` enforced by the router).
-
-### New router: app/routers/newsletter.py
-
-Create a new router file following the `email_capture.py` pattern exactly:
-
-```python
-# app/routers/newsletter.py
-from typing import Literal
-from fastapi import APIRouter, Depends
-from pydantic import BaseModel, EmailStr
-from sqlalchemy.dialects.sqlite import insert
-from sqlalchemy.orm import Session
-from app.database import get_db
-from app.models import NewsletterSubscriber, EmailLead
-
-router = APIRouter()
-
-class NewsletterSubscribeRequest(BaseModel):
-    email: EmailStr
-    source: Literal["profile_gate", "sage_prompt", "direct"] = "profile_gate"
-
-@router.post("/api/newsletter-subscribe", status_code=200)
-def newsletter_subscribe(body: NewsletterSubscribeRequest, db: Session = Depends(get_db)):
-    """
-    Newsletter subscription — writes to newsletter_subscribers and email_leads.
-    Both are idempotent (on_conflict_do_nothing). Returns {"status": "ok"} always.
-    """
-    db.execute(
-        insert(NewsletterSubscriber)
-        .values(email=str(body.email), source=body.source)
-        .on_conflict_do_nothing(index_elements=["email"])
-    )
-    # Also write to email_leads for unified lead tracking
-    db.execute(
-        insert(EmailLead)
-        .values(email=str(body.email))
-        .on_conflict_do_nothing(index_elements=["email"])
-    )
-    db.commit()
-    return {"status": "ok"}
-```
-
-Register in `main.py`:
-```python
-from app.routers import admin, chat, email_capture, feedback, health, explore, pilot, suggest, newsletter
-
-app.include_router(newsletter.router)
-```
-
-### Integration with existing email gate — no breaking changes
-
-The current email gate flow:
-1. `ProfileGateModal` opens when user clicks "View Full Profile"
-2. User submits email → `POST /api/email-capture` → writes to `email_leads`
-3. Frontend: `localStorage.setItem('tcs_email_unlocked', 'true')`
-4. Returning visitors: `useState` reads `localStorage['tcs_email_unlocked']` on init → gate bypassed
-
-**v2.2 change (NLTR-01):** The modal copy changes to newsletter CTA language. The submit action changes from calling `/api/email-capture` to calling `/api/newsletter-subscribe` (which internally also writes to `email_leads` — no lead data is lost). The localStorage key `'tcs_email_unlocked'` and the returning-visitor bypass logic are **completely unchanged**.
-
-The returning-visitor localStorage logic in `ProfileGateModal`:
-```typescript
-// This line is unchanged — still works after NLTR redesign
-const [isUnlocked, setIsUnlocked] = useState(
-  () => localStorage.getItem('tcs_email_unlocked') === 'true'
-)
-```
-
-The Zustand `nltrSlice` is additive UI state — it does not replace the localStorage check.
-
-### Admin leads page (NLTR-04)
-
-Add a new section to `GET /api/admin/leads` or create a separate `GET /api/admin/newsletter-subscribers` endpoint:
-
-```python
-@router.get("/newsletter-subscribers")
-def get_newsletter_subscribers(db: Session = Depends(get_db)):
-    from app.models import NewsletterSubscriber
-    from sqlalchemy import func
-    count = db.scalar(select(func.count()).select_from(NewsletterSubscriber)) or 0
-    subscribers = db.scalars(
-        select(NewsletterSubscriber).order_by(NewsletterSubscriber.created_at.desc()).limit(100)
-    ).all()
-    return {
-        "count": count,
-        "subscribers": [
-            {"email": s.email, "source": s.source, "created_at": s.created_at.isoformat()}
-            for s in subscribers
-        ],
-    }
-```
-
----
-
-## Q4: Zustand Newsletter Slice — Fields and Persist Key
-
-### Recommended: standalone store with separate persist key 'nltr-state'
-
-Do **not** add the newsletter slice to `useExplorerStore`. Create a separate `create()` store.
-
-**Rationale:**
-
-1. The `'explorer-filters'` key uses a `partialize` whitelist: `{query, rateMin, rateMax, tags, sortBy, sortOrder}`. Adding newsletter fields requires either (a) updating the whitelist and bumping `version: 1` with a migrate function, or (b) they silently don't persist. Either path adds risk to an already-working persist setup.
-
-2. `filterSlice.resetFilters()` calls `set({ ...filterDefaults })`. If newsletter state lived in the same store, there is no reset bleed (it only sets filter-specific keys), but the combined store is already complex enough. Newsletter state has a completely different lifecycle.
-
-3. A separate store with its own persist key can be versioned independently and cleared independently without affecting filter persistence.
-
-### Minimal slice (create a new file)
-
-```typescript
-// frontend/src/store/nltrSlice.ts
-
-import { create } from 'zustand'
-import { persist, createJSONStorage } from 'zustand/middleware'
-
-interface NltrState {
-  // Persisted data
-  subscribed: boolean
-  email: string            // '' when not subscribed
-
-  // Actions
-  setSubscribed: (email: string) => void
-  clearSubscription: () => void
-}
-
-export const useNltrStore = create<NltrState>()(
-  persist(
-    (set) => ({
-      subscribed: false,
-      email: '',
-      setSubscribed: (email) => set({ subscribed: true, email }),
-      clearSubscription: () => set({ subscribed: false, email: '' }),
-    }),
-    {
-      name: 'nltr-state',         // separate localStorage key — no collision with 'explorer-filters'
-      storage: createJSONStorage(() => localStorage),
-      version: 1,
-    }
-  )
-)
-```
-
-### Integration in ProfileGateModal
-
-```typescript
-// frontend/src/components/modals/ProfileGateModal.tsx (modified)
-import { useNltrStore } from '../../store/nltrSlice'
-
-// Inside submit handler:
-const handleSubmit = async (email: string) => {
-  await fetch(`${API_URL}/api/newsletter-subscribe`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, source: 'profile_gate' }),
-  })
-  // Gate unlock (unchanged):
-  localStorage.setItem('tcs_email_unlocked', 'true')
-  setIsUnlocked(true)
-  // Newsletter state (new):
-  useNltrStore.getState().setSubscribed(email)
-}
-```
-
-Note: `useNltrStore.getState()` is used here (not the hook) because this is inside an async handler, following the established `useExplorerStore.getState()` pattern from `useSage.ts`.
-
-### What subscribed/email enable in v2.2
-
-- Show "You're subscribed as {email}" in the modal after submission
-- Conditionally show a "Manage preferences" link in the header for subscribed users
-- Skip the modal entirely if `nltrStore.subscribed === true` (alternative to the localStorage check — but keep both for defense in depth)
-
----
-
-## Q5: OTR@K Storage — Column and Computation Location
-
-### The explore vs chat pipeline distinction
-
-`explorer.py`'s `run_explore()` powers the **browse/filter marketplace** (`/api/explore`). It does not write to the `conversations` table — that table is for **Sage/chat interactions** from `chat.py`. These are separate pipelines.
-
-INTEL-01 says "computed per search query and stored in conversations table" — this matches the chat pipeline where each query already produces a `Conversation` row. For the explore pipeline, a separate log table is cleaner.
-
-**Recommendation:** Track OTR@K in two places:
-- **Chat pipeline** (chat.py / search_intelligence.py): add `otr_at_k` column to `conversations` table.
-- **Explore pipeline** (explorer.py): expose `otr_at_k` in `ExploreResponse` for the admin to read; optionally log to a lightweight `explore_events` table.
-
-### ALTER TABLE for the conversations table
-
-Add to the existing inline migration block in `main.py` lifespan (lines 116–127):
-
-```python
-# In the existing migration block alongside top_match_score, gap_resolved, etc.:
-"ALTER TABLE conversations ADD COLUMN otr_at_k REAL",
-```
-
-This follows the identical pattern used for all five existing analytics columns. SQLite raises `OperationalError` if the column already exists — the `except: pass` guard handles it.
-
-Also add the mapped column to the `Conversation` model in `app/models.py`:
-```python
-otr_at_k: Mapped[float | None] = mapped_column(Float, nullable=True)
-```
-
-### Computation in explorer.py (run_explore)
-
-After the `scored.sort(...)` call (line 304), before pagination:
-
-```python
-# OTR@K — On-Topic Rate at K=10
-# Fraction of top-10 hybrid results whose final_score >= SIMILARITY_THRESHOLD
-SIMILARITY_THRESHOLD = 0.60   # mirrors GAP_THRESHOLD in admin.py
-
-otr_at_k: float | None = None
-if is_text_query and scored:
-    top_k = scored[:10]
-    on_topic = sum(1 for final_s, _, _, _ in top_k if final_s >= SIMILARITY_THRESHOLD)
-    otr_at_k = round(on_topic / len(top_k), 4)
-```
-
-Add `otr_at_k: float | None` to `ExploreResponse`:
-```python
-class ExploreResponse(BaseModel):
-    experts: list[ExpertCard]
-    total: int
-    cursor: int | None
-    took_ms: int
-    otr_at_k: float | None = None    # None in pure filter mode (no text query)
-```
-
-### Computation in chat pipeline (for conversations table)
-
-In `app/services/search_intelligence.py` or `app/routers/chat.py`, after the retrieval pipeline returns candidates, compute OTR@K using the candidate scores before writing the `Conversation` row:
-
-```python
-# After candidates are ranked (top-K available):
-top_10 = candidates[:10]
-on_topic = sum(1 for c in top_10 if c.score >= settings["SIMILARITY_THRESHOLD"])
-otr_at_k = round(on_topic / max(1, len(top_10)), 4) if top_10 else None
-
-# Pass to Conversation row creation:
-conversation = Conversation(
-    ...
-    otr_at_k=otr_at_k,
-)
-```
-
-### Admin 7-day rolling average (INTEL-02)
-
-Add to `GET /api/admin/intelligence-stats` in `admin.py`:
-
-```python
-# In get_intelligence_stats(), alongside existing daily trend query:
-from sqlalchemy import text as _text
-
-otr_rows = db.execute(_text("""
-    SELECT
-        strftime('%Y-%m-%d', created_at) AS day,
-        AVG(otr_at_k) AS avg_otr
-    FROM conversations
-    WHERE date(created_at) >= date('now', '-7 days')
-      AND otr_at_k IS NOT NULL
-    GROUP BY strftime('%Y-%m-%d', created_at)
-    ORDER BY day
-""")).all()
-
-otr_7day = [{"date": r.day, "avg_otr": round(float(r.avg_otr), 4) if r.avg_otr else None}
-            for r in otr_rows]
-# Add to response dict: "otr_7day": otr_7day
-```
-
----
-
-## System Overview (v2.2 additions)
+## System Overview
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                         FRONTEND (Vercel)                                │
-├─────────────────────────────────────────────────────────────────────────┤
-│  MarketplacePage — aurora mesh gradient background (VIS-01)              │
-│  ┌──────────────────────────┐  ┌─────────────────────────────────────┐   │
-│  │ FilterSidebar            │  │ ExpertGrid (VirtuosoGrid unchanged) │   │
-│  │ [glassmorphism VIS-02]   │  │ ExpertCard [bento CARD-01..03]      │   │
-│  │                          │  └─────────────────────────────────────┘   │
-│  │ AnimatedTagCloud (NEW)   │                                            │
-│  │ Framer Motion layout     │  SagePanel [glassmorphism VIS-04]          │
-│  │ [DISC-01..04]            │  [unchanged interaction model]             │
-│  └──────────────────────────┘                                            │
+│                          FRONTEND (Vercel)                               │
 │                                                                          │
-│  ProfileGateModal (MODIFIED — newsletter CTA)                            │
-│  → POST /api/newsletter-subscribe (NEW)                                  │
-│  → localStorage 'tcs_email_unlocked' (UNCHANGED)                         │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌─────────────┐ │
+│  │ ExpertGrid   │  │  SagePanel   │  │ FilterSidebar│  │  AdminApp   │ │
+│  │ (VirtuosoGrid│  │  (380px FAB) │  │  (sidebar +  │  │  (/admin/   │ │
+│  │  h-[180px])  │  │  SageMessage │  │  vaul sheet) │  │  Marketplace│ │
+│  │              │  │  + SageExpert│  │              │  │  Page NEW)  │ │
+│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘  └──────┬──────┘ │
+│         │                 │                 │                 │         │
+│  ┌──────▼─────────────────▼─────────────────▼─────────────┐  │         │
+│  │              useExplorerStore (Zustand)                  │  │         │
+│  │  filterSlice: query, rateMin, rateMax, tags, sortBy      │  │         │
+│  │  resultsSlice: experts[], total, cursor, loading         │  │         │
+│  │  pilotSlice: messages[], isOpen, isStreaming             │  │         │
+│  │  (PilotMessage now has optional experts?: Expert[])      │  │         │
+│  └──────┬──────────────────────────────────────────────────┘  │         │
+│         │                                                       │         │
+│  ┌──────▼───────────┐  ┌─────────────────┐  ┌────────────────┐│         │
+│  │   useExplore     │  │    useSage      │  │ useAdminData   ││         │
+│  │  (filter-driven  │  │  Gemini 2-turn  │  │ adminFetch()   ││         │
+│  │   GET /explore)  │  │  search_experts │  │ + Marketplace  ││         │
+│  │  UNCHANGED       │  │  + apply_filters│  │   hooks (NEW)  ││         │
+│  └──────┬───────────┘  └────────┬────────┘  └───────┬────────┘│         │
+│         │                        │                    │                   │
+│  ┌──────▼────────────────────────▼────────────────┐  │                   │
+│  │     tracking.ts (NEW)                           │  │                   │
+│  │     trackEvent() — fire-and-forget POST         │  │                   │
+│  │     called from filterSlice, ExpertCard, useSage│  │                   │
+│  └──────────────────────────────────────────────────┘  │                  │
+└───────────────────────────────────────────────────────────────────────────┘
+          │  HTTP/JSON             │  HTTP/JSON         │  HTTP/JSON
+          ▼                        ▼                    ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                          BACKEND (Railway)                               │
 │                                                                          │
-│  Zustand stores                                                          │
-│  ┌───────────────────────────────┐  ┌────────────────────────────────┐   │
-│  │ useExplorerStore              │  │ useNltrStore (NEW)             │   │
-│  │ 'explorer-filters' (unchanged)│  │ 'nltr-state'                  │   │
-│  │ filterSlice / resultsSlice /  │  │ subscribed: bool              │   │
-│  │ pilotSlice                    │  │ email: string                 │   │
-│  └───────────────────────────────┘  └────────────────────────────────┘   │
-├─────────────────────────────────────────────────────────────────────────┤
-│                         BACKEND (Railway)                                │
-├─────────────────────────────────────────────────────────────────────────┤
-│  app.state                                                               │
-│  ┌──────────────────┐  ┌────────────────┐  ┌───────────────────────┐    │
-│  │ faiss_index      │  │ metadata       │  │ tsne_cache (NEW)      │    │
-│  │ IndexFlatIP      │  │ list[dict]     │  │ list[{x,y,username,   │    │
-│  │ 536 × 768        │  │ 536 rows       │  │  category}]           │    │
-│  │ (swap target)    │  │ (swap target)  │  │ computed at startup   │    │
-│  └──────────────────┘  └────────────────┘  └───────────────────────┘    │
+│  GET /api/explore      POST /api/pilot (MODIFIED)   POST /api/events     │
+│  ┌─────────────────┐  ┌──────────────────────────┐  ┌─────────────────┐ │
+│  │ explorer.py     │  │ pilot_service.py          │  │ events.py (NEW) │ │
+│  │ run_explore()   │  │ search_experts +          │  │ INSERT INTO     │ │
+│  │ UNCHANGED       │◄─┤ apply_filters functions   │  │ user_events     │ │
+│  └─────────────────┘  │ run_explore() direct call │  └─────────────────┘ │
+│                        └──────────────────────────┘                       │
+│                                                                          │
+│  GET /api/admin/events/demand                                            │
+│  GET /api/admin/events/exposure   (new endpoints in admin.py)            │
+│                                                                          │
+│  ┌─────────────────────────────────────────────────────────────────┐    │
+│  │                     SQLite (Railway volume)                       │    │
+│  │  conversations  feedback  email_leads  newsletter_subscribers    │    │
+│  │  experts  settings  experts_fts (FTS5)                          │    │
+│  │  user_events (NEW)                                               │    │
+│  └─────────────────────────────────────────────────────────────────┘    │
 │  ┌────────────────────────────────────────────────────────────────┐     │
-│  │ username_to_faiss_pos dict (rebuilt after each swap)           │     │
+│  │            FAISS in-memory (530 vectors) — UNCHANGED            │     │
 │  └────────────────────────────────────────────────────────────────┘     │
-│                                                                          │
-│  Existing routers (unchanged interaction model)                          │
-│  explore.py — MODIFIED: add otr_at_k to ExploreResponse                 │
-│  admin.py  — MODIFIED: add /embedding-map, /newsletter-subscribers,     │
-│                         otr_7day to intelligence-stats                  │
-│  newsletter.py (NEW) — POST /api/newsletter-subscribe                   │
-│                                                                          │
-│  SQLite tables                                                           │
-│  conversations (MODIFIED: +otr_at_k REAL)                               │
-│  newsletter_subscribers (NEW)                                            │
-│  All other tables unchanged                                              │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
-## Recommended Project Structure (v2.2 delta only)
+### Component Responsibilities
+
+| Component | Responsibility | File | Status |
+|-----------|----------------|------|--------|
+| `useExplorerStore` | Global state hub — filter, results, pilot slices | `store/index.ts` | UNCHANGED |
+| `filterSlice` | Filter fields + actions; calls `trackEvent()` after each set | `store/filterSlice.ts` | MODIFIED |
+| `resultsSlice` | Expert results array, pagination cursor, loading state | `store/resultsSlice.ts` | UNCHANGED |
+| `pilotSlice` | Sage conversation messages; `PilotMessage.experts` field added | `store/pilotSlice.ts` | MODIFIED |
+| `useExplore` | Reactive filter watcher; fires GET /api/explore on filter change | `hooks/useExplore.ts` | UNCHANGED |
+| `useSage` | Handles `data.experts` + `data.filters`; tracks sage_query events | `hooks/useSage.ts` | MODIFIED |
+| `ExpertCard` | Marketplace card; triggers `trackEvent(card_click)` on click | `components/marketplace/ExpertCard.tsx` | MODIFIED |
+| `SagePanel` | 380px panel; renders `SageMessage` with optional expert list | `components/pilot/SagePanel.tsx` | UNCHANGED |
+| `SageMessage` | Renders text content; now renders `SageExpertCard` list if `experts` present | `components/pilot/SageMessage.tsx` | MODIFIED |
+| `SageExpertCard` | Compact expert card for Sage panel (no bento constraints) | `components/pilot/SageExpertCard.tsx` | NEW |
+| `tracking.ts` | `trackEvent()` fire-and-forget utility; `keepalive: true` | `src/lib/tracking.ts` | NEW |
+| `pilot_service.py` | Two-turn Gemini; `search_experts` + `apply_filters` functions; calls `run_explore()` | `services/pilot_service.py` | MODIFIED |
+| `pilot.py` (router) | Injects `db` + `app.state` into `run_pilot()` | `routers/pilot.py` | MODIFIED |
+| `events.py` (router) | `POST /api/events` — inserts `UserEvent`; no auth required | `routers/events.py` | NEW |
+| `models.py` | Adds `UserEvent` SQLAlchemy model | `app/models.py` | MODIFIED |
+| `admin.py` | Adds `/events/demand` + `/events/exposure` aggregation endpoints | `routers/admin.py` | MODIFIED |
+| `MarketplacePage.tsx` | New admin page — exposure distribution + demand signals | `admin/pages/MarketplacePage.tsx` | NEW |
+
+---
+
+## Feature 1: Sage `search_experts` Function
+
+### The Critical Difference From `apply_filters`
+
+`apply_filters` mutates the Zustand store; `useExplore` reactively fires GET /api/explore when the store changes. Filter args are the payload — no results come back from the backend.
+
+`search_experts` must do three things simultaneously:
+1. Call the actual search pipeline and get real expert results
+2. Give those results to Sage to narrate in chat
+3. Sync the main grid to show the same search (so the user can browse the full result set)
+
+This requires the backend to call `run_explore()` and return the expert list in the `/api/pilot` response — not just filter arguments.
+
+### Data Flow
+
+```
+User types in SageInput: "Find me a blockchain expert under €200/hr"
+    │
+    ▼
+useSage.handleSend(text)
+    │ addMessage (user) → pilotSlice
+    │ setStreaming(true)
+    │
+    │ POST /api/pilot { message, history, current_filters }
+    ▼
+pilot.py injects db + app.state → run_pilot(message, history, current_filters, db, app_state)
+    │
+    │ Turn 1: Gemini sees search_experts FunctionDeclaration
+    │         Extracts args: { query: "blockchain", rate_max: 200 }
+    │         Returns FunctionCall(name="search_experts", args={...})
+    │
+    ▼
+pilot_service calls run_explore() directly (service import — no HTTP)
+    │ run_explore(query="blockchain", rate_max=200, limit=5, cursor=0, db=db, app_state=app_state)
+    │ Returns ExploreResponse: { experts: [top 5], total: N, cursor: ... }
+    │
+    │ Turn 2: Gemini receives function response with expert summary strings
+    │         Generates Sage's natural language narrative
+    │
+    ▼
+PilotResponse: {
+    filters: { query: "blockchain", rate_max: 200 },   ← filter diff for grid sync
+    experts: [ ExpertCard, ... ],                       ← NEW: top 5 for Sage display
+    message: "Found 12 blockchain experts under €200/hr. Here are the top matches..."
+}
+    │
+    ▼
+useSage receives response
+    ├── validateAndApplyFilters(data.filters)
+    │       filterSlice.setQuery("blockchain") + setRateRange(0, 200)
+    │       useExplore reacts → GET /api/explore?query=blockchain&rate_max=200
+    │       setResults(experts, total, cursor) → ExpertGrid re-renders with full 20-item page
+    │
+    └── addMessage({ content: data.message, experts: data.experts })
+            pilotSlice.messages updates
+            SageMessage renders SageExpertCard list (top 5 with narrative)
+
+[Grid shows full paginated results] [Sage panel shows top 5 with narrative]
+```
+
+### Grid Sync Mechanism
+
+Grid sync reuses the existing reactive mechanism — no new code. When `useSage` calls `validateAndApplyFilters()` with `{ query: "blockchain", rate_max: 200 }`, the filterSlice updates, `useExplore`'s dependency array `[query, rateMin, rateMax, tags, sortBy]` triggers, and the grid re-fetches automatically.
+
+The key design decision: the pilot response carries both `filters` (for grid sync) and `experts` (for Sage display). These are different views of the same query: Sage shows top 5 with narrative context; the grid shows the full paginated result set.
+
+### Backend Changes
+
+**`pilot.py` router** — inject `db` and `app.state`:
+
+```python
+# BEFORE
+@router.post("/api/pilot", response_model=PilotResponse)
+async def pilot(body: PilotRequest) -> PilotResponse:
+    loop = asyncio.get_event_loop()
+    result = await loop.run_in_executor(
+        None,
+        lambda: run_pilot(
+            message=body.message,
+            history=[h.model_dump() for h in body.history],
+            current_filters=body.current_filters,
+        ),
+    )
+
+# AFTER
+@router.post("/api/pilot", response_model=PilotResponse)
+async def pilot(
+    request: Request,
+    body: PilotRequest,
+    db: Session = Depends(get_db),
+) -> PilotResponse:
+    loop = asyncio.get_event_loop()
+    result = await loop.run_in_executor(
+        None,
+        lambda: run_pilot(
+            message=body.message,
+            history=[h.model_dump() for h in body.history],
+            current_filters=body.current_filters,
+            db=db,
+            app_state=request.app.state,
+        ),
+    )
+```
+
+**`PilotResponse`** — add experts field:
+
+```python
+class PilotResponse(BaseModel):
+    filters: dict | None
+    experts: list[dict] | None = None   # NEW: ExpertCard dicts from run_explore()
+    message: str
+```
+
+**`pilot_service.py`** — add `search_experts` declaration and handler:
+
+```python
+from app.services.explorer import run_explore, ExpertCard as ExploreExpertCard
+
+SEARCH_EXPERTS_DECLARATION = types.FunctionDeclaration(
+    name="search_experts",
+    description=(
+        "Search the expert marketplace for professionals matching the user's request. "
+        "Use this when the user wants to find experts, not just adjust filters. "
+        "Returns real expert results that will appear in Sage's chat and in the main grid."
+    ),
+    parameters_json_schema={
+        "type": "object",
+        "properties": {
+            "query": {"type": "string", "description": "Semantic search query."},
+            "rate_min": {"type": "number", "description": "Minimum hourly rate."},
+            "rate_max": {"type": "number", "description": "Maximum hourly rate."},
+            "tags": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Domain tags to filter by (AND logic).",
+            },
+        },
+        "required": ["query"],
+    },
+)
+
+# In run_pilot(), update tool to include both declarations:
+tool = types.Tool(function_declarations=[APPLY_FILTERS_DECLARATION, SEARCH_EXPERTS_DECLARATION])
+
+# In the function call handler:
+if fn_call.name == "search_experts":
+    args = fn_call.args
+    explore_result = run_explore(
+        query=args.get("query", ""),
+        rate_min=args.get("rate_min", 0.0),
+        rate_max=args.get("rate_max", 10000.0),
+        tags=args.get("tags", []),
+        limit=5,          # Top 5 for Sage display; grid gets full set via filter sync
+        cursor=0,
+        db=db,
+        app_state=app_state,
+    )
+    experts_for_sage = [e.model_dump() for e in explore_result.experts]
+    filters_applied = {  # Also sync the grid
+        "query": args.get("query", ""),
+        "rate_min": args.get("rate_min", 0.0),
+        "rate_max": args.get("rate_max", 10000.0),
+        "tags": args.get("tags", []),
+    }
+    # Build summary string for Turn 2 Gemini context
+    expert_summaries = "\n".join(
+        f"- {e['first_name']} {e['last_name']}: {e['job_title']} @ {e['company']} "
+        f"({e['currency']} {e['hourly_rate']}/hr)"
+        for e in experts_for_sage
+    )
+    function_response = {
+        "result": "success",
+        "total_found": explore_result.total,
+        "experts": expert_summaries,
+    }
+    # Turn 2: generate Sage narrative referencing the actual experts...
+```
+
+### Frontend Changes
+
+**`pilotSlice.ts`** — `PilotMessage` gains optional `experts` field:
+
+```typescript
+export interface PilotMessage {
+  id: string
+  role: 'user' | 'assistant'
+  content: string
+  timestamp: number
+  experts?: Expert[]   // NEW: populated when Sage did a search_experts call
+}
+```
+
+**`useSage.ts`** — handle `data.experts`:
+
+```typescript
+// After receiving pilot response:
+if (data.filters && typeof data.filters === 'object') {
+  validateAndApplyFilters(data.filters as Record<string, unknown>)
+}
+
+addMessage({
+  id: `${Date.now()}-assistant`,
+  role: 'assistant',
+  content: data.message ?? "Here's what I found!",
+  experts: data.experts?.slice(0, 5) ?? undefined,  // NEW
+  timestamp: Date.now(),
+})
+```
+
+**New component: `SageExpertCard.tsx`** — compact card for Sage panel. Intentionally different from marketplace `ExpertCard`: no `h-[180px]` constraint, no CSS hover animation, no bento zones. Simple name/title/rate/tag layout optimized for the narrow 380px panel.
+
+**`SageMessage.tsx`** — render expert list when present:
+
+```tsx
+// After the text bubble, if message.experts exists:
+{message.experts && message.experts.length > 0 && (
+  <div className="mt-2 space-y-2">
+    {message.experts.map(expert => (
+      <SageExpertCard key={expert.username} expert={expert} />
+    ))}
+  </div>
+)}
+```
+
+---
+
+## Feature 2: User Event Tracking
+
+### SQLite `user_events` Table Schema
+
+A single table with discriminated `event_type` column handles all three event types. Using one table (not three) because admin gap queries aggregate across event types; cross-event analysis (e.g., "what filters changed before a card click?") is simpler with a single table.
+
+```sql
+CREATE TABLE user_events (
+    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+    event_type       TEXT    NOT NULL,   -- 'card_click' | 'sage_query' | 'filter_change'
+    created_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    -- card_click fields
+    expert_username  TEXT,          -- which expert was clicked
+    context          TEXT,          -- 'grid' | 'sage_panel'
+
+    -- sage_query fields
+    query_text       TEXT,          -- raw user message to Sage
+    function_called  TEXT,          -- 'apply_filters' | 'search_experts' | null
+    result_count     INTEGER,       -- experts returned (search_experts only)
+
+    -- filter_change fields
+    filter_field     TEXT,          -- 'query' | 'rate_range' | 'tags' | 'reset'
+    filter_value     TEXT           -- JSON-serialized value(s) for the field
+);
+
+CREATE INDEX idx_user_events_type_ts ON user_events (event_type, created_at);
+CREATE INDEX idx_user_events_expert  ON user_events (expert_username)
+    WHERE expert_username IS NOT NULL;
+```
+
+Sparse columns (NULL for irrelevant event types) are intentional. SQLite handles NULLs efficiently; no wasted storage.
+
+### SQLAlchemy Model
+
+Add to `app/models.py`:
+
+```python
+class UserEvent(Base):
+    """
+    User behavior events for marketplace intelligence.
+    Single table with sparse nullable columns per event_type.
+
+    event_type values:
+        'card_click'     — expert card click; expert_username + context populated
+        'sage_query'     — Sage send; query_text + function_called + result_count
+        'filter_change'  — filter state changed; filter_field + filter_value (JSON)
+
+    No FK constraints — consistent with existing models.py style.
+    Auto-created by Base.metadata.create_all at startup.
+    """
+    __tablename__ = "user_events"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    event_type: Mapped[str] = mapped_column(String(30), nullable=False, index=True)
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime, default=datetime.datetime.utcnow, nullable=False
+    )
+    # card_click
+    expert_username: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
+    context: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    # sage_query
+    query_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    function_called: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    result_count: Mapped[int | None] = mapped_column(nullable=True)
+    # filter_change
+    filter_field: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    filter_value: Mapped[str | None] = mapped_column(Text, nullable=True)
+```
+
+No `ALTER TABLE` or migration script needed. `Base.metadata.create_all()` in `main.py` lifespan creates missing tables idempotently on next Railway deploy.
+
+### Backend Ingestion Endpoint
+
+New router: `app/routers/events.py`. No auth required — public, like `/api/explore`.
+
+```python
+"""POST /api/events — user behavior event ingestion. No auth required."""
+from fastapi import APIRouter, Depends
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
+from app.database import get_db
+from app.models import UserEvent
+
+router = APIRouter()
+
+class EventRequest(BaseModel):
+    event_type: str
+    expert_username: str | None = None
+    context: str | None = None
+    query_text: str | None = None
+    function_called: str | None = None
+    result_count: int | None = None
+    filter_field: str | None = None
+    filter_value: str | None = None
+
+@router.post("/api/events", status_code=202)
+def record_event(body: EventRequest, db: Session = Depends(get_db)):
+    """
+    Fire-and-forget event ingestion. Returns 202 (no body) immediately.
+    Frontend does not await a meaningful response.
+    """
+    db.add(UserEvent(**body.model_dump()))
+    db.commit()
+    return None
+```
+
+Register in `main.py` alongside existing routers. `status_code=202` signals "accepted but not processed further" — semantically correct and reduces frontend expectations.
+
+### Frontend Tracking Utility
+
+New file: `frontend/src/lib/tracking.ts`
+
+```typescript
+const API_BASE = import.meta.env.VITE_API_URL ?? ''
+
+export function trackEvent(payload: Record<string, unknown>): void {
+  // keepalive: true ensures event fires even if user navigates away immediately
+  // No error handling — analytics loss on failure is acceptable
+  fetch(`${API_BASE}/api/events`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+    keepalive: true,
+  }).catch(() => { /* silent */ })
+}
+```
+
+`trackEvent` is a plain module function (not a hook). It can be called from Zustand slice actions, event handlers, and `useCallback` — anywhere without hook rules constraints.
+
+### Tracking Integration Points
+
+| Event | Where Called | Code Location | Fields |
+|-------|-------------|---------------|--------|
+| `card_click` (grid) | `ExpertCard.tsx` onClick on "View Full Profile" | `components/marketplace/ExpertCard.tsx` | `expert_username`, `context: 'grid'` |
+| `card_click` (sage) | `SageExpertCard.tsx` onClick | `components/pilot/SageExpertCard.tsx` | `expert_username`, `context: 'sage_panel'` |
+| `sage_query` | `useSage.ts` after pilot response received | `hooks/useSage.ts` | `query_text`, `function_called`, `result_count` |
+| `filter_change` | `filterSlice.ts` set actions | `store/filterSlice.ts` | `filter_field`, `filter_value` |
+
+**Filter tracking pattern** — tracking lives in `filterSlice.ts` set actions (not in UI components). This ensures tracking fires regardless of whether the change came from the sidebar, URL sync, or Sage:
+
+```typescript
+// filterSlice.ts (modified)
+import { trackEvent } from '../lib/tracking'
+
+setQuery: (q) => {
+  set({ query: q })
+  if (q) trackEvent({ event_type: 'filter_change', filter_field: 'query', filter_value: q })
+},
+setRateRange: (min, max) => {
+  set({ rateMin: min, rateMax: max })
+  trackEvent({ event_type: 'filter_change', filter_field: 'rate_range',
+                filter_value: JSON.stringify({ min, max }) })
+},
+setTags: (tags) => {
+  set({ tags })
+  trackEvent({ event_type: 'filter_change', filter_field: 'tags',
+                filter_value: JSON.stringify(tags) })
+},
+resetFilters: () => {
+  set({ ...filterDefaults })
+  trackEvent({ event_type: 'filter_change', filter_field: 'reset', filter_value: 'true' })
+},
+```
+
+Do not track `setQuery('')` (empty string clears) to avoid noise — add a `if (q)` guard as shown.
+
+**Sage query tracking in `useSage.ts`** — after pilot response:
+
+```typescript
+// After receiving pilot response:
+trackEvent({
+  event_type: 'sage_query',
+  query_text: text.trim(),
+  function_called: data.filters ? (data.experts ? 'search_experts' : 'apply_filters') : null,
+  result_count: data.experts?.length ?? null,
+})
+```
+
+---
+
+## Feature 3: Admin Gaps Tab — Unmet Demand + Exposure
+
+### Existing vs New Gaps
+
+The current `GapsPage.tsx` + `GET /api/admin/gaps` endpoint surfaces **chat-API gaps** (queries where `conversations.top_match_score < 0.60`). This is unrelated to the new marketplace intelligence data from `user_events`.
+
+The v2.3 intelligence view is a **new admin page**: `MarketplacePage.tsx` at `/admin/marketplace`. It does not modify the existing GapsPage — it adds a sibling page. Add a sidebar entry in `AdminSidebar.tsx`.
+
+### Admin Aggregation Queries
+
+**Unmet Demand — Sage searches with poor results:**
+
+```sql
+SELECT
+    query_text,
+    COUNT(*)           AS query_count,
+    AVG(result_count)  AS avg_result_count,
+    MIN(created_at)    AS first_seen,
+    MAX(created_at)    AS last_seen
+FROM user_events
+WHERE event_type = 'sage_query'
+  AND function_called = 'search_experts'
+  AND (result_count IS NULL OR result_count < 3)
+GROUP BY query_text
+ORDER BY query_count DESC
+LIMIT 50;
+```
+
+**Unmet Demand — Most searched filter terms:**
+
+```sql
+SELECT
+    filter_value        AS search_term,
+    COUNT(*)            AS frequency,
+    MAX(created_at)     AS last_seen
+FROM user_events
+WHERE event_type = 'filter_change'
+  AND filter_field = 'query'
+  AND filter_value != ''
+  AND filter_value IS NOT NULL
+GROUP BY filter_value
+ORDER BY frequency DESC
+LIMIT 50;
+```
+
+**Expert Exposure Distribution:**
+
+```sql
+SELECT
+    e.username,
+    e.first_name || ' ' || e.last_name  AS name,
+    e.job_title,
+    e.findability_score,
+    COUNT(ue.id)                        AS click_count
+FROM experts e
+LEFT JOIN user_events ue
+    ON ue.expert_username = e.username
+    AND ue.event_type = 'card_click'
+GROUP BY e.username
+ORDER BY click_count DESC;
+```
+
+**Click source breakdown (grid vs Sage panel):**
+
+```sql
+SELECT
+    expert_username,
+    SUM(CASE WHEN context = 'grid'       THEN 1 ELSE 0 END) AS grid_clicks,
+    SUM(CASE WHEN context = 'sage_panel' THEN 1 ELSE 0 END) AS sage_clicks,
+    COUNT(*) AS total_clicks
+FROM user_events
+WHERE event_type = 'card_click'
+GROUP BY expert_username
+ORDER BY total_clicks DESC
+LIMIT 100;
+```
+
+**Daily Sage usage trend:**
+
+```sql
+SELECT
+    DATE(created_at)    AS day,
+    COUNT(*)            AS sage_queries,
+    SUM(CASE WHEN function_called = 'search_experts' THEN 1 ELSE 0 END) AS search_calls,
+    SUM(CASE WHEN function_called = 'apply_filters'  THEN 1 ELSE 0 END) AS filter_calls
+FROM user_events
+WHERE event_type = 'sage_query'
+GROUP BY day
+ORDER BY day DESC
+LIMIT 30;
+```
+
+### New Admin Endpoints
+
+Add to `admin.py` under the existing auth-gated `router`:
+
+```python
+@router.get("/events/demand")
+def get_demand_signals(db: Session = Depends(get_db)):
+    """Unmet demand: Sage searches with few results + most-searched filter terms."""
+    # Run SQL aggregations above
+    return {
+        "sage_gaps": [...],          # query_text, query_count, avg_result_count
+        "filter_terms": [...],       # search_term, frequency, last_seen
+    }
+
+@router.get("/events/exposure")
+def get_exposure_distribution(db: Session = Depends(get_db)):
+    """Expert click counts, grid vs Sage panel breakdown, vs findability score."""
+    # Run SQL aggregations above
+    return {
+        "experts": [...],            # username, name, click_count, findability_score
+        "daily_trend": [...],        # day, sage_queries, search_calls, filter_calls
+    }
+```
+
+### Frontend Admin Page
+
+New file: `frontend/src/admin/pages/MarketplacePage.tsx`
+
+Two sections:
+1. **Demand Signals** — table of Sage searches with poor results + most-searched filter terms
+2. **Expert Exposure** — sortable table of experts by click count vs findability score; highlights over- and under-exposed experts
+
+New hook in `useAdminData.ts`:
+
+```typescript
+export function useMarketplaceEvents() {
+  // Parallel fetch: demand + exposure
+  const [demand, setDemand] = useState<DemandResponse | null>(null)
+  const [exposure, setExposure] = useState<ExposureResponse | null>(null)
+  ...
+  useEffect(() => {
+    Promise.all([
+      adminFetch<DemandResponse>('/events/demand'),
+      adminFetch<ExposureResponse>('/events/exposure'),
+    ]).then(([d, e]) => { setDemand(d); setExposure(e) })
+  }, [])
+}
+```
+
+New types in `admin/types.ts`:
+
+```typescript
+export interface DemandRow {
+  query_text: string
+  query_count: number
+  avg_result_count: number | null
+  last_seen: string
+}
+
+export interface FilterTermRow {
+  search_term: string
+  frequency: number
+  last_seen: string
+}
+
+export interface ExposureRow {
+  username: string
+  name: string
+  job_title: string
+  click_count: number
+  grid_clicks: number
+  sage_clicks: number
+  findability_score: number | null
+}
+```
+
+---
+
+## Recommended Project Structure (v2.3 delta only)
 
 ```
 app/
-├── models.py                  MODIFIED — add NewsletterSubscriber class; add otr_at_k to Conversation
-├── main.py                    MODIFIED — add tsne_cache startup block; add otr_at_k ALTER TABLE;
-│                                         register newsletter.router
+├── models.py               MODIFIED — add UserEvent model
+├── main.py                 MODIFIED — register events.router
 ├── routers/
-│   ├── admin.py               MODIFIED — add /embedding-map; /newsletter-subscribers;
-│   │                                     otr_7day to intelligence-stats
-│   ├── explore.py             MODIFIED — otr_at_k now in ExploreResponse (optional log write)
-│   └── newsletter.py          NEW — POST /api/newsletter-subscribe
+│   ├── pilot.py            MODIFIED — inject db + app.state into run_pilot()
+│   ├── admin.py            MODIFIED — add /events/demand, /events/exposure endpoints
+│   └── events.py           NEW — POST /api/events (public, no auth)
 └── services/
-    └── explorer.py            MODIFIED — add otr_at_k field to ExploreResponse; compute after sort
+    └── pilot_service.py    MODIFIED — add SEARCH_EXPERTS_DECLARATION; call run_explore();
+                                       accept db + app_state params; return experts in response
 
 frontend/src/
+├── lib/
+│   └── tracking.ts         NEW — trackEvent() fire-and-forget utility
 ├── store/
-│   ├── index.ts               UNCHANGED (nltrStore is standalone, not composed in)
-│   └── nltrSlice.ts           NEW — useNltrStore with 'nltr-state' persist key
+│   ├── filterSlice.ts      MODIFIED — call trackEvent() in set actions
+│   └── pilotSlice.ts       MODIFIED — PilotMessage.experts?: Expert[] field
+├── hooks/
+│   └── useSage.ts          MODIFIED — handle data.experts; call trackEvent(sage_query)
 ├── components/
-│   ├── sidebar/
-│   │   ├── TagMultiSelect.tsx REPLACED ENTIRELY by AnimatedTagCloud.tsx
-│   │   └── AnimatedTagCloud.tsx  NEW — Framer Motion layout animations + proximity scale
 │   ├── marketplace/
-│   │   └── ExpertCard.tsx     MODIFIED — bento zones (CARD-01); aurora hover tokens (CARD-03)
-│   └── modals/
-│       └── ProfileGateModal.tsx  MODIFIED — newsletter CTA copy; calls /api/newsletter-subscribe;
-│                                            calls useNltrStore.setSubscribed()
-└── pages/
-    └── MarketplacePage.tsx    MODIFIED — aurora mesh gradient background wrapper (VIS-01)
+│   │   └── ExpertCard.tsx  MODIFIED — call trackEvent(card_click) on profile click
+│   └── pilot/
+│       ├── SageMessage.tsx MODIFIED — render SageExpertCard list when experts present
+│       └── SageExpertCard.tsx  NEW — compact expert card for 380px Sage panel
+└── admin/
+    ├── pages/
+    │   └── MarketplacePage.tsx  NEW — demand signals + exposure distribution
+    ├── components/
+    │   ├── AdminSidebar.tsx     MODIFIED — add Marketplace nav entry
+    │   ├── DemandTable.tsx      NEW — sage gaps + filter terms tables
+    │   └── ExposureTable.tsx    NEW — expert click distribution table
+    ├── hooks/
+    │   └── useAdminData.ts      MODIFIED — add useMarketplaceEvents() hook
+    └── types.ts                 MODIFIED — add DemandRow, FilterTermRow, ExposureRow
 ```
-
-## Architectural Patterns
-
-### Pattern 1: Atomic FAISS Swap — Reference Replacement
-
-**What:** Three sequential Python attribute assignments on `app.state` replace the live FAISS index, metadata, and position mapping after an offline rebuild completes in a background thread.
-
-**When to use:** Every time `_run_ingest_job` completes (triggered by admin rebuild).
-
-**Trade-offs:** Simple and correct for single-process Railway. The 3-statement window is a theoretical race; the `username_in_pos` guard in `run_explore()` provides graceful degradation. If strict atomicity is needed, bundle into a single dataclass (requires updating all callers of `app_state.faiss_index`).
-
-**Code:** Already exists in `admin.py:_run_ingest_job`. Do not duplicate.
-
-### Pattern 2: reconstruct_n for Flat FAISS Indices
-
-**What:** `IndexFlatIP.reconstruct_n(0, ntotal, output_array)` extracts all stored vectors into a pre-allocated numpy float32 array.
-
-**When to use:** Any time you need all vectors for analysis (t-SNE, UMAP, drift detection) without re-reading from disk.
-
-**Trade-offs:** O(n) memory allocation. At 536 × 768 = 3MB — negligible. At 50K × 768 = ~150MB — consider streaming or chunked processing.
-
-```python
-vectors = np.zeros((index.ntotal, index.d), dtype=np.float32)
-index.reconstruct_n(0, index.ntotal, vectors)
-# For IndexFlatIP: vectors == the exact matrix passed to index.add()
-```
-
-**Important:** The vectors in the index are L2-normalized (see `ingest.py` line 162: `faiss.normalize_L2(matrix)`). When computing TSNE, use `metric="cosine"` or know that distances are cosine distances.
-
-### Pattern 3: Newsletter Model Following EmailLead Pattern
-
-**What:** New `newsletter_subscribers` table with `email` unique + index, `created_at`, `source` string. Router uses `insert().on_conflict_do_nothing()` for idempotency. Also writes to `email_leads` for unified lead tracking.
-
-**When to use:** Any new lead-capture table in this codebase.
-
-**Trade-offs:** Two writes per submission (newsletter + email_leads) — both are fast SQLite inserts with unique index lookup. The duplication is intentional: `email_leads` is the unified lead view, `newsletter_subscribers` tracks consent with source attribution.
-
-### Pattern 4: Standalone Zustand Store for Orthogonal State
-
-**What:** Create a separate `create()` store (`useNltrStore`) with its own persist key instead of extending `useExplorerStore`.
-
-**When to use:** When the new state has a different lifecycle than existing state, different persist requirements, and no shared actions with existing slices.
-
-**Trade-offs:** More import paths (two stores vs one). Avoids partialize migration risk and lifecycle coupling.
-
-```typescript
-// Correct — standalone store
-export const useNltrStore = create<NltrState>()(
-  persist(set => ({ ... }), { name: 'nltr-state' })
-)
-
-// Wrong — composing into useExplorerStore would require updating partialize
-// and risks version migration side effects
-```
-
-## Data Flow
-
-### Atomic FAISS Swap Flow
-
-```
-Admin clicks "Rebuild Index" in admin panel
-    ↓
-POST /api/admin/ingest/run (EXISTING endpoint)
-    ↓
-threading.Thread: _run_ingest_job(app)
-    ↓
-subprocess: scripts/tag_experts.py (tags + findability — 60s+ with Gemini API)
-subprocess: scripts/ingest.py     (embed + write faiss.index via staging rename)
-    ↓
-app.state.faiss_index = faiss.read_index(FAISS_INDEX_PATH)
-app.state.metadata = json.load(METADATA_PATH)
-app.state.username_to_faiss_pos = rebuild_mapping(metadata)
-app.state.tsne_cache = []   ← NEW: invalidate cache
-_ingest["status"] = "done"  ← IDX-04 polling sees completion
-    ↓
-Admin polls GET /api/admin/ingest/status (EXISTING endpoint)
-Admin frontend updates rebuild status badge
-```
-
-### Newsletter Subscription Flow
-
-```
-User opens ProfileGateModal (profile click)
-    ↓
-Modal renders newsletter CTA ("Get expert insights. Unlock profiles.")
-User submits email
-    ↓
-POST /api/newsletter-subscribe {email, source: "profile_gate"}
-    ↓ (server: INSERT OR IGNORE newsletter_subscribers + email_leads)
-    ↓
-localStorage.setItem('tcs_email_unlocked', 'true')   ← UNCHANGED
-useNltrStore.getState().setSubscribed(email)          ← NEW
-    ↓
-Modal: shows confirmation with user email
-Profile: unlocked
-
-Returning visitor:
-  localStorage['tcs_email_unlocked'] === 'true'   → gate bypassed (UNCHANGED)
-  useNltrStore rehydrates from 'nltr-state'        → subscribed=true, email restored
-```
-
-### t-SNE Heatmap Flow
-
-```
-FastAPI lifespan startup
-    ↓
-faiss_index loaded (536 vectors, IndexFlatIP)
-    ↓
-reconstruct_n(0, 536) → np.zeros((536, 768)) populated in-place
-    ↓
-TSNE(n_components=2, perplexity=30, metric='cosine').fit_transform() → (536, 2) coords
-    ↓
-app.state.tsne_cache = [{x, y, username, category}] × 536
-    ↓
-GET /api/admin/embedding-map → {"points": tsne_cache}
-    ↓
-Admin panel: scatter plot colored by category; expert name on hover (INTEL-06)
-```
-
-### OTR@K Flow (explore pipeline)
-
-```
-GET /api/explore?query=...
-    ↓
-run_explore() hybrid pipeline runs
-scored list built and sorted (existing)
-    ↓
-top_k = scored[:10]
-otr_at_k = count(final_s >= 0.60) / len(top_k)
-    ↓
-ExploreResponse(... otr_at_k=otr_at_k)
-    ↓
-Admin GET /api/admin/intelligence-stats:
-  SELECT AVG(otr_at_k), date FROM conversations
-  WHERE created_at >= date('now', '-7 days')
-  GROUP BY date
-```
-
-## Integration Points
-
-### New vs Modified Components — Complete Table
-
-| Component | Status | What Changes |
-|-----------|--------|--------------|
-| `app/models.py` | MODIFIED | Add `NewsletterSubscriber`; add `otr_at_k: Mapped[float | None]` to `Conversation` |
-| `app/main.py` | MODIFIED | Add t-SNE startup block after line 214; add `"ALTER TABLE conversations ADD COLUMN otr_at_k REAL"` to existing migration block; add `newsletter.router` import and registration |
-| `app/routers/admin.py` | MODIFIED | Add `GET /embedding-map`; add `GET /newsletter-subscribers`; add `otr_7day` to `get_intelligence_stats()` response |
-| `app/routers/explore.py` | MODIFIED | `ExploreResponse` now includes `otr_at_k`; no structural change to the route |
-| `app/routers/newsletter.py` | NEW | `POST /api/newsletter-subscribe` |
-| `app/services/explorer.py` | MODIFIED | Add `otr_at_k: float | None = None` to `ExploreResponse`; compute OTR@K after `scored.sort()` in `run_explore()` |
-| `frontend/src/store/nltrSlice.ts` | NEW | `useNltrStore` with `subscribed`, `email`, `setSubscribed`, `clearSubscription` |
-| `frontend/src/store/index.ts` | UNCHANGED | `nltrStore` is standalone — no changes needed to `useExplorerStore` |
-| `frontend/src/components/sidebar/TagMultiSelect.tsx` | REPLACED | File contents replaced; same file path; exports `AnimatedTagCloud` component |
-| `frontend/src/components/marketplace/ExpertCard.tsx` | MODIFIED | Bento visual zones (CARD-01); aurora hover glow color tokens (CARD-03); h-[180px] preserved (CARD-02) |
-| `frontend/src/components/modals/ProfileGateModal.tsx` | MODIFIED | Newsletter CTA copy (NLTR-01); calls `POST /api/newsletter-subscribe`; calls `useNltrStore.setSubscribed()`; localStorage logic unchanged |
-| `frontend/src/pages/MarketplacePage.tsx` | MODIFIED | Aurora mesh gradient background div wraps content (VIS-01) |
 
 ### Files Completely Unchanged
 
-`app/routers/chat.py`, `app/routers/feedback.py`, `app/routers/email_capture.py`, `app/routers/health.py`, `app/routers/pilot.py`, `app/routers/suggest.py`, `app/services/embedder.py`, `app/services/retriever.py`, `app/services/search_intelligence.py`, `app/services/tagging.py`, `app/database.py`, `app/config.py`, `frontend/src/store/filterSlice.ts`, `frontend/src/store/resultsSlice.ts`, `frontend/src/store/pilotSlice.ts`, `frontend/src/store/index.ts`, `frontend/src/admin/` (entire directory).
+`app/routers/chat.py`, `app/routers/feedback.py`, `app/routers/email_capture.py`, `app/routers/health.py`, `app/routers/explore.py`, `app/routers/suggest.py`, `app/routers/newsletter.py`, `app/services/embedder.py`, `app/services/explorer.py`, `app/services/retriever.py`, `app/services/search_intelligence.py`, `app/services/tagging.py`, `app/database.py`, `app/config.py`, `frontend/src/store/index.ts`, `frontend/src/store/resultsSlice.ts`, `frontend/src/store/nltrStore.ts`, `frontend/src/components/pilot/SagePanel.tsx`, `frontend/src/hooks/useExplore.ts`, `frontend/src/admin/pages/GapsPage.tsx`.
 
-### External Service Dependencies
+---
+
+## Architectural Patterns
+
+### Pattern 1: Zustand Snapshot in Async Handlers
+
+**What:** Use `useExplorerStore.getState()` (snapshot) inside `async` functions instead of reactive selectors.
+**When to use:** Any async handler in `useSage`, `useExplore`, or similar hooks that reads store state mid-flight.
+**Trade-offs:** Snapshot is slightly stale if state changes during async wait, but prevents stale closures and re-render loops.
+
+```typescript
+// CORRECT — snapshot at call time
+const handleSend = useCallback(async (text: string) => {
+  const storeState = useExplorerStore.getState()  // snapshot
+  const currentFilters = { query: storeState.query, ... }
+}, [isStreaming, addMessage, setStreaming])
+```
+
+### Pattern 2: Service-to-Service Call (No HTTP Self-Call)
+
+**What:** `pilot_service.py` imports and calls `run_explore()` directly rather than making HTTP request to `/api/explore`.
+**When to use:** When one backend service needs results from another in the same process (Railway single-container).
+**Trade-offs:** Tighter coupling, but avoids network overhead, auth complications, and double error handling.
+
+```python
+# CORRECT — direct import
+from app.services.explorer import run_explore
+
+result = run_explore(query=..., db=db, app_state=app_state)
+
+# WRONG — HTTP self-call
+import httpx
+result = httpx.get("http://localhost:8000/api/explore?query=...")
+```
+
+`pilot.py` must pass `db` (from `Depends(get_db)`) and `app_state` (from `request.app.state`) down to `run_pilot()`. This is a dependency injection change — `run_pilot` signature gains two new params.
+
+### Pattern 3: Fire-and-Forget Tracking
+
+**What:** Post analytics events without blocking user interaction or awaiting response.
+**When to use:** All `trackEvent()` calls. Never on critical paths.
+**Trade-offs:** No retry on failure; analytics loss is acceptable. `keepalive: true` handles navigation.
+
+```typescript
+// CORRECT — synchronous dispatch, async fetch ignored
+setQuery: (q) => {
+  set({ query: q })                     // state update is synchronous
+  trackEvent({ event_type: 'filter_change', filter_field: 'query', filter_value: q })
+}
+
+// WRONG — awaiting blocks the action
+setQuery: async (q) => {
+  set({ query: q })
+  await trackEvent(...)   // never do this
+}
+```
+
+### Pattern 4: Discriminated Single Table for Events
+
+**What:** One `user_events` table with `event_type` column and sparse nullable fields per type.
+**When to use:** When multiple event types share common fields (`id`, `created_at`) and admin queries benefit from cross-type analytics.
+**Trade-offs:** Sparse NULLs use minimal space in SQLite. Cross-event queries (GROUP BY event_type, date range filtering) work on one table. At this scale, simpler than 3-table JOIN architecture.
+
+### Pattern 5: Individual Zustand Selectors (Not useShallow)
+
+**What:** Subscribe to each store field individually, never via `useShallow` with an object selector.
+**When to use:** Always in this codebase. The `tags` array causes identity pitfalls with `useShallow` (new array ref every render triggers `useExplore` infinite loop).
+**Trade-offs:** More verbose. Correct for referential stability.
+
+---
+
+## Data Flow
+
+### Sage Search + Grid Sync Flow
+
+```
+[User types in SageInput]
+    │
+    ▼
+useSage.handleSend(text)
+    │ addMessage (user) → pilotSlice
+    │ setStreaming(true)
+    │
+    │ POST /api/pilot { message, history, current_filters }
+    ▼
+pilot_service.run_pilot(message, history, current_filters, db, app_state)
+    │ Turn 1: Gemini sees search_experts FunctionDeclaration
+    │         → FunctionCall(search_experts, { query: "blockchain", rate_max: 200 })
+    │ run_explore(query, rate_max, limit=5) → ExploreResponse(experts=[5], total=12)
+    │ Turn 2: Gemini receives expert summaries → narrative response
+    │
+    ▼
+PilotResponse { filters: {...}, experts: [5 ExpertCards], message: "..." }
+    │
+    ├── validateAndApplyFilters(data.filters)
+    │       filterSlice.setQuery("blockchain") + setRateRange(0, 200)
+    │           ↓
+    │       useExplore re-fetches GET /api/explore?query=blockchain&rate_max=200
+    │       setResults(20 experts, total=12, cursor=null) → ExpertGrid re-renders
+    │
+    ├── addMessage({ content, experts: data.experts.slice(0,5) })
+    │       SageMessage renders SageExpertCard × 5
+    │
+    └── trackEvent({ sage_query, query_text, function_called: 'search_experts', result_count: 5 })
+```
+
+### Event Tracking Flow
+
+```
+[User clicks "View Full Profile" on ExpertCard]
+    │
+    ├── onViewProfile(url) → ProfileGateModal (EXISTING — unchanged)
+    └── trackEvent({ event_type: 'card_click', expert_username, context: 'grid' })
+            │ fetch POST /api/events (keepalive: true, no await)
+            ▼
+        events.py: db.add(UserEvent(...)); db.commit()
+        → user_events table INSERT
+```
+
+### Admin Gaps Query Flow
+
+```
+[Admin opens /admin/marketplace]
+    │
+    ▼
+MarketplacePage renders → useMarketplaceEvents()
+    │ Promise.all([
+    │   GET /api/admin/events/demand,
+    │   GET /api/admin/events/exposure
+    │ ])
+    ▼
+admin.py runs SQL aggregations
+    │ Sage gaps: GROUP BY query_text WHERE result_count < 3
+    │ Filter terms: GROUP BY filter_value WHERE filter_field='query'
+    │ Exposure: LEFT JOIN experts ON expert_username GROUP BY username
+    ▼
+DemandTable + ExposureTable render
+```
+
+---
+
+## Build Order (Dependency Graph)
+
+The three v2.3 features have dependencies that constrain sequencing:
+
+```
+Phase A — SQLite UserEvent model + POST /api/events
+    → Nothing depends on this except B and C.
+    → Can ship alone. Table auto-created on next deploy.
+
+Phase B — Event tracking (trackEvent utility + filterSlice + ExpertCard + useSage)
+    → Depends on Phase A (endpoint must exist before tracking fires)
+    → Ship: tracking.ts, filterSlice changes, ExpertCard click, useSage sage_query event
+
+Phase C — Admin Marketplace Intelligence page
+    → Depends on Phase A + B (needs events in DB to be useful)
+    → Ship: MarketplacePage, DemandTable, ExposureTable, admin endpoints, types
+
+Phase D — Sage search_experts function
+    → Independent: no dependency on A/B/C
+    → Highest-value user-facing feature
+    → Ship: pilot_service changes, pilot.py injection, PilotMessage.experts,
+             useSage experts handling, SageMessage rendering, SageExpertCard
+```
+
+**Recommended sequence: D → A → B → C**
+
+Rationale: `search_experts` (D) is the primary user-facing capability and unblocks immediately without tracking infrastructure. Shipping D first means the feature is live while A/B/C are being built. Doing A before B ensures events endpoint exists when tracking code ships. C ships last — it needs events accumulated in the DB to display meaningful data.
+
+---
+
+## Integration Points
+
+### External Services
 
 | Service | Integration Pattern | Notes |
 |---------|---------------------|-------|
-| `scikit-learn` TSNE | Add to `requirements.txt`; import in lifespan | Railway caches pip installs; ~50MB package; startup adds 2–8s |
-| FAISS `reconstruct_n` | Built into `faiss-cpu` already installed | IndexFlatIP supports it unconditionally — no new flags |
+| Gemini 2.5 Flash | Add `SEARCH_EXPERTS_DECLARATION` to `types.Tool`; two-turn pattern unchanged | Both declarations in same `Tool` object; Gemini selects the appropriate function |
+| Railway SQLite | `UserEvent` added to `models.py`; `Base.metadata.create_all()` handles table creation | No migration script; auto-created on next Railway deploy |
+
+### Internal Boundaries
+
+| Boundary | Communication | Notes |
+|----------|---------------|-------|
+| `useSage` ↔ `useExplorerStore` | `useExplorerStore.getState()` snapshot for async reads; `validateAndApplyFilters()` for writes | UNCHANGED pattern; extend to handle `data.experts` from `search_experts` response |
+| `pilot_service` ↔ `explorer` | Direct Python import + function call via `run_explore()` | NEW: `run_pilot()` must receive `db` and `app_state` params injected by `pilot.py` router |
+| `filterSlice` → `tracking.ts` | Synchronous call after `set()` inside slice actions | NEW: side-effect in slice actions; tracking is not reactive |
+| `ExpertCard` → `tracking.ts` | Direct call in onClick handler | NEW: no hook, no effect — inline in event handler |
+| `useSage` → `tracking.ts` | Direct call after pilot response | NEW: tracks `sage_query` events post-send |
+| `admin.py` ↔ `user_events` | SQLAlchemy SELECT + GROUP BY via `text()` | NEW: two new aggregation endpoints under existing auth-gated `router` |
+
+---
+
+## Anti-Patterns
+
+### Anti-Pattern 1: HTTP Self-Call for search_experts
+
+**What people do:** `pilot_service.py` makes an HTTP request to `http://localhost:8000/api/explore` to fetch experts.
+**Why it's wrong:** Network latency inside the same process; hardcoded internal URL breaks on Railway's dynamic routing; duplicates error handling; requires auth bypass or header forwarding.
+**Do this instead:** Import `run_explore` from `app.services.explorer`; call it directly. Pass `db` and `app_state` from the pilot router's dependency injection.
+
+### Anti-Pattern 2: Awaiting trackEvent
+
+**What people do:** `await trackEvent(...)` or `return trackEvent(...).then(...)` to ensure event is logged.
+**Why it's wrong:** Blocks the critical path (filter dispatch, Sage response display). If the `/api/events` endpoint is slow or returns 5xx, user sees degraded performance.
+**Do this instead:** `trackEvent()` is always fire-and-forget. The `.catch(() => {})` suppresses errors. Analytics loss on failure is acceptable.
+
+### Anti-Pattern 3: Tracking in useEffect
+
+**What people do:** `useEffect(() => { trackEvent(...) }, [lastClickedExpert])` to track events reactively.
+**Why it's wrong:** Fires on mount if dependency is non-null at mount time; creates stale closure risk; couples analytics to render lifecycle.
+**Do this instead:** Call `trackEvent()` directly in onClick handlers and Zustand set actions — synchronous calls that start async fire-and-forget fetches.
+
+### Anti-Pattern 4: Separate Tables per Event Type
+
+**What people do:** Create `card_click_events`, `sage_query_events`, `filter_change_events` tables.
+**Why it's wrong:** Cross-event gap analysis requires JOIN across three tables. Admin aggregation queries become complex. At this scale, three tables provide no query optimization benefit over a well-indexed single table.
+**Do this instead:** Single `user_events` table with discriminated `event_type` and sparse nullable fields. Composite index on `(event_type, created_at)` makes per-type queries fast.
+
+### Anti-Pattern 5: Storing Full Expert Objects in user_events
+
+**What people do:** Store the full expert JSON blob in `user_events` for `card_click` events.
+**Why it's wrong:** Redundant data (expert profile already in `experts` table); makes events table large; complicates queries.
+**Do this instead:** Store only `expert_username`. JOIN to `experts` table in aggregation queries when name/title/score is needed.
+
+### Anti-Pattern 6: Adding search_experts Results to resultsSlice Directly
+
+**What people do:** When Sage calls `search_experts`, directly call `setResults()` on resultsSlice with the backend-returned experts, bypassing `useExplore`.
+**Why it's wrong:** Breaks the invariant that resultsSlice is always a reflection of the current filterSlice state. Infinite scroll (`loadNextPage`) uses the cursor from resultsSlice — if results were injected directly, cursor is wrong. URL sync reads from filterSlice — direct result injection means URL doesn't reflect the search.
+**Do this instead:** Update filterSlice via `validateAndApplyFilters(data.filters)`. `useExplore` reacts and re-fetches GET /api/explore with the new filters. The grid gets consistent data with correct cursor, URL sync, and infinite scroll.
+
+---
 
 ## Scaling Considerations
 
 | Scale | Architecture Adjustments |
 |-------|--------------------------|
-| Current: 536 experts, single-process | All patterns correct as described. IndexFlatIP, single attr-assign swap, app.state, asyncio. Zero ops complexity. |
-| 5K experts | IndexFlatIP still viable (~15MB RAM). t-SNE startup time increases to 30–60s — move to background `asyncio.to_thread` with `tsne_cache = None` (loading state). Newsletter table has no scaling concern. |
-| 50K experts | Switch FAISS to IndexIVFFlat with `make_direct_map()` for reconstruct_n support. Multi-worker Uvicorn requires external store for shared state (app.state pattern breaks). otr_at_k would need sampling instead of full computation. |
+| Current (530 experts, low traffic) | All v2.3 patterns correct as described. SQLite `user_events` grows slowly. |
+| 10k events/day | Add `(event_type, created_at)` composite index (already in schema). Consider archiving events older than 90 days. |
+| 100k+ events/day | SQLite write contention on Railway's single-instance deployment. Consider batch writes (collect events in memory, flush periodically) or WAL mode (`PRAGMA journal_mode=WAL` — already Railway default). At this scale, Postgres migration is warranted. |
+| 50k+ experts | `run_explore()` call from `pilot_service` becomes heavier (FAISS + FTS5 at scale). Move to IndexIVFFlat; pilot endpoint's `run_in_executor` already handles thread offload correctly. |
 
-### Scaling Priorities
+**First bottleneck for v2.3:** The `run_explore()` call inside `pilot_service.run_pilot()` is CPU-bound (FAISS + FTS5). At the router level, `run_pilot()` is already offloaded to `run_in_executor`. The inner `run_explore()` call executes in that same thread — this is correct and safe. No additional concurrency machinery needed.
 
-1. **First bottleneck — t-SNE startup blocking:** At 5K experts, 30–60s startup is unacceptable on Railway health checks. Move TSNE to `asyncio.to_thread` with a polling endpoint `GET /api/admin/embedding-map/status`.
-2. **Second bottleneck — IndexFlatIP linear scan:** At 50K experts, switch to IndexIVFFlat. The atomic swap pattern is unchanged; only ingest.py changes.
-
-## Anti-Patterns
-
-### Anti-Pattern 1: asyncio.Lock for FAISS Swap in Single-Process Uvicorn
-
-**What people do:** Wrap `app.state.faiss_index = new_index` in `async with asyncio.Lock()` to prevent concurrent reads during a swap.
-
-**Why it's wrong:** The rebuild runs in `threading.Thread`, outside the event loop. Acquiring an asyncio.Lock from a thread requires `asyncio.run_coroutine_threadsafe()` — adding complexity for zero correctness benefit. The GIL already makes each attribute assignment atomic. The window between the three statements is real but handled by the existing graceful degradation guard in `run_explore()`.
-
-**Do this instead:** Keep the existing three-line assignment pattern. If strict atomicity is required, bundle all three into a single dataclass and assign once.
-
-### Anti-Pattern 2: Composing nltrSlice into useExplorerStore
-
-**What people do:** Add `subscribed` and `email` to `useExplorerStore` and add them to the `partialize` whitelist.
-
-**Why it's wrong:** The `'explorer-filters'` key has `version: 1` with an existing whitelist. Adding fields without a migrate function causes existing users to lose their newsletter state on next load (Zustand persist discards unrecognized keys at the old version). Also, `filterSlice.resetFilters()` semantically should not touch newsletter state — keeping them separate makes intent clear.
-
-**Do this instead:** Standalone `create()` store with `'nltr-state'` key. Zero migration risk.
-
-### Anti-Pattern 3: Recomputing t-SNE Per-Request
-
-**What people do:** Call `TSNE.fit_transform()` inside the `/embedding-map` route handler.
-
-**Why it's wrong:** 2–8 seconds of CPU-bound computation per admin page load. Railway's single process means this blocks all other requests for that duration.
-
-**Do this instead:** Compute at lifespan startup, cache in `app.state.tsne_cache`. Return cached data instantly. Invalidate on index rebuild (`tsne_cache = []`).
-
-### Anti-Pattern 4: Calling reconstruct_n on IndexIVFPQ Without Direct Map
-
-**What people do:** Upgrade index to `IndexIVFPQ` for compression, then call `reconstruct_n` expecting exact vectors.
-
-**Why it's wrong:** PQ quantization loses precision — reconstructed vectors are approximations. Without `make_direct_map()`, `reconstruct_n` raises `RuntimeError`. Even with it, the approximation distorts the t-SNE layout.
-
-**Do this instead:** For this codebase, IndexFlatIP is correct at 536 vectors. If upgrading to IndexIVFFlat (the recommended step at 5K+ vectors), call `index.make_direct_map()` before `faiss.write_index()` in ingest.py.
-
-### Anti-Pattern 5: Replacing localStorage Gate With nltrSlice
-
-**What people do:** Replace `localStorage['tcs_email_unlocked']` check with `useNltrStore.subscribed` as the gate bypass condition.
-
-**Why it's wrong:** The existing `useState(() => localStorage.getItem('tcs_email_unlocked') === 'true')` pattern reads synchronously in the initializer — it prevents flash of locked state for returning visitors. Zustand `persist` rehydration is asynchronous (it fires after first render). Switching to Zustand as the sole gate check causes a flash of the locked modal for every returning visitor on page load.
-
-**Do this instead:** Keep localStorage as the gate check. Use `nltrSlice` only for UI state (confirmation display, email in header, etc.). Both can coexist — they use different keys.
+---
 
 ## Sources
 
 - Direct codebase inspection (HIGH confidence — ground truth):
-  - `app/main.py` — lifespan startup sequence, existing migrations, app.state pattern
-  - `app/routers/admin.py` — `_run_ingest_job`, `_ingest` dict, existing endpoints
-  - `app/routers/email_capture.py` — EmailLead insert pattern, on_conflict_do_nothing
-  - `app/routers/explore.py` — route structure, app_state access pattern
-  - `app/services/explorer.py` — run_explore() pipeline, ExploreResponse schema, scored list structure
-  - `app/models.py` — all existing model conventions, Mapped[T] style, DateTime defaults
-  - `app/config.py` — OUTPUT_DIM=768, FAISS_INDEX_PATH
-  - `scripts/ingest.py` — IndexFlatIP confirmed, faiss.normalize_L2, staging rename pattern
-  - `frontend/src/store/index.ts` — persist config, partialize whitelist, version: 1
-  - `frontend/src/store/filterSlice.ts` — filterDefaults, resetFilters pattern
-  - `frontend/src/components/sidebar/TagMultiSelect.tsx` — toggleTag/setTags interface
-- FAISS index type confirmed locally: `IndexFlatIP 536 768` (HIGH confidence — loaded production index)
-- IndexFlatIP reconstruct_n: flat indices store verbatim vectors; reconstruct_n is always supported (HIGH confidence — fundamental FAISS property, no special conditions)
-- Zustand persist behavior: rehydration is async, state initializer reads synchronously (HIGH confidence — Zustand docs + known React hydration behavior)
-- scikit-learn TSNE startup estimate (2–8s for 536×768): MEDIUM confidence — typical range on shared CPU; Railway instance allocation varies
+  - `app/routers/pilot.py` — current PilotRequest/PilotResponse shapes, run_in_executor pattern
+  - `app/services/pilot_service.py` — APPLY_FILTERS_DECLARATION, two-turn pattern, run_pilot() signature
+  - `app/routers/explore.py` — run_explore() signature, app_state injection pattern
+  - `app/services/explorer.py` — ExploreResponse schema, ExpertCard model, pipeline structure
+  - `app/models.py` — Conversation, Expert, EmailLead patterns (Mapped[T], DateTime, nullable conventions)
+  - `app/routers/admin.py` — router auth pattern, existing SQL aggregation style, _require_admin dep
+  - `frontend/src/hooks/useSage.ts` — handleSend flow, validateAndApplyFilters, storeState snapshot pattern
+  - `frontend/src/hooks/useExplore.ts` — reactive filter dependency array, how grid re-fetches on state change
+  - `frontend/src/store/filterSlice.ts` — set actions, filterDefaults, slice structure
+  - `frontend/src/store/pilotSlice.ts` — PilotMessage interface, addMessage action
+  - `frontend/src/store/resultsSlice.ts` — Expert interface, setResults/appendResults actions
+  - `frontend/src/components/marketplace/ExpertCard.tsx` — onViewProfile handler, existing onClick pattern
+  - `frontend/src/components/pilot/SagePanel.tsx` — SageMessage rendering, panel structure
+  - `frontend/src/admin/hooks/useAdminData.ts` — adminFetch, hook patterns, existing admin data shapes
+  - `frontend/src/admin/types.ts` — existing type conventions for admin responses
+  - `.planning/PROJECT.md` — v2.3 requirements, existing key decisions table
 
 ---
 
-*Architecture research for: TCS v2.2 Evolved Discovery Engine integration points*
+*Architecture research for: TCS v2.3 Sage Evolution & Marketplace Intelligence*
 *Researched: 2026-02-22*

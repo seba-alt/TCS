@@ -1,276 +1,217 @@
 # Project Research Summary
 
-**Project:** TCS — Tinrate Expert Marketplace v2.2 Evolved Discovery Engine
-**Domain:** AI-augmented expert marketplace (visual overhaul + operational intelligence)
+**Project:** TCS Expert Marketplace — v2.3 Sage Evolution & Marketplace Intelligence
+**Domain:** AI-powered Expert Marketplace (additive milestone on live v2.2 system)
 **Researched:** 2026-02-22
-**Confidence:** HIGH (architecture grounded in production codebase inspection; stack confirmed against npm/PyPI; pitfalls verified against official docs and GitHub issues)
+**Confidence:** HIGH (architecture and pitfalls from direct codebase inspection; stack additions from official sources; features MEDIUM due to emerging AI UX literature)
 
 ## Executive Summary
 
-TCS v2.2 is an additive milestone layering premium visual design, admin intelligence tooling, and operational robustness onto an already-shipping v2.0 marketplace. The v2.0 system — FastAPI + SQLite + FAISS + Gemini embeddings on Railway, React + Zustand + react-virtuoso on Vercel — is stable and unchanged. v2.2 adds six discrete capability groups: aurora/glassmorphism visual overhaul, claymorphic animated tag cloud, atomic FAISS index swap UI, admin intelligence metrics (OTR@K and Index Drift), t-SNE embedding scatter plot, and a newsletter subscription gate. Because the existing codebase is ground truth and the FAISS index type was confirmed by local inspection (IndexFlatIP, 536 vectors, 768 dimensions), all integration points are unambiguous. Frontend additions are three npm packages (zustand@^5, react-virtuoso@^4.18, framer-motion@^12); backend additions are two Python packages (scikit-learn==1.8.0, scipy==1.15.1). No infrastructure changes are required.
+TCS v2.3 is an additive milestone on a live AI expert marketplace (530 experts, FastAPI + SQLite + FAISS backend on Railway, React + Vite + Tailwind v3 frontend on Vercel). The milestone has three parallel tracks: (1) upgrading the Sage AI co-pilot to perform active searches via a second Gemini function (`search_experts`) alongside the existing `apply_filters` function, (2) instrumenting user behavior via a lightweight custom event tracking layer, and (3) surfacing that data in a new Admin Marketplace Intelligence page. No new infrastructure is required — all capabilities extend the existing validated stack without adding any new packages to either the frontend or backend.
 
-The recommended approach is to ship v2.2 in six sequential phases (22–27) that mirror the feature group dependencies. Visual infrastructure (aurora + glassmorphism, Phase 22) must precede all other visual phases because the glassmorphism glass effect is invisible on a white background — the aurora gradient must be rendering before any glass surface can be validated. The claymorphic tag cloud (Phase 23) builds on the OKLCH design tokens introduced in Phase 22. The atomic FAISS swap UI (Phase 24) is a pure admin capability with no frontend visual dependencies. Admin intelligence metrics (Phases 25–26) depend on schema changes from Phase 24 and require scikit-learn on Railway. The newsletter gate and Easter egg (Phase 27) are independent of all other groups.
+The recommended approach is to sequence the work as: Sage `search_experts` (highest user-facing value, fully independent) first, then the personality/clarifying question rewrite (one prompt file, instant rollback), then FAB animations and proactive nudge, then the database model and ingestion endpoint, then the frontend tracking layer, and finally the admin intelligence page. The critical architectural constraint is single ownership: `useExplore` is the exclusive writer to `resultsSlice`, and Sage search results for the panel travel through `pilotSlice.experts` independently. The backend's `pilot_service.py` calls `run_explore()` via direct Python import — no HTTP self-call.
 
-The top risk is deployment failure caused by placing the t-SNE `fit_transform` computation above the `yield` in FastAPI's lifespan context manager — this blocks Railway's healthcheck, triggers an infinite restart loop, and prevents the app from ever serving traffic. The second risk is the `backdrop-filter` stacking context trap: adding glass surfaces inside an `overflow: hidden` ancestor silently produces no visual effect with no error thrown. Both risks are 100% avoidable if the phase specifications encode the correct patterns before implementation begins. All eight critical pitfalls identified have clear, low-cost mitigations.
+The primary risks are about precision rather than scale. Gemini must choose between two semantically similar functions — descriptions must be mutually exclusive and tested against real queries before shipping. The proactive empty-state nudge has multiple false-positive conditions that must all be guarded from day one. Event tracking must be debounced and fire-and-forget to avoid polluting both the user experience and the gap analysis data. The SQLite `user_events` table is a new table (safe with `create_all`), but any future column additions to existing tables require explicit `ALTER TABLE` in the startup lifespan.
 
 ## Key Findings
 
 ### Recommended Stack
 
-The production stack remains unchanged. Three frontend packages are added; two backend packages are added. All other v2.2 features (IDSelectorBatch, FTS5, Gemini function calling, asyncio.to_thread, OKLCH CSS) use packages already installed or built into the standard library.
+The v2.3 stack additions are zero. All three tracks — Gemini dual-function calling, SQLite event tracking, admin aggregation queries — use packages already in `requirements.txt` and `package.json`. The following is a summary of the validated existing stack as used by v2.3:
 
-**New frontend packages:**
-- `zustand@^5.0.10`: State management with `persist` middleware — covers search params, pilot state, and the new newsletter subscription slice. Use separate `create()` stores with unique `name` keys for orthogonal state (newsletter slice must use `'tinrate-newsletter-v1'`, not `'explorer-filters'`).
-- `react-virtuoso@^4.18.1`: Virtualized expert grid. Use `Virtuoso` (list, variable height) not `VirtuosoGrid` (fixed-height only); chunk experts into rows and render each row as a CSS grid inside `itemContent`.
-- `framer-motion@^12.34.3` (import from `motion/react`): Layout animations for tag cloud reordering and proximity-based scale. Already installed at v12.34 per PROJECT.md — verify before reinstalling.
+**Core technologies (all existing — zero new packages):**
+- `google-genai==1.64.*`: dual `FunctionDeclaration` in one `types.Tool`; `response.function_calls` list dispatch; `fn_call.args` is a protobuf Struct — wrap in `dict()` before JSON serialization
+- `motion/react` v12.34 (installed as `framer-motion@^12`): `useMotionValue` + `useTransform` + `useSpring` for proximity-based tag cloud; `AnimatePresence` for FAB/panel; FAB glow via wrapper `motion.div` on `boxShadow` only (never `scale` — conflicts with `whileHover`)
+- `zustand@^5.0.10`: `persist` middleware with `partialize` for selective localStorage persistence; `createJSONStorage` required in v5; `useExplorerStore.getState()` snapshot pattern for async handlers
+- `react-virtuoso@^4.18.1`: `Virtuoso` for variable-height expert card grid; tracking must not add DOM wrappers inside `itemContent` — VirtuosoGrid's height assumption breaks
+- SQLite FTS5 (stdlib) + SQLAlchemy `text()`: no ORM support for FTS5; content-table mode requires INSERT/DELETE/UPDATE triggers; `rank` column = negative BM25 score
+- `scikit-learn==1.8.0` + `scipy==1.15.1`: added in v2.2 for t-SNE; PCA 768→50 then TSNE 50→2; compute post-startup via `asyncio.to_thread`; cached in `app.state`
 
-**New backend packages:**
-- `scikit-learn==1.8.0`: Provides `sklearn.manifold.TSNE` and `sklearn.decomposition.PCA` for the t-SNE embedding map endpoint. Ships manylinux binary wheels for Python 3.11 on Linux x86-64 — Railway builds without compilation. Adds ~10–20s to Railway build time but not to cold-start latency.
-- `scipy==1.15.1`: Required transitive dependency of scikit-learn 1.8. Also ships manylinux wheels.
-
-**What NOT to add:**
-- `google-generativeai` (deprecated — use `google-genai` already in requirements.txt)
-- Tailwind v4 (breaking config changes; migration cost outweighs benefit for this milestone)
-- `umap-learn` (explicitly deferred to v2.3; heavy Railway build dependency)
-- `useSpring` per tag item in proximity scale (40+ concurrent springs = animation frame budget pressure)
-- `VirtuosoGrid` component (requires uniform fixed-height cards; expert cards are variable-height)
+**What NOT to add (confirmed as unnecessary):**
+- Any external analytics SDK (PostHog, Mixpanel, Segment) — SQLite `user_events` table is sufficient at this scale
+- `navigator.sendBeacon` — cannot send `Content-Type: application/json`; use `fetch` with `keepalive: true`
+- Alembic migrations — `Base.metadata.create_all()` handles new tables; `ALTER TABLE` in lifespan for existing table columns
+- LangChain — overkill for a single-tool co-pilot
+- `umap-learn` — explicitly deferred to v2.3+; heavy Railway build dependency
 
 ### Expected Features
 
-**Must have (table stakes — visual features must all ship together in Phase 22 or the design is incoherent):**
-- `backdrop-filter: blur` on FilterSidebar, SearchInput, and SagePanel — the defining affordance of glassmorphism; absent = flat cards
-- Semi-transparent background on glass surfaces (rgba alpha 0.08–0.15 over aurora)
-- 1px border on glass surfaces (rgba(255,255,255,0.18))
-- Keyframe-animated aurora mesh gradient background (15–30s cycles; GPU-composited via `transform` on pseudo-elements)
-- OKLCH color tokens in CSS custom properties (`--aurora-violet`, `--aurora-teal`, `--aurora-rose`)
-- `@supports` fallback for browsers without `backdrop-filter` (opaque dark background)
-- WCAG 4.5:1 contrast on all glass text surfaces (tested over the actual aurora gradient, not white)
-- Bento ExpertCard redesign (four zones: name/role, rate/badge, tags, match-reason; h-[180px] fixed height preserved)
+Research identifies a clear priority hierarchy for v2.3 with dependency constraints that determine sequencing.
 
-**Should have (competitive differentiators for v2.2):**
-- Claymorphic animated tag cloud: Framer Motion `layout` prop for reorder animation; dual-inset + outer shadow for 3D clay depth; proximity-based scale via `useMotionValue` + `useTransform` (not `useState`)
-- "Everything is possible" animated example phrases below tag cloud (AnimatePresence, 3s cycles, 4–6 phrases)
-- Atomic FAISS index swap admin UI: button that calls existing `POST /api/admin/ingest/run`; status polling via existing `GET /api/admin/ingest/status`
-- OTR@K metric in admin: fraction of top-10 results scoring ≥ 0.60 threshold; 7-day rolling average
-- Index Drift metric: time since last rebuild + expert count delta
-- t-SNE embedding scatter plot in admin: startup-computed, category-colored points, hover tooltips
-- Newsletter subscription gate: replaces raw email gate with value-exchange framing; single email field; writes to both `newsletter_subscribers` and `email_leads` tables
+**Must have (table stakes):**
+- Sage search results visible inside the panel after a `search_experts` call — users who ask "show me experts in X" expect inline results, not a silent grid change
+- Grid syncs with Sage search — divergent results between panel and grid break user trust
+- Natural language confirmation from Sage after every function call — raw function results without narrative feel broken
+- Zero-result graceful handling — Sage must acknowledge empty results and offer a redirect, not show a silent empty state
+- Event tracking fires without blocking UX — `void fetch(...)` with `keepalive: true`; never `await` in click paths
+- Admin zero-result query visibility — the most basic search analytics output
 
-**Defer to v2.3+:**
-- UMAP visualization (heavy Railway build dependency; scikit-learn t-SNE is sufficient for 530 points)
-- Cursor-reactive JS aurora (mousemove-driven gradient = 60 events/sec GPU cost for no functional value)
-- `backdrop-filter: blur` on ExpertCards (530 cards × GPU compositor layer = performance failure)
-- External newsletter service integration (Mailchimp, Klaviyo) — CSV export sufficient for current scale
+**Should have (competitive differentiators):**
+- Sage dual-function intent disambiguation (`apply_filters` for browsing refinement vs `search_experts` for direct retrieval) — no competitor marketplace AI co-pilot resolves this split
+- Sage clarifying questions for ambiguous queries — one question maximum; reduces error rates by 27% and retries from 4.1 to 1.3 per session (Haptik 2025)
+- Sage proactive empty-state nudge — FAB pulses when grid hits zero results; injects system message when panel is closed
+- Expert exposure distribution in admin — which experts are effectively invisible in search results
+- Admin Gaps tab combining unmet demand (zero-result queries) and supply gaps (low-exposure experts) in one view
 
-**P3 (ship if time remains after P1/P2):**
-- Barrel roll Easter egg (FUN-01): Framer Motion 360° rotate applied to the VirtuosoGrid container, not individual ExpertCards; trigger on exact phrase match only
+**Defer to v2.4+:**
+- Quick-reply chips for clarifying questions (plain text fallback acceptable for v2.3)
+- FAB glow animation on message received (P3 delight)
+- Real-time Gaps dashboard (WebSocket/polling) — retrospective analysis is sufficient
+- UMAP visualization (heavy Railway build dependency)
+- Third-party analytics SDK (justified at >10K daily events; current scale does not warrant it)
 
 ### Architecture Approach
 
-The v2.2 architecture is strictly additive. The production system is a single-process Uvicorn FastAPI app with `app.state` holding the FAISS index, metadata list, and username-to-position mapping. New state follows the same pattern: `app.state.tsne_cache` (list, computed post-startup in background) and `app.state.tsne_ready` (bool, guards the endpoint).
+The v2.3 architecture makes three surgical additions to the existing v2.2 system without modifying any of its core services. The critical design principle is single ownership: `resultsSlice` is written exclusively by `useExplore`; Sage search results for the panel travel through `pilotSlice.experts`; the `user_events` table is written only by the public `POST /api/events` endpoint. Grid sync for `search_experts` is achieved by `useSage` calling `validateAndApplyFilters(data.filters)`, which updates `filterSlice`, which triggers `useExplore`'s reactive re-fetch — the same mechanism that already powers `apply_filters`. The backend's `pilot_service.py` calls `run_explore()` directly (Python import, no HTTP self-call) and receives `db` and `app_state` via dependency injection from the `pilot.py` router.
 
-The existing atomic swap in `_run_ingest_job` (admin.py lines 93–146) already performs the three-line reference assignment for FAISS index, metadata, and position mapping. The v2.2 change adds one line: `app.state.tsne_cache = []` to invalidate the t-SNE cache on swap completion. The admin UI only needs a frontend button calling the already-existing `POST /api/admin/ingest/run` endpoint.
+**Major components (v2.3 delta):**
+1. `pilot_service.py` (MODIFIED) — adds `SEARCH_EXPERTS_DECLARATION` to `types.Tool`; dispatches `run_explore()` in-process; returns `experts: list[dict]` in `PilotResponse`
+2. `pilot.py` (MODIFIED) — injects `db: Session = Depends(get_db)` and `app_state = request.app.state` into `run_pilot()` call
+3. `events.py` (NEW router) — `POST /api/events`, public, no auth, returns 202; validates `event_type` allowlist
+4. `UserEvent` in `models.py` (NEW model) — single table, discriminated `event_type`, sparse nullable columns per type; auto-created by `Base.metadata.create_all()`
+5. `tracking.ts` (NEW frontend lib) — `trackEvent()` fire-and-forget via `fetch` with `keepalive: true`; module function, not a hook
+6. `SageExpertCard.tsx` (NEW component) — compact expert card for the 380px Sage panel; no bento constraints
+7. `MarketplacePage.tsx` (NEW admin page) — demand signals + expert exposure; reads from `GET /api/admin/events/demand` and `/events/exposure`
 
-**New/modified components (v2.2 delta):**
-
-Backend:
-1. `app/models.py` — add `NewsletterSubscriber` model; add `otr_at_k: Mapped[float | None]` to `Conversation`
-2. `app/main.py` — post-yield `asyncio.create_task(_compute_tsne_background(app))` background task; `ALTER TABLE conversations ADD COLUMN otr_at_k REAL` in existing migration block; register newsletter router
-3. `app/routers/newsletter.py` (NEW) — `POST /api/newsletter-subscribe`; idempotent writes to both `newsletter_subscribers` and `email_leads`
-4. `app/routers/admin.py` — add `GET /embedding-map`; `GET /newsletter-subscribers`; `otr_7day` array in `intelligence-stats` response
-5. `app/services/explorer.py` — add `otr_at_k: float | None = None` field to `ExploreResponse`; compute `top_k = scored[:10]; on_topic = sum(1 for s >= 0.60) / len(top_k)` after `scored.sort()`
-
-Frontend:
-1. `frontend/src/store/nltrSlice.ts` (NEW) — standalone `useNltrStore` with persist key `'nltr-state'`; initializes synchronously from localStorage to prevent gate flash
-2. `frontend/src/components/sidebar/AnimatedTagCloud.tsx` (NEW, replaces TagMultiSelect) — `layout` prop for reordering; `useMotionValue`/`useTransform` for proximity scale
-3. `frontend/src/components/marketplace/ExpertCard.tsx` — bento zones; CSS-only hover glow (no Framer Motion import in this file)
-4. `frontend/src/components/modals/ProfileGateModal.tsx` — newsletter CTA copy; calls `/api/newsletter-subscribe`; `localStorage['tcs_email_unlocked']` bypass logic unchanged
-5. `frontend/src/pages/MarketplacePage.tsx` — aurora mesh gradient wrapper div added
-
-**Files completely unchanged:** chat.py, feedback.py, email_capture.py, health.py, pilot.py, suggest.py, embedder.py, retriever.py, search_intelligence.py, tagging.py, database.py, config.py, all existing Zustand slices (filterSlice, resultsSlice, pilotSlice), entire admin frontend directory.
+**Files completely unchanged:** `explorer.py`, `retriever.py`, `embedder.py`, `search_intelligence.py`, `tagging.py`, `database.py`, `config.py`, `useExplore.ts`, `resultsSlice.ts`, `SagePanel.tsx`, `GapsPage.tsx`, all existing admin pages.
 
 ### Critical Pitfalls
 
-1. **t-SNE `fit_transform` above `yield` in FastAPI lifespan blocks Railway healthcheck** — Even wrapped in `asyncio.to_thread`, calling `fit_transform` above the `yield` prevents the server from starting. Place the computation as `asyncio.create_task(_compute_tsne_background(app))` *after* the `yield`. Use `n_iter=300` (not 1000) + PCA pre-reduction to 50 dims. Guard `/api/admin/embedding-map` with `if not app.state.tsne_ready: return JSONResponse({"status": "computing"}, 202)`.
+1. **Gemini wrong function routing (`search_experts` vs `apply_filters` ambiguity)** — Write mutually exclusive descriptions: `apply_filters` = "narrow or refine current results"; `search_experts` = "discover experts, find me X, who can help with Y". Test against 20 real queries from `conversations` table before shipping; assert `fn_call.name` in Railway logs for each.
 
-2. **`overflow: hidden` ancestor silently kills `backdrop-filter` blur** — The existing layout has `overflow: hidden` flex containers that create stacking contexts. Glass surfaces inside them see only the ancestor's background (solid), not the aurora. Before writing any glass class, audit the full ancestor chain in DevTools. Use the `before:backdrop-blur-md before:-z-10` pseudo-element escape hatch if the ancestor cannot be modified. Always include `-webkit-backdrop-filter` (Tailwind v3 does not emit this prefix).
+2. **Grid sync race condition** — Two concurrent writers to `resultsSlice` when Sage also dispatches filter state. Prevention: `setResults` is called exclusively by `useExplore`. Sage populates `pilotSlice.experts` for the panel independently; grid gets results via the reactive `useExplore` re-fetch triggered by `validateAndApplyFilters`. Never call `setResults` from `useSage`.
 
-3. **Tag cloud proximity scale using `useState` + `onMouseMove` causes 60 re-renders/sec** — With 40+ tags, this produces continuous orange React DevTools profiler highlights and visible jank alongside VirtuosoGrid. Mandate `useMotionValue` + `useTransform` from the start. These bypass React's render cycle entirely. Do NOT add `useSpring` per tag item — use CSS `transition: transform 80ms ease-out` instead.
+3. **SQLite migration crash on Railway** — `Base.metadata.create_all()` creates new tables but silently skips existing ones. New columns on existing tables require explicit `ALTER TABLE ... ADD COLUMN` in `main.py` lifespan before `yield`. The `user_events` table is new (safe). Watch for this if tracking fields are later added to `conversations`.
 
-4. **FAISS in-place mutation during rebuild races concurrent search requests** — Never call `.reset()` or `.add()` on `app.state.faiss_index` directly. Always build a new `faiss.IndexFlatIP(768)` object inside the rebuild thread and assign it to `app.state.faiss_index` only after the thread completes. Add `asyncio.Lock` on the rebuild endpoint to prevent double-rebuild OOM.
+4. **Event tracking noise making gap analysis misleading from day one** — Tracking every Zustand filter mutation generates 10–100 events per slider drag. Prevention: debounce 1000ms after last mutation; track rate slider only on drag-end (`onMouseUp`/`onTouchEnd`); add `if (q)` guard on `setQuery` to skip empty-string clears.
 
-5. **Zustand newsletter persist key collision silently overwrites `explorer-filters` state** — The new newsletter store must use `name: 'tinrate-newsletter-v1'`. Two stores sharing the same key perform a shallow merge on hydration, wiping user filter preferences. No error is thrown.
+5. **Proactive nudge fires at wrong times** — Fires on mount (initial `experts: []` state), during rapid typing, and repeatedly across sessions. Prevention: `hasFetchedOnce` ref + `nudgeSent` boolean in `pilotSlice` + 1500ms debounce + `!loading && !isStreaming` guards. Nudge trigger must live in a `useEffect` with reactive `useExplorerStore(s => s.experts)` selector — never inside `handleSend` using `getState()` snapshots.
 
-6. **`motion.div` with `initial`/`animate` on ExpertCard causes scroll-triggered re-animations** — VirtuosoGrid unmounts cards outside the overscan boundary; Framer Motion treats each remount as a new entry animation. ExpertCard must use CSS-only hover transitions. No Framer Motion import belongs in `ExpertCard.tsx`.
+6. **FAB pulse/glow animation conflicts with `whileHover`/`whileTap` gesture props** — `SageFAB.tsx` already uses `whileHover={{ scale: 1.05 }}` and `whileTap={{ scale: 0.95 }}`. Adding a loop on `animate={{ boxShadow: [...] }}` on the same `motion.button` causes both to compete. Prevention: outer `motion.div` handles `boxShadow` animation only; inner `motion.button` retains `scale` gesture props. Never animate `scale` on the wrapper.
 
-7. **Nested glass surfaces compound blur and wash out to white** — SagePanel using `backdrop-filter` over an already-blurred FilterSidebar blurs the composited result, not the aurora. Apply glass surfaces at the same stacking level. Test contrast over the actual aurora gradient at deployed opacity, not over white.
+7. **Awaiting tracking in click handlers blocks the interaction path** — `await fetch('/api/events', ...)` before `onViewProfile` introduces a 50–200ms network round-trip before the profile gate opens. Prevention: `void fetch(...)` always. The `void` keyword makes fire-and-forget intent explicit in code review.
 
-8. **Newsletter gate flashes locked state for returning subscribers** — Zustand `persist` hydration is asynchronous; the first render uses the store's default state (`subscribed: false`), then hydrates. Read subscription status synchronously in the store's initial state: `() => localStorage.getItem('tinrate-newsletter-v1')`. Keep the existing `localStorage['tcs_email_unlocked']` check as the gate bypass — it is synchronous and must not be replaced.
+8. **Sage personality loops clarifying questions — grid never updates** — Gemini 2.5 Flash defaults to asking when descriptions include "make sure you understand." Hard-limit clarification depth in the system prompt: "You may ask at most ONE clarifying question per conversation. After the user responds to any question, always call a function."
 
 ## Implications for Roadmap
 
-Research confirms the six-phase structure identified in FEATURES.md (Phases 22–27). The ordering is determined by hard dependencies.
+Based on combined research, the recommended build order is: Sage `search_experts` function (D) first, Sage personality (A) concurrently or second, FAB reactions + proactive nudge (C) third, then event tracking backend (Phase 4) then frontend (Phase 5), and finally the admin intelligence page (Phase 6). The key constraint is that Phase 6 requires data from Phase 5 to be meaningful — ship with a cold-start empty state that communicates the tracking start timestamp.
 
-### Phase 22: Visual Infrastructure (VIS-01 through VIS-05)
+### Phase 1: Sage `search_experts` Dual Function
 
-**Rationale:** Aurora gradient and OKLCH tokens are prerequisites for every other visual feature. Glassmorphism is invisible on white — no glass surface can be validated until the aurora is rendering behind it. All visual features share the same OKLCH color token system, so tokens must exist first.
+**Rationale:** Highest user-facing value; fully independent of tracking and admin work; unblocks Phase 3 (which needs search-triggered empty states as test cases for the nudge logic). Ship first.
+**Delivers:** Second `FunctionDeclaration` in `types.Tool`; `pilot_service.py` calls `run_explore()` in-process; `PilotResponse` gains `experts: list[dict]`; `pilotSlice.PilotMessage` gains `experts?: Expert[]`; `useSage` handles `data.experts` and calls `validateAndApplyFilters(data.filters)` for grid sync; `SageExpertCard` compact component (name, title, rate — 3 fields max, no bento constraints); Turn 2 Gemini narrative summarizing result count and notable matches; graceful zero-result handling in Turn 2 context.
+**Uses:** `google-genai==1.64.*` (existing); direct `run_explore()` Python import; `validateAndApplyFilters` for grid sync (already used by `apply_filters`)
+**Avoids:** Pitfall 1 (function description ambiguity — mutually exclusive descriptions, 20-query test); Pitfall 2 (race condition — single-ownership rule enforced at code review); Architecture anti-pattern 6 (never call `setResults` from `useSage`)
 
-**Delivers:** Animated aurora mesh gradient background; glassmorphism on FilterSidebar, SearchInput, SagePanel; OKLCH design tokens in CSS custom properties; `@supports (backdrop-filter: blur(1px))` browser fallback; WCAG 4.5:1 contrast validation on all glass text.
+### Phase 2: Sage Personality Rewrite + System Prompt
 
-**Addresses:** All VIS table-stakes features: backdrop-filter, semi-transparent backgrounds, 1px border, keyframe animation, contrast compliance.
+**Rationale:** Zero infrastructure dependencies; system prompt changes deploy instantly via `main`; establishes the personality baseline before the nudge logic (Phase 3) needs to reference Sage's behavior. Lowest risk, can ship concurrently with Phase 1 or immediately after.
+**Delivers:** Warmer Sage voice with contractions and result summaries; hard-limited clarifying questions (max 1 per conversation, explicit `turn_number` signal in system prompt); correct context injection of `current_filters.query` preserving user's active query; fallback safety net in `useSage` (2 consecutive non-function turns → auto-suggest action).
+**Avoids:** Pitfall 7 (Sage loops clarifying questions); Pitfall UX-3 (Sage ignores active query context when asking clarifying questions)
 
-**Avoids:** Pitfalls 2 (overflow ancestor kills blur) and 7 (nested glass double-blur). Phase spec must require a DevTools ancestor chain audit as Step 1 before writing any glass class. Contrast audit must use the actual aurora gradient, not white.
+### Phase 3: Sage FAB Animated Reactions + Proactive Empty-State Nudge
 
-**Research flag:** STANDARD PATTERNS — CSS glassmorphism and aurora animation are thoroughly documented with cross-verified recipes. Pitfall checklists from PITFALLS.md are the critical addition to the spec.
+**Rationale:** Depends on Phase 1 (`search_experts` must exist to produce search-triggered empty states for testing the nudge). `motion/react` already installed. Independent of tracking infrastructure.
+**Delivers:** FAB pulse animation on zero-results state — outer `motion.div` wrapper on `boxShadow` only; `nudgeSent` boolean added to `pilotSlice` (excluded from `partialize`); `hasFetchedOnce` ref + 1500ms debounce guards; proactive system message injected into `pilotSlice.messages` when `experts.length === 0 && total === 0` and panel is closed; nudge trigger in `useEffect` with reactive selectors.
+**Avoids:** Pitfall 3 (nudge false positives on page load, rapid typing, repeated sessions); Pitfall 4 (Framer Motion gesture/animate property conflict — separate wrapper pattern); Pitfall 10 (reactive selector vs `getState()` misuse for nudge trigger)
 
-### Phase 23: Discovery Engine (CARD-01..03, DISC-01..04)
+### Phase 4: User Behavior Event Tracking (Backend)
 
-**Rationale:** Depends on Phase 22 OKLCH tokens for tag palette and card hover glow colors. Bento card redesign and claymorphic tag cloud are only visually coherent against the aurora background.
+**Rationale:** Foundation for Phase 6 (admin page needs data); `UserEvent` is a new table so `create_all` handles it safely; the public `POST /api/events` endpoint must exist before Phase 5 frontend tracking fires.
+**Delivers:** `UserEvent` SQLAlchemy model with discriminated `event_type` (`card_click`, `sage_query`, `filter_change`) and sparse nullable columns per type; `events.py` router (`POST /api/events`, 202 response, no auth); `event_type` allowlist validation via Pydantic (rejects arbitrary strings with 422); 2000-char cap on `query_text`; composite index on `(event_type, created_at)`; per-IP rate limiting recommendation (20 req/s).
+**Avoids:** Pitfall 6 (new table — `create_all` is safe; no `ALTER TABLE` needed); Security: event_type allowlist prevents attacker-injected event categories
 
-**Delivers:** Bento ExpertCard with four visual zones (h-[180px] preserved); CSS-only aurora hover glow; AnimatedTagCloud replacing TagMultiSelect; Framer Motion `layout` prop for tag reorder animation; proximity-based scale via `useMotionValue`/`useTransform`; "Everything is possible" example phrases with `AnimatePresence`.
+### Phase 5: Frontend Event Tracking Integration
 
-**Uses:** `motion/react` already installed at v12.34 — `layout`, `useMotionValue`, `useTransform`. CSS claymorphism: `border-radius: 999px` + dual-inset shadow + outer drop shadow.
+**Rationale:** Requires Phase 4 endpoint. `trackEvent()` is a module function (not a hook) so it can be called from Zustand actions, handlers, and `useCallback` without hook rules constraints.
+**Delivers:** `tracking.ts` with fire-and-forget `fetch + keepalive: true`; `filterSlice.ts` modified to call `trackEvent()` in settled-state (debounced 1000ms after last mutation); rate slider tracking on drag-end only (`onMouseUp`/`onTouchEnd`), not on every position; `ExpertCard.tsx` onClick emits `card_click` (grid context); `SageExpertCard.tsx` onClick emits `card_click` (sage_panel context); `useSage.ts` emits `sage_query` after pilot response with `query_text`, `function_called`, `result_count`.
+**Avoids:** Pitfall 5 (awaiting tracking blocks click path — `void fetch(...)`, never `await`); Pitfall 8 (tracking noise from slider events — settled-state debounce); Architecture anti-pattern 3 (never in `useEffect` — in onClick and Zustand actions only); VirtuosoGrid tracking wrapper pitfall (no new DOM wrappers inside `itemContent`)
 
-**Avoids:** Pitfall 3 (useState re-render storm — mandate MotionValues from the start); Pitfall 6 (Framer Motion on VirtuosoGrid cards — CSS-only hover; no Framer Motion import in ExpertCard.tsx).
+### Phase 6: Admin Marketplace Intelligence Page
 
-**Research flag:** MEDIUM CONFIDENCE for proximity scale. The canonical pattern is confirmed via BuildUI Magnified Dock, but no v12-specific tag cloud example with exact `motion/react` imports exists. The phase spec must include the exact `useMotionValue`/`useTransform` code from STACK.md Q3 to prevent `useState` temptation during implementation.
-
-### Phase 24: Atomic Index Swap Admin UI (IDX-01..04)
-
-**Rationale:** Backend swap logic already exists in `_run_ingest_job` (admin.py:93–146). This phase adds only the admin frontend button and status polling UI. Must precede Phases 25–26 because t-SNE cache invalidation hooks into swap completion, and Index Drift state is sourced from the `_ingest` dict extended in this phase.
-
-**Delivers:** Admin rebuild button calling existing `POST /api/admin/ingest/run`; status display (idle/running/complete/failed + timestamp) via existing `GET /api/admin/ingest/status`; `last_rebuild_at` and `expert_count_at_rebuild` fields added to `_ingest` dict; `app.state.tsne_cache = []` invalidation line added to swap completion.
-
-**Avoids:** Pitfall 4 (in-place FAISS mutation) and double-rebuild OOM (asyncio.Lock already needed). Acceptance criteria must include: trigger rebuild, send concurrent explore requests, confirm zero search failures during rebuild.
-
-**Research flag:** STANDARD PATTERNS. The backend swap is already implemented; the admin UI pattern follows existing admin panel conventions. No architecture uncertainty.
-
-### Phase 25: Admin Intelligence Metrics (INTEL-01..04)
-
-**Rationale:** Depends on the `otr_at_k` schema change (ALTER TABLE conversations) established in Phase 24's deployment. OTR@K is computed in the explore pipeline (independent of FAISS rebuild) and logged per search query. Index Drift reads from the `_ingest` dict extended in Phase 24.
-
-**Delivers:** OTR@K computed per search query, stored in `conversations` table; 7-day rolling average in admin Intelligence tab (green ≥0.75, amber 0.60–0.74, red <0.60); Index Drift status display (time since rebuild + expert count delta); `newsletter_subscribers` SQLite table created.
-
-**Uses:** Existing SQLAlchemy + SQLite stack. No new packages. `ALTER TABLE conversations ADD COLUMN otr_at_k REAL` in the existing inline migration block.
-
-**Avoids:** OTR@K exposed to end users (admin-only metric; do not add to public ExploreResponse in user-facing API).
-
-**Research flag:** STANDARD PATTERNS. `SIMILARITY_THRESHOLD=0.60` aligns with existing `GAP_THRESHOLD=0.60` in admin.py — no calibration research needed. The SQL rolling average is a trivial GROUP BY query.
-
-### Phase 26: Embedding Heatmap (INTEL-05..06)
-
-**Rationale:** Depends on scikit-learn (new package requiring a Railway redeploy to cache) and on the production FAISS index being accessible via `reconstruct_n`. This is the highest-risk phase for deployment failure due to the t-SNE blocking pitfall.
-
-**Delivers:** t-SNE projection computed post-startup (PCA 768→50 dims, then TSNE 50→2 dims, n_iter=300, method='barnes_hut', random_state=42); cached in `app.state.tsne_cache`; `GET /api/admin/embedding-map` endpoint (returns 202 while computing); admin scatter plot colored by category with hover tooltips; t-SNE recompute triggered on atomic swap completion.
-
-**Uses:** `scikit-learn==1.8.0`, `scipy==1.15.1` (new backend packages). `asyncio.create_task` post-yield for background computation. `IndexFlatIP.reconstruct_n(0, ntotal, vectors)` — confirmed working on the production index type. PCA pre-reduction is mandatory (reduces 768→50 dims before TSNE; cuts compute time 4–8×).
-
-**Avoids:** Pitfall 1 (t-SNE blocking Railway healthcheck) — this is the highest-severity pitfall in the entire milestone. The phase spec must specify the post-yield `asyncio.create_task` pattern as a non-negotiable constraint and include the exact lifespan code.
-
-**Research flag:** HIGH PRIORITY for spec quality. The pattern is clear, but the blocking mistake is easy to make. The phase spec must reproduce the exact lifespan code from PITFALLS.md Pitfall 4 before any implementation begins. Accept criteria must include: Railway deploy completes and `/health` responds in under 10 seconds.
-
-### Phase 27: Newsletter Gate + Easter Egg (NLTR-01..04, FUN-01)
-
-**Rationale:** Fully independent of all visual and intelligence phases. The newsletter gate modifies an existing modal (ProfileGateModal); the Easter egg adds a Zustand flag and CSS keyframe on the VirtuosoGrid container. Both can be built and tested on the current main without the aurora background.
-
-**Delivers:** Newsletter CTA modal replacing email gate copy; `newsletter_subscribers` SQLite table; `useNltrStore` standalone persist store (`'tinrate-newsletter-v1'` key with synchronous initial state read); admin subscriber list; barrel roll Easter egg applied to the VirtuosoGrid container element (not ExpertCards).
-
-**Avoids:** Pitfall 5 (Zustand key collision — explicitly name the key `'tinrate-newsletter-v1'` in the spec); Pitfall 8 (hydration flash — synchronous localStorage read in initial state); email gate migration gap for v2.0 returning users (check `localStorage['tcs_email_unlocked']` to auto-bypass the newsletter gate for existing unlocked users).
-
-**Research flag:** STANDARD PATTERNS for newsletter gate UX. The barrel roll must use the VirtuosoGrid container element to avoid Pitfall 6 (scroll-triggered re-animations on ExpertCards).
+**Rationale:** Requires Phase 4 + 5 live and accumulating data. Builds on existing `adminFetch` and Recharts infrastructure used in the Intelligence tab. New page (`MarketplacePage.tsx`) at `/admin/marketplace` — does not modify existing `GapsPage.tsx`.
+**Delivers:** Two new admin endpoints (`GET /api/admin/events/demand`, `GET /api/admin/events/exposure`) under existing `_require_admin` auth; `DemandTable` (zero-result Sage queries sorted by frequency + most-searched filter terms); `ExposureTable` (expert click counts, grid vs Sage panel breakdown, vs findability score); daily Sage usage trend; `AdminSidebar.tsx` updated with Marketplace nav entry; explicit empty state with "Tracking started [timestamp] — insights will appear after ~50 page views" when `user_events` is empty; `data_since` field in every Gaps API response.
+**Avoids:** Pitfall 9 (cold-start empty tab confusion — empty state built before data-loading logic); Security: all `/api/admin/events/*` wrapped in `_require_admin` dependency (already covers all `/api/admin/*` routes)
 
 ### Phase Ordering Rationale
 
-- Phase 22 before Phase 23: OKLCH tokens must exist before any component uses them; glassmorphism requires aurora to validate.
-- Phase 23 after Phase 22: Tag cloud uses aurora palette; card glow tokens reference Phase 22 CSS variables.
-- Phase 24 before Phases 25–26: `_ingest` dict extensions and tsne_cache invalidation are wired into the swap completion that Phase 24 surfaces in the UI.
-- Phase 26 after Phase 24: `reconstruct_n` reads `app.state.faiss_index` which must be valid after swap; tsne_cache invalidation hook lives in the swap completion added in Phase 24.
-- Phase 27 is fully independent: can be built in parallel with any other phase or interleaved if development bandwidth allows.
+- Phase 1 before Phase 3: `search_experts` must exist to produce search-triggered empty states as test cases for the proactive nudge.
+- Phases 1 and 2 are independent and can ship in parallel or in either order. Personality first is lowest risk; `search_experts` first delivers more value faster.
+- Phases 4 and 5 are independent of Phases 1–3 and can be built in parallel with Phase 3.
+- Phase 5 must follow Phase 4 — the frontend tracking endpoint must exist before tracking code ships.
+- Phase 6 must follow Phase 5 — the admin page needs events accumulated in the DB to display meaningful data. Ship Phase 6 a few days after Phase 5 is live, or with the cold-start empty state handling the gap.
+- The single-ownership rule (`resultsSlice` written only by `useExplore`) must be documented as a code review requirement before Phase 1 implementation begins.
 
 ### Research Flags
 
-Phases likely needing extra care in spec writing:
+Phases likely needing explicit verification before or during implementation:
 
-- **Phase 23 (DISC-02):** Proximity scale is MEDIUM confidence. The phase spec must include the exact `useMotionValue`/`useTransform` code to prevent the `useState` anti-pattern during implementation.
-- **Phase 26 (INTEL-05):** t-SNE parameter selection and startup integration are HIGH confidence, but the post-yield background task pattern is the most failure-prone in the milestone. Phase spec must include the exact lifespan pattern code as a mandatory constraint.
+- **Phase 1 (Sage dual function):** Gemini's function routing behavior with two semantically adjacent functions cannot be fully validated without running inference. Run the 20-query test against real queries from the `conversations` table before shipping. Budget for one iteration of description tuning. Assert `fn_call.name` in Railway logs for each test query.
+- **Phase 5 (Frontend tracking debounce):** Verify that the settled-state debounce (1000ms) does not stack with an existing `RateSlider.tsx` debounce. Check DevTools Network tab: rate slider drag should produce exactly 1 tracking event per settled position, not per pixel of movement.
+- **Phase 4 (SQLite on Railway):** Verify `user_events` table creation on first deploy by scanning Railway logs for `OperationalError` in the first 60 seconds post-deploy.
 
-Phases with standard, well-documented patterns where additional research is not needed:
-- **Phase 22:** CSS glassmorphism, aurora keyframes, OKLCH tokens — thoroughly documented with cross-verified implementations.
-- **Phase 24:** Backend swap already exists; admin UI pattern follows existing admin panel conventions.
-- **Phase 25:** OTR@K SQL query and ALTER TABLE migration follow established codebase patterns exactly.
-- **Phase 27:** Newsletter gate UX and Zustand persist patterns are standard; barrel roll is trivial.
+Phases with standard patterns where additional research is not needed:
+
+- **Phase 2 (System prompt):** One-file change; instant rollback via `git push`. No infrastructure risk.
+- **Phase 3 (FAB animation):** Framer Motion separation pattern (wrapper `motion.div` for `boxShadow`, inner `motion.button` for `scale`) is the documented canonical approach. Motion values pipeline for nudge trigger is the established pattern from v2.2.
+- **Phase 6 (Admin page):** Recharts and `adminFetch` patterns already established in the Intelligence tab. SQL aggregations are standard `GROUP BY` queries with existing SQLAlchemy patterns.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | npm versions confirmed from package registries; scikit-learn 1.8.0 manylinux wheel availability confirmed for Python 3.11 on Linux x86-64; framer-motion proximity API confirmed from official Motion docs. FTS5/SQLAlchemy pattern MEDIUM (community sources; no live Railway test). |
-| Features | MEDIUM | Glassmorphism and claymorphism CSS recipes HIGH (cross-verified). OTR@K formal definition MEDIUM (equivalent to Precision@K; LinkedIn OTR@K usage LOW confidence). Newsletter gate UX MEDIUM (conversion data from MailerLite 2025). "Everything is possible" element MEDIUM (Framer Motion AnimatePresence pattern is standard). |
-| Architecture | HIGH | All integration points grounded in actual production codebase file inspection. FAISS IndexFlatIP confirmed by local index load (`faiss.read_index('data/faiss.index')` → IndexFlatIP, ntotal=536, d=768). Zustand persist async hydration behavior confirmed from official docs and GitHub issues. scikit-learn startup timing is MEDIUM (2–8s estimate; Railway instance allocation varies). |
-| Pitfalls | HIGH | Eight pitfalls with concrete code patterns. Critical pitfalls (overflow ancestor, t-SNE blocking, FAISS in-place mutation, Zustand key collision) verified against official docs, GitHub issues, and production codebase inspection. |
+| Stack | HIGH | Zero new packages for v2.3. All existing package APIs confirmed from official docs and GitHub. OKLCH browser support at 93% confirmed from caniuse. `motion/react` proximity pattern confirmed from official Motion docs and BuildUI recipe. |
+| Features | MEDIUM | AI co-pilot dual-function UX and clarifying question patterns are cross-verified across 2025 sources but all at MEDIUM confidence (no single authoritative standard). The 27% error reduction claim from Haptik has not been independently verified. Table stakes features (inline results, grid sync, zero-result handling) are HIGH confidence from established UX patterns. |
+| Architecture | HIGH | Based on direct codebase inspection of the running v2.2 system. All component boundaries, data flow, and hook patterns are ground truth from actual source files. The `run_explore()` import path, `run_in_executor` threading pattern, and `validateAndApplyFilters` dispatch mechanism are all verified from the live code. |
+| Pitfalls | HIGH | All 10 critical pitfalls derived from direct inspection of `useSage.ts`, `useExplore.ts`, `pilot_service.py`, `SageFAB.tsx`, `models.py`, `admin.py`. The race condition, migration crash, and Framer Motion animation conflict are observable from existing code patterns — not inferred. |
 
-**Overall confidence:** HIGH
+**Overall confidence:** HIGH for architectural and implementation guidance. MEDIUM for Sage dual-function UX decisions where Gemini's actual routing behavior with two functions must be empirically validated before shipping.
 
 ### Gaps to Address
 
-- **t-SNE startup time on Railway:** The 2–8s estimate for 536 × 768 vectors has MEDIUM confidence. If Railway allocates a smaller CPU allocation than expected, the background task may take 15–20s. The post-yield pattern ensures this never blocks healthchecks, but the admin scatter plot loading state must communicate that computation is in progress.
+- **Gemini function routing empirical validation:** The function description text for `apply_filters` and `search_experts` is a design decision that cannot be fully validated without running inference. Before Phase 1 ships to production, run the 20-query verification test and assert `fn_call.name` in logs. Budget for one iteration of description tuning.
 
-- **Framer Motion import path:** PROJECT.md states the project uses `motion/react` imports. Confirm the installed package is `framer-motion` (which re-exports `motion/react`) and not the separate `motion` npm package (web animations API only). Run `cat frontend/package.json | grep -i motion` before Phase 23.
+- **Railway SQLite write latency for tracking endpoint:** The fire-and-forget tracking endpoint posts to Railway's SQLite volume. ARCHITECTURE.md recommends `async def` with `run_in_executor` for the write (same pattern as `explore.py`). Verify at startup that P99 write latency is under 100ms. If not, consider collecting events in memory and flushing every 10 seconds rather than per-event writes.
 
-- **Safari `-webkit-backdrop-filter`:** Tailwind v3 `backdrop-blur-*` utilities do not emit the `-webkit-` prefix. Test on actual Safari (not Chrome DevTools responsive mode which uses Blink). Add the prefix via `@layer utilities` in Phase 22 if needed.
+- **VirtuosoGrid fixed-height constraint and `ExpertCard` tracking integration:** PITFALLS.md confirms that wrapping `ExpertCard` in a new DOM element inside `VirtuosoGrid`'s `itemContent` breaks the fixed-height assumption. The `card_click` tracking call must be added to the existing `onViewProfile` prop handler in `ExpertCard.tsx` — not via any new wrapper element. Confirm the current `itemContent` structure before Phase 5.
 
-- **Returning v2.0 email gate users:** Confirm the exact localStorage key used in v2.0 (`'tcs_email_unlocked'` or `'emailGateUnlocked'`) before writing the Phase 27 migration logic. The auto-bypass for returning users depends on the correct key name. Read `frontend/src/hooks/useEmailGate.ts` before Phase 27 spec.
+- **`conversations.response_experts` backfill for cold-start exposure chart:** PITFALLS.md suggests using existing `conversations` table data to populate initial exposure charts before new tracking accumulates. Whether `conversations.response_experts` is populated in v2.2 and in what format is not confirmed — verify this column exists and contains expert ID arrays before relying on it for Phase 6 backfill.
 
-- **OTR@K threshold calibration:** The `SIMILARITY_THRESHOLD=0.60` aligns with existing `GAP_THRESHOLD=0.60`. After Phase 25 ships and accumulates real query data, validate the distribution of `otr_at_k` values — if the 7-day average is always >0.90 or always <0.40, the threshold needs recalibration. No action needed before shipping.
+- **`useSage.ts` function_called detection logic:** The tracking emission in `useSage` after a pilot response uses `data.filters ? (data.experts ? 'search_experts' : 'apply_filters') : null` to infer which function was called. If the backend always returns `filters` even for `search_experts`, this inference is wrong. Consider returning an explicit `function_called: str | None` field in `PilotResponse` to avoid ambiguity.
 
 ## Sources
 
 ### Primary (HIGH confidence)
 
-- [Zustand npm 5.0.10](https://www.npmjs.com/package/zustand) — version, persist middleware API
-- [Zustand persist docs](https://zustand.docs.pmnd.rs/middlewares/persist) — partialize, createJSONStorage, unique name requirement
-- [Zustand onRehydrateStorage bug #1527](https://github.com/pmndrs/zustand/issues/1527) — do not call set() inside onRehydrateStorage callback
-- [react-virtuoso npm 4.18.1](https://www.npmjs.com/package/react-virtuoso) — version, VirtuosoGrid vs Virtuoso distinction
-- [react-virtuoso issue #298](https://github.com/petyosi/react-virtuoso/issues/298) — unmount/remount behavior on scroll
-- [framer-motion npm 12.34.3](https://www.npmjs.com/package/framer-motion) — version, React 18 minimum
-- [Motion docs — motion values](https://motion.dev/docs/react-motion-value) — useMotionValue bypasses React re-renders
-- [Motion docs — useTransform](https://motion.dev/docs/react-use-transform) — composable motion values
-- [Motion docs — layout animations](https://www.framer.com/motion/layout-animations/) — FLIP animation, layout prop
-- [FAISS IDSelectorBatch C++ API](https://faiss.ai/cpp_api/struct/structfaiss_1_1IDSelectorBatch.html) — Python binding availability
-- [FAISS wiki — search parameters](https://github.com/facebookresearch/faiss/wiki/Setting-search-parameters-for-one-query) — SearchParameters for flat index
-- [FAISS thread safety — Issue #367](https://github.com/facebookresearch/faiss/issues/367) — concurrent read/write not thread-safe
-- [SQLite FTS5 docs](https://sqlite.org/fts5.html) — FTS5 availability, content= mode, trigger patterns
-- [google-genai PyPI](https://pypi.org/project/google-genai/) — function calling API, FunctionDeclaration
-- [google-generativeai deprecated](https://github.com/google-gemini/deprecated-generative-ai-python) — deprecation confirmed
-- [Tailwind v4 blog](https://tailwindcss.com/blog/tailwindcss-v4) — OKLCH built-in in v4; confirms v3 requires manual CSS vars
-- [scikit-learn PyPI 1.8.0](https://pypi.org/project/scikit-learn/) — version, manylinux wheel for Python 3.11
-- [sklearn TSNE docs](https://scikit-learn.org/stable/modules/generated/sklearn.manifold.TSNE.html) — parameter reference, PCA pre-reduction recommendation, max_iter vs n_iter rename
-- [sklearn n_iter deprecation issue #25518](https://github.com/scikit-learn/scikit-learn/issues/25518) — n_iter removed in 1.7, use max_iter
-- [caniuse OKLCH](https://caniuse.com/mdn-css_types_color_oklch) — 93% browser support as of early 2026
+- Direct codebase inspection (`useSage.ts`, `useExplore.ts`, `pilot_service.py`, `SageFAB.tsx`, `models.py`, `admin.py`, `filterSlice.ts`, `resultsSlice.ts`, `pilotSlice.ts`, `ExpertCard.tsx`, `SagePanel.tsx`, `useAdminData.ts`, `admin/types.ts`) — all architecture and pitfall findings
+- [google-genai PyPI + googleapis/python-genai GitHub](https://github.com/googleapis/python-genai) — `FunctionDeclaration`, `response.function_calls`, `fn_call.args` (protobuf Struct) API
+- [Gemini function calling official docs](https://ai.google.dev/gemini-api/docs/function-calling) — two-turn pattern, multiple declarations in one Tool, AUTO mode
+- [SQLite FTS5 official docs](https://sqlite.org/fts5.html) — content table mode, triggers, BM25 rank column
+- [Motion useTransform docs](https://motion.dev/docs/react-use-transform) — proximity scaling pipeline API
+- [Motion useSpring docs](https://motion.dev/docs/react-use-spring) — spring physics for proximity scale
+- [Motion motion values docs](https://motion.dev/docs/react-motion-value) — `useMotionValue` bypasses React re-renders
+- [Algolia Analytics — zero-result query tracking](https://support.algolia.com/hc/en-us/articles/13079831222033) — gap analysis dashboard patterns
+- [Algolia Ecommerce Playbook — null results](https://www.algolia.com/ecommerce-merchandising-playbook/null-results-optimization) — unmet demand identification
+- [Google Analytics for Developers — SPA event tracking](https://developers.google.com/analytics/devguides/collection/ga4/single-page-applications) — event schema design (GA4 pattern)
+- [scikit-learn TSNE docs 1.8](https://scikit-learn.org/stable/modules/generated/sklearn.manifold.TSNE.html) — parameter reference, PCA pre-reduction recommendation
+- [caniuse OKLCH](https://caniuse.com/mdn-css_types_color_oklch) — 93% browser support
 - [caniuse backdrop-filter](https://caniuse.com/css-backdrop-filter) — 92% browser support
-- [MDN backdrop-filter](https://developer.mozilla.org/en-US/docs/Web/CSS/backdrop-filter) — stacking context behavior documented
-- [Josh W. Comeau — Next-level frosted glass](https://www.joshwcomeau.com/css/backdrop-filter/) — overflow: hidden stacking context trap
-- [FastAPI Discussion #6526](https://github.com/fastapi/fastapi/discussions/6526) — lifespan above yield blocking startup
-- Direct codebase inspection: `app/main.py`, `app/routers/admin.py`, `app/routers/explore.py`, `app/services/explorer.py`, `app/models.py`, `app/config.py`, `scripts/ingest.py`, `frontend/src/store/index.ts`, `frontend/src/store/filterSlice.ts`, `frontend/src/components/marketplace/ExpertCard.tsx` — all integration points ground truth
+- [Web Fetch API keepalive — MDN](https://developer.mozilla.org/en-US/docs/Web/API/fetch) — `keepalive: true` behavior on page unload
 
 ### Secondary (MEDIUM confidence)
 
-- [Glassmorphism Implementation Guide 2025](https://playground.halfaccessible.com/blog/glassmorphism-design-trend-implementation-guide) — glass recipe values
-- [LogRocket — Implementing Claymorphism](https://blog.logrocket.com/implementing-claymorphism-css/) — clay shadow values
-- [hype4.academy — Claymorphism CSS](https://hype4.academy/articles/coding/how-to-create-claymorphism-using-css) — dual-inset shadow technique
-- [BuildUI Magnified Dock recipe](https://buildui.com/recipes/magnified-dock) — proximity scale canonical pattern (framer-motion imports; API identical to motion/react)
-- [Pinecone — Evaluation Measures in IR](https://www.pinecone.io/learn/offline-evaluation/) — OTR@K / Precision@K equivalence
-- [Omnisend — Newsletter Signup Examples 2026](https://www.omnisend.com/blog/newsletter-signup-examples/) — newsletter gate UX patterns
-- [MailerLite — Newsletter Form Best Practices](https://www.mailerlite.com/blog/optimize-email-signup-form) — single-field friction data (each additional field reduces conversion 4–11%)
-- [SQLAlchemy FTS5 Discussion #9466](https://github.com/sqlalchemy/sqlalchemy/discussions/9466) — text() is the only path for FTS5 DDL
-- [Railway nixpacks docs](https://docs.railway.com/reference/nixpacks) — Python build process, glibc version
-- [Zustand persist behavior — Discussion #426](https://github.com/pmndrs/zustand/discussions/426) — async hydration; synchronous read workaround
-- [scikit-learn t-SNE perplexity example](https://scikit-learn.org/stable/auto_examples/manifold/plot_t_sne_perplexity.html) — parameter tuning for N=530
-- [Dalton Walsh — Aurora CSS Background](https://daltonwalsh.com/blog/aurora-css-background-effect/) — aurora animation technique
+- [BuildUI Magnified Dock recipe](https://buildui.com/recipes/magnified-dock) — proximity-based scaling pattern (`useMotionValue + useTransform + useSpring`); uses `framer-motion` imports (same API as `motion/react`)
+- [Haptik AI — clarifying questions research](https://www.haptik.ai/tech/probing-clarification-skill-ai-assistant) — 27% error reduction, 4.1→1.3 retry reduction from single clarifying question
+- [ShapeOfAI.com — AI nudge patterns](https://www.shapeof.ai/patterns/nudges) — proactive empty-state nudge UX
+- [SQLAlchemy FTS5 discussion #9466](https://github.com/sqlalchemy/sqlalchemy/discussions/9466) — `text()` is the only path for FTS5 DDL in SQLAlchemy
+- [Railway nixpacks docs](https://docs.railway.com/reference/nixpacks) — Python build process, glibc version, manylinux compatibility
+- [fetch keepalive vs sendBeacon](https://www.stefanjudis.com/today-i-learned/fetch-supports-a-keepalive-option-to-make-it-outlive-page-navigations/) — `keepalive: true` survives page navigation; `sendBeacon` cannot send JSON
 
 ### Tertiary (LOW confidence)
 
-- Training data: LinkedIn OTR@K usage in production search evaluation — OTR@K term sourcing; mathematically equivalent to Precision@K regardless of term origin
+- [5 UX Patterns for Better Generative AI Search — Medium/Bootcamp](https://medium.com/design-bootcamp/5-ux-patterns-for-better-generative-ai-search-6fecb37142a1) — dual-function intent distinction; single source
+- [Microsoft Learn — UX guidance for AI co-pilots](https://learn.microsoft.com/en-us/microsoft-cloud/dev/copilot/isv/ux-guidance) — compact result card pattern inside chat panel; indirect application to Sage
 
 ---
 *Research completed: 2026-02-22*

@@ -742,7 +742,7 @@ backdrop-filter (needed for glassmorphism surfaces) has 92% global support. It i
 - Always define a hex/rgba fallback FIRST on the same property — browsers silently ignore `oklch()` if unsupported and use the previous valid value
 - Use `@supports (color: oklch(0% 0 0))` for OKLCH-gated blocks (not strictly necessary given 93% support, but correct defensive practice)
 - Use `@supports (backdrop-filter: blur(1px))` for glassmorphism blocks — this is the more useful gate since backdrop-filter has slightly lower support than OKLCH
-- VIS-05 contrast requirement (≥4.5:1): test both the OKLCH path and the fallback hex path separately — the fallback surfaces must also meet contrast
+- VIS-05 contrast requirement (>=4.5:1): test both the OKLCH path and the fallback hex path separately — the fallback surfaces must also meet contrast
 
 ### No new packages needed
 
@@ -886,11 +886,11 @@ import type { MotionValue } from 'motion/react'
 
 ---
 
-## Q4. scikit-learn t-SNE Parameters for 530 × 768
+## Q4. scikit-learn t-SNE Parameters for 530 x 768
 
 ### Recommendation
 
-**Use PCA-then-t-SNE two-stage pipeline.** Reduce 768 dimensions to 50 via PCA first, then run t-SNE on the 530×50 matrix. This is the officially documented approach for high-dimensional inputs and cuts t-SNE runtime significantly.
+**Use PCA-then-t-SNE two-stage pipeline.** Reduce 768 dimensions to 50 via PCA first, then run t-SNE on the 530x50 matrix. This is the officially documented approach for high-dimensional inputs and cuts t-SNE runtime significantly.
 
 ### Recommended parameters
 
@@ -904,12 +904,12 @@ def compute_embedding_map(vectors: np.ndarray) -> np.ndarray:
     vectors: shape (530, 768) — raw FAISS index vectors (numpy float32)
     returns: shape (530, 2)   — 2D t-SNE projection, stored in app.state
     """
-    # Stage 1: PCA from 768 → 50 dims
-    # PCA initialization is deterministic, fast (~0.5s for 530×768)
+    # Stage 1: PCA from 768 -> 50 dims
+    # PCA initialization is deterministic, fast (~0.5s for 530x768)
     pca = PCA(n_components=50, random_state=42)
     reduced = pca.fit_transform(vectors)  # shape: (530, 50)
 
-    # Stage 2: t-SNE from 50 → 2 dims
+    # Stage 2: t-SNE from 50 -> 2 dims
     tsne = TSNE(
         n_components=2,
         perplexity=30,           # recommended for ~500 points; range 5-50
@@ -928,18 +928,18 @@ def compute_embedding_map(vectors: np.ndarray) -> np.ndarray:
 
 | Parameter | Value | Justification |
 |-----------|-------|---------------|
-| `perplexity` | 30 | Recommended range is 5–50; 30 is the sklearn default and appropriate for N=530. Rule of thumb: perplexity ≈ sqrt(N) ≈ 23 for 530 points, so 25–35 is the sweet spot. 30 is safe. |
+| `perplexity` | 30 | Recommended range is 5-50; 30 is the sklearn default and appropriate for N=530. Rule of thumb: perplexity = sqrt(N) = 23 for 530 points, so 25-35 is the sweet spot. 30 is safe. |
 | `max_iter` | 1000 | Minimum is 250. 1000 is sufficient for 530 points to converge. 500 would likely suffice too, but 1000 ensures stable output. |
-| `learning_rate` | `'auto'` | `'auto'` computes `max(N/early_exaggeration/4, 50)` = `max(530/12/4, 50)` ≈ `max(11, 50)` = 50. This is the correct sklearn 1.2+ best practice; replaces the old default of 200. |
+| `learning_rate` | `'auto'` | `'auto'` computes `max(N/early_exaggeration/4, 50)` = `max(530/12/4, 50)` = `max(11, 50)` = 50. This is the correct sklearn 1.2+ best practice; replaces the old default of 200. |
 | `init` | `'pca'` | PCA initialization produces more globally stable layouts than random. It is the default since sklearn 1.2. More reproducible runs. |
-| `method` | `'barnes_hut'` | O(N log N) approximation — appropriate for N < 10,000. Exact method (`'exact'`) is O(N²) and slower; not needed here. |
+| `method` | `'barnes_hut'` | O(N log N) approximation — appropriate for N < 10,000. Exact method (`'exact'`) is O(N^2) and slower; not needed here. |
 | `random_state` | `42` | Reproducibility — t-SNE is stochastic; fixing seed ensures the same layout across container restarts. |
 | `n_jobs` | `1` | Railway containers have 1-2 vCPU. t-SNE's barnes_hut implementation in sklearn is single-threaded anyway. Setting explicitly avoids surprises. |
-| PCA `n_components` | `50` | Standard preprocessing dimension. Sklearn's own TSNE documentation explicitly recommends reducing to 50 with PCA before t-SNE for high-dimensional data. Preserves ≥95% variance in typical embedding spaces. |
+| PCA `n_components` | `50` | Standard preprocessing dimension. Sklearn's own TSNE documentation explicitly recommends reducing to 50 with PCA before t-SNE for high-dimensional data. Preserves >=95% variance in typical embedding spaces. |
 
 ### Startup caching pattern
 
-t-SNE for 530×768 takes ~2–5 seconds. Compute once at startup, cache in `app.state`:
+t-SNE for 530x768 takes ~2-5 seconds. Compute once at startup, cache in `app.state`:
 
 ```python
 # main.py — in @app.on_event("startup") or lifespan context manager
@@ -978,9 +978,9 @@ async def get_embedding_map(request: Request, _=Depends(_require_admin)):
 
 | Stage | Time estimate |
 |-------|--------------|
-| PCA 768→50 (530 points) | ~0.3–0.5 seconds |
-| t-SNE 50→2 (530 points, max_iter=1000) | ~2–4 seconds |
-| Total at startup | ~3–5 seconds |
+| PCA 768->50 (530 points) | ~0.3-0.5 seconds |
+| t-SNE 50->2 (530 points, max_iter=1000) | ~2-4 seconds |
+| Total at startup | ~3-5 seconds |
 
 This is acceptable for a one-time startup computation. The endpoint itself returns in <1ms (reads from `app.state`).
 
@@ -1124,4 +1124,534 @@ class NewsletterSubscriber(Base):
 ---
 
 *Stack research for: TCS v2.2 Evolved Discovery Engine — additive section*
+*Researched: 2026-02-22*
+
+---
+---
+
+# Stack Research — v2.3 Sage Evolution & Marketplace Intelligence
+
+**Domain:** Expert Marketplace — v2.3 additions only (Sage search function, event tracking, admin gap analysis)
+**Researched:** 2026-02-22
+**Research Mode:** Ecosystem (Subsequent Milestone — specific integration questions)
+**Confidence:** HIGH — all critical claims verified against existing codebase + official Gemini API docs; no new packages required
+
+---
+
+## Scope of This Section
+
+Three discrete new capabilities. Zero new packages for either frontend or backend. Everything needed is already installed. The work is pure pattern extension.
+
+| Capability | What's New | New Packages? |
+|------------|-----------|---------------|
+| `search_experts` Gemini function | Second `FunctionDeclaration` in existing `Tool`; `run_explore()` called in-process | None |
+| Client-side event tracking | `useRef` queue + `setInterval` flush hook; `POST /api/events` batch endpoint; `UserEvent` SQLAlchemy model | None |
+| Admin Gaps tab aggregations | `GROUP BY` / `HAVING` / `func.avg()` queries on `user_events`; Recharts charts (already installed) | None |
+
+---
+
+## 1. search_experts Gemini Function Addition
+
+### How the existing two-turn pattern extends
+
+The existing `pilot_service.py` already handles `apply_filters` with a two-turn Gemini pattern:
+- Turn 1: send user message + `Tool(function_declarations=[APPLY_FILTERS_DECLARATION])` — Gemini returns `function_calls`
+- Turn 2: send function result back — Gemini generates confirmation text
+
+Adding `search_experts` requires only extending the `function_declarations` list and adding an `elif` branch in the dispatch. The turn structure is identical.
+
+### The extension pattern
+
+```python
+# pilot_service.py — additions only
+
+SEARCH_EXPERTS_DECLARATION = types.FunctionDeclaration(
+    name="search_experts",
+    description=(
+        "Search the expert marketplace and return matching experts directly in the chat. "
+        "Call this when the user wants to find experts for a specific problem or skill, "
+        "especially when they want to see results without navigating the main grid."
+    ),
+    parameters_json_schema={
+        "type": "object",
+        "properties": {
+            "query": {
+                "type": "string",
+                "description": "Natural language description of the problem or expertise needed.",
+            },
+            "tags": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Domain tags to filter by (AND logic). Empty array = no tag filter.",
+            },
+            "rate_min": {
+                "type": "number",
+                "description": "Minimum hourly rate filter. Omit to use no minimum.",
+            },
+            "rate_max": {
+                "type": "number",
+                "description": "Maximum hourly rate filter. Omit to use no maximum.",
+            },
+        },
+        "required": ["query"],
+    },
+)
+
+# In run_pilot():
+tool = types.Tool(function_declarations=[APPLY_FILTERS_DECLARATION, SEARCH_EXPERTS_DECLARATION])
+
+# After Turn 1 response, dispatch on fn_call.name:
+if fn_call.name == "apply_filters":
+    # ... existing logic unchanged ...
+
+elif fn_call.name == "search_experts":
+    # Call run_explore() in-process — no HTTP round-trip
+    from app.services.explorer import run_explore
+    from app.database import SessionLocal
+
+    db = SessionLocal()
+    try:
+        explore_result = run_explore(
+            query=fn_call.args.get("query", ""),
+            rate_min=float(fn_call.args.get("rate_min", 0.0)),
+            rate_max=float(fn_call.args.get("rate_max", 10000.0)),
+            tags=list(fn_call.args.get("tags", [])),
+            limit=5,     # cap at 5 for Sage panel — enough context without overwhelming Turn 2
+            cursor=0,
+            db=db,
+            app_state=app_state,  # pass via closure or inject into run_pilot signature
+        )
+    finally:
+        db.close()
+
+    search_results = [e.model_dump() for e in explore_result.experts]
+
+    # Turn 2: send search results as function response
+    contents.append(response.candidates[0].content)
+    contents.append(types.Content(
+        role="user",
+        parts=[types.Part.from_function_response(
+            name="search_experts",
+            response={"experts": search_results},
+        )]
+    ))
+    final = client.models.generate_content(model=GENERATION_MODEL, contents=contents, config=config)
+    confirmation = final.text or "Here are the experts I found for you!"
+
+    return {
+        "filters": None,
+        "message": confirmation,
+        "search_results": search_results,  # NEW field — frontend renders inline cards
+    }
+```
+
+### PilotResponse schema change
+
+```python
+# pilot.py router
+class PilotResponse(BaseModel):
+    filters: dict | None
+    message: str
+    search_results: list[dict] | None = None  # NEW — populated only by search_experts
+```
+
+### Frontend: useSage.ts extension
+
+```typescript
+// useSage.ts — after receiving response
+if (data.search_results && data.search_results.length > 0) {
+  // Sync main grid to these results
+  const store = useExplorerStore.getState()
+  store.setResults({
+    experts: data.search_results,
+    total: data.search_results.length,
+    cursor: null,
+  })
+}
+
+// Render search_results as structured cards within the Sage panel message
+// Store them on the message object: addMessage({ ..., searchResults: data.search_results })
+```
+
+### Why in-process call, not HTTP
+
+Calling `run_explore()` directly from `pilot_service.py` avoids: (1) HTTP round-trip latency within Railway, (2) auth header forwarding complexity, (3) a second port listener. The function is already a pure Python function that takes a `db` Session — same pattern used by admin.py's `ThreadPoolExecutor` workers which each instantiate `SessionLocal()` directly.
+
+**The one constraint:** `run_pilot()` runs in a thread pool (`loop.run_in_executor`). So `run_explore()` is also synchronous in the same thread — no asyncio conflict. Both are sync. The `app_state` reference (needed for FAISS index) must be passed into `run_pilot()` — add it as a parameter to the signature.
+
+### Gemini model selection between two functions
+
+Gemini selects which function to call based on which description best matches the user's intent. The distinction between the two functions is deliberately clear:
+
+- `apply_filters`: user wants to change what's visible on the main grid — adjusting scope
+- `search_experts`: user wants to find experts for a specific problem — active search, results in chat
+
+With well-written descriptions, Gemini 2.5 Flash reliably routes to the correct function. No `tool_config` overrides needed; leave `mode="AUTO"` (or omit it — AUTO is the default).
+
+**No new packages required.**
+
+---
+
+## 2. Client-Side Event Tracking
+
+### Frontend: useEventTracker hook (no new library)
+
+The entire tracking solution is a `useRef` queue with a `setInterval` flush. No external analytics library, no new npm package.
+
+```typescript
+// frontend/src/hooks/useEventTracker.ts
+
+import { useRef, useEffect, useCallback } from 'react'
+import { useExplorerStore } from '../store'
+
+const API_BASE = import.meta.env.VITE_API_URL ?? ''
+const FLUSH_INTERVAL_MS = 30_000   // flush every 30 seconds
+const FLUSH_BATCH_SIZE = 20        // flush when buffer reaches 20 events
+
+export type EventType = 'card_click' | 'sage_query' | 'filter_change'
+
+export interface TrackedEvent {
+  event_type: EventType
+  expert_username?: string     // card_click
+  query_text?: string          // sage_query
+  function_called?: string     // sage_query: 'apply_filters' | 'search_experts' | null
+  result_count?: number        // sage_query
+  filter_snapshot?: object     // filter_change: {query, rate_min, rate_max, tags}
+  session_id: string
+  ts: number                   // Date.now()
+}
+
+async function flushEvents(events: TrackedEvent[]): Promise<void> {
+  if (events.length === 0) return
+  try {
+    await fetch(`${API_BASE}/api/events`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ events }),
+      keepalive: true,   // survives page unload
+    })
+  } catch {
+    // Fire-and-forget: tracking failures must not bubble to user
+  }
+}
+
+export function useEventTracker() {
+  const queue = useRef<TrackedEvent[]>([])
+  const sessionId = useExplorerStore((s) => s.sessionId)
+
+  const track = useCallback((partial: Omit<TrackedEvent, 'session_id' | 'ts'>) => {
+    const event: TrackedEvent = {
+      ...partial,
+      session_id: sessionId,
+      ts: Date.now(),
+    }
+    queue.current.push(event)
+
+    // Eager flush if batch size reached
+    if (queue.current.length >= FLUSH_BATCH_SIZE) {
+      const batch = queue.current.splice(0)
+      void flushEvents(batch)
+    }
+  }, [sessionId])
+
+  useEffect(() => {
+    // Interval flush
+    const timer = setInterval(() => {
+      if (queue.current.length > 0) {
+        const batch = queue.current.splice(0)
+        void flushEvents(batch)
+      }
+    }, FLUSH_INTERVAL_MS)
+
+    // Visibility-change flush (modern replacement for beforeunload)
+    function handleVisibility() {
+      if (document.visibilityState === 'hidden' && queue.current.length > 0) {
+        const batch = queue.current.splice(0)
+        void flushEvents(batch)
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+
+    return () => {
+      clearInterval(timer)
+      document.removeEventListener('visibilitychange', handleVisibility)
+    }
+  }, [])
+
+  return { track }
+}
+```
+
+### Why fetch with keepalive, not sendBeacon
+
+`navigator.sendBeacon` cannot set `Content-Type: application/json` — it only supports `text/plain`, `application/x-www-form-urlencoded`, and `multipart/form-data`. Our batch payload is JSON. `fetch` with `keepalive: true` achieves the same page-unload durability with full header control.
+
+### Why NOT in Zustand store
+
+Event tracking is write-only fire-and-forget. Adding it to `useExplorerStore` would: (1) contaminate the `partialize` logic (event queue must never be persisted to localStorage), (2) waste memory retaining acknowledged events, (3) require actions for something that has no UI representation. Standalone `useRef` hook is the correct pattern — same rationale as `useNltrStore` being separate from `useExplorerStore`.
+
+### Hook placement
+
+Call `useEventTracker()` once in `Marketplace.tsx` or top-level `App.tsx`. Pass the `track` function down to:
+- `ExpertCard` — `onClick` handler emits `card_click`
+- `useSage.ts` — after successful response emits `sage_query`
+- `useExplore.ts` or filter action handlers — emits `filter_change` on Zustand filter state changes (use `subscribeWithSelector` for reactive filter watching, or call `track()` inside the setter dispatch)
+
+### Backend: UserEvent model + POST /api/events
+
+```python
+# app/models.py — add UserEvent
+
+class UserEvent(Base):
+    """
+    User behavior events for marketplace intelligence.
+    Written via POST /api/events (batch). Read via GET /api/admin/gaps/*.
+    No FK constraints — consistent with schema style across models.
+    Auto-created by Base.metadata.create_all() on Railway startup.
+    """
+    __tablename__ = "user_events"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    event_type: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    # card_click fields
+    expert_username: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
+    # sage_query fields
+    query_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    function_called: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    result_count: Mapped[int | None] = mapped_column(nullable=True)
+    # filter_change fields
+    filter_snapshot: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON
+    # shared
+    session_id: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime, default=datetime.datetime.utcnow, nullable=False, index=True
+    )
+```
+
+```python
+# app/routers/events.py — new router, no auth required
+
+from fastapi import APIRouter, Depends
+from pydantic import BaseModel, Field
+from sqlalchemy.orm import Session
+from app.database import get_db
+from app.models import UserEvent
+import datetime, json
+
+router = APIRouter()
+
+class EventPayload(BaseModel):
+    event_type: str = Field(..., max_length=50)
+    expert_username: str | None = None
+    query_text: str | None = None
+    function_called: str | None = None
+    result_count: int | None = None
+    filter_snapshot: dict | None = None
+    session_id: str = Field(..., max_length=100)
+    ts: int  # client-side Date.now() — stored as created_at
+
+class BatchEventsRequest(BaseModel):
+    events: list[EventPayload] = Field(..., max_length=100)  # cap at 100 per flush
+
+@router.post("/api/events")
+async def ingest_events(body: BatchEventsRequest, db: Session = Depends(get_db)):
+    """
+    Batch event ingestion. Public endpoint — no auth required.
+    Cap of 100 events per request prevents abuse.
+    """
+    rows = []
+    for e in body.events:
+        rows.append(UserEvent(
+            event_type=e.event_type,
+            expert_username=e.expert_username,
+            query_text=e.query_text,
+            function_called=e.function_called,
+            result_count=e.result_count,
+            filter_snapshot=json.dumps(e.filter_snapshot) if e.filter_snapshot else None,
+            session_id=e.session_id,
+            created_at=datetime.datetime.utcfromtimestamp(e.ts / 1000),
+        ))
+    db.add_all(rows)
+    db.commit()
+    return {"accepted": len(rows)}
+```
+
+Register in `main.py`:
+```python
+from app.routers import events as events_router
+app.include_router(events_router.router)
+```
+
+**No new Python packages required.** Pure SQLAlchemy 2.0 + Pydantic 2 + FastAPI — all in requirements.txt.
+
+---
+
+## 3. Admin Gaps Tab Aggregation Queries
+
+### SQLAlchemy query patterns (no new libraries)
+
+All queries use `sqlalchemy.func.*` and standard ORM constructs already imported in `admin.py`.
+
+**Query 1: Unmet demand — searches with poor expert results**
+
+```python
+# GET /api/admin/gaps/demand
+from sqlalchemy import func, select, text
+
+stmt = (
+    select(
+        UserEvent.query_text,
+        func.count().label("search_count"),
+        func.avg(UserEvent.result_count).label("avg_results"),
+    )
+    .where(UserEvent.event_type == "sage_query")
+    .where(UserEvent.query_text.isnot(None))
+    .group_by(UserEvent.query_text)
+    .having(func.avg(UserEvent.result_count) < 3)  # threshold: fewer than 3 results = unmet
+    .order_by(text("search_count DESC"))
+    .limit(50)
+)
+rows = db.execute(stmt).all()
+# Returns: [{"query_text": "...", "search_count": N, "avg_results": M.M}, ...]
+```
+
+**Query 2: Expert exposure — who gets seen vs clicked**
+
+```python
+# GET /api/admin/gaps/exposure
+stmt = (
+    select(
+        UserEvent.expert_username,
+        func.count().label("click_count"),
+    )
+    .where(UserEvent.event_type == "card_click")
+    .where(UserEvent.expert_username.isnot(None))
+    .group_by(UserEvent.expert_username)
+    .order_by(text("click_count DESC"))
+)
+rows = db.execute(stmt).all()
+# Join with experts table for name/category context
+```
+
+**Query 3: Zero-result rate trend (for chart)**
+
+```python
+# GET /api/admin/gaps/trend
+from sqlalchemy import case, func, select
+
+stmt = (
+    select(
+        func.date(UserEvent.created_at).label("day"),
+        func.count().label("total_searches"),
+        func.sum(case((UserEvent.result_count == 0, 1), else_=0)).label("zero_result_count"),
+    )
+    .where(UserEvent.event_type == "sage_query")
+    .group_by(func.date(UserEvent.created_at))
+    .order_by(func.date(UserEvent.created_at))
+)
+rows = db.execute(stmt).all()
+```
+
+**Query 4: Most-used filter combinations**
+
+```python
+# GET /api/admin/gaps/filters
+stmt = (
+    select(
+        UserEvent.filter_snapshot,
+        func.count().label("n"),
+    )
+    .where(UserEvent.event_type == "filter_change")
+    .where(UserEvent.filter_snapshot.isnot(None))
+    .group_by(UserEvent.filter_snapshot)
+    .order_by(text("n DESC"))
+    .limit(20)
+)
+rows = db.execute(stmt).all()
+```
+
+### Frontend: Gaps tab charts
+
+Recharts `recharts@3.7.0` is already installed (used for t-SNE scatter in Intelligence tab). The Gaps tab reuses the same library:
+
+- Unmet demand: `<BarChart>` showing top N low-result queries by search frequency
+- Expert exposure: `<BarChart>` (descending click counts, highlight bottom quartile)
+- Zero-result trend: `<LineChart>` over time
+
+No new frontend packages required.
+
+---
+
+## Installation Summary
+
+```bash
+# Backend — NO changes to requirements.txt
+# Frontend — NO changes to package.json
+```
+
+All v2.3 capabilities are pure pattern extensions using existing dependencies.
+
+---
+
+## What NOT to Add
+
+| Avoid | Why | Use Instead |
+|-------|-----|-------------|
+| PostHog / Mixpanel / Amplitude | External analytics SaaS at $0-$X/month, data leaves your infra, overkill for 530-expert marketplace | SQLite `user_events` table — same DB, zero new infra |
+| `@segment/analytics-next` | External event pipeline; requires API keys, egress, vendor lock-in | Custom `useEventTracker` hook, ~50 lines |
+| `navigator.sendBeacon` | Cannot send `Content-Type: application/json`; only supports text/plain and form data | `fetch` with `keepalive: true` |
+| Alembic migrations | Not in use in this project; `Base.metadata.create_all()` auto-creates at startup | Add `UserEvent` to `models.py` — auto-created on first Railway deploy |
+| Automatic function calling (`AutomaticFunctionCallingConfig(disable=False)`) | Removes control over Turn 2 — we need to extract `search_results` from the function response and return them to the frontend | Manual `response.function_calls` dispatch (existing pattern) |
+| Separate events microservice | Not warranted at this scale; Railway already runs one process | Add `POST /api/events` router to existing FastAPI app |
+| WebSockets for real-time event streaming | Events are low-frequency (card clicks, Sage queries) — batch POST every 30s is sufficient | `setInterval` flush pattern |
+| SQLite percentile extension | Requires compile-time flag; not available on Railway without custom build | Use `func.avg()` + `func.count()` for gap detection — sufficient for this use case |
+
+---
+
+## Integration Points Summary
+
+| File | Change Type | What Changes |
+|------|------------|--------------|
+| `app/services/pilot_service.py` | Extend | Add `SEARCH_EXPERTS_DECLARATION`; extend `Tool`; add `elif` branch calling `run_explore()` in-process; add `app_state` param to `run_pilot()` signature; return `search_results` field |
+| `app/routers/pilot.py` | Extend | Add `search_results: list[dict] \| None = None` to `PilotResponse` |
+| `app/models.py` | Extend | Add `UserEvent` class |
+| `app/routers/events.py` | New file | `POST /api/events` batch endpoint, no auth |
+| `app/main.py` | Extend | Register `events_router` |
+| `app/routers/admin.py` | Extend | Add 3-4 Gaps aggregation endpoints under `/api/admin/gaps/*` |
+| `frontend/src/hooks/useEventTracker.ts` | New file | Event queue hook |
+| `frontend/src/hooks/useSage.ts` | Extend | Handle `data.search_results`; emit `sage_query` event; call `store.setResults()` for grid sync |
+| `frontend/src/store/pilotSlice.ts` | Extend | Add `searchResults` field to `PilotMessage` type |
+| `frontend/src/admin/` | Extend | Add Gaps tab component with Recharts charts |
+
+---
+
+## Version Compatibility — v2.3
+
+| Package | Version in Use | Compatibility Notes |
+|---------|---------------|---------------------|
+| `google-genai` | 1.64.* | Multiple `FunctionDeclaration` in one `Tool` supported since v0.5+; `response.function_calls` list dispatch pattern verified |
+| `sqlalchemy` | 2.0.* | `func.count()`, `func.avg()`, `func.sum()`, `case()`, `func.date()` all available; `having()` and `group_by()` supported in 2.0 ORM select |
+| `zustand` | 5.0.11 | `useRef` queue pattern is React-only (not Zustand); `getState()` snapshot pattern already used in `useSage.ts` |
+| `recharts` | 3.7.0 | Already installed with `react-is@19.2.4` peer dep; Gaps tab BarChart and LineChart reuse same setup as Intelligence tab |
+| `react` | 19.2.0 | `useRef`, `useEffect`, `useCallback` for event queue hook — standard React hooks, no compatibility concerns |
+| Web Fetch API (`keepalive`) | Browser built-in | Supported in Chrome 66+, Firefox 106+, Safari 17+ — all within target browser support range |
+
+---
+
+## Sources — v2.3
+
+- [Gemini function calling — google.ai.dev](https://ai.google.dev/gemini-api/docs/function-calling) — HIGH confidence (multiple FunctionDeclarations in one Tool, two-turn pattern, manual dispatch)
+- [googleapis/python-genai GitHub](https://github.com/googleapis/python-genai) — HIGH confidence (response.function_calls list API, 1.64 release)
+- Existing codebase `app/services/pilot_service.py` — VERIFIED (two-turn pattern, types.Tool, FunctionDeclaration shape)
+- Existing codebase `app/models.py` — VERIFIED (SQLAlchemy ORM pattern, Base.metadata.create_all() auto-create)
+- Existing codebase `app/routers/admin.py` — VERIFIED (func.count, select, SessionLocal direct instantiation pattern)
+- Existing codebase `frontend/src/hooks/useSage.ts` — VERIFIED (useRef queue pattern applicable; existing store.getState() snapshot)
+- [fetch keepalive vs sendBeacon](https://www.stefanjudis.com/today-i-learned/fetch-supports-a-keepalive-option-to-make-it-outlive-page-navigations/) — MEDIUM confidence (blog post; behavior matches MDN spec for keepalive)
+- [navigator.sendBeacon content-type limitation](https://blog.zackhu.com/navigatorsendbeacon-vs-fetch-keepalive) — MEDIUM confidence (multiple sources agree on JSON limitation)
+- [SQLAlchemy 2.0 func docs](https://docs.sqlalchemy.org/en/20/core/functions.html) — HIGH confidence (func.count, func.avg, func.sum, case, having API)
+- [SQLite WAL mode](https://sqlite.org/wal.html) — HIGH confidence (concurrent read+write without blocking)
+
+---
+
+*Stack research for: TCS v2.3 Sage Evolution & Marketplace Intelligence*
 *Researched: 2026-02-22*

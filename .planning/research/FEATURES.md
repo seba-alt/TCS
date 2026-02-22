@@ -1,26 +1,26 @@
 # Feature Research
 
-**Domain:** Expert Marketplace Visual & Intelligence Evolution — Tinrate / TCS v2.2
-**Milestone:** v2.2 Evolved Discovery Engine
+**Domain:** AI Expert Marketplace — v2.3 Sage Evolution & Marketplace Intelligence
+**Milestone:** v2.3 (adding to existing v2.2 codebase)
 **Researched:** 2026-02-22
-**Confidence:** MEDIUM — visual patterns (glassmorphism, claymorphism, aurora) are well-documented with strong 2024-2025 consensus; OTR@K has a clear analogue in Precision@K IR literature; newsletter gate UX has high-quality 2025-2026 conversion data; tag cloud proximity animation is well-supported by Framer Motion primitives but specific "claymorphic tag cloud" implementations are an emerging pattern with fewer direct references.
+**Confidence:** MEDIUM — Sage dual-function UX and clarifying question patterns are MEDIUM (cross-verified with multiple 2025 sources); event tracking schema is HIGH (well-established GA4/analytics industry standards); gap dashboard UX is MEDIUM (Algolia analytics patterns + marketplace analytics literature verified); FAB animation reactions are MEDIUM (Material Design docs + animation UX literature).
 
 ---
 
-## Context: What Already Exists (v2.0)
+## Context: What Already Exists (do NOT re-implement)
 
-This milestone adds on top of a fully-shipped v2.0. Do NOT re-implement these:
+| Existing Feature | Status | Notes |
+|-----------------|--------|-------|
+| Sage FAB + slide-in panel (380px, Framer Motion AnimatePresence) | Live | FAB hides when panel is open |
+| Gemini two-turn function calling (`apply_filters`) | Live | Calls `filterSlice.setTags/setRate` — no search API call |
+| Hybrid search `/api/explore` (FAISS + BM25) | Live | Three-stage pipeline, accepts `query`, `tags`, `rate_min`, `rate_max`, `page`, `limit` |
+| Zustand `useExplorerStore` (filter + results + pilot slices) | Live | `filterSlice`, `resultsSlice`, `pilotSlice` |
+| No-results empty state (6 tag suggestions + Sage CTA) | Live | Visible when `results.length === 0` |
+| Admin analytics (searches, leads, expert management, intelligence, t-SNE) | Live | In `/admin` |
+| `conversations` table in SQLite | Live | Stores query text, timestamp, result count, OTR@K |
+| Aurora aesthetic, glassmorphism, bento cards | Live | Shipped v2.2 |
 
-| Existing Feature | Status |
-|-----------------|--------|
-| Hybrid search pipeline (FAISS + BM25 fusion) | Live |
-| Faceted sidebar: TagMultiSelect (flat list), RateSlider, SearchInput | Live |
-| react-virtuoso infinite-scroll expert grid | Live |
-| Floating Sage AI co-pilot with Framer Motion (AnimatePresence) | Live |
-| Email gate for profile clicks (localStorage-persisted) | Live |
-| URL filter sync, FTS5 autocomplete suggestions | Live |
-
-All v2.2 features build on this foundation without touching the search pipeline, store structure, or admin analytics already shipped.
+All v2.3 features extend this foundation without replacing any of the above.
 
 ---
 
@@ -28,35 +28,32 @@ All v2.2 features build on this foundation without touching the search pipeline,
 
 ### Table Stakes (Users Expect These)
 
-For a marketplace claiming "immersive" or "high-fidelity" aesthetics, these visual properties are the minimum that makes the design feel intentional rather than accidentally styled.
+For an AI co-pilot that claims to help users "find experts," these behaviors are the minimum that makes the experience feel functional and trustworthy. Missing any of these makes Sage feel broken or misleading.
 
 | Feature | Why Expected | Complexity | Notes |
 |---------|--------------|------------|-------|
-| `backdrop-filter: blur` on overlay surfaces | Any product describing "glassmorphism" that lacks this property looks like a flat card with a white background — the defining visual affordance of the style | LOW | Values: `blur(12px)` to `blur(20px)`. Requires `-webkit-backdrop-filter` prefix for Safari (still needed in 2026). GPU-intensive — limit to sidebar, SearchInput, Sage panel; do not apply to the expert card grid (530 cards rendered = performance collapse). |
-| Semi-transparent background on glass surfaces | The blur is invisible without a translucent fill; the two properties are inseparable for the glass effect | LOW | `background: rgba(255,255,255,0.08)` to `rgba(255,255,255,0.15)` on dark aurora bg. For light aurora variants: `rgba(0,0,0,0.05)` to `rgba(0,0,0,0.10)`. Alpha below 0.08 renders invisible; above 0.25 looks like an opaque panel. |
-| Subtle 1px border on glass surfaces | Without a border, glass surfaces lose their edge definition and appear to float disconnectedly from the layout | LOW | `border: 1px solid rgba(255,255,255,0.18)` to `rgba(255,255,255,0.25)`. For aurora-tinted borders use `oklch(95% 0.05 260 / 0.20)` (very light purple-blue at 20% opacity). |
-| Contrast ratio ≥ 4.5:1 on all glass text | WCAG 2.1 AA minimum for body text on variable-background glass surfaces | MEDIUM | Glass surfaces change perceived contrast depending on what's behind them. Test with darkest and lightest background state of the aurora animation. Mitigation: add subtle `text-shadow: 0 1px 3px rgba(0,0,0,0.3)` on body text over glass; increase glass bg opacity from 0.10 to 0.20 if contrast fails. |
-| `@supports` fallback for unsupported browsers | `backdrop-filter` has ~95% global support in 2026, but the 5% that don't support it see a completely transparent surface with no background — text becomes unreadable | LOW | Wrap glass surfaces: `@supports not (backdrop-filter: blur(1px)) { .glass-surface { background: rgba(15,15,35,0.85); } }`. Opaque dark fallback ensures legibility. |
-| Keyframe-animated aurora background that doesn't stutter | A static aurora gradient defeats the purpose; a janky one reads as broken | MEDIUM | Animate `background-position` on multiple stacked radial-gradient layers, NOT `background-size` (repaints trigger layout). Use `transform: translate()` on pseudo-elements for GPU compositing. Animate on 15–30s cycles. Use `animation-timing-function: ease-in-out`. |
-| OKLCH color tokens for aurora palette | Perceptually uniform color space is necessary for smooth hue transitions in gradients — standard RGB/HSL produces muddy intermediate colors in aurora gradients | LOW | Define color design tokens as OKLCH values in CSS custom properties. Example aurora tokens: `--aurora-violet: oklch(55% 0.25 290)`, `--aurora-teal: oklch(65% 0.20 185)`, `--aurora-rose: oklch(62% 0.22 350)`. OKLCH prevents the "gray mudge" in the middle of hue transitions. Tailwind v3 supports OKLCH in `theme.extend.colors` via direct CSS variable reference. |
-| Bento-zone visual structure on ExpertCard | A card claiming "bento-style" without distinct spatial zones looks like a disorganized list item | MEDIUM | Four zones: (1) name/role area top-left, (2) rate+badge top-right, (3) tag pills bottom-left strip, (4) match-reason bottom-right or full-width footer strip. Must maintain h-[180px] fixed height (VirtuosoGrid constraint — non-negotiable). |
+| Sage search results visible in panel (not just filter adjustments) | Users who ask "show me experts in X" expect to see expert results in the conversation — not just a filter sidebar that silently changes. Confirmed by 2025 UX research: chat-dominated experiences without visible state feedback cause users to miss critical context. | MEDIUM | Render expert result cards (compact, 2-3 fields: name, title, rate) inside the Sage panel chat bubble. Do NOT try to render full bento cards — the panel is 380px wide. Use a condensed list format. |
+| Grid syncs when Sage searches | If Sage searches and the main grid doesn't update, users lose trust in which source is "correct." The grid and panel must show the same results after a Sage search. | MEDIUM | After `search_experts` returns, dispatch results to `resultsSlice` (same slice that `/api/explore` normally populates). This is the same as `apply_filters` already does — just also fire the search. |
+| Sage confirms what it did in natural language | Users need text confirmation after every function call ("I found 8 experts in fintech under $200/hr"). Returning raw data without a summary creates a "dead" AI feeling. | LOW | Already done for `apply_filters` in the two-turn pattern. Extend to `search_experts`: Turn 2 prompt instructs Gemini to summarize results found (count, domain, notable names). |
+| Sage handles zero results gracefully | When search returns nothing, Sage must acknowledge it and suggest a next action — not silently show an empty panel. | LOW | Detect `results.length === 0` in the function result, pass this context to Turn 2 so Gemini responds with a redirect (e.g., "No exact matches — try broadening the domain or adjusting the rate"). Existing no-results empty state on the grid can remain. |
+| Event tracking fires without blocking UX | Behavior tracking must be invisible — no latency on clicks, no UI freezes, no error surfaces if tracking POST fails. | LOW | Fire-and-forget pattern: POST to tracking endpoint and ignore response. Never `await` tracking calls in the critical path. Use `navigator.sendBeacon()` or background `fetch()` with no error handling surfaced to user. |
+| Admin can view zero-result queries | This is table stakes for any search analytics dashboard. Algolia, Elastic, and every search analytics product exposes this as the first data point. Without it, admins cannot identify unmet demand. | MEDIUM | Query the `events` table: `SELECT query_text, COUNT(*) as occurrences FROM search_events WHERE result_count = 0 GROUP BY query_text ORDER BY occurrences DESC`. Present as a sortable table in the Admin Gaps tab. |
 
 ---
 
 ### Differentiators (Competitive Advantage)
 
-These are the v2.2 features that give the marketplace a premium, distinctive character. None of them exist in competitor marketplaces (Upwork, Toptal, Clarity.fm).
+These are the features that make v2.3 more than "adding tracking." None of these are standard behavior for marketplace co-pilots as of early 2026.
 
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| Animated claymorphic tag cloud | Replaces a flat checkbox list with a tactile, living element that communicates the breadth of expert domains without feeling clinical. No competitor marketplace has this. | HIGH | Uses Framer Motion `layout` prop for position animation when tags reorder. Hover/proximity scale: individual tags scale to `1.08–1.12` on hover (claymorphism lift). Framer Motion `useMotionValue` tracks cursor position; `useTransform` maps distance to scale for proximity effect on neighboring tags. Each tag is a `motion.button` with `whileHover={{ scale: 1.1 }}` as baseline; proximity enhancement is additive. |
-| Claymorphic bubble aesthetic on tags | Visual design language that makes filter tags feel physical and playful rather than UI-widget sterile | MEDIUM | Core CSS: `border-radius: 999px` (full pill), `box-shadow: inset -2px -2px 5px rgba(0,0,0,0.15), inset 2px 2px 5px rgba(255,255,255,0.25), 3px 3px 8px rgba(0,0,0,0.20)` (two inner + one outer shadow for 3D clay depth). `background: oklch(62% 0.18 260)` (saturated). Scale transition: `transition: transform 0.18s ease, box-shadow 0.18s ease`. Hover state deepens outer shadow and lifts scale. |
-| "Everything is possible" animated hero element | Communicates product breadth through example quirky tags ("Find a rocket scientist", "Someone who speaks fluent legalese") — sets expectations about the search system's power | MEDIUM | Rendered as an animated banner beneath the tag cloud. Cycle through example tags with Framer Motion `AnimatePresence` + fade-in/fade-out or slide-up stagger. Should feel like a gentle revelation, not a carousel. 4–6 example phrases, 3s per phrase, infinite loop. |
-| t-SNE embedding scatter plot in admin | Makes the abstract concept of "embedding space" legible to a non-ML admin — shows category clustering, coverage gaps, and outlier experts as a 2D map | HIGH | Backend: `sklearn.manifold.TSNE(n_components=2, perplexity=30, random_state=42)` on the FAISS index vectors at startup, cached in `app.state.tsne_projection`. Endpoint: `/api/admin/embedding-map` returns `[{x, y, label, category, expert_name, findability_score}]`. Frontend: scatter plot (Recharts `ScatterChart` or `react-chartjs-2`) with points colored by `category`. Hover tooltip: expert name + job title. What it shows: tight clusters = good category coverage; isolated points = outlier experts who are hard to retrieve; large empty regions = coverage gaps (domains with few experts). |
-| OTR@K metric in admin dashboard | Gives admins a weekly signal of whether search is returning semantically relevant results, without requiring manual labeling | HIGH | OTR@K (On-Topic Rate at K) is functionally equivalent to Precision@K with a score-based relevance threshold. Definition: for a query returning K results, OTR@K = (count of results where `hybrid_score >= threshold`) / K. Standard K=10, threshold=0.60 (aligns with existing `GAP_THRESHOLD=0.60`). Computed per search query and stored in `conversations` table. 7-day rolling average exposed in admin Intelligence tab. |
-| Atomic FAISS index swap | Allows the admin to rebuild the embedding index without any downtime or inconsistency window — essential once the expert pool grows | HIGH | Pattern: `asyncio.to_thread` runs FAISS rebuild in background; on completion, `app.state.faiss_index = new_index` is a single atomic Python reference reassignment (GIL-safe for this operation). In-flight requests continue using the old object until completion; new requests pick up the new index. Admin panel shows rebuild status: idle / running / complete / failed + last-rebuilt timestamp. |
-| Newsletter subscription gate (replaces raw email gate) | Repositions the lead capture as a value exchange ("Get expert insights") rather than a toll ("Give us your email"). Higher perceived value = higher conversion. | MEDIUM | Same localStorage + Zustand persistence infrastructure as existing email gate. New copy framing and backend table (`newsletter_subscribers`). SQLite-backed, exportable. Admin Leads page shows subscriber count + list. |
-| Barrel roll Easter egg | Adds delight and shareable surprise — users who discover it tell others | LOW | Framer Motion `animate` on ExpertCards triggered by matching query/Sage phrases ("barrel roll", "do a flip"). 360° `rotate` transition on all visible cards simultaneously. `AnimatePresence` not needed — existing cards just receive a new animate prop value. Duration: 0.6s, ease-in-out, single rotation. |
+| Sage dual-function calling (`apply_filters` + `search_experts`) | Sage can either adjust filters (when user wants to browse) OR perform a full search (when user wants direct results). No competitor marketplace AI co-pilot resolves this split — they either filter or search, not both. | HIGH | Add `search_experts` as a second function in the Gemini function schema alongside `apply_filters`. Gemini decides which to call based on intent signals in the query. Clear intent heuristic: "show me" / "find me" → `search_experts`; "filter by" / "only show" → `apply_filters`. Both functions must sync the grid as a side effect. See dependency notes. |
+| Sage clarifying questions for ambiguous queries | When query is ambiguous, inserting one clarifying question reduces error rates by 27% and ambiguity-induced retries from 4.1 to 1.3 per session (2025 research finding, haptik.ai). No other marketplace co-pilot does this. | MEDIUM | Implement as a third Gemini function `ask_clarification(question: string)` or as a Turn 2 instruction: if Gemini's Turn 2 text includes a question, render it as a question bubble with optional quick-reply chips (e.g., "Product strategy" / "Technical architecture"). Trigger: system prompt instructs Sage to ask one question when budget, domain, or experience level is missing from the query. |
+| Sage proactive empty-state nudge | When the grid shows zero results (detected via Zustand store), Sage FAB pulses and Sage proactively surfaces a suggestion — unprompted. This closes the "dead end" gap where users stare at an empty grid without knowing what to do. | MEDIUM | Subscribe to `resultsSlice.results.length` in the Sage component. When it drops to 0 and Sage panel is closed, trigger FAB pulse animation + inject a system-generated message into the pilot history: "No experts matched those filters — want me to broaden the search?" This is a proactive AI nudge pattern (confirmed via ShapeOfAI.com patterns). |
+| FAB animated reactions (pulse/glow on user activity) | Sage FAB draws attention at moments when Sage can add value (empty state, first load, user inactivity). Animated FABs with contextual motion signals are proven to increase engagement with the underlying feature (Material Design research). | LOW | Two states: (1) `pulse` — soft radial keyframe animation when grid hits zero results or user has been idle 30s; (2) `glow` — aurora-colored box-shadow intensification when Sage receives a message response. Framer Motion `animate` prop on the FAB div. Do NOT animate continuously — only on the specific trigger events. |
+| Expert exposure distribution in admin | Shows which experts appear in search results most vs least — identifies "invisible" experts who are almost never surfaced. No public competitor marketplace dashboard exposes this. This is borrowed from Elastic's search analytics patterns (impression tracking per document ID). | HIGH | Requires the event tracking layer to log which expert IDs appeared in each search result set (not just clicks). Exposure = appearance in results. Click-through = user clicked the card. Display as a ranked table: Expert Name, Appearances, Clicks, CTR. Sortable by "least exposed" to surface invisible experts. |
+| Admin Gaps tab: unmet demand + exposure in one view | Combining zero-result queries (demand) with low-exposure experts (supply) in one screen gives admins an actionable market intelligence view. Comparable to Algolia's Analytics dashboard for enterprise customers, but here it's native to the marketplace with domain-specific context. | HIGH | Two sections on the tab: (1) Unmet Demand — top zero-result queries grouped by likely domain; (2) Expert Exposure — ranked list of experts by appearance count. Secondary metric: queries that returned results but had low engagement (high impressions, zero clicks = low relevance indicator). |
+| Warmer/wittier Sage personality | System prompt rewrite: Sage shifts from functional assistant to personality-driven guide. 2025 conversational AI UX research (TELUS Digital, Haptik) shows users form stronger product attachment to assistants with distinct voice. Current Sage is competent but neutral. | LOW | System prompt rewrite is a low-risk, high-impact change with no infrastructure changes required. Key principles: use contractions, occasional light humor, acknowledge the user's goal before diving into results, avoid corporate hedging phrases. Example: "I found 6 fintech experts who know their stuff — let me show you the standouts." vs current: "Here are the experts matching your query:" |
 
 ---
 
@@ -64,446 +61,113 @@ These are the v2.2 features that give the marketplace a premium, distinctive cha
 
 | Feature | Why Requested | Why Problematic | Alternative |
 |---------|---------------|-----------------|-------------|
-| Cursor-reactive JS aurora (mousemove-driven gradient) | "Makes the background feel interactive and alive" | `mousemove` fires at 60+ events/second; each triggers a CSS variable update and GPU re-composite on a large radial gradient — measurable frame drops on mid-range hardware. Specifically: Tailwind JIT does not handle inline-style gradient updates; requires direct DOM style mutation. | CSS keyframe animation achieves ambient motion at zero JS cost, runs on the compositor thread, and is explicitly chosen in REQUIREMENTS.md (`Out of Scope`). |
-| Applying `backdrop-filter: blur` to expert cards | "Make cards feel glassy too" | 530 cards × backdrop-filter = 530 GPU layers. This is the single most common cause of glassmorphism performance failures in production. Safari is particularly sensitive. | Apply backdrop-filter only to 3-4 UI chrome elements: sidebar, SearchInput, Sage panel, mobile filter sheet. Cards get solid or semi-opaque non-blurred backgrounds. |
-| External newsletter service (Mailchimp, Klaviyo) integration | "We need proper email automation" | Adds an external API dependency with its own auth, webhook handling, rate limits, and cost. The product does not currently send any automated emails — the complexity is all overhead. | SQLite `newsletter_subscribers` table with CSV export is sufficient. Manual export to email service when campaign is needed. Out of scope in REQUIREMENTS.md. |
-| UMAP instead of t-SNE for embedding map | "UMAP produces better layouts and runs faster for large datasets" | True for >10K points, but `umap-learn` is a heavy Railway dependency (~200MB package) and adds cold-start time. 530 points is squarely in t-SNE's sweet spot (best results under 5K points; no neighbor approximation needed). | scikit-learn t-SNE at 530 points runs in ~1-2 seconds on startup. Explicitly deferred to v2.3 in REQUIREMENTS.md. |
-| Animated on-hover full card flip | "Makes cards feel 3D and premium" | Card flip breaks the scan pattern of a dense grid — it changes the card's footprint mid-hover, causes surrounding cards to appear to shift, and conflicts with VirtuosoGrid's fixed-height contract. | Bento card design + aurora-tuned glow on hover covers the "premium feel" need without layout disruption. |
-| GDPR consent checkbox on newsletter gate | "We must get explicit consent for email marketing" | A consent checkbox is correct for marketing jurisdictions but is not required for a B2B lead-capture model where the subscription is the product. Adding it adds a field, reduces conversion, and requires legal review of checkbox copy. | Document the legal basis in deployment notes. Add consent copy as microcopy under the email field ("By subscribing you agree to receive expert insights from Tinrate"). |
-| Real-time OTR@K (per-request computation) | "Show live retrieval quality on every search" | OTR@K requires looking at K results and applying a threshold — this is already done at search time, but logging it on every request adds a DB write per search. At scale this is manageable; but real-time display on the user-facing search page exposes internal quality signals to users who have no context for interpreting them. | Compute and store per query (INTEL-01). Display 7-day rolling average in admin only (INTEL-02). Never expose raw per-query OTR to end users. |
-
----
-
-## Detailed Pattern Notes by Feature Area
-
-### 1. Aurora + Glassmorphism (VIS-01 – VIS-05)
-
-**Aurora mesh gradient technique (MEDIUM confidence — daltonwalsh.com, auroral GitHub, Aceternity UI):**
-
-The aurora effect is achieved by stacking multiple semi-transparent `radial-gradient` blobs with large radius values over a dark base, then animating their position using CSS `@keyframes`. The canonical technique:
-
-```css
-/* Base layer — deep dark navy */
-.aurora-bg {
-  background: oklch(12% 0.05 260);
-  position: relative;
-  overflow: hidden;
-}
-
-/* Blob layers via pseudo-elements or child divs */
-.aurora-blob-1 {
-  position: absolute;
-  width: 60vw;
-  height: 60vw;
-  border-radius: 50%;
-  background: radial-gradient(
-    circle,
-    oklch(55% 0.25 290 / 0.35) 0%,
-    transparent 70%
-  );
-  animation: drift-1 20s ease-in-out infinite alternate;
-  filter: blur(60px);  /* Soft blob edge — NOT backdrop-filter */
-}
-
-@keyframes drift-1 {
-  0%   { transform: translate(-20%, -20%) scale(1.0); }
-  100% { transform: translate(20%, 30%) scale(1.15); }
-}
-```
-
-**Critical distinction:** `filter: blur()` on the gradient blobs is different from `backdrop-filter: blur()` on UI surfaces. The former blurs the blob itself (cheap). The latter blurs whatever is behind the glass element (expensive but required for glassmorphism). Use both — one for the background blobs, the other for sidebar/panel surfaces.
-
-**Glassmorphism surface recipe (HIGH confidence — cross-verified with multiple 2024-2025 implementations):**
-
-```css
-.glass-surface {
-  background: rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(16px) saturate(1.8);
-  -webkit-backdrop-filter: blur(16px) saturate(1.8);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
-}
-
-/* Fallback for browsers without backdrop-filter */
-@supports not (backdrop-filter: blur(1px)) {
-  .glass-surface {
-    background: rgba(15, 15, 35, 0.85);
-    border: 1px solid rgba(255, 255, 255, 0.10);
-  }
-}
-```
-
-Key values to tune per surface: blur radius (sidebar: 16px; Sage panel: 20px; SearchInput: 12px), background alpha (0.08–0.15), border opacity (0.15–0.25).
-
-**OKLCH color tokens for Tailwind (MEDIUM confidence — training data + MDN verified approach):**
-
-Tailwind v3 does not natively parse `oklch()` in `tailwind.config.js` color definitions, but accepts CSS custom properties. Pattern:
-
-```css
-/* globals.css */
-:root {
-  --aurora-violet: oklch(55% 0.25 290);
-  --aurora-teal:   oklch(65% 0.20 185);
-  --aurora-rose:   oklch(62% 0.22 350);
-  --glass-bg:      oklch(100% 0 0 / 0.08);
-  --glass-border:  oklch(100% 0 0 / 0.18);
-}
-```
-
-Then reference in Tailwind config as CSS variable values or inline `style={{ '--color': 'oklch(...)' }}`.
-
----
-
-### 2. Animated Claymorphic Tag Cloud (DISC-01 – DISC-04)
-
-**Layout animation vs absolute positioning (HIGH confidence — Motion docs, multiple verified implementations):**
-
-Use Framer Motion `layout` prop on each `motion.button` tag. When tags reorder (e.g., selected tags move to top), `layout` animates the transition automatically using FLIP (First-Last-Invert-Play) — no manual position calculation needed.
-
-```tsx
-// Each tag item
-<motion.button
-  layout                        // Animates position changes
-  layoutId={`tag-${tag.id}`}   // Stable ID for cross-container animation
-  whileHover={{ scale: 1.1 }}  // Claymorphic lift on hover
-  whileTap={{ scale: 0.95 }}   // Tactile press feedback
-  transition={{ type: "spring", stiffness: 400, damping: 25 }}
->
-  {tag.label}
-</motion.button>
-```
-
-Wrap all tags in `<motion.div layout>` container so the container also animates its height as tags are selected/deselected and reorder.
-
-**Do NOT use absolute positioning** for the tag cloud. Absolute positioning requires manual x/y calculation per tag (like a word cloud library), which conflicts with the sidebar's flex/flow layout, makes keyboard navigation non-linear, and breaks accessibility reading order.
-
-**Proximity-based scale (MEDIUM confidence — Framer Motion useMotionValue patterns, training data):**
-
-For the "nearby tags also scale slightly when cursor approaches" effect:
-
-```tsx
-// In a parent component tracking cursor position
-const mouseX = useMotionValue(0);
-const mouseY = useMotionValue(0);
-
-// Per tag: compute distance from tag center to cursor
-// Map distance 0–150px → scale 1.10–1.00
-const tagScale = useTransform(distance, [0, 150], [1.10, 1.00]);
-```
-
-The proximity effect adds perceived "life" — tags that are close to the hovered tag subtly breathe outward. This is the hallmark "claymorphism" interaction pattern. Distance threshold of 100–150px is the sweet spot: too wide feels chaotic; too narrow feels like standard hover.
-
-**Claymorphism CSS for individual tags (HIGH confidence — multiple 2024-2025 sources):**
-
-```css
-.clay-tag {
-  border-radius: 999px;               /* Full pill */
-  background: oklch(62% 0.18 260);    /* Saturated domain color */
-  padding: 6px 14px;
-  font-weight: 500;
-
-  box-shadow:
-    inset -2px -3px 6px rgba(0, 0, 0, 0.20),   /* Dark inner shadow (bottom-right) */
-    inset 2px 2px 5px rgba(255, 255, 255, 0.30), /* Light inner highlight (top-left) */
-    3px 4px 10px rgba(0, 0, 0, 0.25);            /* Outer drop shadow */
-
-  transition: transform 0.18s ease, box-shadow 0.18s ease;
-}
-
-.clay-tag:hover {
-  transform: scale(1.10) translateY(-1px);
-  box-shadow:
-    inset -2px -3px 6px rgba(0, 0, 0, 0.20),
-    inset 2px 2px 5px rgba(255, 255, 255, 0.30),
-    5px 7px 16px rgba(0, 0, 0, 0.30);            /* Deeper outer shadow on hover = lift */
-}
-```
-
-The dual-inset + outer-shadow triple is the defining CSS pattern for claymorphism. The inner dark shadow simulates the recessed underside; the inner light shadow simulates the top highlight; the outer shadow provides the floating elevation.
-
-**"Everything is possible" element (DISC-03):**
-
-Below the tag cloud, render a row of example quirky search phrases that cycle using Framer Motion `AnimatePresence`:
-
-```tsx
-const examples = [
-  "Find a rocket scientist who codes",
-  "Someone fluent in startup legalese",
-  "A CFO who's been through a Series B",
-  "An AI ethicist with product sense",
-];
-```
-
-Use `key={currentExample}` so `AnimatePresence` treats each phrase as a distinct element with enter/exit animation (fade up, 0.4s). Switch every 3 seconds.
-
----
-
-### 3. t-SNE Embedding Heatmap / Scatter Plot (INTEL-05 – INTEL-06)
-
-**What the visualization shows (MEDIUM confidence — Google GenAI embedding examples, ML visualization literature):**
-
-An embedding scatter plot for a search admin serves three diagnostic purposes:
-
-1. **Category clustering:** Experts in the same domain should cluster together in 2D. Tight clusters = embeddings are capturing domain signal correctly. Scattered points within a labeled category = the embedding model sees those experts as semantically diverse (may indicate noisy or inconsistent tag assignments).
-
-2. **Coverage gaps:** Large empty regions in the 2D space = no experts in that embedding neighborhood. If a user query embeds into that region, retrieval quality will be poor (all results will have low similarity). These gaps inform which expert domains to recruit.
-
-3. **Outlier experts:** Points far from any cluster = unusual embeddings (very generalist experts, experts with sparse tag data, or experts whose job title doesn't align with their tags). Outliers are candidates for findability score review.
-
-**What to render per point:**
-- `x`, `y` from t-SNE 2D projection
-- Color: by `category` (domain tag — use the most-assigned tag per expert as primary category)
-- Hover tooltip: `expert_name`, `job_title`, `findability_score`, primary category
-- Point size: uniform (2–4px radius); avoid sizing by findability score — too visually noisy for 530 points
-
-**scikit-learn t-SNE implementation:**
-
-```python
-from sklearn.manifold import TSNE
-import numpy as np
-
-def compute_tsne(faiss_index, experts: list[dict]) -> list[dict]:
-    # Extract all vectors from FAISS index
-    vectors = np.array([faiss_index.reconstruct(i) for i in range(faiss_index.ntotal)])
-
-    tsne = TSNE(
-        n_components=2,
-        perplexity=30,       # Standard for 530 points; increase to 50 for >1000
-        random_state=42,     # Deterministic output (same layout on every restart)
-        n_iter=1000,
-        metric="cosine",     # gemini-embedding-001 uses cosine similarity
-    )
-    embedding_2d = tsne.fit_transform(vectors)
-
-    return [
-        {
-            "x": float(embedding_2d[i][0]),
-            "y": float(embedding_2d[i][1]),
-            "expert_name": experts[i]["name"],
-            "job_title": experts[i]["job_title"],
-            "category": experts[i]["primary_tag"],
-            "findability_score": experts[i]["findability_score"],
-        }
-        for i in range(len(experts))
-    ]
-```
-
-Compute at startup, cache in `app.state.tsne_projection`. Recompute after atomic FAISS index swap.
-
-**Frontend scatter plot:** Recharts `ScatterChart` is the lowest-friction choice given the existing React stack (no new charting library). Alternatively, `react-chartjs-2` if richer interactivity is needed. Both support colored point groups and hover tooltips.
-
----
-
-### 4. OTR@K — On-Topic Rate at K (INTEL-01 – INTEL-02)
-
-**Definition (MEDIUM confidence — semantic search evaluation literature; "OTR@K" specifically sourced from LinkedIn's search evaluation system):**
-
-OTR@K (On-Topic Rate at K) = the fraction of the top-K retrieved results that are "on-topic" (relevant) for the query.
-
-**Formal definition:**
-
-```
-OTR@K = (number of on-topic results in top K) / K
-```
-
-where "on-topic" is a binary determination: a result is on-topic if its relevance score exceeds a threshold.
-
-**In this system's context:** The hybrid search pipeline already produces a `hybrid_score` per result (FAISS semantic score × 0.7 + BM25 score × 0.3). A result is "on-topic" if `hybrid_score >= 0.60` (aligning with the existing `GAP_THRESHOLD=0.60` constant). K=10 is standard; use K=10 for INTEL-01.
-
-**Computation at search time:**
-
-```python
-def compute_otr_at_k(results: list[dict], k: int = 10, threshold: float = 0.60) -> float:
-    top_k = results[:k]
-    if not top_k:
-        return 0.0
-    on_topic = sum(1 for r in top_k if r.get("hybrid_score", 0) >= threshold)
-    return on_topic / len(top_k)
-```
-
-Store `otr_at_k` in the `conversations` table alongside the existing query log (add a `REAL` column). Admin Intelligence tab computes 7-day rolling average via:
-
-```sql
-SELECT AVG(otr_at_k)
-FROM conversations
-WHERE created_at >= datetime('now', '-7 days')
-  AND otr_at_k IS NOT NULL;
-```
-
-**Display in admin:** Single metric card "On-Topic Rate (7d avg): 0.82" with a subtitle "Fraction of top-10 results scoring above the relevance threshold." Color code: green >= 0.75, amber 0.60–0.74, red < 0.60.
-
-**OTR@K vs Precision@K:** These are functionally identical when relevance is defined by a score threshold rather than ground-truth labels. OTR@K is the term used in production search systems (LinkedIn, Bing) where explicit relevance judgments don't exist; Precision@K is the academic terminology. The math is the same.
-
----
-
-### 5. Index Drift (INTEL-03 – INTEL-04)
-
-**What it tracks:**
-
-Index Drift is not a retrieval quality metric — it is an operational health metric. It answers: "How stale is the current FAISS index relative to the live expert database?"
-
-**Two components:**
-
-1. **Time since last rebuild:** `datetime.utcnow() - last_rebuild_timestamp`. Display as "Rebuilt 3 days ago" or "Rebuilt 14 days ago (attention recommended)".
-
-2. **Expert count delta:** `current_expert_count - expert_count_at_last_rebuild`. A positive delta means new experts are in SQLite but not yet in the FAISS index (they won't appear in semantic search results). Display as "+23 experts not yet indexed" when delta > 0.
-
-**Storage:** Add `last_rebuild_ts` and `expert_count_at_rebuild` columns to a `system_state` SQLite table (or the existing `settings` table if schema allows). Update on every atomic FAISS swap completion.
-
-**Display in admin:** Status badge: "Index is current" (green, delta=0, age<7d) | "Index drift detected: +N experts" (amber, delta>0) | "Rebuild recommended (14d old)" (amber, age>7d) | Both conditions = red.
-
----
-
-### 6. Newsletter Subscription Gate (NLTR-01 – NLTR-04)
-
-**Newsletter gate vs raw email gate — the UX difference (MEDIUM confidence — omnisend.com, moosend.com 2026 examples, mailerlite.com best practices):**
-
-| Dimension | Raw Email Gate (v2.0) | Newsletter Gate (v2.2) |
-|-----------|----------------------|------------------------|
-| User mental model | "Pay to see the profile" (toll) | "Subscribe to get ongoing expert insights" (value exchange) |
-| Value proposition | Opaque — user doesn't know what they get | Explicit — "Get curated expert insights to your inbox" |
-| Trust signal | Extractive ("give us your email") | Reciprocal ("we'll send you value in return") |
-| Perceived friction | Higher (giving up data for access) | Lower (joining something worth joining) |
-| Conversion mechanism | FOMO + access blocking | Desire for ongoing value |
-
-**Copy pattern (MEDIUM confidence — conversion copywriting best practices):**
-
-Headline options (pick one, A/B test if needed):
-- "Get expert insights delivered to your inbox"
-- "Unlock profiles + receive curated expert matchmaking tips"
-- "Join 500+ businesses who trust Tinrate experts"
-
-Subheadline: "One email when we publish new expert spotlights. Unsubscribe anytime."
-
-CTA button: "Subscribe & View Profile" (combines the action with the immediate payoff)
-
-Microcopy beneath button: "No spam. Sent monthly. 30-second unsubscribe."
-
-**Friction level — target: single-field (MEDIUM confidence — MailerLite, VWO, conversion data):**
-
-Single email field only. No first name, no company. Each additional field reduces conversion by 4–11% (MailerLite, 2025 data). The subscriber list benefits from the email alone — name/company can be inferred from the email domain for B2B.
-
-**Behavioral logic:**
-- Gate triggers on "View Full Profile" click (same trigger point as v2.0 email gate)
-- If `newsletterSubscribed === true` in Zustand store (persisted via localStorage), skip modal entirely — do not show it again even on next session
-- On subscription: write to `newsletter_subscribers(email, created_at, source='profile_gate')` in SQLite, set `newsletterSubscribed: true` in Zustand + localStorage
-- Immediately after subscription: proceed to the original action (open Tinrate profile in new tab)
-
-**Zustand store addition:**
-
-```typescript
-interface NewsletterSlice {
-  subscribed: boolean;
-  email: string | null;
-  setSubscribed: (email: string) => void;
-}
-```
-
-Persist to localStorage under the existing `useExplorerStore` persist key. No new store needed.
+| Sage auto-searches on every user message | "Sage should always search, not just sometimes" | Creates confusion when user is asking a clarifying follow-up or saying "thanks" — firing a search on "Thanks, what else?" produces nonsensical results and wastes Gemini API calls. Also breaks the `apply_filters` use case which is intentionally filter-only. | Keep dual-function model: Gemini decides when to call `search_experts` vs `apply_filters` vs respond in plain text. Trust the LLM's intent classification — it's reliable for these two clear function signatures. |
+| Rendering full bento cards inside Sage panel | "Show the same cards in Sage as in the grid" | The Sage panel is 380px wide. Full bento cards are designed for a grid at 2-3 column widths. Rendering them in the panel produces a broken, over-constrained layout that looks unpolished. | Compact expert result format inside Sage panel: name, job title, rate badge — 3 fields max. Clicking an item in the panel highlights/scrolls to the card in the main grid (a "select" action, not a new view). |
+| Storing full search result payloads in the events table | "Track everything for replay later" | 530 experts × JSON payloads per query = rapid DB bloat on SQLite (Railway volume). Full result storage is not needed for the Gap dashboard — only result count and expert IDs that appeared. | Store: `query_text`, `result_count`, `result_expert_ids` (array of IDs, stored as JSON string), `filters_applied` (JSON), `timestamp`. Expert ID list allows exposure calculation without storing names/titles. |
+| Real-time gap dashboard (WebSocket / polling) | "Show live activity in the Gaps tab" | The gap analysis is inherently retrospective — it shows patterns over time, not live queries. Real-time updates would require WebSocket infrastructure not in the stack and add complexity with no UX benefit. Admin checks the Gaps tab periodically, not continuously. | Simple HTTP GET endpoint that aggregates the events table on request. Cache the aggregation for 60 seconds. No streaming. |
+| Tracking individual anonymous user sessions | "We want to know what each user does across their whole session" | Anonymous session stitching requires either cookies (consent friction) or fingerprinting (privacy risk, inaccurate). The platform already gates profiles via newsletter — that email is the natural user identifier. Cross-session tracking of anonymous users adds complexity with low analytical value given the existing newsletter gate. | Track events with `session_id` (random UUID generated on page load, stored in sessionStorage). This gives per-session context without cross-session stitching. Session ID is reset on each new tab/visit, which is appropriate for anonymous analytics. |
+| Third-party analytics SDK (Segment, Mixpanel, Heap) | "Use a proper analytics platform instead of rolling our own" | Adds an external dependency with its own pricing, data residency concerns, and integration complexity. The four v2.3 event types (card clicks, Sage queries, filter usage, exposure) are well-defined and can be stored in the existing SQLite DB with three new tables. A third-party SDK is justified at scale (>10K daily events); at 530 experts and current traffic, it's overengineering. | Custom event tables in SQLite. Design the schema to mirror GA4's `event_name + event_params` pattern so migration to a proper analytics platform later is straightforward (no schema redesign needed). |
+| Sage sending expert results AND updating filters simultaneously | "Do both — search and also apply filters so the grid reflects it" | If `search_experts` also calls `apply_filters`, the filter sidebar state diverges from the Sage search state — the sidebar might show filters that weren't user-set, confusing users who then try to adjust them. | Keep the operations separate. `search_experts` dispatches results directly to `resultsSlice` bypassing the filter pipeline. `apply_filters` updates `filterSlice` and re-fetches. User-visible filter chips only reflect user-initiated or `apply_filters`-initiated filter changes, not Sage search results. |
 
 ---
 
 ## Feature Dependencies
 
 ```
-[Aurora CSS background + OKLCH tokens]
-    └──prerequisite──> [Glassmorphism surfaces on sidebar, SearchInput, Sage panel]
-    └──prerequisite──> [Bento ExpertCard aurora glow tokens]
-    └──prerequisite──> [Claymorphic tag cloud color palette]
-    (All visual features share the same OKLCH color token system)
+[Sage `search_experts` function]
+    └──requires──> [Gemini function schema updated with new function definition]
+    └──requires──> [Backend `/api/explore` already live — no new endpoint needed]
+    └──requires──> [resultsSlice.setResults dispatcher (already in Zustand store)]
+    └──side-effect──> [Grid sync (same dispatch mechanism as normal explore flow)]
+    └──enables──> [Sage proactive empty-state nudge]
+    └──enables──> [Sage result exposure tracking]
 
-[Glassmorphism surfaces]
-    └──requires──> [Aurora background renders behind the surface]
-    (Glass effect is invisible or wrong on white/flat backgrounds)
+[Sage proactive empty-state nudge]
+    └──requires──> [Sage `search_experts` OR `apply_filters` can produce zero results]
+    └──requires──> [FAB pulse animation (FAB animated reactions)]
+    └──requires──> [Sage panel can inject system-generated messages into pilot history]
+    └──independent of──> [Event tracking tables]
 
-[Atomic FAISS index swap (IDX-01 – IDX-04)]
-    └──prerequisite──> [t-SNE recomputation on swap completion]
-    └──prerequisite──> [Index Drift metric reset on swap completion]
-    (Swap completion triggers two downstream state updates)
+[FAB animated reactions (pulse/glow)]
+    └──requires──> [Framer Motion `animate` prop on FAB (already installed)]
+    └──triggers from──> [Sage proactive nudge OR new message received]
+    └──independent of──> [Event tracking, admin Gaps tab]
 
-[t-SNE embedding scatter plot]
-    └──requires──> [FAISS index accessible at startup for vector extraction]
-    └──requires──> [Expert metadata (name, job_title, tags) aligned with FAISS index positions]
-    └──independent of──> [Atomic FAISS swap]
-    (t-SNE computation is triggered at startup; atomic swap should re-trigger it)
+[Sage warmer personality + clarifying questions]
+    └──requires──> [System prompt change only — no infra changes]
+    └──independent of──> [All other v2.3 features]
+    └──note: ship first — lowest risk, establishes personality baseline before search function changes]
 
-[OTR@K metric]
-    └──requires──> [hybrid_score field in explore results]
-    └──requires──> [conversations table schema update (otr_at_k column)]
-    └──independent of──> [t-SNE or Index Drift]
-    (OTR@K is computed in the search pipeline, not the index pipeline)
+[User behavior event tracking — 3 event types]
+    └──requires──> [New SQLite table: `user_events` (event_name, event_params JSON, session_id, timestamp)]
+    └──event: expert_card_click requires──> [Expert card onClick handler updated]
+    └──event: sage_query requires──> [useSage hook logs after function call resolves]
+    └──event: filter_applied requires──> [filterSlice actions log on dispatch]
+    └──enables──> [Admin Gaps tab (both unmet demand + exposure analysis)]
 
-[Newsletter gate]
-    └──extends──> [Existing email gate modal (v2.0)]
-    └──requires──> [New newsletter_subscribers SQLite table]
-    └──requires──> [New Zustand newsletter slice]
-    └──independent of──> [Aurora/glass/tag cloud]
-    (Can be built and tested independently of visual features)
+[Expert exposure tracking (which experts appear in results)]
+    └──requires──> [Event tracking layer live]
+    └──requires──> [Search handler logs result expert IDs as part of sage_query event]
+    └──requires──> [Explore API handler logs result expert IDs as part of filter_applied event]
+    └──enables──> [Admin Gaps tab exposure distribution table]
 
-[Claymorphic tag cloud]
-    └──replaces──> [TagMultiSelect flat list (v2.0)]
-    └──requires──> [Framer Motion layout animations (already installed in v2.0)]
-    └──requires──> [Aurora color tokens for tag palette]
-    └──independent of──> [FAISS, OTR@K, Newsletter]
-
-[Barrel roll Easter egg]
-    └──requires──> [Framer Motion animate prop on ExpertCards]
-    └──triggers from──> [Sage query matching OR SearchInput text]
-    └──independent of──> [All visual redesign features]
-    (Can be added to existing card component without touching card design)
+[Admin Gaps & Exposure tab]
+    └──requires──> [user_events table populated with sage_query + filter_applied events]
+    └──requires──> [result_expert_ids stored per event for exposure calculation]
+    └──independent of──> [Sage personality, FAB animations]
+    └──note: build last — depends on tracking layer being live and populated]
 ```
+
+### Dependency Notes
+
+- **Sage personality rewrite is independent and lowest-risk:** Ship it first in v2.3 — a system prompt change with zero infrastructure dependencies. Establishes the new tone before any of the function calling or tracking changes land.
+- **`search_experts` requires no new backend endpoint:** The existing `/api/explore` already accepts `query`, `tags`, `rate_min`, `rate_max`. The function just needs to call it with the right params and dispatch results to `resultsSlice`. This is a frontend-only change for the core feature.
+- **Event tracking must precede the Gaps tab:** The Admin Gaps tab aggregates data from the `user_events` table. If tracking ships in Phase X, the Gaps tab can ship in Phase X+1 after events have had time to accumulate. Do not ship the Gaps tab before tracking — an empty dashboard creates a confusing admin experience.
+- **Exposure tracking requires search events to include result IDs:** This is a slightly heavier event payload than simple click tracking. The `sage_query` and `filter_applied` events must include `result_expert_ids: string[]` in their params JSON. Design the event schema to include this from the start, not as a later addition.
+- **Zustand `resultsSlice` is the sync mechanism:** Both `search_experts` and `apply_filters` must write to the same `resultsSlice.setResults` to keep the grid and panel in sync. This is already how `apply_filters` works — `search_experts` follows the exact same dispatch pattern.
 
 ---
 
-## v2.2 Launch Definition
+## v2.3 Phase Definition
 
-### Phase 22 — Visual Metamorphosis (VIS)
+### Phase A — Sage Personality & Clarifying Questions (lowest risk, ship first)
 
-All of these must ship together or the glassmorphism effect is incoherent:
+- [ ] System prompt rewrite: warmer voice, contractions, result summary format
+- [ ] Clarifying question behavior: instruct Gemini to ask one question when intent is ambiguous (missing domain, budget, or experience level)
+- [ ] Quick-reply chip rendering for clarifying questions in Sage panel (optional: plain text fallback acceptable for MVP)
 
-- [ ] OKLCH design tokens in CSS custom properties
-- [ ] Aurora mesh gradient background with keyframe animation
-- [ ] Glassmorphism on FilterSidebar, SearchInput, Sage panel (backdrop-filter, rgba bg, subtle border)
-- [ ] `@supports` fallback for unsupported browsers (opaque dark background)
-- [ ] Contrast validation across all glass surfaces (WCAG 4.5:1)
+### Phase B — Sage Active Search (`search_experts` function)
 
-### Phase 23 — Discovery Engine (CARD + DISC)
+- [ ] Add `search_experts` function to Gemini function schema (params: `query`, `tags`, `rate_min`, `rate_max`)
+- [ ] Handle `search_experts` function call in `useSage` hook: call `/api/explore`, dispatch results to `resultsSlice`
+- [ ] Render compact expert result list inside Sage panel chat bubble (name, title, rate — 3 fields, no full bento card)
+- [ ] Turn 2 prompt instructs Gemini to summarize results found (count, domain, notable characteristics)
+- [ ] Handle zero-result case in Turn 2 context
 
-- [ ] Bento ExpertCard redesign (h-[180px] fixed height maintained)
-- [ ] Aurora-tuned hover glow on ExpertCards
-- [ ] Claymorphic tag cloud replacing TagMultiSelect
-- [ ] Proximity-based scale on tag hover
-- [ ] "Everything is possible" animated example phrases
+### Phase C — Sage FAB Animated Reactions + Proactive Nudge
 
-### Phase 24 — Atomic Index Swap (IDX)
+- [ ] FAB `pulse` animation: Framer Motion keyframe on zero-results state (subscribe to `resultsSlice.results.length === 0`)
+- [ ] FAB `glow` animation: aurora box-shadow intensification when Sage receives a response
+- [ ] Proactive nudge: inject system message into pilot history when grid hits zero results and panel is closed
 
-- [ ] Admin-triggered FAISS rebuild via panel
-- [ ] asyncio.to_thread background rebuild
-- [ ] Atomic `app.state.faiss_index` swap on completion
-- [ ] Rebuild status display in admin (idle/running/complete/failed + timestamp)
+### Phase D — User Behavior Event Tracking
 
-### Phase 25 — Admin Intelligence Metrics (INTEL 01-04)
+- [ ] SQLite `user_events` table: `id`, `event_name`, `event_params` (TEXT/JSON), `session_id`, `created_at`
+- [ ] `POST /api/events` endpoint: accepts `{event_name, event_params}` — no auth required, no response body needed
+- [ ] Session ID generation: random UUID in sessionStorage on page load, attached to all events
+- [ ] Track `expert_card_click`: `{expert_id, expert_name, context: 'grid'|'sage_panel', session_id}`
+- [ ] Track `sage_query`: `{query_text, function_called: 'search_experts'|'apply_filters'|'none', result_count, result_expert_ids: string[]}`
+- [ ] Track `filter_applied`: `{filters: {tags, rate_min, rate_max, text_query}, result_count, result_expert_ids: string[]}`
+- [ ] All tracking calls fire-and-forget (no await, no error surfacing)
 
-- [ ] OTR@K computed per search query, stored in conversations table
-- [ ] 7-day rolling OTR@K average in admin Intelligence tab
-- [ ] Index Drift metric (time since rebuild + expert count delta)
-- [ ] Index Drift status display in admin
+### Phase E — Admin Gaps & Exposure Tab
 
-### Phase 26 — Embedding Heatmap (INTEL 05-06)
-
-- [ ] t-SNE projection computed at startup, cached in app.state
-- [ ] `/api/admin/embedding-map` endpoint
-- [ ] Admin scatter plot (colored by category, hover tooltip)
-- [ ] t-SNE recomputed on atomic FAISS swap
-
-### Phase 27 — Newsletter Gate + Easter Egg (NLTR + FUN)
-
-- [ ] Newsletter gate copy and modal redesign
-- [ ] newsletter_subscribers SQLite table
-- [ ] Zustand newsletter slice (persisted to localStorage)
-- [ ] Admin Leads page subscriber count + list
-- [ ] Barrel roll Easter egg on trigger phrases
+- [ ] Admin Gaps tab route and nav item in existing admin panel
+- [ ] Unmet Demand section: top zero-result queries (`result_count = 0`), grouped and sorted by frequency
+- [ ] Low Engagement section: queries with results but zero clicks (impressions without interaction)
+- [ ] Expert Exposure section: ranked table of experts by appearance count + click count + CTR
+- [ ] "Least visible" experts: sorted ascending by appearance count — identifies experts who need findability review
+- [ ] Date range filter on Gaps tab (last 7d / 30d / all time)
 
 ---
 
@@ -511,71 +175,283 @@ All of these must ship together or the glassmorphism effect is incoherent:
 
 | Feature | User Value | Implementation Cost | Phase | Priority |
 |---------|------------|---------------------|-------|----------|
-| Aurora background + glassmorphism | HIGH (product quality signal) | MEDIUM | 22 | P1 |
-| OKLCH design tokens | HIGH (enables all visual features) | LOW | 22 | P1 |
-| @supports fallback | MEDIUM (accessibility/compatibility) | LOW | 22 | P1 |
-| Bento ExpertCard redesign | HIGH (product quality) | MEDIUM | 23 | P1 |
-| Claymorphic tag cloud | HIGH (differentiator) | HIGH | 23 | P1 |
-| Atomic FAISS swap | HIGH (ops capability) | HIGH | 24 | P1 |
-| OTR@K metric | MEDIUM (admin insight) | MEDIUM | 25 | P1 |
-| Index Drift metric | MEDIUM (ops awareness) | LOW | 25 | P2 |
-| t-SNE scatter plot | HIGH (admin differentiator) | HIGH | 26 | P2 |
-| Newsletter gate | HIGH (lead quality) | MEDIUM | 27 | P1 |
-| "Everything is possible" element | LOW (delight) | LOW | 23 | P2 |
-| Barrel roll Easter egg | LOW (delight/shareability) | LOW | 27 | P3 |
-| Proximity-based tag scale | MEDIUM (perceived polish) | MEDIUM | 23 | P2 |
+| Sage warmer personality + clarifying questions | HIGH (trust + engagement) | LOW (system prompt only) | A | P1 |
+| Sage `search_experts` function + grid sync | HIGH (core Sage capability) | MEDIUM (frontend function call + dispatch) | B | P1 |
+| Compact expert results in Sage panel | HIGH (makes search results visible) | MEDIUM (new panel component) | B | P1 |
+| Sage zero-result graceful handling | HIGH (avoids dead-end UX) | LOW (Turn 2 prompt + condition) | B | P1 |
+| `user_events` table + POST endpoint | HIGH (enables all analytics) | LOW (2 new DB columns, 1 endpoint) | D | P1 |
+| Track `expert_card_click` event | HIGH (core marketplace intelligence) | LOW (onClick handler) | D | P1 |
+| Track `sage_query` event (with result IDs) | HIGH (enables gap analysis + exposure) | LOW (hook instrumentation) | D | P1 |
+| Track `filter_applied` event (with result IDs) | MEDIUM (filter usage patterns) | LOW (store dispatch instrumentation) | D | P2 |
+| Admin Gaps tab — unmet demand section | HIGH (admin intelligence) | MEDIUM (SQL aggregation + table UI) | E | P1 |
+| Admin Gaps tab — expert exposure section | HIGH (supply-side intelligence) | MEDIUM (SQL aggregation + ranked table) | E | P1 |
+| FAB pulse on zero results | MEDIUM (engagement, nudge) | LOW (Framer Motion animate) | C | P2 |
+| Sage proactive empty-state nudge | MEDIUM (reduces dead-end abandonment) | MEDIUM (store subscription + message injection) | C | P2 |
+| FAB glow on message received | LOW (delight) | LOW (CSS animation) | C | P3 |
+| Date range filter on Gaps tab | MEDIUM (admin usability) | LOW (SQL WHERE clause + date picker) | E | P2 |
+| Quick-reply chips for clarifying questions | LOW (polish) | MEDIUM (new component) | A | P3 |
 
 **Priority key:**
-- P1: Ships in v2.2 core — milestone incomplete without these
-- P2: Ships in v2.2 — adds significant value, low regression risk
-- P3: Ship if P1/P2 complete with time remaining
+- P1: Ships in v2.3 core — milestone incomplete without these
+- P2: Ships in v2.3 — adds significant value, low regression risk
+- P3: Ship if P1/P2 complete, or defer to v2.4
+
+---
+
+## Detailed Pattern Notes by Feature Area
+
+### 1. Sage Dual-Function UX (Filter vs Search)
+
+**The core UX distinction (MEDIUM confidence — 2025 AI UX research, Microsoft Copilot patterns):**
+
+The fundamental question Sage must resolve per turn: does the user want to *constrain browsing* (apply_filters) or *get direct results* (search_experts)?
+
+| Signal | Intent | Function |
+|--------|--------|----------|
+| "Only show me..." / "Filter to..." / "Hide..." | Constrain browsing | `apply_filters` |
+| "Show me experts in X" / "Find me someone who..." / "Who can help with..." | Direct retrieval | `search_experts` |
+| "What's your rate?" / "Can you do X?" (clarification) | Ambiguous | Ask clarifying question first |
+| "Thanks" / "That's helpful" / non-action statement | No function | Plain text response |
+
+The LLM resolves this disambiguation natively given clear function descriptions. Write the function schema descriptions to encode this intent distinction explicitly:
+
+```python
+search_experts_schema = {
+    "name": "search_experts",
+    "description": "Perform a semantic search to find and display matching experts. Use this when the user wants to SEE results — when they ask 'show me', 'find me', or describe a problem to solve. This will update both the Sage panel results AND the main expert grid.",
+    "parameters": { ... }
+}
+
+apply_filters_schema = {
+    "name": "apply_filters",
+    "description": "Adjust the browse filters without performing a new search. Use this when the user wants to CONSTRAIN what's visible — 'only show', 'filter to', 'hide results above'. This adjusts the sidebar filters and refreshes the grid.",
+    "parameters": { ... }
+}
+```
+
+**Grid sync mechanism:** Both functions must ultimately write to `resultsSlice` via the same dispatch. For `search_experts`, call `useExplorerStore.getState().setResults(results)` directly after receiving the API response. For `apply_filters`, the existing flow already triggers a grid refresh via `filterSlice` → `useExplore` hook refetch. Do not merge these code paths — keep them separate with the same end state.
+
+**Compact result cards in Sage panel (MEDIUM confidence — derived from Microsoft Copilot chat result pattern):**
+
+Inside the Sage panel chat bubble, render a compact list — not full bento cards. Maximum 5 results displayed. Each item:
+```
+[Name] — [Job Title]
+[Rate badge] [Primary tag]
+```
+Clicking an item in the panel should: (1) close the Sage panel, (2) scroll the main grid to that expert's card, (3) highlight it briefly (pulse animation). This "show me in the grid" action is more useful than trying to open the profile gate from within the panel.
+
+---
+
+### 2. Sage Clarifying Questions
+
+**When to ask vs when to act (MEDIUM confidence — Haptik research, 2026 Medium article on agentic AI):**
+
+Research finding: inserting ONE clarifying question reduces error rates by 27% and retries from 4.1 to 1.3 per session. The key word is ONE. Sage should never ask two questions in a row.
+
+**Trigger condition for clarifying question:**
+- Domain is completely unspecified ("I need some help" / "looking for experts")
+- Budget is not mentioned AND rate range covers the full spectrum (no implicit signal)
+- "Level of expertise" is ambiguous when it materially affects the result set
+
+**Do NOT ask when:**
+- The user has already given one of the three signals (domain, budget, seniority)
+- The user's previous message already answered a prior clarifying question
+- The query is clear enough to search with reasonable confidence
+
+**Implementation in system prompt (LOW complexity):**
+
+Add to Sage system prompt:
+> "If a user's request is ambiguous and lacks domain, budget, or experience level, ask ONE focused question before searching. Keep the question short and offer 2-3 concrete options where possible. Example: 'Are you looking for a technical expert, a business strategist, or something else?' Never ask more than one clarifying question per turn."
+
+---
+
+### 3. Event Tracking Schema
+
+**Schema design (HIGH confidence — mirrors GA4 event schema industry standard):**
+
+```sql
+CREATE TABLE user_events (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    event_name  TEXT NOT NULL,          -- 'expert_card_click' | 'sage_query' | 'filter_applied'
+    event_params TEXT NOT NULL,         -- JSON string
+    session_id  TEXT NOT NULL,          -- UUID from sessionStorage
+    created_at  DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_user_events_name ON user_events(event_name);
+CREATE INDEX idx_user_events_created ON user_events(created_at);
+```
+
+**Event schemas (HIGH confidence — standard product analytics event design):**
+
+```json
+// expert_card_click
+{
+  "expert_id": "usr_abc123",
+  "expert_name": "Jane Smith",
+  "context": "grid"  // or "sage_panel"
+}
+
+// sage_query
+{
+  "query_text": "fintech compliance expert under $150/hr",
+  "function_called": "search_experts",  // or "apply_filters" or "none"
+  "result_count": 8,
+  "result_expert_ids": ["usr_abc", "usr_def", "usr_ghi"]
+}
+
+// filter_applied
+{
+  "filters": {
+    "tags": ["fintech", "compliance"],
+    "rate_min": 0,
+    "rate_max": 150,
+    "text_query": ""
+  },
+  "result_count": 12,
+  "result_expert_ids": ["usr_abc", "usr_def", "usr_ghi", ...]
+}
+```
+
+**Frontend tracking utility (fire-and-forget pattern):**
+
+```typescript
+// src/lib/track.ts
+const SESSION_ID = (() => {
+  let id = sessionStorage.getItem('tcs_session_id');
+  if (!id) {
+    id = crypto.randomUUID();
+    sessionStorage.setItem('tcs_session_id', id);
+  }
+  return id;
+})();
+
+export function track(eventName: string, params: Record<string, unknown>): void {
+  // Fire-and-forget — never await this
+  fetch('/api/events', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ event_name: eventName, event_params: params, session_id: SESSION_ID }),
+  }).catch(() => {}); // Swallow errors silently
+}
+```
+
+**No auth on the events endpoint:** The `/api/events` endpoint should NOT require `X-Admin-Key`. It's a write-only append endpoint that accepts any payload. Abuse is low-risk (worst case: junk rows in SQLite). Adding auth would require passing the session key through the frontend tracking call, which creates complexity and fragility.
+
+---
+
+### 4. Admin Gaps & Exposure Dashboard
+
+**What the dashboard answers (MEDIUM confidence — Algolia analytics patterns, marketplace intelligence literature):**
+
+Two distinct questions answered by one tab:
+
+**Demand side (Unmet Demand):**
+> "What are users looking for that we don't have well-covered?"
+
+- Zero-result queries: search terms + filter combos that returned 0 experts
+- Low-engagement queries: returned results but zero clicks (results shown were irrelevant)
+- These are the highest-signal marketplace gaps — they represent real user intent that the supply side fails to meet
+
+**Supply side (Expert Exposure):**
+> "Which of our 530 experts are effectively invisible?"
+
+- Appearance frequency: how often each expert's ID appears in search result sets
+- Click rate: appearances vs actual card clicks
+- Low-CTR experts: appear in results but are never clicked (findability score or card content issue)
+- Near-zero appearance experts: essentially invisible regardless of query (embedding quality issue)
+
+**SQL queries for the Gaps tab backend:**
+
+```sql
+-- Unmet Demand: zero-result queries, ranked by frequency
+SELECT
+    json_extract(event_params, '$.query_text') as query_text,
+    COUNT(*) as occurrences,
+    MAX(created_at) as last_seen
+FROM user_events
+WHERE event_name = 'sage_query'
+  AND json_extract(event_params, '$.result_count') = 0
+GROUP BY query_text
+ORDER BY occurrences DESC
+LIMIT 50;
+
+-- Expert Exposure: appearances in result sets (requires JSON array expansion)
+-- Note: SQLite JSON functions available since 3.38 (Railway should have this)
+SELECT
+    expert_id,
+    COUNT(*) as appearances,
+    SUM(CASE WHEN event_name = 'expert_card_click' THEN 1 ELSE 0 END) as clicks
+FROM (
+    SELECT json_each.value as expert_id, event_name
+    FROM user_events, json_each(json_extract(event_params, '$.result_expert_ids'))
+    WHERE event_name IN ('sage_query', 'filter_applied')
+    UNION ALL
+    SELECT json_extract(event_params, '$.expert_id'), event_name
+    FROM user_events
+    WHERE event_name = 'expert_card_click'
+)
+GROUP BY expert_id
+ORDER BY appearances ASC; -- ASC = least visible first
+```
+
+**Dashboard UI layout (MEDIUM confidence — derived from Algolia Analytics dashboard pattern):**
+
+```
+Admin → Gaps & Exposure tab
+├── Date Range Selector (Last 7d | 30d | All time)
+│
+├── Section: Unmet Demand
+│   ├── Stat card: "X zero-result queries in period"
+│   ├── Stat card: "Y low-engagement queries in period"
+│   └── Table: Query Text | Occurrences | Last Seen | Action (→ test in search)
+│
+└── Section: Expert Exposure
+    ├── Stat card: "N experts with 0 appearances"
+    ├── Stat card: "Average appearances per expert: X"
+    └── Table: Expert Name | Appearances | Clicks | CTR% | Findability Score
+        (sortable; default sort: least exposed first)
+```
+
+**Recommendation: no charts for MVP.** Tables are more actionable than bar charts for this data. An admin looking at the Gaps tab wants to take action on specific queries or specific experts — a table with copy-able query text and clickable expert names is more useful than a distribution chart. Add charts in v2.4 if needed.
 
 ---
 
 ## Sources
 
-**Glassmorphism / Aurora:**
-- [Glassmorphism Implementation Guide 2025 — playground.halfaccessible.com](https://playground.halfaccessible.com/blog/glassmorphism-design-trend-implementation-guide) — MEDIUM confidence
-- [backdrop-filter — MDN Web Docs](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/backdrop-filter) — HIGH confidence
-- [Next-level frosted glass with backdrop-filter — Josh W. Comeau](https://www.joshwcomeau.com/css/backdrop-filter/) — HIGH confidence (authoritative CSS author)
-- [Aurora CSS Background Effect — Dalton Walsh](https://daltonwalsh.com/blog/aurora-css-background-effect/) — MEDIUM confidence
-- [Auroral library — LunarLogic/auroral GitHub](https://github.com/LunarLogic/auroral) — MEDIUM confidence
-- [Aurora Background — Aceternity UI](https://ui.aceternity.com/components/aurora-background) — MEDIUM confidence
-- [CSS Glassmorphism Generator — css.glass](https://css.glass/) — MEDIUM confidence (generator, practical values)
+**AI assistant dual-function / active search UX:**
+- [5 UX Patterns for Better Generative AI Search — Medium/Bootcamp](https://medium.com/design-bootcamp/5-ux-patterns-for-better-generative-ai-search-6fecb37142a1) — MEDIUM confidence
+- [Generative UI — CopilotKit](https://www.copilotkit.ai/generative-ui) — MEDIUM confidence
+- [Creating a dynamic UX for generative AI applications — Microsoft Learn](https://learn.microsoft.com/en-us/microsoft-cloud/dev/copilot/isv/ux-guidance) — MEDIUM confidence
+- [UX for AI Chatbots — parallelhq.com](https://www.parallelhq.com/blog/ux-ai-chatbots) — LOW confidence (single source)
 
-**Claymorphism:**
-- [Implementing Claymorphism with CSS — LogRocket Blog](https://blog.logrocket.com/implementing-claymorphism-css/) — HIGH confidence
-- [How to Create Claymorphism Using CSS — hype4.academy](https://hype4.academy/articles/coding/how-to-create-claymorphism-using-css) — HIGH confidence
-- [clay.css — Adrian Bece](https://codeadrian.github.io/clay.css/) — MEDIUM confidence (reference implementation)
-- [Claymorphism: Will It Stick Around? — Smashing Magazine](https://www.smashingmagazine.com/2022/03/claymorphism-css-ui-design-trend/) — MEDIUM confidence
-- [Fun with Claymorphism 2025 — Unorthodox CSS](https://unorthodocss.com/ui-frameworks/2025/08/19/fun-with-claymorphism.html) — MEDIUM confidence
+**Clarifying questions in conversational AI:**
+- [Probing For Clarification — Haptik AI](https://www.haptik.ai/tech/probing-clarification-skill-ai-assistant) — MEDIUM confidence (specific data: 27% error reduction, 4.1→1.3 retries)
+- [When agents learn to ask: Active questioning in agentic AI — Medium](https://medium.com/@milesk_33/when-agents-learn-to-ask-active-questioning-in-agentic-ai-f9088e249cf7) — MEDIUM confidence
+- [Conversational AI Assistant Design — TELUS Digital / WillowTree](https://www.willowtreeapps.com/insights/willowtrees-7-ux-ui-rules-for-designing-a-conversational-ai-assistant) — MEDIUM confidence
 
-**Framer Motion:**
-- [Layout Animations — Motion (Framer Motion)](https://www.framer.com/motion/layout-animations/) — HIGH confidence (official docs)
-- [useTransform — Motion](https://www.framer.com/motion/use-transform/) — HIGH confidence (official docs)
-- [Advanced animation patterns — Maxime Heckel](https://blog.maximeheckel.com/posts/advanced-animation-patterns-with-framer-motion/) — MEDIUM confidence
+**AI nudges + empty states:**
+- [AI UX Patterns — Nudges — ShapeOfAI.com](https://www.shapeof.ai/patterns/nudges) — MEDIUM confidence
+- [Empty State UI Pattern — Mobbin](https://mobbin.com/glossary/empty-state) — MEDIUM confidence
 
-**OTR@K / Retrieval Evaluation:**
-- [Semantic Search Evaluation — arxiv.org/html/2410.21549v1](https://arxiv.org/html/2410.21549v1) — MEDIUM confidence (academic preprint)
-- [Evaluation Metrics For Information Retrieval — amitness.com](https://amitness.com/posts/information-retrieval-evaluation) — MEDIUM confidence
-- [How to Evaluate Retrieval Quality in RAG Pipelines — Towards Data Science](https://towardsdatascience.com/how-to-evaluate-retrieval-quality-in-rag-pipelines-precisionk-recallk-and-f1k/) — MEDIUM confidence
-- [Evaluation Measures in Information Retrieval — Pinecone](https://www.pinecone.io/learn/offline-evaluation/) — HIGH confidence (Pinecone authoritative)
-- [Precision and Recall at K — Evidently AI](https://www.evidentlyai.com/ranking-metrics/precision-recall-at-k) — MEDIUM confidence
-- Training data: LinkedIn OTR@K usage in production search evaluation — LOW confidence (training data, unverified post-cutoff)
+**Event tracking in SPAs:**
+- [Best practices for tracking user interactions in SPAs — Zigpoll](https://www.zigpoll.com/content/what-are-the-best-practices-for-tracking-user-interaction-data-on-singlepage-applications-to-optimize-frontend-performance-and-enhance-user-experience) — MEDIUM confidence
+- [Measure single-page applications — Google Analytics for Developers](https://developers.google.com/analytics/devguides/collection/ga4/single-page-applications) — HIGH confidence (official Google docs)
+- [Event Analytics: Ultimate Guide — UXcam](https://uxcam.com/blog/event-analytics/) — MEDIUM confidence
+- [The Complete Guide to Events Tracking — Countly](https://countly.com/blog/event-tracking-digital-analytics) — MEDIUM confidence
 
-**t-SNE / Embedding Visualization:**
-- [Visualizing Embeddings with t-SNE — Google AI for Developers](https://ai.google.dev/examples/clustering_with_embeddings) — HIGH confidence (official Google source)
-- [TSNE — scikit-learn docs](https://scikit-learn.org/stable/modules/generated/sklearn.manifold.TSNE.html) — HIGH confidence (official)
-- [Visualizing Embeddings with t-SNE — Kaggle](https://www.kaggle.com/code/colinmorris/visualizing-embeddings-with-t-sne) — MEDIUM confidence
+**Zero-result analytics:**
+- [Track Zero Search Results In Google Analytics — Cludo](https://www.cludo.com/blog/track-zero-search-results-in-google-analytics) — MEDIUM confidence
+- [Zero-Result Searches — Lucidworks (Never Null)](https://lucidworks.com/blog/learn-from-zero-results-searches-with-never-null/) — MEDIUM confidence
+- [Where can I see searches without results? — Algolia](https://support.algolia.com/hc/en-us/articles/13079831222033-Where-can-I-see-searches-without-results) — HIGH confidence (official Algolia docs)
+- [Null Results Optimization — Algolia Ecommerce Playbook](https://www.algolia.com/ecommerce-merchandising-playbook/null-results-optimization) — HIGH confidence
 
-**Newsletter Gate:**
-- [25 Newsletter Signup Examples That Convert in 2026 — Omnisend](https://www.omnisend.com/blog/newsletter-signup-examples/) — MEDIUM confidence
-- [Newsletter Signup Forms Best Practices — MailerLite](https://www.mailerlite.com/blog/optimize-email-signup-form) — MEDIUM confidence
-- [Sign-up Flows and Friction — CXL](https://cxl.com/blog/saas-signup-flows/) — MEDIUM confidence
-- [Gated vs. Non-Gated Content — IDX](https://www.idx.inc/blog/performance-marketing/gated-vs-non-gated-content-why-how-and-when) — MEDIUM confidence
-- [Best Sign Up Flows 2026 — Eleken](https://www.eleken.co/blog-posts/sign-up-flow) — MEDIUM confidence
+**FAB animation patterns:**
+- [FAB: UX Design Win — Google Design](https://design.google/library/absolutely-fab-button) — HIGH confidence (Google Design, authoritative)
+- [The Usability of the Animated FAB — Cinnamon Agency](https://www.cinnamon.agency/blog/post/the_usability_of_the_animated_fab_part_1_2) — MEDIUM confidence
+- [Floating Action Button in UX Design — Icons8](https://blog.icons8.com/articles/floating-action-button-ux-design/) — LOW confidence
 
 ---
 
-*Feature research for: TCS v2.2 Evolved Discovery Engine*
+*Feature research for: TCS v2.3 Sage Evolution & Marketplace Intelligence*
 *Researched: 2026-02-22*
