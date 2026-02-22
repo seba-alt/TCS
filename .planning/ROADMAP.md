@@ -160,8 +160,8 @@ Plans:
 - SQL aggregations use standard `GROUP BY` + `ORDER BY COUNT DESC` with existing SQLAlchemy `text()` pattern
 
 Plans:
-- [ ] 31-01-PLAN.md — Backend: demand, exposure, trend aggregation endpoints + CSV exports in admin.py
-- [ ] 31-02-PLAN.md — Frontend: AdminMarketplacePage with DemandTable, ExposureTable, BarChart, cold-start state + sidebar nav
+- [x] 31-01-PLAN.md — Backend: demand, exposure, trend aggregation endpoints + CSV exports in admin.py
+- [x] 31-02-PLAN.md — Frontend: AdminMarketplacePage with DemandTable, ExposureTable, BarChart, cold-start state + sidebar nav
 
 ## Progress
 
