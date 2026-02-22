@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-22)
 
 **Core value:** A user describes any problem and instantly gets expertly matched professionals they can browse, filter, and contact — no searching, no guesswork.
-**Current focus:** v2.3 — Sage Evolution & Marketplace Intelligence (Phase 31 complete — all plans signed off)
+**Current focus:** Phase 32 — Sage Direct Search (experts array in pilot response, frontend wiring)
 
 ## Current Position
 
-Phase: 31 of 31 (Marketplace Intelligence) — COMPLETE
-Plan: 2 of 2 in current phase (31-01 and 31-02 both complete, human-verified)
-Status: Phase 31 fully signed off — all 53 plans complete, v2.3 roadmap done
-Last activity: 2026-02-22 — 31-02 human-verify checkpoint approved; phase and roadmap complete
+Phase: 32 of 32+ (Sage Direct Search) — IN PROGRESS
+Plan: 1 of 3 in current phase (32-01 complete)
+Status: 32-01 complete — pilot API now returns populated experts array for search_experts
+Last activity: 2026-02-22 — 32-01 complete
 
-Progress: [████████████████████] 53/53 plans (100%) | v2.3: 7/7 plans (100%)
+Progress: [████████████████████] 54/56 plans | v2.4 in progress
 
 ## Live URLs
 
@@ -26,13 +26,14 @@ Progress: [████████████████████] 53/53 p
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 53 (all phases complete)
+- Total plans completed: 54
 - Average duration: ~15 min
 
 | Phase-Plan | Duration | Tasks | Files |
 |------------|----------|-------|-------|
 | 31-01 | 2 min | 2 | 1 |
 | 31-02 | 2 min | 3 | 5 |
+| 32-01 | 3 min | 1 | 1 |
 
 ## Accumulated Context
 
@@ -63,6 +64,11 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - AdminSidebar slice updated (0,3)/(3+) to (0,4)/(4+) — Marketplace inserted at Analytics index 2, between Searches and Gaps
 - TrendSection uses useMarketplaceTrend() with no days param (fixed 14d) — only demand/exposure tables respond to page-level dropdown
 
+**Phase 32-01 key decisions:**
+- Only primary result.experts serialized — fallback variable experts excluded from response (fallback used for narration only, not grid population)
+- Zero-result paths produce experts: [] automatically — result.experts is already [] from run_explore(), no special casing needed
+- No PilotResponse schema changes needed — existing `experts: list[dict] | None = None` field already accepts serialized list
+
 ### Pending Todos
 
 - Set `ALLOWED_ORIGINS=https://tcs-three-sigma.vercel.app` in Railway environment variables (carried over from v1.1)
@@ -70,10 +76,10 @@ Decisions are logged in PROJECT.md Key Decisions table.
 
 ### Blockers/Concerns
 
-None active — Phase 31 complete and human-verified.
+None active.
 
 ## Session Continuity
 
 Last session: 2026-02-22
-Stopped at: Completed 31-02-PLAN.md — all 53 plans done, v2.3 roadmap complete
-Resume signal: N/A — project fully complete
+Stopped at: Completed 32-01-PLAN.md — pilot API now returns experts array in search_experts response
+Resume signal: Continue with 32-02-PLAN.md (frontend wiring)
