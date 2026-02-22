@@ -1,9 +1,12 @@
 import type { Expert } from '../../store/resultsSlice'
 import { useExplorerStore } from '../../store'
+import { trackEvent } from '../../tracking'
 
 interface ExpertCardProps {
   expert: Expert
   onViewProfile: (url: string) => void
+  context?: 'grid' | 'sage_panel'
+  rank?: number
 }
 
 // Findability badge label — thresholds from Phase 14 (score range 50-100, neutral at 75)
@@ -14,7 +17,7 @@ function findabilityLabel(score: number | null): 'Top Match' | 'Good Match' | nu
   return null
 }
 
-export function ExpertCard({ expert, onViewProfile }: ExpertCardProps) {
+export function ExpertCard({ expert, onViewProfile, context = 'grid', rank }: ExpertCardProps) {
   const toggleTag = useExplorerStore((s) => s.toggleTag)
   const query = useExplorerStore((s) => s.query)
   const tags = useExplorerStore((s) => s.tags)
@@ -75,6 +78,19 @@ export function ExpertCard({ expert, onViewProfile }: ExpertCardProps) {
         <button
           onClick={(e) => {
             e.stopPropagation()
+            // Track card click — fire-and-forget, never await
+            const storeState = useExplorerStore.getState()
+            void trackEvent('card_click', {
+              expert_id: expert.username,
+              context,
+              rank,
+              active_filters: {
+                query: storeState.query,
+                rate_min: storeState.rateMin,
+                rate_max: storeState.rateMax,
+                tags: storeState.tags,
+              },
+            })
             onViewProfile(expert.profile_url)
           }}
           className="mt-auto cursor-pointer text-xs text-brand-purple font-medium hover:underline self-start"
