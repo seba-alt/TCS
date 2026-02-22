@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-22)
 ## Current Position
 
 Phase: 25 of 27 (Admin Intelligence Metrics)
-Plan: 25-01 complete (1/2 plans done)
-Status: Wave 1 complete, Wave 2 in progress
-Last activity: 2026-02-22 — Phase 25 plan 01 executed (OTR@K backend + /api/admin/intelligence endpoint)
+Plan: 25-02 complete (all plans done)
+Status: Phase complete
+Last activity: 2026-02-22 — Phase 25 all plans executed + human verified (OTR@K backend + Intelligence dashboard UI)
 
-Progress: [██████████░░░░░░░░░░] 1/2 plans (50%)
+Progress: [████████████████████] 2/2 plans (100%)
 
 ## Live URLs
 
