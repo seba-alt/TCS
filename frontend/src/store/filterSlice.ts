@@ -35,23 +35,37 @@ export const createFilterSlice: StateCreator<
   [['zustand/persist', unknown]],
   [],
   FilterSlice
-> = (set) => ({
+> = (set, get) => ({
   ...filterDefaults,
 
-  setQuery: (q) => set({ query: q }),
+  setQuery: (q) => {
+    get().setSageMode(false)
+    set({ query: q })
+  },
 
-  setRateRange: (min, max) => set({ rateMin: min, rateMax: max }),
+  setRateRange: (min, max) => {
+    get().setSageMode(false)
+    set({ rateMin: min, rateMax: max })
+  },
 
-  toggleTag: (tag) =>
+  toggleTag: (tag) => {
+    get().setSageMode(false)
     set((state) => ({
       tags: state.tags.includes(tag)
         ? state.tags.filter((t) => t !== tag)
         : [...state.tags, tag],
-    })),
+    }))
+  },
 
-  setTags: (tags) => set({ tags }),
+  setTags: (tags) => {
+    get().setSageMode(false)
+    set({ tags })
+  },
 
-  setSortBy: (sortBy) => set({ sortBy }),
+  setSortBy: (sortBy) => set({ sortBy }),  // sort does NOT exit sage mode
 
-  resetFilters: () => set({ ...filterDefaults }),
+  resetFilters: () => {
+    get().setSageMode(false)
+    set({ ...filterDefaults })
+  },
 })

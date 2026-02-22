@@ -1,5 +1,6 @@
 import { useCallback } from 'react'
 import { useExplorerStore } from '../store'
+import type { Expert } from '../store/resultsSlice'
 import { useNltrStore } from '../store/nltrStore'
 import { trackEvent } from '../tracking'
 
@@ -110,6 +111,7 @@ export function useSage() {
         message: string
         search_performed?: boolean  // true when search_experts was called
         total?: number              // result count from search_experts
+        experts?: Expert[]         // expert list returned by search_experts
       } = await res.json()
 
       // Track sage_query — fire-and-forget, never await
@@ -120,21 +122,15 @@ export function useSage() {
         zero_results: (data.total ?? 0) === 0,
       })
 
-      // search_performed: true = search_experts was called; false/undefined = apply_filters
-      // NEVER write resultsSlice directly — validateAndApplyFilters triggers useExplore re-fetch
+      // search_performed: true = search_experts was called → direct store injection
+      // search_performed: false/undefined = apply_filters refinement → validateAndApplyFilters
       if (data.search_performed === true) {
-        if (data.filters && typeof data.filters === 'object') {
-          const filtersObj = data.filters as Record<string, unknown>
-          if (filtersObj.reset === true) {
-            // Double-zero: reset grid to show all experts
-            validateAndApplyFilters({ reset: true })
-          } else {
-            // Search found results: clear slate, apply Sage's search params
-            validateAndApplyFilters({ reset: true })
-            validateAndApplyFilters(filtersObj)
-          }
-        }
-        // If data.filters is null: grid stays as-is (zero results, Sage narrates alternative)
+        const store = useExplorerStore.getState()
+        const experts = data.experts ?? []
+        const total = data.total ?? 0
+        store.setLoading(false)        // ensure loading=false before setResults (avoids skeleton flash if prior fetch was mid-flight)
+        store.setResults(experts, total, null)
+        store.setSageMode(true)
       } else if (data.filters && typeof data.filters === 'object') {
         // apply_filters refinement path — unchanged behavior
         validateAndApplyFilters(data.filters as Record<string, unknown>)
