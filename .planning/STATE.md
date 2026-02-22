@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-21)
 
 **Core value:** A user describes any problem and instantly gets three expertly matched professionals they can contact — no searching, no filtering, no guesswork.
-**Current focus:** v2.0 COMPLETE — All phases 14-19 shipped
+**Current focus:** v2.0 bug fixes — Phase 20 (pagination + rate filter fixes)
 
 ## Current Position
 
-Phase: 19 of 19 (Extended Features) — COMPLETE
-Plan: 6/6 (all complete)
-Status: v2.0 Extreme Semantic Explorer milestone SHIPPED
-Last activity: 2026-02-21 — Phase 19 complete: Extended Features — GET /api/suggest, URL sync, email gate modal, enhanced EmptyState, search suggestions dropdown, FTS5 rebuild fix
+Phase: 20 of 20 (Bug Fixes — Pagination & Rate Filter) — COMPLETE
+Plan: 1/1 (all complete)
+Status: Phase 20 complete — four v2.0 audit bugs fixed, Vitest regression tests added
+Last activity: 2026-02-22 — Phase 20-01 complete: pagination param fix (query= not q=), rate constants aligned to 5000, MobileFilterSheet TOP_TAGS import, Vitest installed with 7 passing tests
 
 Progress: [████████████████████] 52/52 plans (100% — all phases complete)
 
@@ -41,6 +41,7 @@ Progress: [████████████████████] 52/52 p
 | 17 | 01 | ~10 min | 2 | 5 |
 | 17 | 02 | ~12 min | 2 | 4 |
 | 17 | 03 | ~3 min | 2 | 1 |
+| 20 | 01 | 3 min | 2 | 8 |
 
 ## Accumulated Context
 
@@ -105,6 +106,12 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - `onMouseDown={(e) => e.preventDefault()}` on suggestion buttons — cleaner than 150ms blurTimer for blur/click race
 - `setTags([tag])` replace semantics in EmptyState (not toggleTag) — suggestions are redirects, not additions
 
+**Phase 20 Plan 01 decisions (2026-02-22):**
+- Rate constants source of truth = filterSlice.ts (rateMax: 5000) — no new constants file needed; all components mirror this value
+- Vitest configured via vitest/config defineConfig (not separate vitest.config.ts) to avoid config conflict
+- Test environment: node — tests are pure URLSearchParams/boolean logic; no jsdom needed
+- TypeScript literal-type comparison TS2367 in regression guard test fixed by annotating types as `number` (not inferred literal)
+
 Key v2.0 architecture constraints (from .planning/research/):
 - FAISS IDSelectorBatch used as search-time filter only — never `remove_ids`; `username_to_faiss_pos` mapping required at startup
 - FTS5 synced via explicit SQL in write paths (not ORM events); `rebuild` required after virtual table creation to populate existing rows
@@ -126,6 +133,6 @@ Key v2.0 architecture constraints (from .planning/research/):
 
 ## Session Continuity
 
-Last session: 2026-02-21
-Stopped at: Phase 19 complete — v2.0 milestone SHIPPED
+Last session: 2026-02-22
+Stopped at: Phase 20 Plan 01 complete — four v2.0 audit bugs fixed, Vitest regression tests added, build passing
 Resume file: None

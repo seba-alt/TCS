@@ -44,7 +44,7 @@ See `.planning/milestones/v1.2-ROADMAP.md`
 - [x] **Phase 17: Expert Grid & Cards** - Virtualized grid, high-density cards, Framer Motion entry animations (completed 2026-02-21)
 - [x] **Phase 18: Floating AI Co-Pilot** - FAB panel, Gemini function calling, mobile full-screen overlay (completed 2026-02-21)
 - [x] **Phase 19: Extended Features** - Lead capture, match report, URL state, fuzzy suggestions, empty states (completed 2026-02-21)
-- [ ] **Phase 20: Bug Fixes — Pagination & Rate Filter** - Fix loadNextPage param, FilterChips/RateSlider/MobileFilterSheet rate defaults (gap closure)
+- [x] **Phase 20: Bug Fixes — Pagination & Rate Filter** - Fix loadNextPage param, FilterChips/RateSlider/MobileFilterSheet rate defaults (gap closure) (completed 2026-02-22)
 - [ ] **Phase 21: Documentation & Cleanup** - Post-hoc VERIFICATION.md for phases 16/19, MARKET-05 accept, LEAD-03 deferred, tech debt (gap closure)
 
 ## Phase Details
@@ -194,5 +194,5 @@ Plans:
 | 17. Expert Grid & Cards | v2.0 | Complete    | 2026-02-21 | - |
 | 18. Floating AI Co-Pilot | 4/4 | Complete    | 2026-02-21 | - |
 | 19. Extended Features | v2.0 | 6/6 | Complete | 2026-02-21 |
-| 20. Bug Fixes — Pagination & Rate Filter | v2.0 | 0/1 | Pending | — |
+| 20. Bug Fixes — Pagination & Rate Filter | 1/1 | Complete   | 2026-02-22 | — |
 | 21. Documentation & Cleanup | v2.0 | 0/1 | Pending | — |

@@ -22,8 +22,8 @@
 
 ### MARKET — Marketplace UI
 
-- [ ] **MARKET-01**: User sees faceted sidebar with rate range slider, domain tag multi-select, text search, and active filter chips
-- [ ] **MARKET-02**: Expert grid renders via `react-virtuoso` with cursor-based pagination and scroll restoration
+- [x] **MARKET-01**: User sees faceted sidebar with rate range slider, domain tag multi-select, text search, and active filter chips
+- [x] **MARKET-02**: Expert grid renders via `react-virtuoso` with cursor-based pagination and scroll restoration
 - [x] **MARKET-03**: Expert cards display name, title, company, hourly rate, domain tag pills, findability badge, and match reason snippet
 - [x] **MARKET-04**: Clicking a domain tag pill on a card adds that tag to sidebar filters and re-fetches
 - [ ] **MARKET-05**: Cards animate on mount via Framer Motion; `AnimatePresence` used only on sidebar and modal transitions *(gap closure Phase 21: accepting CSS hover animation — requirement will be updated)*
@@ -81,8 +81,8 @@
 | STATE-01 | Phase 15 | Complete |
 | STATE-02 | Phase 15 | Complete |
 | STATE-03 | Phase 15 | Complete |
-| MARKET-01 | Phase 20 (gap closure) | Pending |
-| MARKET-02 | Phase 20 (gap closure) | Pending |
+| MARKET-01 | Phase 20 (gap closure) | Complete |
+| MARKET-02 | Phase 20 (gap closure) | Complete |
 | MARKET-03 | Phase 17 | Complete |
 | MARKET-04 | Phase 17 | Complete |
 | MARKET-05 | Phase 21 (gap closure) | Pending |
