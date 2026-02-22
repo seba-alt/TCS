@@ -122,6 +122,8 @@ export interface IngestStatus {
   log: string
   error: string | null
   started_at: number | null
+  last_rebuild_at: number | null          // Phase 24: unix timestamp of last full FAISS rebuild
+  expert_count_at_rebuild: number | null  // Phase 24 + 25: expert count at last rebuild
 }
 
 export interface AdminSetting {

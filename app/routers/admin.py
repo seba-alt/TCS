@@ -21,6 +21,7 @@ Endpoints:
     POST /api/admin/settings                    — write a setting to DB (immediate, no redeploy)
     POST /api/admin/compare                     — run query through up to 4 intelligence configs in parallel
 """
+import asyncio as _asyncio
 import csv
 import io
 import json
@@ -65,7 +66,15 @@ log = structlog.get_logger()
 # admin.py lives at app/routers/admin.py → parent.parent.parent = project root
 PROJECT_ROOT = METADATA_PATH.parent.parent
 
-_ingest: dict = {"status": "idle", "log": "", "error": None, "started_at": None}
+_ingest: dict = {
+    "status": "idle",
+    "log": "",
+    "error": None,
+    "started_at": None,
+    "last_rebuild_at": None,          # Phase 24: set on successful FAISS rebuild completion
+    "expert_count_at_rebuild": None,  # Phase 24 + 25: expert count at last full rebuild
+}
+_ingest_lock = _asyncio.Lock()
 
 
 def _run_tag_job() -> None:
@@ -140,6 +149,9 @@ def _run_ingest_job(app) -> None:
         app.state.username_to_faiss_pos = _new_mapping
         log.info("fts5.username_mapping_refreshed", count=len(_new_mapping))
 
+        _ingest["last_rebuild_at"] = time.time()
+        _ingest["expert_count_at_rebuild"] = len(app.state.metadata)
+        app.state.tsne_cache = []   # Phase 26: invalidate stale t-SNE projection
         _ingest["status"] = "done"
     except Exception as exc:
         _ingest["status"] = "error"
@@ -625,15 +637,17 @@ def tag_all(request: Request):
 
 
 @router.post("/ingest/run")
-def ingest_run(request: Request):
+async def ingest_run(request: Request):
     """
     Trigger tag_experts.py + ingest.py in a background thread, then hot-reload FAISS.
     Returns 409 if a job is already running.
+    asyncio.Lock prevents concurrent invocations causing OOM on Railway.
     """
     global _ingest
-    if _ingest["status"] == "running":
-        raise HTTPException(status_code=409, detail="Ingest job already running")
-    _ingest["status"] = "running"
+    async with _ingest_lock:
+        if _ingest["status"] == "running":
+            raise HTTPException(status_code=409, detail="Ingest job already running")
+        _ingest["status"] = "running"
     thread = threading.Thread(target=_run_ingest_job, args=(request.app,), daemon=True)
     thread.start()
     return {"status": "started"}

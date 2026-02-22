@@ -216,6 +216,7 @@ async def lifespan(app: FastAPI):
         "startup: username-to-FAISS-position mapping built",
         count=len(_username_to_pos),
     )
+    app.state.tsne_cache = []   # Phase 26: t-SNE projection cache; invalidated on index rebuild
 
     # Phase 14: category auto-classification (one-time startup migration)
     from app.routers.admin import _auto_categorize as _categorize  # noqa: PLC0415

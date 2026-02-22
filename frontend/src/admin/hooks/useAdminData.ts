@@ -188,6 +188,8 @@ export function useIngestStatus() {
     log: '',
     error: null,
     started_at: null,
+    last_rebuild_at: null,          // Phase 24
+    expert_count_at_rebuild: null,  // Phase 24 + 25
   })
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
