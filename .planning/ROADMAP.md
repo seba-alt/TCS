@@ -174,5 +174,5 @@ Plans:
 | 22-27. Evolved Discovery Engine | v2.2 | 14/14 | Complete | 2026-02-22 |
 | 28. Sage Search Engine | v2.3 | Complete    | 2026-02-22 | - |
 | 29. Sage Personality + FAB Reactions | v2.3 | Complete    | 2026-02-22 | - |
-| 30. Behavior Tracking | 2/2 | Complete   | 2026-02-22 | - |
+| 30. Behavior Tracking | 2/2 | Complete    | 2026-02-22 | - |
 | 31. Admin Marketplace Intelligence | v2.3 | 0/2 | Not started | - |
