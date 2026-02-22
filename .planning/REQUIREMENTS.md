@@ -17,11 +17,11 @@ Requirements for v2.3 release. Each maps to roadmap phases.
 
 ### Sage Personality
 
-- [ ] **SAGE-05**: Sage system prompt rewritten for warmer, wittier tone — hard cap of max 1 clarifying question per conversation; after any user reply to a question, Sage must call a function
+- [x] **SAGE-05**: Sage system prompt rewritten for warmer, wittier tone — hard cap of max 1 clarifying question per conversation; after any user reply to a question, Sage must call a function
 
 ### Sage FAB
 
-- [ ] **FAB-01**: Sage FAB displays animated boxShadow pulse/glow on user activity via an outer `motion.div` wrapper (inner `motion.button` retains scale gesture props — no animation conflict)
+- [x] **FAB-01**: Sage FAB displays animated boxShadow pulse/glow on user activity via an outer `motion.div` wrapper (inner `motion.button` retains scale gesture props — no animation conflict)
 
 ### Tracking
 
@@ -71,8 +71,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SAGE-02 | Phase 28 | Complete |
 | SAGE-03 | Phase 28 | Complete |
 | SAGE-04 | Phase 28 | Complete |
-| SAGE-05 | Phase 29 | Pending |
-| FAB-01 | Phase 29 | Pending |
+| SAGE-05 | Phase 29 | Complete |
+| FAB-01 | Phase 29 | Complete |
 | TRACK-01 | Phase 30 | Pending |
 | TRACK-02 | Phase 30 | Pending |
 | TRACK-03 | Phase 30 | Pending |
