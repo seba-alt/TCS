@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-02-21)
 
 ## Current Position
 
-Phase: 20 of 20 (Bug Fixes — Pagination & Rate Filter) — COMPLETE
-Plan: 1/1 (all complete)
-Status: Phase 20 complete — four v2.0 audit bugs fixed, Vitest regression tests added
-Last activity: 2026-02-22 — Phase 20-01 complete: pagination param fix (query= not q=), rate constants aligned to 5000, MobileFilterSheet TOP_TAGS import, Vitest installed with 7 passing tests
+Phase: 21 of 21 (Documentation & Cleanup) — IN PROGRESS
+Plan: 2/2 complete (21-02 done; 21-01 in progress)
+Status: Phase 21 Plan 02 complete — dead triggerSearch comment and dead index prop removed from store/index.ts, ExpertCard.tsx, ExpertGrid.tsx; build passing
+Last activity: 2026-02-22 — Phase 21-02 complete: removed dead onRehydrateStorage comment, removed dead index prop from ExpertCardProps and ExpertGrid itemContent
 
-Progress: [████████████████████] 52/52 plans (100% — all phases complete)
+Progress: [████████████████████] 52/52 plans (100% — phases 1-20 complete; phase 21 in progress)
 
 ## Live URLs
 
@@ -42,6 +42,7 @@ Progress: [████████████████████] 52/52 p
 | 17 | 02 | ~12 min | 2 | 4 |
 | 17 | 03 | ~3 min | 2 | 1 |
 | 20 | 01 | 3 min | 2 | 8 |
+| Phase 21 P02 | 8 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -120,6 +121,8 @@ Key v2.0 architecture constraints (from .planning/research/):
 - Co-pilot is client-side dispatch — FastAPI is thin Gemini proxy; browser owns all filter state via `useExplorerStore.getState()`
 - Gemini function call output must pass `validateFilterArgs` before any store dispatch
 - VirtuosoGrid used (not Virtuoso) — expert cards are fixed height h-[180px]; listClassName CSS grid for responsive columns
+- [Phase 21]: onRehydrateStorage kept as empty callback — valid Zustand persist hook point; only dead triggerSearch comment removed
+- [Phase 21]: itemContent index → _index in ExpertGrid — VirtuosoGrid API provides positional (index, item); underscore prefix satisfies TypeScript unused-variable rule without restructuring
 
 ### Pending Todos
 
@@ -134,5 +137,5 @@ Key v2.0 architecture constraints (from .planning/research/):
 ## Session Continuity
 
 Last session: 2026-02-22
-Stopped at: Phase 20 Plan 01 complete — four v2.0 audit bugs fixed, Vitest regression tests added, build passing
+Stopped at: Phase 21 Plan 02 complete — dead triggerSearch comment and dead index prop removed, build passing
 Resume file: None

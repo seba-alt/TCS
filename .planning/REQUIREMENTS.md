@@ -26,7 +26,7 @@
 - [x] **MARKET-02**: Expert grid renders via `react-virtuoso` with cursor-based pagination and scroll restoration
 - [x] **MARKET-03**: Expert cards display name, title, company, hourly rate, domain tag pills, findability badge, and match reason snippet
 - [x] **MARKET-04**: Clicking a domain tag pill on a card adds that tag to sidebar filters and re-fetches
-- [ ] **MARKET-05**: Cards animate on mount via Framer Motion; `AnimatePresence` used only on sidebar and modal transitions *(gap closure Phase 21: accepting CSS hover animation — requirement will be updated)*
+- [x] **MARKET-05**: Expert cards have a CSS hover animation (lift + purple glow via `.expert-card` class in `index.css`); `AnimatePresence` from `motion/react` is used for Sage FAB show/hide, Sage panel slide-in, and ProfileGateModal enter/exit transitions
 - [x] **MARKET-06**: Sidebar collapses into a bottom-sheet on mobile viewports
 
 ### PILOT — Floating AI Co-Pilot
@@ -85,7 +85,7 @@
 | MARKET-02 | Phase 20 (gap closure) | Complete |
 | MARKET-03 | Phase 17 | Complete |
 | MARKET-04 | Phase 17 | Complete |
-| MARKET-05 | Phase 21 (gap closure) | Pending |
+| MARKET-05 | Phase 21 (gap closure) | Complete |
 | MARKET-06 | Phase 16 | Complete |
 | PILOT-01 | Phase 18 | Complete |
 | PILOT-02 | Phase 18 | Complete |
@@ -102,7 +102,7 @@
 - v2.0 requirements: 24 total
 - Mapped to phases: 24
 - Unmapped: 0
-- Complete: 20 | Pending (gap closure): 3 (MARKET-01, MARKET-02, MARKET-05) | Deferred: 1 (LEAD-03)
+- Complete: 23 | Pending (gap closure): 0 | Deferred: 1 (LEAD-03)
 
 ---
 *Requirements defined: 2026-02-21*

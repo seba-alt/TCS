@@ -196,4 +196,4 @@ Plans:
 | 18. Floating AI Co-Pilot | 4/4 | Complete    | 2026-02-21 | - |
 | 19. Extended Features | v2.0 | 6/6 | Complete | 2026-02-21 |
 | 20. Bug Fixes — Pagination & Rate Filter | 1/1 | Complete    | 2026-02-22 | — |
-| 21. Documentation & Cleanup | v2.0 | 0/2 | Pending | — |
+| 21. Documentation & Cleanup | 1/2 | In Progress|  | — |
