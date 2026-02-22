@@ -1,6 +1,7 @@
 import { useCallback } from 'react'
 import { useExplorerStore } from '../store'
 import { useNltrStore } from '../store/nltrStore'
+import { trackEvent } from '../tracking'
 
 const API_BASE = import.meta.env.VITE_API_URL ?? ''
 
@@ -110,6 +111,14 @@ export function useSage() {
         search_performed?: boolean  // true when search_experts was called
         total?: number              // result count from search_experts
       } = await res.json()
+
+      // Track sage_query — fire-and-forget, never await
+      void trackEvent('sage_query', {
+        query_text: text.trim(),
+        function_called: data.search_performed ? 'search_experts' : 'apply_filters',
+        result_count: data.total ?? 0,
+        zero_results: (data.total ?? 0) === 0,
+      })
 
       // search_performed: true = search_experts was called; false/undefined = apply_filters
       // NEVER write resultsSlice directly — validateAndApplyFilters triggers useExplore re-fetch
