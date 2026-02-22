@@ -24,34 +24,35 @@
 
 - [ ] **MARKET-01**: User sees faceted sidebar with rate range slider, domain tag multi-select, text search, and active filter chips
 - [ ] **MARKET-02**: Expert grid renders via `react-virtuoso` with cursor-based pagination and scroll restoration
-- [ ] **MARKET-03**: Expert cards display name, title, company, hourly rate, domain tag pills, findability badge, and match reason snippet
-- [ ] **MARKET-04**: Clicking a domain tag pill on a card adds that tag to sidebar filters and re-fetches
-- [ ] **MARKET-05**: Cards animate on mount via Framer Motion; `AnimatePresence` used only on sidebar and modal transitions
-- [ ] **MARKET-06**: Sidebar collapses into a bottom-sheet on mobile viewports
+- [x] **MARKET-03**: Expert cards display name, title, company, hourly rate, domain tag pills, findability badge, and match reason snippet
+- [x] **MARKET-04**: Clicking a domain tag pill on a card adds that tag to sidebar filters and re-fetches
+- [ ] **MARKET-05**: Cards animate on mount via Framer Motion; `AnimatePresence` used only on sidebar and modal transitions *(gap closure Phase 21: accepting CSS hover animation — requirement will be updated)*
+- [x] **MARKET-06**: Sidebar collapses into a bottom-sheet on mobile viewports
 
 ### PILOT — Floating AI Co-Pilot
 
-- [ ] **PILOT-01**: Floating FAB (bottom-right) opens a 380px right-edge slide-in co-pilot panel
-- [ ] **PILOT-02**: Co-pilot uses Gemini function calling (`apply_filters`) to update Zustand filter state from conversation
-- [ ] **PILOT-03**: Co-pilot panel is full-screen on mobile
+- [x] **PILOT-01**: Floating FAB (bottom-right) opens a 380px right-edge slide-in co-pilot panel
+- [x] **PILOT-02**: Co-pilot uses Gemini function calling (`apply_filters`) to update Zustand filter state from conversation
+- [x] **PILOT-03**: Co-pilot panel is full-screen on mobile
 
 ### LEAD — Value-Driven Lead Capture
 
-- [ ] **LEAD-01**: User can browse the expert grid freely without providing email
-- [ ] **LEAD-02**: "View Full Profile" action gates behind a single-field email capture modal
-- [ ] **LEAD-03**: "Download Match Report" gates behind email + project type (2 fields); AI generates in-app styled HTML report of top matches
-- [ ] **LEAD-04**: Returning visitors with captured email bypass the gate automatically (localStorage)
+- [x] **LEAD-01**: User can browse the expert grid freely without providing email
+- [x] **LEAD-02**: "View Full Profile" action gates behind a single-field email capture modal
+- [ ] **LEAD-03**: "Download Match Report" gates behind email + project type (2 fields); AI generates in-app styled HTML report of top matches *(deferred to v2.1 — not implemented in v2.0)*
+- [x] **LEAD-04**: Returning visitors with captured email bypass the gate automatically (localStorage)
 
 ### ROBUST — Robustness & Optimization
 
-- [ ] **ROBUST-01**: Active filter state encodes to URL query params (shareable, bookmarkable)
-- [ ] **ROBUST-02**: Search bar provides fuzzy/prefix suggestions via FTS5 prefix matching
-- [ ] **ROBUST-03**: No-results state shows alternative query suggestions and nearby tag options
+- [x] **ROBUST-01**: Active filter state encodes to URL query params (shareable, bookmarkable)
+- [x] **ROBUST-02**: Search bar provides fuzzy/prefix suggestions via FTS5 prefix matching
+- [x] **ROBUST-03**: No-results state shows alternative query suggestions and nearby tag options
 
 ## Future Requirements
 
 ### Deferred to v2.1+
 
+- **LEAD-03: Download Match Report** — explicitly removed from v2.0 scope in `19-CONTEXT.md`; no MatchReport component or `/api/match_report` endpoint built; requires full implementation in v2.1
 - HyDE in `/api/explore` — HyDE already exists in the chat endpoint; deferred here to reduce explore latency complexity
 - Skeleton loaders on AI-triggered filter apply — deferred; standard loading state is sufficient for v2.0
 - PDF/email delivery of Match Report — in-app HTML only for v2.0; email delivery requires SendGrid/Resend integration
@@ -80,28 +81,29 @@
 | STATE-01 | Phase 15 | Complete |
 | STATE-02 | Phase 15 | Complete |
 | STATE-03 | Phase 15 | Complete |
-| MARKET-01 | Phase 16 | Pending |
-| MARKET-02 | Phase 17 | Pending |
-| MARKET-03 | Phase 17 | Pending |
-| MARKET-04 | Phase 17 | Pending |
-| MARKET-05 | Phase 17 | Pending |
-| MARKET-06 | Phase 16 | Pending |
-| PILOT-01 | Phase 18 | Pending |
-| PILOT-02 | Phase 18 | Pending |
-| PILOT-03 | Phase 18 | Pending |
-| LEAD-01 | Phase 19 | Pending |
-| LEAD-02 | Phase 19 | Pending |
-| LEAD-03 | Phase 19 | Pending |
-| LEAD-04 | Phase 19 | Pending |
-| ROBUST-01 | Phase 19 | Pending |
-| ROBUST-02 | Phase 19 | Pending |
-| ROBUST-03 | Phase 19 | Pending |
+| MARKET-01 | Phase 20 (gap closure) | Pending |
+| MARKET-02 | Phase 20 (gap closure) | Pending |
+| MARKET-03 | Phase 17 | Complete |
+| MARKET-04 | Phase 17 | Complete |
+| MARKET-05 | Phase 21 (gap closure) | Pending |
+| MARKET-06 | Phase 16 | Complete |
+| PILOT-01 | Phase 18 | Complete |
+| PILOT-02 | Phase 18 | Complete |
+| PILOT-03 | Phase 18 | Complete |
+| LEAD-01 | Phase 19 | Complete |
+| LEAD-02 | Phase 19 | Complete |
+| LEAD-03 | Phase 21 (deferred → v2.1) | Deferred |
+| LEAD-04 | Phase 19 | Complete |
+| ROBUST-01 | Phase 19 | Complete |
+| ROBUST-02 | Phase 19 | Complete |
+| ROBUST-03 | Phase 19 | Complete |
 
 **Coverage:**
 - v2.0 requirements: 24 total
 - Mapped to phases: 24
 - Unmapped: 0
+- Complete: 20 | Pending (gap closure): 3 (MARKET-01, MARKET-02, MARKET-05) | Deferred: 1 (LEAD-03)
 
 ---
 *Requirements defined: 2026-02-21*
-*Last updated: 2026-02-21 after roadmap creation (phases 14-19 confirmed)*
+*Last updated: 2026-02-22 — gap closure phases 20-21 added after v2.0 audit*

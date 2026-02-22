@@ -5,7 +5,7 @@
 - [x] **v1.0 MVP** - Phases 1-7 (shipped 2026-02-20)
 - [x] **v1.1 Expert Intelligence & Search Quality** - Phases 8-10 (shipped 2026-02-21)
 - [x] **v1.2 Intelligence Activation & Steering Panel** - Phases 11-13 (shipped 2026-02-21)
-- [x] **v2.0 Extreme Semantic Explorer** - Phases 14-19 (shipped 2026-02-21)
+- [ ] **v2.0 Extreme Semantic Explorer** - Phases 14-21 (gap closure in progress)
 
 ## Phases
 
@@ -32,7 +32,7 @@ See `.planning/milestones/v1.2-ROADMAP.md`
 
 ---
 
-### v2.0 Extreme Semantic Explorer (SHIPPED 2026-02-21)
+### v2.0 Extreme Semantic Explorer (gap closure in progress)
 
 **Milestone Goal:** Rearchitect from AI chat into a professional Expert Marketplace with hybrid search (SQLAlchemy + FAISS IDSelectorBatch + FTS5 BM25 fusion), Zustand global state, virtualized expert grid, floating AI co-pilot with Gemini function calling, and value-driven lead capture.
 
@@ -44,6 +44,8 @@ See `.planning/milestones/v1.2-ROADMAP.md`
 - [x] **Phase 17: Expert Grid & Cards** - Virtualized grid, high-density cards, Framer Motion entry animations (completed 2026-02-21)
 - [x] **Phase 18: Floating AI Co-Pilot** - FAB panel, Gemini function calling, mobile full-screen overlay (completed 2026-02-21)
 - [x] **Phase 19: Extended Features** - Lead capture, match report, URL state, fuzzy suggestions, empty states (completed 2026-02-21)
+- [ ] **Phase 20: Bug Fixes — Pagination & Rate Filter** - Fix loadNextPage param, FilterChips/RateSlider/MobileFilterSheet rate defaults (gap closure)
+- [ ] **Phase 21: Documentation & Cleanup** - Post-hoc VERIFICATION.md for phases 16/19, MARKET-05 accept, LEAD-03 deferred, tech debt (gap closure)
 
 ## Phase Details
 
@@ -146,6 +148,37 @@ Plans:
 - [x] 19-05-PLAN.md — Search suggestions dropdown in SearchInput (calls /api/suggest, AbortController)
 - [x] 19-06-PLAN.md — Human verify: email gate, URL sync, search suggestions, no-results state
 
+### Phase 20: Bug Fixes — Pagination & Rate Filter
+**Goal:** Fix the two functional bugs identified by the v2.0 audit so infinite scroll with an active text query works correctly and the rate filter chip reflects actual filter state on page load
+**Depends on**: Phase 19
+**Requirements**: MARKET-01, MARKET-02
+**Gap Closure:** Closes gaps from v2.0 audit
+**Success Criteria** (what must be TRUE):
+  1. Typing a query and scrolling past page 1 returns semantically-ranked results — not filter-only results
+  2. On fresh page load with no active rate filter, the "EUR 0–5000" chip does not appear
+  3. `RateSlider` can represent rates up to €5000/hr (max=5000)
+  4. `MobileFilterSheet` rate defaults match the store defaults; `TOP_TAGS` is imported from `constants/tags.ts` (no inline copy)
+**Plans**: 1 plan
+
+Plans:
+- [ ] 20-01-PLAN.md — Fix `useExplore.ts` loadNextPage param (`q`→`query`); fix `FilterChips.DEFAULT_RATE_MAX` (2000→5000); align `RateSlider` max; fix `MobileFilterSheet` rate defaults + import TOP_TAGS
+
+### Phase 21: Documentation & Cleanup
+**Goal:** Bring all planning artefacts up to date with actual code so the milestone audit can pass — write missing VERIFICATION.md files, accept the CSS hover animation for MARKET-05, formally defer LEAD-03, and remove stale code comments
+**Depends on**: Phase 20
+**Requirements**: MARKET-05, LEAD-03
+**Gap Closure:** Closes remaining audit gaps from v2.0 audit
+**Success Criteria** (what must be TRUE):
+  1. `VERIFICATION.md` exists in phases 16 and 19 directories and accurately describes implemented features
+  2. MARKET-05 requirement and Phase 17 `VERIFICATION.md` accurately describe the CSS hover animation (not motion/react mount animation)
+  3. LEAD-03 is marked deferred in `REQUIREMENTS.md` with a v2.1 backlog note
+  4. Dead `_state?.triggerSearch()` comment removed from Phase 15 store
+  5. Phase 17 `VERIFICATION.md` `tags.slice` count corrected (0,2 not 0,3)
+**Plans**: 1 plan
+
+Plans:
+- [ ] 21-01-PLAN.md — Write Phase 16 + Phase 19 VERIFICATION.md; update MARKET-05 + Phase 17 VERIFICATION.md; mark LEAD-03 deferred; remove dead comments
+
 ## Progress
 
 **Execution Order:** 14 → 15 → 16 → 17 → 18 → 19
@@ -161,3 +194,5 @@ Plans:
 | 17. Expert Grid & Cards | v2.0 | Complete    | 2026-02-21 | - |
 | 18. Floating AI Co-Pilot | 4/4 | Complete    | 2026-02-21 | - |
 | 19. Extended Features | v2.0 | 6/6 | Complete | 2026-02-21 |
+| 20. Bug Fixes — Pagination & Rate Filter | v2.0 | 0/1 | Pending | — |
+| 21. Documentation & Cleanup | v2.0 | 0/1 | Pending | — |
