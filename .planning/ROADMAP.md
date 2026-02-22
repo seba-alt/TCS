@@ -189,31 +189,31 @@ Plans:
 - [x] 32-03-PLAN.md — Frontend UX: Sage icon in FilterChips, Sage empty state message, inline confirmation tooltips for search/rate
 
 ### Phase 33: Command Center Header
-**Goal**: Transform `Header.tsx` from a utilitarian nav into a premium "Command Center" — glassmorphic frosted glass panel, aurora glow radial background, rotating playful placeholders in the search bar, Framer Motion entrance animation, odometer-style expert count, and a tilt easter egg
+**Goal**: Transform the marketplace header into a premium "Command Center" — glassmorphic frosted-glass panel, aurora radial gradient, rotating animated placeholders, Sage-in-flight pulse indicator, spring-animated expert count, and a "tinrate" tilt + particle easter egg. Header search replaces sidebar SearchInput.
 **Depends on**: Phase 22 (aurora visual infrastructure), Phase 32 (sageMode store + store.total for expert count)
 **Requirements**: HDR-01, HDR-02, HDR-03
 **Success Criteria** (what must be TRUE):
   1. Header background is `backdrop-blur-md bg-white/70 border-b border-white/20` over a `radial-gradient` aurora backdrop — no flat `bg-white`
   2. Search bar uses `bg-white/50 border-slate-200/50 shadow-sm focus-within:ring-2 focus-within:ring-purple/20` and scales to 1.02 on focus via Framer Motion
-  3. Placeholder text rotates through 4+ playful phrases on a 4s interval (no flicker on route change)
-  4. An "AI thinking" pulse glow appears left of the search icon while a Sage query is in-flight (`sageMode` transitioning)
+  3. Placeholder text rotates through 8 playful phrases on a 4.5s interval, paused when input has text
+  4. A purple pulse dot appears left of the search icon while `isStreaming` is true (Sage query in-flight)
   5. Expert count reads from `store.total` and animates with a spring transition when the number changes
-  6. Typing the easter egg phrase triggers a smooth 3-degree tilt of the entire header, then resets
+  6. Typing "tinrate" triggers a 3-degree header tilt + emoji particle burst from logo corner, then clears input
   7. Header remains `sticky top-0 z-50` — grid scrolls visibly underneath through the glass
 **Plans**: 2 plans
 
 **Architecture notes (encode in plan):**
-- `Header.tsx` is the only file modified — keep all new logic co-located or in a single `useHeaderSearch.ts` hook
-- Zustand: read `store.query` (for controlled input), `store.setQuery` (on change), `store.total` (count), `sageMode` (pulse indicator) — no new store slices
-- `AuroraBackground.tsx` already wraps the page; the header's own radial gradient is a **separate** subtle layer scoped to the header element only (do not modify `AuroraBackground.tsx`)
-- Framer Motion `AnimatePresence` for placeholder crossfade; `useMotionValue` + `useSpring` for count animation
-- Easter egg: detect specific phrase client-side only (no backend); use `motion.header` with `rotate` spring — reset after 800ms
-- Tailwind v3 arbitrary values: `bg-[radial-gradient(circle_at_top_right,_rgba(139,92,246,0.08),_transparent_60%)]`
-- Logo drop-shadow via Tailwind: `drop-shadow-[0_0_12px_rgba(139,92,246,0.25)]`
+- `Header.tsx` rewritten as Command Center; all logic in `useHeaderSearch.ts` hook
+- `MarketplacePage.tsx` replaces inline `<header>` block with `<Header />`; `SearchInput.tsx` deleted
+- Zustand: read `store.query`, `store.setQuery`, `store.total`, `store.isStreaming` (pulse — NOT sageMode), `store.sageMode`
+- `AuroraBackground.tsx` untouched — header gets its own scoped radial gradient via inline style
+- `motion/react` v12: `AnimatePresence mode="wait"` for placeholder crossfade; `useMotionValue` + `useSpring` for count and tilt
+- Sage pulse uses `isStreaming` (transient in-flight signal), NOT `sageMode` (persistent results-mode flag)
+- Easter egg: detect "tinrate" exactly in `handleChange`; clear input + call `store.setQuery('')`; fire tilt + particles; no one-shot guard (fires every time)
 
 Plans:
-- [ ] 33-01-PLAN.md — Header redesign: glassmorphism, aurora radial, animated search bar, rotating placeholders, Framer Motion entrance, easter egg
-- [ ] 33-02-PLAN.md — Header store wiring: expert count spring animation, Sage pulse indicator, sticky glass scroll effect
+- [ ] 33-01-PLAN.md — Build `useHeaderSearch.ts` hook + full `Header.tsx` component (glassmorphism, animated search, spring count, Sage pulse, tilt + particles easter egg)
+- [ ] 33-02-PLAN.md — Wire Header into MarketplacePage, delete SearchInput.tsx, deploy, human verify
 
 ### Phase 34: Admin Platform Restructure
 **Goal**: Clean up the admin IA — dashboard gives a strong first impression, gap tracking and intelligence data are front and centre, and operational tools (Search Lab, Score Explainer, Index) are consolidated into a single "Tools" tab so the sidebar no longer feels like a junk drawer
