@@ -56,6 +56,17 @@ const NAV_ITEMS = [
     ),
   },
   {
+    to: '/admin/index',
+    label: 'Index',
+    end: false,
+    icon: (
+      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round"
+          d="M4 7v10c0 2 1 3 3 3h10c2 0 3-1 3-3V7M9 3h6M12 3v4M8 11h8M8 15h5" />
+      </svg>
+    ),
+  },
+  {
     to: '/admin/score-explainer',
     label: 'Score Explainer',
     end: false,
