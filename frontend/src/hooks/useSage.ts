@@ -102,14 +102,36 @@ export function useSage() {
       })
 
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const data = await res.json()
 
-      // Dispatch validated filter updates to store (triggers useExplore re-fetch)
-      if (data.filters && typeof data.filters === 'object') {
+      // PilotResponse API shape (matches backend pilot_service.py return)
+      const data: {
+        filters: Record<string, unknown> | null
+        message: string
+        search_performed?: boolean  // true when search_experts was called
+        total?: number              // result count from search_experts
+      } = await res.json()
+
+      // search_performed: true = search_experts was called; false/undefined = apply_filters
+      // NEVER write resultsSlice directly — validateAndApplyFilters triggers useExplore re-fetch
+      if (data.search_performed === true) {
+        if (data.filters && typeof data.filters === 'object') {
+          const filtersObj = data.filters as Record<string, unknown>
+          if (filtersObj.reset === true) {
+            // Double-zero: reset grid to show all experts
+            validateAndApplyFilters({ reset: true })
+          } else {
+            // Search found results: clear slate, apply Sage's search params
+            validateAndApplyFilters({ reset: true })
+            validateAndApplyFilters(filtersObj)
+          }
+        }
+        // If data.filters is null: grid stays as-is (zero results, Sage narrates alternative)
+      } else if (data.filters && typeof data.filters === 'object') {
+        // apply_filters refinement path — unchanged behavior
         validateAndApplyFilters(data.filters as Record<string, unknown>)
       }
 
-      // Add Sage's confirmation message
+      // Add Sage's confirmation/narration message
       addMessage({
         id: `${Date.now()}-assistant`,
         role: 'assistant',
