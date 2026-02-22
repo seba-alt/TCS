@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import * as Slider from '@radix-ui/react-slider'
 import { useFilterSlice } from '../../store'
+import { trackEvent } from '../../tracking'
 
 export function RateSlider() {
   const { rateMin, rateMax, setRateRange } = useFilterSlice()
@@ -29,7 +30,13 @@ export function RateSlider() {
         minStepsBetweenThumbs={1}
         value={localValue}
         onValueChange={(val) => setLocalValue(val as [number, number])}
-        onValueCommit={(val) => setRateRange(val[0], val[1])}
+        onValueCommit={(val) => {
+          setRateRange(val[0], val[1])
+          void trackEvent('filter_change', {
+            filter: 'rate',
+            value: [val[0], val[1]],
+          })
+        }}
       >
         <Slider.Track className="bg-gray-200 relative grow rounded-full h-1">
           <Slider.Range className="absolute bg-brand-purple rounded-full h-full" />
