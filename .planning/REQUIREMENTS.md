@@ -53,7 +53,7 @@ Requirements for milestone v2.2 "Evolved Discovery Engine". Phases continue from
 
 ### FUN — Easter Egg
 
-- [ ] **FUN-01**: Sage query or search containing playful trigger phrases (e.g. "barrel roll", "do a flip") triggers 360° card animation via Framer Motion on ExpertCards
+- [x] **FUN-01**: Sage query or search containing playful trigger phrases (e.g. "barrel roll", "do a flip") triggers 360° card animation via Framer Motion on ExpertCards
 
 ## Future Requirements (v2.3+)
 
@@ -107,7 +107,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | NLTR-02 | Phase 27 | Complete |
 | NLTR-03 | Phase 27 | Complete |
 | NLTR-04 | Phase 27 | Complete |
-| FUN-01 | Phase 27 | Pending |
+| FUN-01 | Phase 27 | Complete |
 
 **Coverage:**
 - v2.2 requirements: 27 total
