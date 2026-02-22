@@ -35,6 +35,7 @@ Progress: [████████████████████] 55/56 p
 | 31-02 | 2 min | 3 | 5 |
 | 32-01 | 3 min | 1 | 1 |
 | 32-02 | 3 min | 2 | 5 |
+| Phase 32 P03 | 12 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -75,6 +76,8 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - setSortBy intentionally does NOT call setSageMode(false) — sorting Sage results is valid without exiting sage mode
 - useExplore guard is the FIRST statement in useEffect (before abort/setLoading) to prevent loading flash
 - store.setLoading(false) called before store.setResults in useSage to avoid skeleton flash from mid-flight prior fetch
+- [Phase 32-03]: motion.img always in DOM with animate={{ opacity }} for smooth sage icon fade — avoids abrupt conditional render
+- [Phase 32-03]: Sage confirmation handlers call setQuery/setRateRange directly — setSageMode(false) fires internally via filterSlice, no double-calling
 
 ### Pending Todos
 
