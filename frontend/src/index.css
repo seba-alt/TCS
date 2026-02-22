@@ -1,3 +1,133 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ===== OKLCH Design Tokens — Phase 22 Visual Infrastructure ===== */
+/* Brand purple #5128F2 = oklch(49.0% 0.270 279.0) — all aurora colors derive from this anchor */
+:root {
+  /* Aurora palette — cool blues, cyans, teals, violets */
+  --aurora-bg:        oklch(7% 0.020 279);    /* deep purple-tinted near-black base */
+  --aurora-purple:    oklch(49% 0.270 279 / 0.35); /* brand purple blob */
+  --aurora-violet:    oklch(42% 0.200 295 / 0.25); /* blue-violet blob */
+  --aurora-blue:      oklch(45% 0.175 250 / 0.30); /* deep blue blob */
+  --aurora-cyan:      oklch(55% 0.155 220 / 0.20); /* cyan-blue blob */
+  --aurora-teal:      oklch(52% 0.135 195 / 0.25); /* teal blob */
+
+  /* Glass surface tokens */
+  --glass-tint:        oklch(49% 0.270 279 / 0.08); /* brand purple at 8% opacity */
+  --glass-border:      oklch(100% 0 0 / 0.10);       /* white at 10% opacity */
+  --glass-fallback-bg: oklch(14% 0.022 279);          /* opaque dark purple — fallback for no backdrop-filter */
+}
+
+/* ===== Aurora Mesh Gradient Animation ===== */
+/* Technique: animate background-position on multi-layer radial-gradient.
+   background-position is GPU-composited — no repaints. background-size: 200% 200%
+   gives blobs room to drift without reaching edges.
+   0% and 100% are IDENTICAL — seamless loop, no visible jump at boundary. */
+@keyframes aurora-drift {
+  0%, 100% {
+    background-position:
+      15% 30%,
+      75% 20%,
+      40% 70%,
+      85% 60%,
+      25% 80%;
+  }
+  33% {
+    background-position:
+      30% 50%,
+      60% 40%,
+      60% 35%,
+      30% 80%,
+      65% 60%;
+  }
+  66% {
+    background-position:
+      20% 60%,
+      80% 50%,
+      50% 55%,
+      70% 40%,
+      40% 70%;
+  }
+}
+
+.aurora-bg {
+  /* Base color — deep purple-tinted near-black per CONTEXT.md */
+  background-color: var(--aurora-bg);
+  /* Five radial gradient blobs — each placed at 50% 50% initially, drifted by background-position */
+  background-image:
+    radial-gradient(ellipse 60% 40% at 50% 50%, var(--aurora-purple) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 35% at 50% 50%, var(--aurora-violet) 0%, transparent 70%),
+    radial-gradient(ellipse 55% 45% at 50% 50%, var(--aurora-blue) 0%, transparent 70%),
+    radial-gradient(ellipse 45% 40% at 50% 50%, var(--aurora-cyan) 0%, transparent 70%),
+    radial-gradient(ellipse 65% 50% at 50% 50%, var(--aurora-teal) 0%, transparent 70%);
+  background-size: 200% 200%;
+  /* 20s is mid-range of 15–25s cycle duration per CONTEXT.md */
+  animation: aurora-drift 20s ease-in-out infinite;
+  /* Full viewport coverage, behind all content */
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+}
+
+/* JS sets this class when document.hidden === true (AuroraBackground component) */
+.aurora-paused {
+  animation-play-state: paused;
+}
+
+/* Static aurora fallback — same gradient, no animation, per CONTEXT.md: "frozen, looks intentional" */
+@media (prefers-reduced-motion: reduce) {
+  .aurora-bg {
+    animation: none;
+    background-position: 15% 30%, 75% 20%, 40% 70%, 85% 60%, 25% 80%;
+  }
+}
+
+/* ===== Glass Surface ===== */
+/* CRITICAL: backdrop-filter breaks when any ancestor has overflow:hidden (Chrome).
+   Solution: move backdrop-filter to an absolutely-positioned ::before pseudo-element.
+   ::before is not affected by overflow clipping on its parent.
+   This pattern is safe for FilterSidebar (overflow-y-auto on inner div, not <aside> itself)
+   and SagePanel (position:fixed creates own stacking context). */
+
+.glass-surface {
+  position: relative;
+  /* Opaque fallback — dark brand-purple tone, looks intentional per CONTEXT.md */
+  background-color: var(--glass-fallback-bg);
+}
+
+/* Blur layer behind content via pseudo-element */
+.glass-surface::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background-color: var(--glass-tint); /* brand purple at 8% */
+  -webkit-backdrop-filter: blur(4px);  /* Safari — Tailwind v3.4.19 also emits this on backdrop-blur-sm */
+  backdrop-filter: blur(4px);          /* blur(4px) = blur-sm per CONTEXT.md */
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* Progressive enhancement: show glass when backdrop-filter is supported */
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .glass-surface {
+    background-color: transparent; /* ::before handles background */
+    border: 1px solid var(--glass-border); /* white/10 border per CONTEXT.md */
+  }
+}
+
+/* Expert card hover animation — purple glow lift on hover.
+   transition handles both enter and exit of hover state smoothly. */
+.expert-card {
+  transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.06);
+}
+
+.expert-card:hover {
+  transform: translateY(-4px);
+  box-shadow:
+    0 0 0 1.5px #5128F2,
+    0 0 24px rgba(81, 40, 242, 0.25),
+    0 8px 20px rgba(0, 0, 0, 0.08);
+}
