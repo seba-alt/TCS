@@ -174,7 +174,6 @@ def run_explore(
         stmt = stmt.where(Expert.tags.like(f'%"{tag.lower()}"%'))
 
     filtered_experts: list[Expert] = list(db.scalars(stmt).all())
-    total = len(filtered_experts)
 
     if not filtered_experts:
         return ExploreResponse(
@@ -303,6 +302,11 @@ def run_explore(
 
         scored.sort(key=lambda x: x[0], reverse=True)
 
+        # total = semantically-matched experts (those with FAISS or BM25 signal)
+        # This is what the user sees as the result count — reflects actual search quality,
+        # not the raw pre-filter pool which can be the full DB when no rate/tag filters are set.
+        total = len(scored)
+
         # --- Pagination ---
         page = scored[cursor: cursor + limit + 1]
         has_more = len(page) > limit
@@ -321,6 +325,9 @@ def run_explore(
             key=lambda e: (e.findability_score or 0.0),
             reverse=True,
         )
+
+        # In pure filter mode, total = all experts that pass rate/tag filters
+        total = len(filtered_experts)
 
         page_experts = sorted_experts[cursor: cursor + limit + 1]
         has_more = len(page_experts) > limit
