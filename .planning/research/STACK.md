@@ -605,3 +605,523 @@ None. All v2.0 backend features (IDSelectorBatch, FTS5, Gemini function calling)
 
 *Stack research for: TCS v2.0 Expert Marketplace rearchitecture*
 *Researched: 2026-02-21*
+
+---
+---
+
+# Stack Research — v2.2 Evolved Discovery Engine
+
+**Domain:** Expert Marketplace — v2.2 feature additions only
+**Researched:** 2026-02-22
+**Research Mode:** Ecosystem (Subsequent Milestone — 5 specific questions)
+**Confidence:** HIGH for scikit-learn Railway compat and OKLCH browser support; HIGH for t-SNE parameters; MEDIUM for Framer Motion proximity pattern (canonical approach confirmed, no v12-specific docs)
+
+---
+
+## Scope of This Section
+
+Covers ONLY the five questions relevant to v2.2. The existing v2.0 production stack is unchanged. New additions:
+
+- **Backend:** scikit-learn (t-SNE endpoint + PCA preprocessing)
+- **Frontend:** OKLCH aurora aesthetics (no new packages); Motion proximity-based tag cloud (motion/react already installed)
+- **Pattern:** asyncio.to_thread for atomic FAISS swap (stdlib — no new dep)
+
+---
+
+## Q1. scikit-learn on Railway — Version, Compatibility, Build Risk
+
+### Recommendation
+
+**Use `scikit-learn==1.8.0`.** It is the current stable release (December 10, 2025), supports Python 3.11–3.14, and ships **pre-built manylinux binary wheels** for Linux x86-64. No C++ compilation occurs on Railway.
+
+### Railway compatibility breakdown
+
+Railway uses Nixpacks to build Python services. Nixpacks installs packages via pip. The key question is whether pip can resolve a pre-built binary wheel (no build) or must compile from source (slow, risky).
+
+scikit-learn 1.8.0 publishes these wheel files to PyPI for Python 3.11 on Linux x86-64:
+
+```
+scikit_learn-1.8.0-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl
+```
+
+Railway's Linux base image uses glibc 2.27+, which satisfies the `manylinux_2_27` requirement. pip will download this binary directly — no Cython, no C++ compiler, no build tools required.
+
+**Build time impact:** scikit-learn 1.8.0 wheel is ~8.8 MB. It adds scipy (if not already present) and numpy (already present via faiss-cpu). scipy also ships manylinux binary wheels — no source compilation. Expect a 10–20 second increase in Railway build time, not minutes.
+
+### scipy dependency
+
+scikit-learn requires scipy. scipy 1.x and 2.x both ship manylinux binary wheels. The constraint in scikit-learn 1.8 is `scipy>=1.8.0,<1.16.0`. Pin to a specific version to avoid unexpected updates:
+
+```
+scikit-learn==1.8.0
+scipy==1.15.1
+```
+
+scipy 1.15.1 is the current stable and satisfies scikit-learn 1.8's constraint. It also ships manylinux binary wheels for Python 3.11.
+
+### numpy version note
+
+numpy is already a transitive dependency (faiss-cpu, google-genai). scikit-learn 1.8.0 requires `numpy>=1.19.5`. The existing `numpy==2.2.*` in the project satisfies this. No conflict.
+
+### requirements.txt additions
+
+```
+scikit-learn==1.8.0
+scipy==1.15.1
+```
+
+**Confidence:** HIGH — scikit-learn 1.8.0 release date and Python support confirmed from [PyPI](https://pypi.org/project/scikit-learn/) and [GitHub releases](https://github.com/scikit-learn/scikit-learn/releases). manylinux_2_27 wheel availability for Python 3.11 confirmed from PyPI download page. Railway nixpacks glibc compatibility confirmed from [Railway nixpacks docs](https://docs.railway.com/reference/nixpacks). scipy constraint from [nixpkgs scikit-learn default.nix](https://github.com/NixOS/nixpkgs/blob/master/pkgs/development/python-modules/scikit-learn/default.nix).
+
+---
+
+## Q2. OKLCH in Target Browsers — Support and Fallback Strategy
+
+### Recommendation
+
+**Use OKLCH directly — no polyfill needed for the Tinrate target audience.** Provide a single CSS cascade fallback (hex before oklch) as a defensive posture; no JavaScript polyfill or PostCSS plugin required.
+
+### Browser support as of February 2026
+
+| Browser | Minimum version for OKLCH | Released |
+|---------|--------------------------|---------|
+| Chrome / Edge | 111 | March 2023 |
+| Firefox | 113 | May 2023 |
+| Safari | 15.4 | March 2022 |
+
+Global support is approximately 93% (caniuse.com as of early 2026). The remaining ~7% is primarily Internet Explorer (no support, but IE usage is effectively zero for a modern SaaS product) and old Android WebView versions.
+
+The Tinrate expert marketplace user base — professionals browsing vetted experts — will overwhelmingly use modern browsers. IE is not a support target. Chrome, Firefox, and Safari are all covered from versions shipped 2–3 years ago.
+
+### backdrop-filter support (glassmorphism)
+
+backdrop-filter (needed for glassmorphism surfaces) has 92% global support. It is supported in all target browsers:
+
+- Chrome 76+
+- Firefox 103+
+- Safari 9+ (with `-webkit-` prefix; prefix-free since Safari 18)
+
+### Fallback strategy for v2.2
+
+**Two-level cascade — no JavaScript, no PostCSS plugin:**
+
+```css
+/* Level 1: hex fallback for browsers without OKLCH (ignored if OKLCH supported) */
+:root {
+  --aurora-1: #7c3aed;
+  --aurora-2: #0ea5e9;
+  --aurora-3: #10b981;
+  --surface-bg: rgba(15, 15, 30, 0.7);
+}
+
+/* Level 2: OKLCH overrides — browser applies this if it understands oklch() */
+@supports (color: oklch(0% 0 0)) {
+  :root {
+    --aurora-1: oklch(55% 0.22 290);
+    --aurora-2: oklch(62% 0.18 220);
+    --aurora-3: oklch(70% 0.18 160);
+    --surface-bg: oklch(12% 0.02 270 / 70%);
+  }
+}
+
+/* Glassmorphism: provide opaque fallback */
+.glass-surface {
+  background: var(--surface-bg);          /* fallback: rgba */
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+@supports (backdrop-filter: blur(1px)) {
+  .glass-surface {
+    background: oklch(12% 0.02 270 / 40%);  /* more translucent when blur available */
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+  }
+}
+```
+
+**Key rules:**
+- Always define a hex/rgba fallback FIRST on the same property — browsers silently ignore `oklch()` if unsupported and use the previous valid value
+- Use `@supports (color: oklch(0% 0 0))` for OKLCH-gated blocks (not strictly necessary given 93% support, but correct defensive practice)
+- Use `@supports (backdrop-filter: blur(1px))` for glassmorphism blocks — this is the more useful gate since backdrop-filter has slightly lower support than OKLCH
+- VIS-05 contrast requirement (≥4.5:1): test both the OKLCH path and the fallback hex path separately — the fallback surfaces must also meet contrast
+
+### No new packages needed
+
+```bash
+# Nothing to install — OKLCH is native CSS, Tailwind v3 supports arbitrary oklch() values
+# className="bg-[oklch(55%_0.22_290)]" works in Tailwind v3 JIT
+```
+
+**Confidence:** HIGH — Browser support matrix from [caniuse.com OKLCH](https://caniuse.com/mdn-css_types_color_oklch) and [MDN oklch()](https://developer.mozilla.org/en-US/docs/Web/CSS/color_value/oklch). backdrop-filter support from [caniuse.com backdrop-filter](https://caniuse.com/css-backdrop-filter). @supports pattern from CSS spec and confirmed working in all target browsers.
+
+---
+
+## Q3. Framer Motion v12 — Proximity-Based Scaling Pattern
+
+### Recommendation
+
+**Use the `onMouseMove` + `useMotionValue` + `useTransform` + `useSpring` pattern.** This is the canonical approach for proximity-based scaling in Motion (Framer Motion) v12 — it is used in the official BuildUI Magnified Dock recipe and is the documented pattern in Motion's own examples.
+
+Do NOT use `whileHover` for proximity effects — `whileHover` only fires on the hovered element itself, it does not respond to cursor distance. Proximity requires tracking the mouse position relative to each element's center.
+
+### The pattern
+
+The architecture has two levels:
+
+**Level 1 — Container (TagCloud):** Tracks mouse X/Y position as `useMotionValue`. Passed to each tag via props or context.
+
+**Level 2 — Each tag:** Receives a reference mouse position, calculates its center's distance from the cursor using `getBoundingClientRect()`, maps that distance through `useTransform` to a scale value, smooths it via `useSpring`.
+
+```tsx
+// TagCloud.tsx — container
+import { useMotionValue } from 'motion/react'
+import { useRef } from 'react'
+
+const DISTANCE = 120  // px — cursor influence radius
+const SCALE_MAX = 1.4 // scale at cursor center
+const SPRING = { mass: 0.1, stiffness: 200, damping: 15 }
+
+export function TagCloud({ tags }: { tags: string[] }) {
+  const mouseX = useMotionValue(Infinity)  // Infinity = "no cursor" sentinel
+  const mouseY = useMotionValue(Infinity)
+
+  return (
+    <div
+      onMouseMove={(e) => {
+        mouseX.set(e.clientX)
+        mouseY.set(e.clientY)
+      }}
+      onMouseLeave={() => {
+        mouseX.set(Infinity)  // reset: no cursor in area
+        mouseY.set(Infinity)
+      }}
+      className="flex flex-wrap gap-2 p-4"
+    >
+      {tags.map((tag) => (
+        <TagPill key={tag} tag={tag} mouseX={mouseX} mouseY={mouseY} />
+      ))}
+    </div>
+  )
+}
+```
+
+```tsx
+// TagPill.tsx — individual tag with proximity scale
+import { motion, useMotionValue, useTransform, useSpring, MotionValue } from 'motion/react'
+import { useRef } from 'react'
+
+const DISTANCE = 120
+const SCALE_MAX = 1.4
+const SPRING = { mass: 0.1, stiffness: 200, damping: 15 }
+
+interface TagPillProps {
+  tag: string
+  mouseX: MotionValue<number>
+  mouseY: MotionValue<number>
+}
+
+export function TagPill({ tag, mouseX, mouseY }: TagPillProps) {
+  const ref = useRef<HTMLDivElement>(null)
+
+  // Derive distance from mouse to this pill's center
+  const distance = useTransform([mouseX, mouseY], ([mx, my]: number[]) => {
+    const el = ref.current
+    if (!el) return Infinity
+    const rect = el.getBoundingClientRect()
+    const cx = rect.left + rect.width / 2
+    const cy = rect.top + rect.height / 2
+    const dx = mx - cx
+    const dy = my - cy
+    return Math.sqrt(dx * dx + dy * dy)
+  })
+
+  // Map distance [0, DISTANCE] -> scale [SCALE_MAX, 1.0]
+  const scaleRaw = useTransform(distance, [0, DISTANCE], [SCALE_MAX, 1.0], { clamp: true })
+
+  // Smooth with spring physics
+  const scale = useSpring(scaleRaw, SPRING)
+
+  return (
+    <motion.div
+      ref={ref}
+      style={{ scale }}
+      onClick={() => { /* toggle selection unchanged */ }}
+      className="px-3 py-1 rounded-full cursor-pointer select-none ..."
+    >
+      {tag}
+    </motion.div>
+  )
+}
+```
+
+### Why this pattern over alternatives
+
+| Approach | Works for proximity? | Notes |
+|----------|---------------------|-------|
+| `whileHover={{ scale: 1.2 }}` | No | Binary on/off, no distance gradient |
+| `onMouseEnter` / `onMouseLeave` | No | Binary, no distance gradient |
+| CSS `:hover` + `transform` | No | Binary, cannot read sibling cursor position |
+| `useMotionValue` + `useTransform` + `useSpring` | Yes | Distance-continuous, spring-smoothed — canonical Motion pattern |
+| `animate()` imperative API | Possible but worse | Cannot be composed into motion value pipeline; no automatic cleanup |
+
+### Performance note for 530 tags
+
+The `useTransform` callback inside TagPill runs on every animation frame while the mouse is in the container. With ~530 tags visible simultaneously this would be expensive — 530 getBoundingClientRect() calls per frame.
+
+**Mitigation:** The tag cloud should show a curated subset (20–40 most common or relevant tags), not all 530. The "Everything is possible" element with quirky tags (DISC-03) is separate from the filter tags shown in DISC-01. Limit the proximate-scale cloud to 30–40 items maximum. At that count, the pattern is performant without further optimization.
+
+If more tags are needed: debounce mouse events to ~60fps with `requestAnimationFrame`, or use CSS `will-change: transform` on each pill to promote to GPU layers.
+
+### import path
+
+The project already uses `motion/react` (confirmed from PROJECT.md: "motion from 'motion/react' for modals/FAB"). The import is consistent:
+
+```typescript
+import { motion, useMotionValue, useTransform, useSpring } from 'motion/react'
+import type { MotionValue } from 'motion/react'
+```
+
+**No new packages needed.** `motion` (the npm package, which re-exports both the React and vanilla JS APIs) is already installed at v12.34.
+
+**Confidence:** MEDIUM — Pattern confirmed from [BuildUI Magnified Dock recipe](https://buildui.com/recipes/magnified-dock) (uses useMotionValue + useTransform + useSpring for distance-based scaling), [Motion motion values docs](https://motion.dev/docs/react-motion-value), and [Motion useSpring docs](https://motion.dev/docs/react-use-spring). The `useTransform` with array input `[mouseX, mouseY]` is confirmed from Motion docs. Flagged MEDIUM because no v12-specific proximity tag cloud example was found with exact import paths — the BuildUI dock example uses `framer-motion` imports, but the API is identical in `motion/react` (same library, rebranded).
+
+---
+
+## Q4. scikit-learn t-SNE Parameters for 530 × 768
+
+### Recommendation
+
+**Use PCA-then-t-SNE two-stage pipeline.** Reduce 768 dimensions to 50 via PCA first, then run t-SNE on the 530×50 matrix. This is the officially documented approach for high-dimensional inputs and cuts t-SNE runtime significantly.
+
+### Recommended parameters
+
+```python
+from sklearn.decomposition import PCA
+from sklearn.manifold import TSNE
+import numpy as np
+
+def compute_embedding_map(vectors: np.ndarray) -> np.ndarray:
+    """
+    vectors: shape (530, 768) — raw FAISS index vectors (numpy float32)
+    returns: shape (530, 2)   — 2D t-SNE projection, stored in app.state
+    """
+    # Stage 1: PCA from 768 → 50 dims
+    # PCA initialization is deterministic, fast (~0.5s for 530×768)
+    pca = PCA(n_components=50, random_state=42)
+    reduced = pca.fit_transform(vectors)  # shape: (530, 50)
+
+    # Stage 2: t-SNE from 50 → 2 dims
+    tsne = TSNE(
+        n_components=2,
+        perplexity=30,           # recommended for ~500 points; range 5-50
+        max_iter=1000,           # replaces deprecated n_iter (removed in 1.7)
+        learning_rate='auto',    # auto = max(N/early_exaggeration/4, 50); best practice
+        init='pca',              # PCA init: more stable than random, default since sklearn 1.2
+        method='barnes_hut',     # O(N log N) — appropriate for 530 points
+        random_state=42,         # reproducibility
+        n_jobs=1,                # single-threaded — Railway containers are typically 1-2 vCPU
+    )
+    embedding = tsne.fit_transform(reduced)  # shape: (530, 2)
+    return embedding
+```
+
+### Parameter justification
+
+| Parameter | Value | Justification |
+|-----------|-------|---------------|
+| `perplexity` | 30 | Recommended range is 5–50; 30 is the sklearn default and appropriate for N=530. Rule of thumb: perplexity ≈ sqrt(N) ≈ 23 for 530 points, so 25–35 is the sweet spot. 30 is safe. |
+| `max_iter` | 1000 | Minimum is 250. 1000 is sufficient for 530 points to converge. 500 would likely suffice too, but 1000 ensures stable output. |
+| `learning_rate` | `'auto'` | `'auto'` computes `max(N/early_exaggeration/4, 50)` = `max(530/12/4, 50)` ≈ `max(11, 50)` = 50. This is the correct sklearn 1.2+ best practice; replaces the old default of 200. |
+| `init` | `'pca'` | PCA initialization produces more globally stable layouts than random. It is the default since sklearn 1.2. More reproducible runs. |
+| `method` | `'barnes_hut'` | O(N log N) approximation — appropriate for N < 10,000. Exact method (`'exact'`) is O(N²) and slower; not needed here. |
+| `random_state` | `42` | Reproducibility — t-SNE is stochastic; fixing seed ensures the same layout across container restarts. |
+| `n_jobs` | `1` | Railway containers have 1-2 vCPU. t-SNE's barnes_hut implementation in sklearn is single-threaded anyway. Setting explicitly avoids surprises. |
+| PCA `n_components` | `50` | Standard preprocessing dimension. Sklearn's own TSNE documentation explicitly recommends reducing to 50 with PCA before t-SNE for high-dimensional data. Preserves ≥95% variance in typical embedding spaces. |
+
+### Startup caching pattern
+
+t-SNE for 530×768 takes ~2–5 seconds. Compute once at startup, cache in `app.state`:
+
+```python
+# main.py — in @app.on_event("startup") or lifespan context manager
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # ... existing FAISS load ...
+
+    # Compute t-SNE embedding map (runs in thread to not block event loop)
+    import asyncio
+    from app.embedding_map import compute_embedding_map
+
+    vectors = np.array(app.state.faiss_index.reconstruct_n(0, app.state.faiss_index.ntotal))
+    app.state.embedding_map = await asyncio.to_thread(compute_embedding_map, vectors)
+
+    yield
+    # ... cleanup ...
+```
+
+```python
+# routers/admin.py — the endpoint just reads cached state
+@router.get("/admin/embedding-map")
+async def get_embedding_map(request: Request, _=Depends(_require_admin)):
+    embedding = request.app.state.embedding_map  # shape (530, 2)
+    # Return alongside expert metadata for frontend coloring
+    experts = ...  # query from DB
+    return {
+        "points": [
+            {"x": float(embedding[i, 0]), "y": float(embedding[i, 1]),
+             "username": experts[i].username, "category": experts[i].category}
+            for i in range(len(experts))
+        ]
+    }
+```
+
+### Runtime estimate on Railway
+
+| Stage | Time estimate |
+|-------|--------------|
+| PCA 768→50 (530 points) | ~0.3–0.5 seconds |
+| t-SNE 50→2 (530 points, max_iter=1000) | ~2–4 seconds |
+| Total at startup | ~3–5 seconds |
+
+This is acceptable for a one-time startup computation. The endpoint itself returns in <1ms (reads from `app.state`).
+
+**Confidence:** HIGH — Perplexity guidance from [sklearn TSNE official docs](https://scikit-learn.org/stable/modules/generated/sklearn.manifold.TSNE.html) ("Larger datasets usually require a larger perplexity. Consider selecting a value between 5 and 50"). PCA preprocessing recommendation from sklearn TSNE docs ("It is highly recommended to use another dimensionality reduction method (e.g. PCA) to reduce the number of dimensions to a reasonable amount (e.g. 50) if the number of features is very high"). `max_iter` rename (from `n_iter`) confirmed from [sklearn GitHub issue #25518](https://github.com/scikit-learn/scikit-learn/issues/25518) — `n_iter` deprecated in 1.5, removed in 1.7. `learning_rate='auto'` recommended from sklearn 1.2+ docs. `init='pca'` as default since sklearn 1.2 confirmed from changelog.
+
+---
+
+## Q5. Additional Packages for t-SNE Endpoint
+
+### Complete additions to requirements.txt
+
+```
+scikit-learn==1.8.0
+scipy==1.15.1
+```
+
+That is the complete list. Detailed breakdown:
+
+| Package | Already present? | Why needed | Version |
+|---------|-----------------|-----------|---------|
+| `scikit-learn` | No | TSNE + PCA from sklearn.manifold and sklearn.decomposition | `==1.8.0` |
+| `scipy` | No (transitive of sklearn) | Required by scikit-learn; ships manylinux wheel | `==1.15.1` |
+| `numpy` | Yes (faiss-cpu dep) | numpy.ndarray operations; already in requirements.txt | no change |
+
+**What is NOT needed:**
+
+| Avoid | Why |
+|-------|-----|
+| `umap-learn` | UMAP is explicitly deferred to v2.3+ in REQUIREMENTS.md due to heavy Railway dependency. Do not add for v2.2. |
+| `openTSNE` | A faster t-SNE implementation but adds a separate package; sklearn t-SNE is fast enough for 530 points and avoids an extra dependency. |
+| `plotly` / `matplotlib` | The t-SNE visualization is rendered in the browser (React scatter plot, INTEL-06) — not server-side. The backend returns JSON coordinates only. |
+| `pandas` | Not needed; numpy arrays are sufficient for the pipeline. |
+
+### requirements.txt diff
+
+```diff
+# Add to requirements.txt:
++ scikit-learn==1.8.0
++ scipy==1.15.1
+```
+
+**Confidence:** HIGH — Package list derived from scikit-learn 1.8.0 declared dependencies on PyPI. umap-learn exclusion from REQUIREMENTS.md explicit decision. No additional packages needed beyond sklearn + its required scipy.
+
+---
+
+## v2.2 Summary
+
+### Backend additions (requirements.txt)
+
+```
+scikit-learn==1.8.0
+scipy==1.15.1
+```
+
+### Frontend additions
+
+None. All v2.2 frontend features use already-installed packages:
+- OKLCH aurora: native CSS (no package)
+- Glassmorphism: native CSS (no package)
+- Animated tag cloud proximity: `motion/react` already at v12.34
+- Framer Motion layout animations for tag cloud: `motion/react` already installed
+- Easter egg barrel roll: `motion/react` already installed
+
+### asyncio.to_thread for atomic FAISS swap (IDX-02, IDX-03)
+
+This uses Python stdlib only — `asyncio.to_thread` is available in Python 3.9+. No new package required.
+
+```python
+import asyncio
+import faiss
+
+async def rebuild_faiss_index(app_state):
+    """Rebuild FAISS index in thread, swap atomically. IDX-02 + IDX-03."""
+    def _rebuild():
+        # Heavy CPU work in thread — does not block event loop
+        new_index = faiss.IndexFlatIP(768)
+        # ... build new index from DB vectors ...
+        return new_index
+
+    new_index = await asyncio.to_thread(_rebuild)
+    # Atomic swap — Python GIL ensures this assignment is thread-safe
+    app_state.faiss_index = new_index
+```
+
+### newsletter_subscribers table (NLTR-02)
+
+SQLite table addition — uses existing SQLAlchemy + SQLite stack. No new package.
+
+```python
+class NewsletterSubscriber(Base):
+    __tablename__ = "newsletter_subscribers"
+    id = Column(Integer, primary_key=True)
+    email = Column(String, unique=True, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    source = Column(String, default="profile_gate")
+```
+
+---
+
+## Version Compatibility — v2.2 additions
+
+| Package | Version | Compatible with | Notes |
+|---------|---------|-----------------|-------|
+| `scikit-learn` | 1.8.0 | Python 3.11, numpy 2.2.* | manylinux wheel; no compile on Railway |
+| `scipy` | 1.15.1 | Python 3.11, numpy 2.2.* | manylinux wheel; satisfies sklearn 1.8 constraint |
+| OKLCH CSS | native | Chrome 111+, Firefox 113+, Safari 15.4+ | ~93% global support; hex fallback for rest |
+| `motion/react` proximity | v12.34 (existing) | React 19, TypeScript 5.9 | useMotionValue + useTransform + useSpring pattern |
+| `asyncio.to_thread` | stdlib | Python 3.9+ (Railway uses 3.11) | No package needed |
+
+---
+
+## What NOT to Add for v2.2
+
+| Avoid | Why | Use Instead |
+|-------|-----|-------------|
+| `umap-learn` | Explicitly deferred to v2.3+; heavy build dep on Railway | scikit-learn t-SNE (good enough for 530 points) |
+| `openTSNE` | Extra dep; sklearn's barnes_hut is fast enough for N=530 | `sklearn.manifold.TSNE` |
+| `@csstools/postcss-oklab-function` | No polyfill needed — 93% OKLCH browser support, target users are modern-browser | Native CSS + hex cascade fallback |
+| `plotly` / `matplotlib` | Visualization is browser-side (React); backend returns JSON coordinates | React scatter plot (e.g. recharts or plain SVG) |
+| `motion` (npm, separate package) | Already available via `framer-motion` which re-exports `motion/react` | Import from `'motion/react'` (already in package.json) |
+
+---
+
+## Sources — v2.2
+
+- [scikit-learn PyPI — version 1.8.0](https://pypi.org/project/scikit-learn/) — HIGH confidence (current stable)
+- [scikit-learn GitHub releases](https://github.com/scikit-learn/scikit-learn/releases) — HIGH confidence (December 2025 release)
+- [sklearn TSNE docs 1.8](https://scikit-learn.org/stable/modules/generated/sklearn.manifold.TSNE.html) — HIGH confidence (parameter reference)
+- [sklearn n_iter deprecation issue #25518](https://github.com/scikit-learn/scikit-learn/issues/25518) — HIGH confidence (rename timeline)
+- [Railway nixpacks docs](https://docs.railway.com/reference/nixpacks) — MEDIUM confidence (build process)
+- [caniuse OKLCH](https://caniuse.com/mdn-css_types_color_oklch) — HIGH confidence (93% browser support)
+- [MDN oklch()](https://developer.mozilla.org/en-US/docs/Web/CSS/color_value/oklch) — HIGH confidence (official spec)
+- [caniuse backdrop-filter](https://caniuse.com/css-backdrop-filter) — HIGH confidence (92% support)
+- [BuildUI Magnified Dock](https://buildui.com/recipes/magnified-dock) — MEDIUM confidence (canonical proximity pattern; framer-motion imports, same API as motion/react)
+- [Motion useTransform docs](https://motion.dev/docs/react-use-transform) — HIGH confidence (official Motion docs)
+- [Motion useSpring docs](https://motion.dev/docs/react-use-spring) — HIGH confidence (official Motion docs)
+- [Motion motion values docs](https://motion.dev/docs/react-motion-value) — HIGH confidence (official Motion docs)
+- [sklearn t-SNE perplexity example](https://scikit-learn.org/stable/auto_examples/manifold/plot_t_sne_perplexity.html) — HIGH confidence (official example)
+- [sklearn t-SNE PCA preprocessing guidance](https://scikit-learn.org/stable/modules/generated/sklearn.manifold.TSNE.html) — HIGH confidence ("highly recommended to use PCA" quote is in official docs)
+
+---
+
+*Stack research for: TCS v2.2 Evolved Discovery Engine — additive section*
+*Researched: 2026-02-22*

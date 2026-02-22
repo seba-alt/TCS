@@ -1,1162 +1,811 @@
 # Architecture Research
 
-**Domain:** Expert Marketplace v2.0 — Hybrid search, Zustand state, floating AI co-pilot
-**Researched:** 2026-02-21
-**Confidence:** HIGH — all seven integration questions resolved against actual codebase + verified sources
+**Domain:** v2.2 Evolved Discovery Engine — integration points for new features
+**Researched:** 2026-02-22
+**Confidence:** HIGH (all findings grounded in actual codebase files, FAISS index type confirmed by local load)
 
 ---
 
-## Context: Subsequent Milestone
+## Context: Subsequent Milestone Research
 
-This document answers seven concrete integration questions for v2.0 rearchitecture. The existing production system (v1.2) is ground truth. Nothing is replaced unless explicitly stated — this is an additive rearchitecture.
+This document answers the five concrete integration questions for v2.2. The v2.0 system is ground truth. All existing components listed in the v2.0 architecture document remain unchanged unless explicitly noted here. This document focuses only on new integration points.
 
-### Existing production components (do not touch)
-
-| File | Status |
-|------|--------|
-| `app/main.py` | EXISTS — MODIFIED to add FTS5 migration and new router registrations |
-| `app/models.py` | EXISTS — UNCHANGED (FTS5 is raw DDL, not SQLAlchemy ORM) |
-| `app/routers/chat.py` | EXISTS — UNCHANGED |
-| `app/routers/admin.py` | EXISTS — UNCHANGED |
-| `app/routers/feedback.py` | EXISTS — UNCHANGED |
-| `app/routers/email_capture.py` | EXISTS — UNCHANGED |
-| `app/services/search_intelligence.py` | EXISTS — UNCHANGED (used by chat.py only) |
-| `app/services/retriever.py` | EXISTS — UNCHANGED |
-| `app/services/embedder.py` | EXISTS — UNCHANGED |
-| `app/services/llm.py` | EXISTS — UNCHANGED |
-| `frontend/src/admin/` | EXISTS — UNCHANGED (all admin pages, hooks, types) |
-| `frontend/src/hooks/useChat.ts` | EXISTS — UNCHANGED |
-| `frontend/src/App.tsx` | EXISTS — DEPRECATED (no longer at `/`) |
+**FAISS index confirmed:** `IndexFlatIP` with 536 vectors, 768 dimensions. Loaded from `data/faiss.index` and verified by running `faiss.read_index()` locally.
 
 ---
 
-## Q1: /api/explore router structure
+## Q1: Atomic FAISS Swap — Lock Strategy and Mapping
 
-### Decision: New file `app/routers/explore.py`
+### Short answer: no new lock needed; the pattern already exists in admin.py
 
-Create `app/routers/explore.py` as a standalone `APIRouter`. Do NOT extend `chat.py` or `admin.py`.
+The atomic swap pattern is fully implemented in `_run_ingest_job()` in `app/routers/admin.py` (lines 93–146). IDX-01..04 is an admin UI trigger and status polling task, not a new concurrency design task.
 
-**Why not chat.py:** `/api/chat` is an SSE streaming endpoint for conversational AI. `/api/explore` is a synchronous JSON endpoint for paginated hybrid search. They share no code, no response format, and serve different clients (chat UI vs marketplace grid).
+### Why asyncio.Lock is not needed
 
-**Why not admin.py:** `admin.py` is already 500+ lines and has its own `_require_admin` dependency. The explore endpoint is public-facing with no admin auth. Adding public routes to an admin router is the wrong abstraction.
+Railway runs a **single-process Uvicorn worker** by default (no `--workers N` flag). Within one process, CPython's GIL ensures that Python object reference assignment (`app.state.faiss_index = new_index`) is atomic at the bytecode level. Concurrent coroutines in the event loop cannot observe a partially-written object reference.
 
-**Why a separate file:** The existing codebase already follows router-per-file: `chat.py`, `admin.py`, `email_capture.py`, `feedback.py`, `health.py`. This is FastAPI's official recommended pattern for larger applications.
+`asyncio.Lock` only serializes coroutines sharing the same event loop. The FAISS rebuild runs in `threading.Thread` (not an asyncio coroutine). Acquiring an asyncio.Lock from a thread requires `asyncio.run_coroutine_threadsafe()` — adding complexity that provides no correctness benefit for single-process deployments.
 
-```python
-# app/routers/explore.py
-from fastapi import APIRouter, Depends, Query, Request
-from sqlalchemy.orm import Session
-from app.database import get_db
-from app.services.explorer import run_explore
-
-router = APIRouter()
-
-@router.get("/api/explore")
-async def explore(
-    request: Request,
-    db: Session = Depends(get_db),
-    query: str = Query(default="", max_length=500),
-    rate_min: float = Query(default=0.0, ge=0),
-    rate_max: float = Query(default=10000.0, le=10000),
-    tags: str = Query(default=""),       # comma-separated tag names
-    limit: int = Query(default=20, ge=1, le=100),
-    cursor: int = Query(default=0, ge=0),
-) -> ExploreResponse:
-    import asyncio
-    loop = asyncio.get_event_loop()
-    tag_list = [t.strip() for t in tags.split(",") if t.strip()]
-    result = await loop.run_in_executor(
-        None,
-        lambda: run_explore(
-            query=query,
-            rate_min=rate_min,
-            rate_max=rate_max,
-            tags=tag_list,
-            limit=limit,
-            cursor=cursor,
-            db=db,
-            app_state=request.app.state,
-        )
-    )
-    return result
-```
-
-### Registration in main.py
+### What already exists (do not duplicate)
 
 ```python
-# app/main.py — add alongside existing routers
-from app.routers import admin, chat, email_capture, feedback, health, explore, pilot
+# app/routers/admin.py lines 93–146 (_run_ingest_job)
 
-app.include_router(explore.router)
-app.include_router(pilot.router)
+# Step 1: subprocess runs tag_experts.py
+# Step 2: subprocess runs ingest.py (writes faiss.index to disk atomically via staging rename)
+# Step 3: HOT-RELOAD — three sequential attribute assignments:
+
+app.state.faiss_index = faiss.read_index(str(FAISS_INDEX_PATH))          # line 123
+with open(METADATA_PATH, "r", encoding="utf-8") as f:
+    app.state.metadata = json.load(f)                                      # line 125
+
+# Phase 14: rebuild username → FAISS position mapping
+_new_mapping: dict[str, int] = {}
+for _pos, _row in enumerate(app.state.metadata):
+    _uname = _row.get("Username") or _row.get("username") or ""
+    if _uname:
+        _new_mapping[_uname] = _pos
+app.state.username_to_faiss_pos = _new_mapping                            # line 140
 ```
 
-### CORS: no change needed
+This code already swaps all three state objects. The `_ingest` module-level dict already tracks `status/log/error/started_at` for IDX-04 status polling. The existing `GET /api/admin/ingest/status` endpoint exposes it.
 
-`app/main.py` already allows `GET` and `POST` methods with `Content-Type` and `X-Admin-Key` headers. `/api/explore` uses `GET` with no custom headers — no CORS update required.
+### The one real risk: 3-statement swap window
 
-### Endpoint comparison
+Between the `faiss_index` assignment and the `username_to_faiss_pos` assignment, a concurrent `/api/explore` call could read the new index but the old mapping. In `run_explore()` (explorer.py line 196), the guard `if e.username in username_to_pos` skips unmapped experts gracefully — they get `faiss_score=0.0` and are excluded from hybrid results. This is acceptable degradation during a rebuild that takes 60+ seconds overall.
 
-| Router | Auth | Response type | Verb | Access |
-|--------|------|---------------|------|--------|
-| `chat.py` | None (email in body) | SSE stream | POST | Public |
-| `admin.py` | X-Admin-Key header | JSON | GET/POST | Admin only |
-| `feedback.py` | None | JSON | POST | Public |
-| `explore.py` (NEW) | None | JSON paginated | GET | Public |
-| `pilot.py` (NEW) | None | JSON | POST | Public |
+If zero-inconsistency is required: bundle all three as a single dataclass and replace the entire object atomically:
+```python
+from dataclasses import dataclass
+
+@dataclass
+class IndexState:
+    faiss_index: faiss.Index
+    metadata: list[dict]
+    username_to_faiss_pos: dict[str, int]
+
+# Single atomic assignment — one attribute, one bytecode STORE_ATTR:
+app.state.index_state = IndexState(new_index, new_metadata, new_mapping)
+```
+Callers then access `app_state.index_state.faiss_index` etc. This requires updating `run_explore()` and the `compare_configs()` endpoint — moderate refactor.
+
+**Recommendation:** Keep the existing three-line pattern. The graceful degradation is sufficient. The rebuild window is ~60s but the inconsistency window is microseconds (three sequential stores).
+
+### v2.2 additions needed (IDX-01..04)
+
+IDX-01/02: The existing `POST /api/admin/ingest/run` endpoint already triggers `_run_ingest_job` in a background thread. The admin frontend needs a button that calls this endpoint — no new backend endpoint required.
+
+IDX-03: Already implemented (the three-line swap above).
+
+IDX-04: The existing `GET /api/admin/ingest/status` exposes `_ingest` dict. The admin frontend needs to poll this endpoint and display status. Add `last_rebuild_at` and `expert_count_at_rebuild` to `_ingest` for the Index Drift metric (INTEL-03).
+
+### After atomic swap: invalidate t-SNE cache
+
+Add one line to `_run_ingest_job` after the username mapping rebuild:
+```python
+app.state.tsne_cache = []   # signals stale; background recompute optional
+log.info("atomic_swap.complete", vectors=app.state.faiss_index.ntotal)
+```
 
 ---
 
-## Q2: FTS5 virtual table migration strategy
+## Q2: t-SNE Heatmap — reconstruct_n Compatibility
 
-### What FTS5 external content tables are
+### Index type: IndexFlatIP — reconstruct_n works directly
 
-SQLite FTS5 supports "external content" mode: the FTS index stores term positions only; actual column values are fetched from the source table on retrieval. This avoids data duplication. The `content='experts'` and `content_rowid='id'` options wire the FTS index to the existing `experts` table.
-
-### Migration DDL — add to lifespan handler in main.py
-
-```python
-# In app/main.py lifespan handler
-# Add AFTER the existing Phase 8 enrichment column migrations
-
-from sqlalchemy import text as _text
-
-with engine.connect() as _conn:
-    # Step 1: Create FTS5 virtual table (idempotent via IF NOT EXISTS)
-    _conn.execute(_text("""
-        CREATE VIRTUAL TABLE IF NOT EXISTS experts_fts USING fts5(
-            first_name,
-            last_name,
-            job_title,
-            company,
-            bio,
-            tags,
-            content='experts',
-            content_rowid='id'
-        )
-    """))
-    _conn.commit()
-
-    # Step 2: Populate from existing 1,558 Expert rows (runs once — guarded by count)
-    fts_count = _conn.execute(_text("SELECT COUNT(*) FROM experts_fts")).scalar()
-    if fts_count == 0:
-        _conn.execute(_text("""
-            INSERT INTO experts_fts(rowid, first_name, last_name, job_title, company, bio, tags)
-            SELECT id, first_name, last_name, job_title, company, bio, COALESCE(tags, '')
-            FROM experts
-        """))
-        _conn.commit()
-
-log.info("startup: FTS5 index created/verified")
+**Confirmed by local load:**
+```
+faiss.read_index('data/faiss.index') → IndexFlatIP, ntotal=536, d=768
 ```
 
-**Why `IF NOT EXISTS`:** SQLite FTS5 supports `IF NOT EXISTS` on `CREATE VIRTUAL TABLE`. This is idempotent and safe across restarts — the same pattern used for the existing `ALTER TABLE` guards.
-
-**Why explicit rowid mapping in INSERT:** FTS5 external content tables require the `rowid` to match the content table's primary key (`Expert.id`). Without specifying `rowid` in the INSERT, FTS5 autogenerates its own rowids and cannot retrieve data from the `experts` table.
-
-**Why populate from `experts` not from CSV:** `app.state.metadata` / `experts.csv` may be stale. The Expert SQLAlchemy table is the authoritative source (established in v1.1). This is consistent with the existing `ingest.py` change that switched to reading from the Expert table.
-
-### Keeping FTS5 in sync after writes
-
-SQLite triggers for FTS5 can cause "unsafe use of virtual table" errors in certain configurations (confirmed in SQLite Forum). Use explicit SQL sync in write paths instead:
-
-**When a new expert is added (POST /api/admin/experts in admin.py):**
-```python
-# After db.commit() on the new Expert row:
-db.execute(text("""
-    INSERT INTO experts_fts(rowid, first_name, last_name, job_title, company, bio, tags)
-    VALUES (:id, :fn, :ln, :jt, :co, :bio, :tags)
-"""), {"id": expert.id, "fn": expert.first_name, ...})
-db.commit()
-```
-
-**After a bulk tag update (end of `_run_ingest_job` in admin.py):**
-```python
-# Rebuild entire FTS index from current experts table
-app_obj.state.faiss_index = faiss.read_index(str(FAISS_INDEX_PATH))
-with SessionLocal() as db:
-    db.execute(text("INSERT INTO experts_fts(experts_fts) VALUES('rebuild')"))
-    db.commit()
-```
-
-The `'rebuild'` command is FTS5's documented mechanism for resynchronizing the FTS index from the content table. Call this at the end of any bulk update that modifies `experts.bio`, `experts.tags`, or `experts.job_title`.
-
-### FTS5 BM25 query
-
-```python
-# In app/services/explorer.py
-from sqlalchemy import text
-
-fts_rows = db.execute(text("""
-    SELECT rowid, rank
-    FROM experts_fts
-    WHERE experts_fts MATCH :q
-    ORDER BY rank
-    LIMIT :limit
-"""), {"q": fts_query, "limit": 100}).fetchall()
-# Note: FTS5 rank is negative (lower = better). expert rowid = Expert.id
-```
-
-**FTS5 MATCH syntax note:** Simple word queries work as-is. For multi-word queries, wrap in quotes for phrase search or use `AND`/`OR` operators. For the explore endpoint, the user's raw query string passed directly to MATCH is the starting point; add `*` suffix for prefix matching on partial words.
-
-**Confidence:** HIGH — SQLite FTS5 official docs confirm `content=`, `content_rowid=`, INSERT rowid mapping, and rebuild command. Trigger limitation confirmed in SQLite Forum threads.
-
----
-
-## Q3: FAISS IDSelectorBatch with existing IndexFlatIP
-
-### Short answer: works without index rebuild
-
-`IDSelectorBatch` is passed at search time via `SearchParameters.sel`. The FAISS index itself is not modified, not rebuilt, and not reloaded. The selector acts as a per-query membership filter applied during the search.
-
-### Python API (confirmed against FAISS wiki and issue #3046)
+`IndexFlatIP` stores all vectors verbatim in a dense float32 matrix. `reconstruct_n(start, n, recons)` copies them back out. No special flags, no direct map needed.
 
 ```python
 import numpy as np
 import faiss
 
-# Build allowed positions array from SQLAlchemy pre-filter results
-allowed_positions = np.array([12, 45, 892, 1201, ...], dtype=np.int64)
-
-selector = faiss.IDSelectorBatch(allowed_positions)
-params = faiss.SearchParameters(sel=selector)
-
-# Same index.search() call — params is the only addition
-scores, indices = faiss_index.search(query_vector, k=50, params=params)
-# indices are positional — map back to username via app.state.metadata[idx]
+index = app.state.faiss_index  # IndexFlatIP confirmed
+vectors = np.zeros((index.ntotal, index.d), dtype=np.float32)
+index.reconstruct_n(0, index.ntotal, vectors)
+# vectors.shape == (536, 768) — exact vectors that were added via index.add()
 ```
 
-### Critical constraint: FAISS uses positional indices, not Expert.id
+### Compatibility matrix (for future reference if index type changes)
 
-The existing `IndexFlatIP` uses **positional indexing**: vector at position 0 corresponds to `metadata[0]`, position 1 to `metadata[1]`, etc. `IDSelectorBatch` works on these **positional indices** (0 to 1557), not on `Expert.id` from the database.
+| Index Type | reconstruct_n Support | Condition |
+|------------|----------------------|-----------|
+| `IndexFlatIP` / `IndexFlatL2` | YES — always | None — flat indices store verbatim |
+| `IndexIVFFlat` | YES — with caveat | Must call `index.make_direct_map()` before saving; or call it after loading |
+| `IndexIVFPQ` | APPROXIMATE only | `make_direct_map()` required; returns quantized approximation (not exact vectors) |
+| `IndexHNSWFlat` | NO | HNSW graph does not support reconstruct |
 
-The SQLAlchemy pre-filter returns `Expert` objects with DB `id` values. To bridge:
+For this codebase: no caveat applies. `IndexFlatIP` reconstruct_n is unconditional.
 
-**Build a username → FAISS position mapping at startup (in lifespan handler):**
+### t-SNE computation and startup integration
+
+Compute once at startup in `main.py` lifespan, after the `username_to_faiss_pos` block (line 214):
 
 ```python
-# In app/main.py lifespan handler, after loading metadata:
-username_to_pos: dict[str, int] = {}
-for pos, row in enumerate(app.state.metadata):
-    username = row.get("Username") or row.get("username") or ""
-    if username:
-        username_to_pos[username] = pos
-app.state.username_to_faiss_pos = username_to_pos
-log.info("startup: username-to-FAISS-position mapping built", count=len(username_to_pos))
+# Phase 26: t-SNE 2D projection — computed at startup from FAISS index, cached in app.state
+# scikit-learn must be in requirements.txt; fails gracefully if absent
+try:
+    import numpy as _np
+    from sklearn.manifold import TSNE as _TSNE
+
+    _vecs = _np.zeros((app.state.faiss_index.ntotal, app.state.faiss_index.d), dtype=_np.float32)
+    app.state.faiss_index.reconstruct_n(0, app.state.faiss_index.ntotal, _vecs)
+
+    _coords = _TSNE(
+        n_components=2,
+        random_state=42,
+        perplexity=min(30, app.state.faiss_index.ntotal - 1),
+        n_iter=1000,
+        metric="cosine",   # vectors are L2-normalized → cosine = inner product
+    ).fit_transform(_vecs)
+
+    app.state.tsne_cache = [
+        {
+            "x": float(_coords[i, 0]),
+            "y": float(_coords[i, 1]),
+            "username": app.state.metadata[i].get("Username", ""),
+            "category": app.state.metadata[i].get("category", None),
+        }
+        for i in range(len(_coords))
+    ]
+    log.info("startup: tsne_cache built", points=len(app.state.tsne_cache))
+except Exception as _exc:
+    app.state.tsne_cache = []
+    log.warning("startup: tsne_cache failed", error=str(_exc))
 ```
 
-Then in `explorer.py`:
+**Runtime:** TSNE on 536 × 768 typically completes in 2–8 seconds on a Railway shared CPU. This extends startup time but is acceptable — the Railway health check endpoint responds during lifespan (FastAPI yields after lifespan completes, so the first request is gated until TSNE finishes). If startup time becomes a concern, move TSNE to an `asyncio.to_thread` background task and set `tsne_cache = None` until ready.
 
+**New admin endpoint (INTEL-05):**
 ```python
-username_to_pos = app_state.username_to_faiss_pos
-filtered_experts = db.scalars(pre_filter_query).all()
-
-# Map expert usernames to FAISS positions (skip experts not in index)
-allowed_positions = np.array(
-    [username_to_pos[e.username] for e in filtered_experts if e.username in username_to_pos],
-    dtype=np.int64
-)
-
-if len(allowed_positions) == 0:
-    return ExploreResponse(experts=[], total=0, cursor=None, took_ms=0)
+# In app/routers/admin.py, add to `router`:
+@router.get("/embedding-map")
+def get_embedding_map(request: Request):
+    """Return cached t-SNE 2D projection. Empty list if cache is building."""
+    return {"points": request.app.state.tsne_cache or []}
 ```
 
-### Known issue: IDSelectorBatch hash collisions
-
-GitHub issue #3112 documents inconsistent results when IDs share common bit patterns. For sequential positional indices (0, 1, 2... 1557), this is not a concern — sequential integers do not cause hash collisions in the IDSelectorBatch hash function. This issue affects non-sequential or patterned ID ranges only.
-
-### Performance characteristic at 1,558 vectors
-
-`IndexFlatIP` scans all 1,558 vectors for every query — IDSelectorBatch does not skip computation for unselected vectors. The selector filters results after scoring. At 1,558 vectors, a full FAISS scan takes under 1ms in Python. The SQLAlchemy pre-filter takes 1-3ms on SQLite with a simple WHERE clause. The FTS5 BM25 query takes 2-5ms. Total pipeline latency for all three stages is well under the 200ms target even without any caching.
-
-**Conclusion:** The <200ms filter-to-grid latency target is achievable for this dataset size. IDSelectorBatch provides correctness (only score pre-filtered experts) not speed at this scale.
-
-**Confidence:** HIGH — confirmed via FAISS wiki "Setting search parameters for one query", IDSelectorBatch C++ API docs, Python examples in issues #3046 and #3156.
+**Dependency:** Add `scikit-learn` to `requirements.txt`. It is a large package (~50MB) but Railway caches pip installs between deploys.
 
 ---
 
-## Q4: Zustand store placement and coexistence with useAdminData
+## Q3: Newsletter Table — SQLAlchemy Model and Email Gate Integration
 
-### Current React tree
+### Minimal SQLAlchemy model (following models.py conventions exactly)
 
+```python
+# In app/models.py — add after the AppSetting class
+
+class NewsletterSubscriber(Base):
+    """
+    Newsletter subscription captures created when user submits email via
+    the redesigned ProfileGateModal (NLTR-01).
+
+    source values (stored as plain string, validated at router layer):
+        "profile_gate" — submitted via email gate unlock modal
+        "sage_prompt"  — submitted via Sage co-pilot CTA
+        "direct"       — submitted via a standalone subscribe form
+
+    Unique constraint on email: use on_conflict_do_nothing at the query layer
+    for idempotency, matching the EmailLead pattern in email_capture.py.
+    """
+    __tablename__ = "newsletter_subscribers"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    email: Mapped[str] = mapped_column(String(320), unique=True, nullable=False, index=True)
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime, default=datetime.datetime.utcnow, nullable=False
+    )
+    source: Mapped[str] = mapped_column(
+        String(50), nullable=False, default="profile_gate"
+    )
 ```
-main.tsx
-└── RouterProvider
-    ├── / → App (ChatPage)   ← will be replaced by MarketplacePage
-    ├── /admin/login → LoginPage
-    └── /admin → RequireAuth → AdminApp → [admin pages]
+
+**No ALTER TABLE needed.** `Base.metadata.create_all(bind=engine)` in the lifespan already runs on every startup and creates missing tables idempotently. Add the model class, redeploy — the table is created automatically on first Railway startup.
+
+**Why String not Python Enum for source:** SQLite has no native enum type. Python Enum columns require Alembic or manual `CHECK` constraints. String(50) validated at the Pydantic layer is simpler and consistent with all other categorical fields in models.py (e.g., `Feedback.vote` is `String(4)` with `"up"|"down"` enforced by the router).
+
+### New router: app/routers/newsletter.py
+
+Create a new router file following the `email_capture.py` pattern exactly:
+
+```python
+# app/routers/newsletter.py
+from typing import Literal
+from fastapi import APIRouter, Depends
+from pydantic import BaseModel, EmailStr
+from sqlalchemy.dialects.sqlite import insert
+from sqlalchemy.orm import Session
+from app.database import get_db
+from app.models import NewsletterSubscriber, EmailLead
+
+router = APIRouter()
+
+class NewsletterSubscribeRequest(BaseModel):
+    email: EmailStr
+    source: Literal["profile_gate", "sage_prompt", "direct"] = "profile_gate"
+
+@router.post("/api/newsletter-subscribe", status_code=200)
+def newsletter_subscribe(body: NewsletterSubscribeRequest, db: Session = Depends(get_db)):
+    """
+    Newsletter subscription — writes to newsletter_subscribers and email_leads.
+    Both are idempotent (on_conflict_do_nothing). Returns {"status": "ok"} always.
+    """
+    db.execute(
+        insert(NewsletterSubscriber)
+        .values(email=str(body.email), source=body.source)
+        .on_conflict_do_nothing(index_elements=["email"])
+    )
+    # Also write to email_leads for unified lead tracking
+    db.execute(
+        insert(EmailLead)
+        .values(email=str(body.email))
+        .on_conflict_do_nothing(index_elements=["email"])
+    )
+    db.commit()
+    return {"status": "ok"}
 ```
 
-### v2.0 React tree
+Register in `main.py`:
+```python
+from app.routers import admin, chat, email_capture, feedback, health, explore, pilot, suggest, newsletter
 
-```
-main.tsx
-└── RouterProvider
-    ├── / → MarketplacePage             ← new
-    ├── /admin/login → LoginPage        ← unchanged
-    └── /admin → RequireAuth → AdminApp → [admin pages]  ← unchanged
+app.include_router(newsletter.router)
 ```
 
-### Zustand store placement: module-level singleton
+### Integration with existing email gate — no breaking changes
 
-Zustand stores are module-level singletons created with `create()` — not inside React components, not inside Providers. The store file lives at:
+The current email gate flow:
+1. `ProfileGateModal` opens when user clicks "View Full Profile"
+2. User submits email → `POST /api/email-capture` → writes to `email_leads`
+3. Frontend: `localStorage.setItem('tcs_email_unlocked', 'true')`
+4. Returning visitors: `useState` reads `localStorage['tcs_email_unlocked']` on init → gate bypassed
 
+**v2.2 change (NLTR-01):** The modal copy changes to newsletter CTA language. The submit action changes from calling `/api/email-capture` to calling `/api/newsletter-subscribe` (which internally also writes to `email_leads` — no lead data is lost). The localStorage key `'tcs_email_unlocked'` and the returning-visitor bypass logic are **completely unchanged**.
+
+The returning-visitor localStorage logic in `ProfileGateModal`:
+```typescript
+// This line is unchanged — still works after NLTR redesign
+const [isUnlocked, setIsUnlocked] = useState(
+  () => localStorage.getItem('tcs_email_unlocked') === 'true'
+)
 ```
-frontend/src/store/useExplorerStore.ts
+
+The Zustand `nltrSlice` is additive UI state — it does not replace the localStorage check.
+
+### Admin leads page (NLTR-04)
+
+Add a new section to `GET /api/admin/leads` or create a separate `GET /api/admin/newsletter-subscribers` endpoint:
+
+```python
+@router.get("/newsletter-subscribers")
+def get_newsletter_subscribers(db: Session = Depends(get_db)):
+    from app.models import NewsletterSubscriber
+    from sqlalchemy import func
+    count = db.scalar(select(func.count()).select_from(NewsletterSubscriber)) or 0
+    subscribers = db.scalars(
+        select(NewsletterSubscriber).order_by(NewsletterSubscriber.created_at.desc()).limit(100)
+    ).all()
+    return {
+        "count": count,
+        "subscribers": [
+            {"email": s.email, "source": s.source, "created_at": s.created_at.isoformat()}
+            for s in subscribers
+        ],
+    }
 ```
 
-No `<Provider>` wrapper is needed. Any component or hook that imports `useExplorerStore` shares the same store instance. This also enables calling `useExplorerStore.getState()` from async callbacks and plain functions outside the React render cycle — which is required for the co-pilot function call dispatch.
+---
+
+## Q4: Zustand Newsletter Slice — Fields and Persist Key
+
+### Recommended: standalone store with separate persist key 'nltr-state'
+
+Do **not** add the newsletter slice to `useExplorerStore`. Create a separate `create()` store.
+
+**Rationale:**
+
+1. The `'explorer-filters'` key uses a `partialize` whitelist: `{query, rateMin, rateMax, tags, sortBy, sortOrder}`. Adding newsletter fields requires either (a) updating the whitelist and bumping `version: 1` with a migrate function, or (b) they silently don't persist. Either path adds risk to an already-working persist setup.
+
+2. `filterSlice.resetFilters()` calls `set({ ...filterDefaults })`. If newsletter state lived in the same store, there is no reset bleed (it only sets filter-specific keys), but the combined store is already complex enough. Newsletter state has a completely different lifecycle.
+
+3. A separate store with its own persist key can be versioned independently and cleared independently without affecting filter persistence.
+
+### Minimal slice (create a new file)
 
 ```typescript
-// frontend/src/store/useExplorerStore.ts
+// frontend/src/store/nltrSlice.ts
+
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { persist, createJSONStorage } from 'zustand/middleware'
 
-interface FilterSlice {
-  query: string
-  rateMin: number
-  rateMax: number
-  tags: string[]
-  setQuery: (q: string) => void
-  setRateRange: (min: number, max: number) => void
-  setTags: (tags: string[]) => void
-  toggleTag: (tag: string) => void
-  resetFilters: () => void
+interface NltrState {
+  // Persisted data
+  subscribed: boolean
+  email: string            // '' when not subscribed
+
+  // Actions
+  setSubscribed: (email: string) => void
+  clearSubscription: () => void
 }
 
-interface ResultsSlice {
-  experts: ExpertCard[]
-  total: number
-  loading: boolean
-  cursor: number
-  setResults: (experts: ExpertCard[], total: number, nextCursor: number) => void
-  appendResults: (experts: ExpertCard[], nextCursor: number) => void
-  setLoading: (loading: boolean) => void
-}
-
-interface PilotSlice {
-  isPilotOpen: boolean
-  messages: PilotMessage[]
-  togglePilot: () => void
-  addMessage: (msg: PilotMessage) => void
-  clearMessages: () => void
-}
-
-export const useExplorerStore = create<FilterSlice & ResultsSlice & PilotSlice>()(
+export const useNltrStore = create<NltrState>()(
   persist(
     (set) => ({
-      // filters
-      query: '', rateMin: 0, rateMax: 10000, tags: [],
-      setQuery: (q) => set({ query: q, cursor: 0 }),
-      setRateRange: (min, max) => set({ rateMin: min, rateMax: max, cursor: 0 }),
-      setTags: (tags) => set({ tags, cursor: 0 }),
-      toggleTag: (tag) => set((s) => ({
-        tags: s.tags.includes(tag) ? s.tags.filter(t => t !== tag) : [...s.tags, tag],
-        cursor: 0,
-      })),
-      resetFilters: () => set({ query: '', rateMin: 0, rateMax: 10000, tags: [], cursor: 0 }),
-
-      // results
-      experts: [], total: 0, loading: false, cursor: 0,
-      setResults: (experts, total, cursor) => set({ experts, total, cursor, loading: false }),
-      appendResults: (experts, cursor) => set((s) => ({
-        experts: [...s.experts, ...experts], cursor, loading: false
-      })),
-      setLoading: (loading) => set({ loading }),
-
-      // pilot
-      isPilotOpen: false, messages: [],
-      togglePilot: () => set((s) => ({ isPilotOpen: !s.isPilotOpen })),
-      addMessage: (msg) => set((s) => ({ messages: [...s.messages, msg] })),
-      clearMessages: () => set({ messages: [] }),
+      subscribed: false,
+      email: '',
+      setSubscribed: (email) => set({ subscribed: true, email }),
+      clearSubscription: () => set({ subscribed: false, email: '' }),
     }),
     {
-      name: 'explorer-store',
-      // Only persist filter state — results are stale after page reload, messages are session-only
-      partialize: (state) => ({
-        query: state.query,
-        rateMin: state.rateMin,
-        rateMax: state.rateMax,
-        tags: state.tags,
-        isPilotOpen: state.isPilotOpen,
-      }),
+      name: 'nltr-state',         // separate localStorage key — no collision with 'explorer-filters'
+      storage: createJSONStorage(() => localStorage),
+      version: 1,
     }
   )
 )
 ```
 
-### Coexistence with existing admin state (useAdminData)
-
-Admin hooks (`useAdminStats`, `useAdminSearches`, `useAdminExperts`, etc. in `useAdminData.ts`) use local `useState` — not Zustand. They live entirely in the `/admin` subtree and are mounted only when an admin page is active.
-
-**Zero conflict.** `useExplorerStore` is only imported by marketplace components under `/`. Admin components never touch it. React Router renders admin and marketplace routes in separate branches — they are never mounted simultaneously.
-
-**Rule:** Do NOT migrate admin hooks to Zustand. They are page-local, they work, and mixing concerns would break the clean admin/public separation established in v1.0.
-
-### Component access pattern
+### Integration in ProfileGateModal
 
 ```typescript
-// MarketplacePage.tsx
-const { query, rateMin, rateMax, tags, loading } = useExplorerStore()
+// frontend/src/components/modals/ProfileGateModal.tsx (modified)
+import { useNltrStore } from '../../store/nltrSlice'
 
-// FilterSidebar.tsx — reads filters, writes actions
-const { rateMin, rateMax, tags, setRateRange, toggleTag } = useExplorerStore()
-
-// ExpertGrid.tsx — reads results only, no filter awareness
-const { experts, loading, cursor } = useExplorerStore()
-
-// CoPilot.tsx — reads pilot slice, dispatches filter actions via getState()
-const { isPilotOpen, messages, togglePilot } = useExplorerStore()
+// Inside submit handler:
+const handleSubmit = async (email: string) => {
+  await fetch(`${API_URL}/api/newsletter-subscribe`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, source: 'profile_gate' }),
+  })
+  // Gate unlock (unchanged):
+  localStorage.setItem('tcs_email_unlocked', 'true')
+  setIsUnlocked(true)
+  // Newsletter state (new):
+  useNltrStore.getState().setSubscribed(email)
+}
 ```
 
-Use granular selectors (individual field destructuring) to prevent unnecessary re-renders. Components that only read `experts` do not re-render when `isPilotOpen` changes.
+Note: `useNltrStore.getState()` is used here (not the hook) because this is inside an async handler, following the established `useExplorerStore.getState()` pattern from `useSage.ts`.
+
+### What subscribed/email enable in v2.2
+
+- Show "You're subscribed as {email}" in the modal after submission
+- Conditionally show a "Manage preferences" link in the header for subscribed users
+- Skip the modal entirely if `nltrStore.subscribed === true` (alternative to the localStorage check — but keep both for defense in depth)
 
 ---
 
-## Q5: /api/explore response shape vs /api/chat
+## Q5: OTR@K Storage — Column and Computation Location
 
-### Why /api/chat's shape is wrong for the grid
+### The explore vs chat pipeline distinction
 
-`/api/chat` returns 3 experts via SSE streaming, with each expert having a `why_them` narrative. The marketplace grid needs:
-- 20+ experts per page (not 3)
-- Cursor-based pagination for infinite scroll
-- Total count for "Showing X of Y" display
-- Richer per-expert data (tags array, findability_score, bio excerpt)
-- Synchronous JSON (not SSE streaming)
-- No LLM narrative generation per expert
+`explorer.py`'s `run_explore()` powers the **browse/filter marketplace** (`/api/explore`). It does not write to the `conversations` table — that table is for **Sage/chat interactions** from `chat.py`. These are separate pipelines.
 
-### Response shape (Pydantic backend + TypeScript frontend)
+INTEL-01 says "computed per search query and stored in conversations table" — this matches the chat pipeline where each query already produces a `Conversation` row. For the explore pipeline, a separate log table is cleaner.
+
+**Recommendation:** Track OTR@K in two places:
+- **Chat pipeline** (chat.py / search_intelligence.py): add `otr_at_k` column to `conversations` table.
+- **Explore pipeline** (explorer.py): expose `otr_at_k` in `ExploreResponse` for the admin to read; optionally log to a lightweight `explore_events` table.
+
+### ALTER TABLE for the conversations table
+
+Add to the existing inline migration block in `main.py` lifespan (lines 116–127):
 
 ```python
-# app/routers/explore.py
-from pydantic import BaseModel
+# In the existing migration block alongside top_match_score, gap_resolved, etc.:
+"ALTER TABLE conversations ADD COLUMN otr_at_k REAL",
+```
 
-class ExpertCard(BaseModel):
-    id: int
-    username: str
-    first_name: str
-    last_name: str
-    job_title: str
-    company: str
-    bio_excerpt: str          # first 150 chars of bio (truncated for grid density)
-    hourly_rate: float
-    currency: str
-    profile_url: str
-    tags: list[str]           # parsed from JSON text column
-    findability_score: float | None
-    faiss_score: float | None     # None when query is empty (pure filter mode)
-    bm25_rank: int | None         # None when no text query; 1=best
+This follows the identical pattern used for all five existing analytics columns. SQLite raises `OperationalError` if the column already exists — the `except: pass` guard handles it.
 
+Also add the mapped column to the `Conversation` model in `app/models.py`:
+```python
+otr_at_k: Mapped[float | None] = mapped_column(Float, nullable=True)
+```
+
+### Computation in explorer.py (run_explore)
+
+After the `scored.sort(...)` call (line 304), before pagination:
+
+```python
+# OTR@K — On-Topic Rate at K=10
+# Fraction of top-10 hybrid results whose final_score >= SIMILARITY_THRESHOLD
+SIMILARITY_THRESHOLD = 0.60   # mirrors GAP_THRESHOLD in admin.py
+
+otr_at_k: float | None = None
+if is_text_query and scored:
+    top_k = scored[:10]
+    on_topic = sum(1 for final_s, _, _, _ in top_k if final_s >= SIMILARITY_THRESHOLD)
+    otr_at_k = round(on_topic / len(top_k), 4)
+```
+
+Add `otr_at_k: float | None` to `ExploreResponse`:
+```python
 class ExploreResponse(BaseModel):
     experts: list[ExpertCard]
-    total: int                # total matching experts (for display, pre-pagination)
-    cursor: int | None        # next page offset; None = no more pages
-    took_ms: int              # server latency for debugging/admin monitoring
+    total: int
+    cursor: int | None
+    took_ms: int
+    otr_at_k: float | None = None    # None in pure filter mode (no text query)
 ```
 
-```typescript
-// frontend/src/types.ts additions
-export interface ExpertCard {
-  id: number
-  username: string
-  first_name: string
-  last_name: string
-  job_title: string
-  company: string
-  bio_excerpt: string
-  hourly_rate: number
-  currency: string
-  profile_url: string
-  tags: string[]
-  findability_score: number | null
-  faiss_score: number | null
-  bm25_rank: number | null
-}
+### Computation in chat pipeline (for conversations table)
 
-export interface ExploreResponse {
-  experts: ExpertCard[]
-  total: number
-  cursor: number | null
-  took_ms: number
-}
-```
-
-### Pagination strategy: offset-as-cursor (integer)
-
-Use integer offset as cursor, not an opaque encoded string. Rationale: the expert corpus is 1,558 rows and does not change in real-time during a user session. Offset pagination is simpler to implement, debug, and explain, and cursor pagination's main advantage (stable pages during concurrent inserts) is irrelevant here.
+In `app/services/search_intelligence.py` or `app/routers/chat.py`, after the retrieval pipeline returns candidates, compute OTR@K using the candidate scores before writing the `Conversation` row:
 
 ```python
-# In app/services/explorer.py
-ITEMS_PER_PAGE = 20
+# After candidates are ranked (top-K available):
+top_10 = candidates[:10]
+on_topic = sum(1 for c in top_10 if c.score >= settings["SIMILARITY_THRESHOLD"])
+otr_at_k = round(on_topic / max(1, len(top_10)), 4) if top_10 else None
 
-offset = cursor  # cursor is the integer offset passed from frontend
-
-# Count total matching (for "Showing X of Y" — before pagination)
-total = db.scalar(count_query)
-
-# Fetch page + 1 to detect "has more"
-page_experts = db.scalars(results_query.offset(offset).limit(ITEMS_PER_PAGE + 1)).all()
-
-has_more = len(page_experts) > ITEMS_PER_PAGE
-experts = page_experts[:ITEMS_PER_PAGE]
-next_cursor = offset + ITEMS_PER_PAGE if has_more else None
-```
-
-### Pure filter mode vs hybrid search mode
-
-**When `query` is empty (pure filter):**
-- Skip FAISS entirely
-- SQLAlchemy filter by rate_min/rate_max and tags only
-- `faiss_score = None`, `bm25_rank = None` for all experts
-- Sort by `findability_score DESC NULLS LAST`
-
-**When `query` is non-empty (hybrid search):**
-- SQLAlchemy pre-filter → FAISS IDSelectorBatch → FTS5 BM25 → fused weighted ranking
-- Return `faiss_score` and `bm25_rank` per expert
-- Fused score = `(faiss_score * 0.7) + (normalized_bm25 * 0.3)`
-
-The frontend ExpertCard renders the same regardless of mode — score fields are informational (visible in admin debug mode, hidden from end users).
-
----
-
-## Q6: Gemini function calling co-pilot — client-side dispatch
-
-### Decision: Client-side (frontend parses tool call, dispatches Zustand action)
-
-The co-pilot must dispatch Zustand store actions. Zustand lives in the browser. Therefore function call execution must happen in the browser. There is no server-side alternative that does not require SSE/WebSockets to push state to the client.
-
-### How Gemini function calling works (two-turn loop)
-
-1. Frontend sends user message + tool declarations to Gemini (proxied via FastAPI backend to avoid exposing API key in browser)
-2. Gemini responds with either: (a) text response, OR (b) a `functionCall` part with `name` and `args` JSON
-3. If `functionCall`: frontend executes the named action locally (dispatch to Zustand), then sends a `tool` result message back to Gemini
-4. Gemini generates final text response incorporating the tool result
-
-### Architecture: thin proxy through FastAPI
-
-```
-Browser → POST /api/pilot/chat → FastAPI → Gemini API
-                                              ↓
-                            { function_call: { name, args } } OR { text }
-                                              ↓
-                            FastAPI returns raw response to browser
-                                              ↓
-Browser: if function_call → dispatch to Zustand → trigger /api/explore refetch
-                                              ↓
-Browser → POST /api/pilot/chat (with tool result) → FastAPI → Gemini
-                                              ↓
-                            { text: "I've applied filters..." }
-                                              ↓
-CoPilot panel renders final text
-```
-
-```python
-# app/routers/pilot.py (new)
-from fastapi import APIRouter
-from pydantic import BaseModel
-from google import genai
-from google.genai import types
-
-router = APIRouter()
-
-PILOT_TOOLS = types.Tool(function_declarations=[
-    types.FunctionDeclaration(
-        name="apply_filters",
-        description="Apply search filters to the expert grid. Call this when the user asks to filter by rate, tags, or search terms.",
-        parameters=types.Schema(
-            type="OBJECT",
-            properties={
-                "query": types.Schema(type="STRING", description="Text search query"),
-                "rate_min": types.Schema(type="NUMBER", description="Minimum hourly rate in EUR"),
-                "rate_max": types.Schema(type="NUMBER", description="Maximum hourly rate in EUR"),
-                "tags": types.Schema(
-                    type="ARRAY",
-                    items=types.Schema(type="STRING"),
-                    description="Domain tag names to filter by"
-                ),
-            }
-        )
-    )
-])
-
-class PilotMessage(BaseModel):
-    role: str            # "user" | "model" | "tool"
-    content: str | None = None
-    tool_result: dict | None = None   # {"name": str, "result": str}
-
-class PilotRequest(BaseModel):
-    messages: list[PilotMessage]
-    context: str | None = None   # e.g. "Currently showing 45 experts"
-
-@router.post("/api/pilot/chat")
-async def pilot_chat(body: PilotRequest):
-    # Build Gemini contents from message history
-    # Return raw Gemini response with either text or function_call
+# Pass to Conversation row creation:
+conversation = Conversation(
     ...
+    otr_at_k=otr_at_k,
+)
 ```
 
-### Frontend execution loop (usePilot.ts)
+### Admin 7-day rolling average (INTEL-02)
 
-```typescript
-// frontend/src/hooks/usePilot.ts
-import { useExplorerStore } from '../store/useExplorerStore'
+Add to `GET /api/admin/intelligence-stats` in `admin.py`:
 
-async function executeFunctionCall(name: string, args: Record<string, unknown>) {
-  // getState() works outside React render — documented Zustand pattern
-  const store = useExplorerStore.getState()
+```python
+# In get_intelligence_stats(), alongside existing daily trend query:
+from sqlalchemy import text as _text
 
-  if (name === 'apply_filters') {
-    if (typeof args.query === 'string') store.setQuery(args.query)
-    if (typeof args.rate_min === 'number' || typeof args.rate_max === 'number') {
-      store.setRateRange(
-        typeof args.rate_min === 'number' ? args.rate_min : store.rateMin,
-        typeof args.rate_max === 'number' ? args.rate_max : store.rateMax,
-      )
-    }
-    if (Array.isArray(args.tags)) store.setTags(args.tags as string[])
-    return 'filters applied'
-  }
-  return 'unknown function'
-}
+otr_rows = db.execute(_text("""
+    SELECT
+        strftime('%Y-%m-%d', created_at) AS day,
+        AVG(otr_at_k) AS avg_otr
+    FROM conversations
+    WHERE date(created_at) >= date('now', '-7 days')
+      AND otr_at_k IS NOT NULL
+    GROUP BY strftime('%Y-%m-%d', created_at)
+    ORDER BY day
+""")).all()
 
-export function usePilot() {
-  const { messages, addMessage } = useExplorerStore()
-
-  async function sendMessage(userText: string) {
-    addMessage({ role: 'user', content: userText })
-
-    const response = await fetch(`${API_URL}/api/pilot/chat`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages: [...messages, { role: 'user', content: userText }] }),
-    })
-    const data = await response.json()
-
-    if (data.function_call) {
-      const { name, args } = data.function_call
-      const result = await executeFunctionCall(name, args)
-
-      // Second turn: send tool result back for final text response
-      const followUp = await fetch(`${API_URL}/api/pilot/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: [
-            ...messages,
-            { role: 'user', content: userText },
-            { role: 'tool', tool_result: { name, result } },
-          ],
-        }),
-      })
-      const finalData = await followUp.json()
-      addMessage({ role: 'assistant', content: finalData.text })
-    } else {
-      addMessage({ role: 'assistant', content: data.text })
-    }
-  }
-
-  return { messages, sendMessage }
-}
-```
-
-### Why not server-side dispatch
-
-Server-side function execution would require the backend to: (1) know the current filter state, (2) push state updates via SSE or WebSocket, (3) have the frontend reconcile backend-pushed state with local Zustand. This adds a bidirectional communication channel with no benefit — tool calls only modify frontend state, which the backend has no reason to own.
-
-**Confidence:** MEDIUM — Gemini function calling architecture confirmed in official docs. Two-turn proxy pattern follows the documented function calling loop. `useExplorerStore.getState()` outside hooks is confirmed in Zustand documentation. The exact FastAPI proxy implementation is inferred from the pattern (no official FastAPI+Gemini-function-calling reference code found).
-
----
-
-## Q7: Build order
-
-### Dependency graph
-
-```
-Phase 1: FTS5 migration + /api/explore backend
-    └── Phase 2: Zustand store + React Router update (needs API contract)
-            └── Phase 3: MarketplacePage + FilterSidebar (needs store + API)
-                    └── Phase 4: ExpertGrid with react-virtuoso (needs page skeleton)
-                            └── Phase 5: Floating co-pilot (needs grid + store)
-```
-
-### Phase-by-phase build order
-
-**Phase 1: DB migration + /api/explore backend (build this first)**
-
-Everything else is blocked until the API contract is established and the FTS5 index exists.
-
-1. Add FTS5 migration block to `lifespan` in `main.py` (CREATE VIRTUAL TABLE + seed from Expert rows)
-2. Add `username_to_faiss_pos` mapping to `app.state` in `lifespan`
-3. Create `app/services/explorer.py` with `run_explore()` implementing SQLAlchemy pre-filter → FAISS IDSelectorBatch → FTS5 BM25 → fused rank → cursor pagination
-4. Create `app/routers/explore.py` (thin wrapper calling `run_explore`)
-5. Register `explore.router` in `main.py`
-6. Define and validate `ExploreResponse` Pydantic model
-
-Existing code touched: `main.py` (3 additions to lifespan + 1 router import). Nothing else.
-
-**Phase 2: Zustand store + React Router update**
-
-Can begin in parallel with Phase 1 using a mock API response for local development. Must finalize after Phase 1 API contract is confirmed.
-
-1. `npm install zustand`
-2. Create `frontend/src/store/useExplorerStore.ts` (filters + results + pilot slices)
-3. Update `frontend/src/main.tsx`: change `/ → App` to `/ → MarketplacePage`
-4. Add `frontend/src/types.ts` additions (`ExpertCard`, `ExploreResponse`, `PilotMessage`)
-5. Create `frontend/src/hooks/useExplore.ts` (debounced fetch from `/api/explore` on filter change)
-
-Existing code touched: `main.tsx` (1 route change), `types.ts` (additive).
-
-**Phase 3: MarketplacePage + FilterSidebar**
-
-Depends on Phase 1 (API works) and Phase 2 (store works).
-
-1. Create `frontend/src/pages/MarketplacePage.tsx` (layout: sidebar + grid + floating pilot button)
-2. Create `frontend/src/components/marketplace/FilterSidebar.tsx` (rate sliders, tag checkboxes, query input)
-3. Wire sidebar controls to `useExplorerStore` actions
-4. Wire `useExplore` hook to re-fetch on filter changes (with 300ms debounce)
-
-**Phase 4: ExpertGrid with react-virtuoso**
-
-Depends on Phase 3 (page skeleton exists).
-
-1. `npm install react-virtuoso`
-2. Create `frontend/src/components/marketplace/ExpertGrid.tsx` (Virtuoso component with `endReached` for cursor pagination)
-3. Create `frontend/src/components/marketplace/ExpertCard.tsx` (high-density: tags, bio excerpt, findability badge, hourly rate, profile link)
-
-**Phase 5: Floating co-pilot**
-
-Depends on Phase 2 (Zustand store exists) and Phase 4 (grid exists to summarize).
-
-1. Create `app/routers/pilot.py` (thin Gemini proxy with `apply_filters` tool declaration)
-2. Register `pilot.router` in `main.py`
-3. Create `frontend/src/hooks/usePilot.ts` (two-turn Gemini function calling loop)
-4. Create `frontend/src/components/marketplace/CoPilot.tsx` (fixed-position panel, open/close via `isPilotOpen`)
-
-### What can be built in parallel
-
-- Phase 2 frontend store can start before Phase 1 backend is deployed, using a mock response
-- Phase 5 backend (`pilot.py`) can be built while Phase 4 frontend is in progress — they share no code and have no dependency on each other
-
-### What cannot be skipped or reordered
-
-- FTS5 migration (Phase 1, step 1) must be deployed to Railway before any `/api/explore` call can return BM25 scores. The migration is idempotent — safe to deploy early and let Railway's restart trigger it.
-- The `username_to_faiss_pos` mapping (Phase 1, step 2) must exist in `app.state` before any explore request that uses IDSelectorBatch. It is built at startup alongside the FAISS index load.
-- Zustand store (Phase 2) must exist before FilterSidebar or ExpertGrid can be wired (Phase 3/4).
-
----
-
-## System Overview
-
-```
-┌────────────────────────────────────────────────────────────────────────────┐
-│                              Browser (Vercel)                               │
-│                                                                              │
-│  ┌──────────────────────────────────────────────────────────────────────┐  │
-│  │  MarketplacePage /                                                     │  │
-│  │                                                                        │  │
-│  │  ┌─────────────────┐  ┌────────────────────────────────────────────┐  │  │
-│  │  │  FilterSidebar  │  │  ExpertGrid (react-virtuoso virtualized)   │  │  │
-│  │  │                 │  │  ┌────────────┐ ┌────────────┐             │  │  │
-│  │  │  query input    │  │  │ ExpertCard │ │ ExpertCard │ ...          │  │  │
-│  │  │  rate slider    │  │  └────────────┘ └────────────┘             │  │  │
-│  │  │  tag checkboxes │  │  [endReached → cursor pagination]          │  │  │
-│  │  └─────────────────┘  └────────────────────────────────────────────┘  │  │
-│  │                                                                        │  │
-│  │                         ┌──────────────────────────────────────────┐  │  │
-│  │                         │  CoPilot (fixed-position floating panel)  │  │  │
-│  │                         │  Gemini function calling two-turn loop    │  │  │
-│  │                         │  apply_filters → Zustand dispatch         │  │  │
-│  │                         └──────────────────────────────────────────┘  │  │
-│  └──────────────────────────────────────────────────────────────────────┘  │
-│                                                                              │
-│  ┌──────────────────────────────────────────────────────────────────────┐  │
-│  │  useExplorerStore (Zustand — module-level singleton)                   │  │
-│  │  filters: query, rateMin, rateMax, tags[]                              │  │
-│  │  results: experts[], total, cursor, loading                            │  │
-│  │  pilot: isPilotOpen, messages[]                                        │  │
-│  └──────────────────────────────────────────────────────────────────────┘  │
-│                                                                              │
-│  /admin → AdminApp (entirely unchanged — useAdminData hooks, no Zustand)    │
-└────────────────────────────────────────────────────────────────────────────┘
-                    │ GET /api/explore?query=...&rate_min=...&tags=...
-                    │ POST /api/pilot/chat
-                    ▼
-┌────────────────────────────────────────────────────────────────────────────┐
-│                              Railway (FastAPI)                               │
-│                                                                              │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────────────────┐  │
-│  │ explore.py   │  │ pilot.py     │  │ chat.py / admin.py (unchanged)   │  │
-│  │ (NEW)        │  │ (NEW)        │  │ SSE chat + admin CRUD            │  │
-│  │              │  │ Gemini proxy │  │                                  │  │
-│  │ → explorer   │  │ apply_filters│  └──────────────────────────────────┘  │
-│  │   .run_      │  │ tool decl    │                                         │
-│  │   explore()  │  └──────────────┘                                         │
-│  └──────────────┘                                                            │
-│                                                                              │
-│  app/services/explorer.py (NEW)                                              │
-│  ┌──────────────────────────────────────────────────────────────────────┐  │
-│  │  Stage 1: SQLAlchemy pre-filter (rate, tags)                          │  │
-│  │       ↓                                                               │  │
-│  │  Stage 2: FAISS IDSelectorBatch search (when query non-empty)         │  │
-│  │       ↓                                                               │  │
-│  │  Stage 3: FTS5 BM25 search (when query non-empty)                     │  │
-│  │       ↓                                                               │  │
-│  │  Fused rank → cursor pagination → ExploreResponse                    │  │
-│  └──────────────────────────────────────────────────────────────────────┘  │
-│                                                                              │
-│  app.state.faiss_index (IndexFlatIP, 1,558 vectors) — UNCHANGED             │
-│  app.state.metadata (position-aligned list[dict]) — UNCHANGED               │
-│  app.state.username_to_faiss_pos (NEW: {username: int})                     │
-│                                                                              │
-│  SQLite: experts table (UNCHANGED) + experts_fts virtual table (NEW FTS5)  │
-└────────────────────────────────────────────────────────────────────────────┘
+otr_7day = [{"date": r.day, "avg_otr": round(float(r.avg_otr), 4) if r.avg_otr else None}
+            for r in otr_rows]
+# Add to response dict: "otr_7day": otr_7day
 ```
 
 ---
 
-## Recommended Project Structure
+## System Overview (v2.2 additions)
 
-### Backend additions and modifications
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         FRONTEND (Vercel)                                │
+├─────────────────────────────────────────────────────────────────────────┤
+│  MarketplacePage — aurora mesh gradient background (VIS-01)              │
+│  ┌──────────────────────────┐  ┌─────────────────────────────────────┐   │
+│  │ FilterSidebar            │  │ ExpertGrid (VirtuosoGrid unchanged) │   │
+│  │ [glassmorphism VIS-02]   │  │ ExpertCard [bento CARD-01..03]      │   │
+│  │                          │  └─────────────────────────────────────┘   │
+│  │ AnimatedTagCloud (NEW)   │                                            │
+│  │ Framer Motion layout     │  SagePanel [glassmorphism VIS-04]          │
+│  │ [DISC-01..04]            │  [unchanged interaction model]             │
+│  └──────────────────────────┘                                            │
+│                                                                          │
+│  ProfileGateModal (MODIFIED — newsletter CTA)                            │
+│  → POST /api/newsletter-subscribe (NEW)                                  │
+│  → localStorage 'tcs_email_unlocked' (UNCHANGED)                         │
+│                                                                          │
+│  Zustand stores                                                          │
+│  ┌───────────────────────────────┐  ┌────────────────────────────────┐   │
+│  │ useExplorerStore              │  │ useNltrStore (NEW)             │   │
+│  │ 'explorer-filters' (unchanged)│  │ 'nltr-state'                  │   │
+│  │ filterSlice / resultsSlice /  │  │ subscribed: bool              │   │
+│  │ pilotSlice                    │  │ email: string                 │   │
+│  └───────────────────────────────┘  └────────────────────────────────┘   │
+├─────────────────────────────────────────────────────────────────────────┤
+│                         BACKEND (Railway)                                │
+├─────────────────────────────────────────────────────────────────────────┤
+│  app.state                                                               │
+│  ┌──────────────────┐  ┌────────────────┐  ┌───────────────────────┐    │
+│  │ faiss_index      │  │ metadata       │  │ tsne_cache (NEW)      │    │
+│  │ IndexFlatIP      │  │ list[dict]     │  │ list[{x,y,username,   │    │
+│  │ 536 × 768        │  │ 536 rows       │  │  category}]           │    │
+│  │ (swap target)    │  │ (swap target)  │  │ computed at startup   │    │
+│  └──────────────────┘  └────────────────┘  └───────────────────────┘    │
+│  ┌────────────────────────────────────────────────────────────────┐     │
+│  │ username_to_faiss_pos dict (rebuilt after each swap)           │     │
+│  └────────────────────────────────────────────────────────────────┘     │
+│                                                                          │
+│  Existing routers (unchanged interaction model)                          │
+│  explore.py — MODIFIED: add otr_at_k to ExploreResponse                 │
+│  admin.py  — MODIFIED: add /embedding-map, /newsletter-subscribers,     │
+│                         otr_7day to intelligence-stats                  │
+│  newsletter.py (NEW) — POST /api/newsletter-subscribe                   │
+│                                                                          │
+│  SQLite tables                                                           │
+│  conversations (MODIFIED: +otr_at_k REAL)                               │
+│  newsletter_subscribers (NEW)                                            │
+│  All other tables unchanged                                              │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+## Recommended Project Structure (v2.2 delta only)
 
 ```
 app/
+├── models.py                  MODIFIED — add NewsletterSubscriber class; add otr_at_k to Conversation
+├── main.py                    MODIFIED — add tsne_cache startup block; add otr_at_k ALTER TABLE;
+│                                         register newsletter.router
 ├── routers/
-│   ├── admin.py          UNCHANGED
-│   ├── chat.py           UNCHANGED
-│   ├── email_capture.py  UNCHANGED
-│   ├── feedback.py       UNCHANGED
-│   ├── health.py         UNCHANGED
-│   ├── explore.py        NEW — GET /api/explore (thin router, delegates to explorer service)
-│   └── pilot.py          NEW — POST /api/pilot/chat (Gemini proxy, tool declarations)
-├── services/
-│   ├── embedder.py           UNCHANGED
-│   ├── llm.py                UNCHANGED
-│   ├── retriever.py          UNCHANGED
-│   ├── search_intelligence.py UNCHANGED
-│   ├── tagging.py            UNCHANGED
-│   └── explorer.py           NEW — hybrid search pipeline (SQLAlchemy + FAISS + FTS5)
-├── main.py               MODIFIED — FTS5 migration block, username_to_faiss_pos mapping,
-│                                    register explore.router and pilot.router
-└── models.py             UNCHANGED — FTS5 virtual table is raw DDL, not ORM
-```
+│   ├── admin.py               MODIFIED — add /embedding-map; /newsletter-subscribers;
+│   │                                     otr_7day to intelligence-stats
+│   ├── explore.py             MODIFIED — otr_at_k now in ExploreResponse (optional log write)
+│   └── newsletter.py          NEW — POST /api/newsletter-subscribe
+└── services/
+    └── explorer.py            MODIFIED — add otr_at_k field to ExploreResponse; compute after sort
 
-**Why `explorer.py` is a service, not inline in `explore.py`:** The hybrid pipeline (3 stages + fusion + pagination) is complex. Keeping it in a service mirrors the existing pattern: `chat.py` (thin router) → `search_intelligence.py` (service). It also makes the pipeline testable without running FastAPI.
-
-**Why `models.py` is unchanged:** SQLAlchemy ORM does not have native FTS5 virtual table support. `experts_fts` is created and queried via raw `text()` SQL. This is consistent with how the existing migrations use `text()` for `ALTER TABLE` operations.
-
-### Frontend additions and modifications
-
-```
 frontend/src/
 ├── store/
-│   └── useExplorerStore.ts    NEW — Zustand module-level singleton (filters + results + pilot)
-├── pages/
-│   └── MarketplacePage.tsx    NEW — top-level layout (sidebar + grid + pilot button)
+│   ├── index.ts               UNCHANGED (nltrStore is standalone, not composed in)
+│   └── nltrSlice.ts           NEW — useNltrStore with 'nltr-state' persist key
 ├── components/
-│   └── marketplace/
-│       ├── FilterSidebar.tsx  NEW — rate sliders, tag checkboxes, query input
-│       ├── ExpertGrid.tsx     NEW — react-virtuoso virtualized list + endReached
-│       ├── ExpertCard.tsx     NEW — high-density card (tags, bio excerpt, findability, rate)
-│       └── CoPilot.tsx        NEW — fixed-position panel, isPilotOpen controlled by store
-├── hooks/
-│   ├── useExplore.ts          NEW — debounced /api/explore fetch, writes to results slice
-│   ├── usePilot.ts            NEW — Gemini two-turn function calling loop
-│   └── [existing hooks]       UNCHANGED
-├── admin/                     ENTIRELY UNCHANGED
-├── App.tsx                    DEPRECATED — no longer the / route component
-├── main.tsx                   MODIFIED — replace / → App with / → MarketplacePage
-└── types.ts                   MODIFIED — add ExpertCard, ExploreResponse, PilotMessage types
+│   ├── sidebar/
+│   │   ├── TagMultiSelect.tsx REPLACED ENTIRELY by AnimatedTagCloud.tsx
+│   │   └── AnimatedTagCloud.tsx  NEW — Framer Motion layout animations + proximity scale
+│   ├── marketplace/
+│   │   └── ExpertCard.tsx     MODIFIED — bento zones (CARD-01); aurora hover tokens (CARD-03)
+│   └── modals/
+│       └── ProfileGateModal.tsx  MODIFIED — newsletter CTA copy; calls /api/newsletter-subscribe;
+│                                            calls useNltrStore.setSubscribed()
+└── pages/
+    └── MarketplacePage.tsx    MODIFIED — aurora mesh gradient background wrapper (VIS-01)
 ```
-
----
 
 ## Architectural Patterns
 
-### Pattern 1: Hybrid search pipeline (SQLAlchemy → FAISS → FTS5 → fused rank)
+### Pattern 1: Atomic FAISS Swap — Reference Replacement
 
-**What:** Three-stage retrieval where each stage narrows or re-ranks the candidate set.
+**What:** Three sequential Python attribute assignments on `app.state` replace the live FAISS index, metadata, and position mapping after an offline rebuild completes in a background thread.
 
-**Stage 1 — SQLAlchemy pre-filter (always runs):**
+**When to use:** Every time `_run_ingest_job` completes (triggered by admin rebuild).
+
+**Trade-offs:** Simple and correct for single-process Railway. The 3-statement window is a theoretical race; the `username_in_pos` guard in `run_explore()` provides graceful degradation. If strict atomicity is needed, bundle into a single dataclass (requires updating all callers of `app_state.faiss_index`).
+
+**Code:** Already exists in `admin.py:_run_ingest_job`. Do not duplicate.
+
+### Pattern 2: reconstruct_n for Flat FAISS Indices
+
+**What:** `IndexFlatIP.reconstruct_n(0, ntotal, output_array)` extracts all stored vectors into a pre-allocated numpy float32 array.
+
+**When to use:** Any time you need all vectors for analysis (t-SNE, UMAP, drift detection) without re-reading from disk.
+
+**Trade-offs:** O(n) memory allocation. At 536 × 768 = 3MB — negligible. At 50K × 768 = ~150MB — consider streaming or chunked processing.
+
 ```python
-from sqlalchemy import select, and_
-from app.models import Expert
-
-query_obj = select(Expert).where(
-    and_(
-        Expert.hourly_rate >= rate_min,
-        Expert.hourly_rate <= rate_max,
-    )
-)
-if tags:
-    # Tags stored as JSON text: '["SEO", "Content Marketing"]'
-    # LIKE per tag is O(n) but acceptable at 1,558 rows
-    for tag in tags:
-        query_obj = query_obj.where(Expert.tags.like(f'%"{tag}"%'))
-
-filtered_experts = db.scalars(query_obj).all()
+vectors = np.zeros((index.ntotal, index.d), dtype=np.float32)
+index.reconstruct_n(0, index.ntotal, vectors)
+# For IndexFlatIP: vectors == the exact matrix passed to index.add()
 ```
 
-**Stage 2 — FAISS IDSelectorBatch (when query is non-empty):**
-```python
-username_to_pos = app_state.username_to_faiss_pos
-faiss_index = app_state.faiss_index
+**Important:** The vectors in the index are L2-normalized (see `ingest.py` line 162: `faiss.normalize_L2(matrix)`). When computing TSNE, use `metric="cosine"` or know that distances are cosine distances.
 
-allowed_pos = np.array(
-    [username_to_pos[e.username] for e in filtered_experts if e.username in username_to_pos],
-    dtype=np.int64
-)
-query_vec = np.array(embed_query(query), dtype=np.float32).reshape(1, -1)
-selector = faiss.IDSelectorBatch(allowed_pos)
-params = faiss.SearchParameters(sel=selector)
-scores, indices = faiss_index.search(query_vec, k=50, params=params)
+### Pattern 3: Newsletter Model Following EmailLead Pattern
 
-# Build faiss_score dict: metadata[pos]["Username"] → score
-faiss_scores: dict[str, float] = {}
-for score, pos in zip(scores[0], indices[0]):
-    if pos < 0:
-        continue
-    username = app_state.metadata[pos].get("Username", "")
-    if username:
-        faiss_scores[username] = float(score)
-```
+**What:** New `newsletter_subscribers` table with `email` unique + index, `created_at`, `source` string. Router uses `insert().on_conflict_do_nothing()` for idempotency. Also writes to `email_leads` for unified lead tracking.
 
-**Stage 3 — FTS5 BM25 (when query is non-empty):**
-```python
-# Use Expert.id as rowid key (matches content_rowid='id' in FTS5 table)
-fts_rows = db.execute(text("""
-    SELECT rowid, rank FROM experts_fts
-    WHERE experts_fts MATCH :q
-    ORDER BY rank LIMIT 100
-"""), {"q": query}).fetchall()
+**When to use:** Any new lead-capture table in this codebase.
 
-# rank is negative — lower = better. Build id → normalized score
-id_to_expert = {e.id: e for e in filtered_experts}
-ranks = [abs(r.rank) for r in fts_rows if r.rowid in id_to_expert]
-max_rank = max(ranks) if ranks else 1.0
-bm25_scores: dict[int, float] = {
-    r.rowid: 1.0 - abs(r.rank) / max_rank
-    for r in fts_rows if r.rowid in id_to_expert
-}
-```
+**Trade-offs:** Two writes per submission (newsletter + email_leads) — both are fast SQLite inserts with unique index lookup. The duplication is intentional: `email_leads` is the unified lead view, `newsletter_subscribers` tracks consent with source attribution.
 
-**Fusion:**
-```python
-FAISS_WEIGHT = 0.7
-BM25_WEIGHT = 0.3
+### Pattern 4: Standalone Zustand Store for Orthogonal State
 
-scored = []
-for expert in filtered_experts:
-    faiss_s = faiss_scores.get(expert.username, 0.0)
-    bm25_s = bm25_scores.get(expert.id, 0.0)
-    if faiss_s == 0.0 and bm25_s == 0.0:
-        continue  # exclude experts with no signal in either index
-    fused = (faiss_s * FAISS_WEIGHT) + (bm25_s * BM25_WEIGHT)
-    scored.append((fused, faiss_s, bm25_s, expert))
+**What:** Create a separate `create()` store (`useNltrStore`) with its own persist key instead of extending `useExplorerStore`.
 
-scored.sort(key=lambda x: x[0], reverse=True)
-```
+**When to use:** When the new state has a different lifecycle than existing state, different persist requirements, and no shared actions with existing slices.
 
-**Trade-offs:**
-- Tag `LIKE` queries are O(n) full-table scan — acceptable at 1,558 rows; at 10k+ rows, add a GIN index (Postgres) or use JSON virtual columns (SQLite 3.38+)
-- FAISS_WEIGHT/BM25_WEIGHT are starting values (0.7/0.3); tune based on user behavior
-- Experts with no FAISS match AND no BM25 match are excluded from hybrid results
-
-### Pattern 2: Zustand getState() dispatch from outside React
-
-**What:** Call `useExplorerStore.getState()` to access and dispatch actions from async callbacks and plain functions that run outside the React render cycle.
-
-**When to use:** The co-pilot `usePilot` hook calls `executeFunctionCall` in an async callback. React hooks cannot be called inside async callbacks. `getState()` is the documented alternative.
+**Trade-offs:** More import paths (two stores vs one). Avoids partialize migration risk and lifecycle coupling.
 
 ```typescript
-// Works in any async context — not limited to React components
-import { useExplorerStore } from '../store/useExplorerStore'
+// Correct — standalone store
+export const useNltrStore = create<NltrState>()(
+  persist(set => ({ ... }), { name: 'nltr-state' })
+)
 
-function executeFunctionCall(name: string, args: Record<string, unknown>) {
-  const store = useExplorerStore.getState()  // direct store access
-  if (name === 'apply_filters') {
-    if (typeof args.query === 'string') store.setQuery(args.query)
-    // ... other filter dispatches
-  }
-  // store.setQuery() calls set() internally → notifies all React subscribers
-}
+// Wrong — composing into useExplorerStore would require updating partialize
+// and risks version migration side effects
 ```
-
-**Trade-off:** `getState()` bypasses React's subscription model, but actions called via `getState()` still invoke `set()` internally, which notifies all active `useExplorerStore` hook subscribers. Components re-render correctly. This is not a workaround — it is a documented Zustand pattern.
-
-### Pattern 3: Thin router + fat service (explore pipeline)
-
-**What:** `explore.py` handles HTTP concerns only (request parsing, response serialization, error handling, run_in_executor). All retrieval logic lives in `explorer.py` service.
-
-**When to use:** Always. This is the established pattern in the codebase: `chat.py` (thin) delegates to `search_intelligence.py` (fat service). Maintain this pattern for `explore.py` → `explorer.py`.
-
-**Why:** Separation makes the pipeline testable without FastAPI. It also makes latency profiling simpler — add timing to the service, not the router.
-
----
 
 ## Data Flow
 
-### /api/explore request flow
+### Atomic FAISS Swap Flow
 
 ```
-User adjusts filter
-    ↓ (debounced 300ms in useExplore hook)
-GET /api/explore?rate_min=50&query=marketing&tags=SEO,Content
+Admin clicks "Rebuild Index" in admin panel
     ↓
-explore.py → loop.run_in_executor → explorer.run_explore()
+POST /api/admin/ingest/run (EXISTING endpoint)
     ↓
-[1] SQLAlchemy: SELECT * FROM experts WHERE rate BETWEEN 50 AND 10000
-                AND tags LIKE '%"SEO"%' AND tags LIKE '%"Content"%'
-    → 312 filtered experts
+threading.Thread: _run_ingest_job(app)
     ↓
-[2] FAISS: IDSelectorBatch(allowed_positions_for_312_experts)
-           index.search(embed("marketing"), k=50)
-    → 50 scored candidates
+subprocess: scripts/tag_experts.py (tags + findability — 60s+ with Gemini API)
+subprocess: scripts/ingest.py     (embed + write faiss.index via staging rename)
     ↓
-[3] FTS5: SELECT rowid, rank FROM experts_fts WHERE experts_fts MATCH 'marketing'
-    → BM25 ranked results
+app.state.faiss_index = faiss.read_index(FAISS_INDEX_PATH)
+app.state.metadata = json.load(METADATA_PATH)
+app.state.username_to_faiss_pos = rebuild_mapping(metadata)
+app.state.tsne_cache = []   ← NEW: invalidate cache
+_ingest["status"] = "done"  ← IDX-04 polling sees completion
     ↓
-[4] Fuse + sort → take cursor=0 offset → 20 experts
-    ↓
-ExploreResponse(experts=[20 cards], total=312, cursor=20, took_ms=38)
-    ↓
-useExplorerStore.setResults() → ExpertGrid re-renders with 20 experts
+Admin polls GET /api/admin/ingest/status (EXISTING endpoint)
+Admin frontend updates rebuild status badge
 ```
 
-### Co-pilot function calling flow
+### Newsletter Subscription Flow
 
 ```
-User types: "show me marketing experts under €100/hr"
+User opens ProfileGateModal (profile click)
     ↓
-usePilot → POST /api/pilot/chat { messages, context }
+Modal renders newsletter CTA ("Get expert insights. Unlock profiles.")
+User submits email
     ↓
-pilot.py → Gemini API (with apply_filters tool declaration)
+POST /api/newsletter-subscribe {email, source: "profile_gate"}
+    ↓ (server: INSERT OR IGNORE newsletter_subscribers + email_leads)
     ↓
-Gemini → functionCall: { name: "apply_filters",
-                         args: { query: "marketing", rate_max: 100 } }
+localStorage.setItem('tcs_email_unlocked', 'true')   ← UNCHANGED
+useNltrStore.getState().setSubscribed(email)          ← NEW
     ↓
-pilot.py → returns { function_call: { name, args } }
-    ↓
-usePilot → executeFunctionCall()
-         → useExplorerStore.getState().setQuery("marketing")
-         → useExplorerStore.getState().setRateRange(0, 100)
-    ↓ (Zustand notifies all subscribers)
-useExplore detects filter change → GET /api/explore?query=marketing&rate_max=100
-    ↓
-ExpertGrid re-renders with new results
-    ↓
-usePilot → POST /api/pilot/chat { tool_result: "filters applied, 45 experts visible" }
-    ↓
-Gemini → "I've filtered to marketing experts under €100/hr. 45 results shown."
-    ↓
-CoPilot renders Gemini text
+Modal: shows confirmation with user email
+Profile: unlocked
+
+Returning visitor:
+  localStorage['tcs_email_unlocked'] === 'true'   → gate bypassed (UNCHANGED)
+  useNltrStore rehydrates from 'nltr-state'        → subscribed=true, email restored
 ```
 
----
+### t-SNE Heatmap Flow
 
-## Component Boundaries
+```
+FastAPI lifespan startup
+    ↓
+faiss_index loaded (536 vectors, IndexFlatIP)
+    ↓
+reconstruct_n(0, 536) → np.zeros((536, 768)) populated in-place
+    ↓
+TSNE(n_components=2, perplexity=30, metric='cosine').fit_transform() → (536, 2) coords
+    ↓
+app.state.tsne_cache = [{x, y, username, category}] × 536
+    ↓
+GET /api/admin/embedding-map → {"points": tsne_cache}
+    ↓
+Admin panel: scatter plot colored by category; expert name on hover (INTEL-06)
+```
 
-| Component | Responsibility | Reads from | Writes to |
-|-----------|---------------|------------|-----------|
-| `FilterSidebar` | Render filter controls | `useExplorerStore` filters slice | `useExplorerStore` actions (setQuery, setRateRange, toggleTag) |
-| `ExpertGrid` | Virtualized list + infinite scroll | `useExplorerStore` results slice | Triggers `appendResults` via `useExplore` on `endReached` |
-| `ExpertCard` | One expert display (dense) | Props from grid | None |
-| `CoPilot` | Floating chat panel | `useExplorerStore` pilot slice | `useExplorerStore` via `getState()` dispatch |
-| `useExplore` | Fetch /api/explore on filter change | `useExplorerStore` filters | `useExplorerStore` results slice |
-| `usePilot` | Gemini two-turn loop | `useExplorerStore.getState()` | `useExplorerStore` actions via getState() |
-| `explore.py` | HTTP layer for explore | Request params, `get_db` | Response only |
-| `explorer.py` | Hybrid search pipeline | `db`, `app.state` | Returns `ExploreResponse` |
-| `pilot.py` | Gemini API proxy | Request body | Returns Gemini response |
+### OTR@K Flow (explore pipeline)
 
----
+```
+GET /api/explore?query=...
+    ↓
+run_explore() hybrid pipeline runs
+scored list built and sorted (existing)
+    ↓
+top_k = scored[:10]
+otr_at_k = count(final_s >= 0.60) / len(top_k)
+    ↓
+ExploreResponse(... otr_at_k=otr_at_k)
+    ↓
+Admin GET /api/admin/intelligence-stats:
+  SELECT AVG(otr_at_k), date FROM conversations
+  WHERE created_at >= date('now', '-7 days')
+  GROUP BY date
+```
 
 ## Integration Points
 
-### Files modified (existing)
+### New vs Modified Components — Complete Table
 
-| File | Change | Risk |
-|------|--------|------|
-| `app/main.py` | Add FTS5 migration block (~15 lines); add `username_to_faiss_pos` to `app.state` (~5 lines); register `explore.router` and `pilot.router` (~2 lines) | LOW — idempotent migration, existing pattern |
-| `frontend/src/main.tsx` | Change `/ → App` to `/ → MarketplacePage` (1 line) | MEDIUM — removes chat as homepage; existing `/admin` routes unaffected |
-| `frontend/src/types.ts` | Add `ExpertCard`, `ExploreResponse`, `PilotMessage` types (additive) | LOW |
+| Component | Status | What Changes |
+|-----------|--------|--------------|
+| `app/models.py` | MODIFIED | Add `NewsletterSubscriber`; add `otr_at_k: Mapped[float | None]` to `Conversation` |
+| `app/main.py` | MODIFIED | Add t-SNE startup block after line 214; add `"ALTER TABLE conversations ADD COLUMN otr_at_k REAL"` to existing migration block; add `newsletter.router` import and registration |
+| `app/routers/admin.py` | MODIFIED | Add `GET /embedding-map`; add `GET /newsletter-subscribers`; add `otr_7day` to `get_intelligence_stats()` response |
+| `app/routers/explore.py` | MODIFIED | `ExploreResponse` now includes `otr_at_k`; no structural change to the route |
+| `app/routers/newsletter.py` | NEW | `POST /api/newsletter-subscribe` |
+| `app/services/explorer.py` | MODIFIED | Add `otr_at_k: float | None = None` to `ExploreResponse`; compute OTR@K after `scored.sort()` in `run_explore()` |
+| `frontend/src/store/nltrSlice.ts` | NEW | `useNltrStore` with `subscribed`, `email`, `setSubscribed`, `clearSubscription` |
+| `frontend/src/store/index.ts` | UNCHANGED | `nltrStore` is standalone — no changes needed to `useExplorerStore` |
+| `frontend/src/components/sidebar/TagMultiSelect.tsx` | REPLACED | File contents replaced; same file path; exports `AnimatedTagCloud` component |
+| `frontend/src/components/marketplace/ExpertCard.tsx` | MODIFIED | Bento visual zones (CARD-01); aurora hover glow color tokens (CARD-03); h-[180px] preserved (CARD-02) |
+| `frontend/src/components/modals/ProfileGateModal.tsx` | MODIFIED | Newsletter CTA copy (NLTR-01); calls `POST /api/newsletter-subscribe`; calls `useNltrStore.setSubscribed()`; localStorage logic unchanged |
+| `frontend/src/pages/MarketplacePage.tsx` | MODIFIED | Aurora mesh gradient background div wraps content (VIS-01) |
 
-### Files created (new)
+### Files Completely Unchanged
 
-| File | Depends on existing |
-|------|---------------------|
-| `app/routers/explore.py` | `app.state.faiss_index`, `app.state.metadata`, `app.state.username_to_faiss_pos`, `app.database.get_db`, `app.models.Expert` |
-| `app/routers/pilot.py` | `google.genai` client |
-| `app/services/explorer.py` | `faiss`, `sqlalchemy`, `numpy`, `app.models.Expert`, `app.services.embedder` |
-| `frontend/src/store/useExplorerStore.ts` | `zustand`, `zustand/middleware` |
-| `frontend/src/pages/MarketplacePage.tsx` | `useExplorerStore`, `FilterSidebar`, `ExpertGrid`, `CoPilot` |
-| `frontend/src/hooks/useExplore.ts` | `useExplorerStore`, `fetch` |
-| `frontend/src/hooks/usePilot.ts` | `useExplorerStore.getState()`, `fetch` |
+`app/routers/chat.py`, `app/routers/feedback.py`, `app/routers/email_capture.py`, `app/routers/health.py`, `app/routers/pilot.py`, `app/routers/suggest.py`, `app/services/embedder.py`, `app/services/retriever.py`, `app/services/search_intelligence.py`, `app/services/tagging.py`, `app/database.py`, `app/config.py`, `frontend/src/store/filterSlice.ts`, `frontend/src/store/resultsSlice.ts`, `frontend/src/store/pilotSlice.ts`, `frontend/src/store/index.ts`, `frontend/src/admin/` (entire directory).
 
-### Files completely unchanged
+### External Service Dependencies
 
-`app/routers/admin.py`, `app/routers/chat.py`, `app/routers/feedback.py`, `app/routers/email_capture.py`, `app/routers/health.py`, `app/services/search_intelligence.py`, `app/services/retriever.py`, `app/services/embedder.py`, `app/services/llm.py`, `app/services/tagging.py`, `app/models.py`, `app/database.py`, `app/config.py`, and everything under `frontend/src/admin/`.
+| Service | Integration Pattern | Notes |
+|---------|---------------------|-------|
+| `scikit-learn` TSNE | Add to `requirements.txt`; import in lifespan | Railway caches pip installs; ~50MB package; startup adds 2–8s |
+| FAISS `reconstruct_n` | Built into `faiss-cpu` already installed | IndexFlatIP supports it unconditionally — no new flags |
 
----
+## Scaling Considerations
+
+| Scale | Architecture Adjustments |
+|-------|--------------------------|
+| Current: 536 experts, single-process | All patterns correct as described. IndexFlatIP, single attr-assign swap, app.state, asyncio. Zero ops complexity. |
+| 5K experts | IndexFlatIP still viable (~15MB RAM). t-SNE startup time increases to 30–60s — move to background `asyncio.to_thread` with `tsne_cache = None` (loading state). Newsletter table has no scaling concern. |
+| 50K experts | Switch FAISS to IndexIVFFlat with `make_direct_map()` for reconstruct_n support. Multi-worker Uvicorn requires external store for shared state (app.state pattern breaks). otr_at_k would need sampling instead of full computation. |
+
+### Scaling Priorities
+
+1. **First bottleneck — t-SNE startup blocking:** At 5K experts, 30–60s startup is unacceptable on Railway health checks. Move TSNE to `asyncio.to_thread` with a polling endpoint `GET /api/admin/embedding-map/status`.
+2. **Second bottleneck — IndexFlatIP linear scan:** At 50K experts, switch to IndexIVFFlat. The atomic swap pattern is unchanged; only ingest.py changes.
 
 ## Anti-Patterns
 
-### Anti-Pattern 1: Passing Expert.id to IDSelectorBatch instead of FAISS positional indices
+### Anti-Pattern 1: asyncio.Lock for FAISS Swap in Single-Process Uvicorn
 
-**What people do:** Get `Expert.id` values (1, 2, 3... 1558) from SQLAlchemy and pass them directly to `IDSelectorBatch`.
+**What people do:** Wrap `app.state.faiss_index = new_index` in `async with asyncio.Lock()` to prevent concurrent reads during a swap.
 
-**Why it's wrong:** `IndexFlatIP` uses positional indices (0, 1, 2... 1557). Expert.id=1 is at FAISS position 0. The IDs may be off by 1 at minimum. If any Expert rows were ever deleted and reinserted, Expert.id values are not contiguous, and the mismatch silently returns wrong experts.
+**Why it's wrong:** The rebuild runs in `threading.Thread`, outside the event loop. Acquiring an asyncio.Lock from a thread requires `asyncio.run_coroutine_threadsafe()` — adding complexity for zero correctness benefit. The GIL already makes each attribute assignment atomic. The window between the three statements is real but handled by the existing graceful degradation guard in `run_explore()`.
 
-**Do this instead:** Build `app.state.username_to_faiss_pos` at startup by iterating `app.state.metadata` and storing the list position (not Expert.id) per username. Look up positional indices when building the IDSelectorBatch array.
+**Do this instead:** Keep the existing three-line assignment pattern. If strict atomicity is required, bundle all three into a single dataclass and assign once.
 
-### Anti-Pattern 2: Scoping Zustand store inside a React Provider
+### Anti-Pattern 2: Composing nltrSlice into useExplorerStore
 
-**What people do:** Use `createStore()` (not `create()`) and wrap the tree in a `StoreProvider` for "proper scoping".
+**What people do:** Add `subscribed` and `email` to `useExplorerStore` and add them to the `partialize` whitelist.
 
-**Why it's wrong:** The co-pilot's `usePilot` hook dispatches to the store from async callbacks outside React's render cycle. A scoped store accessible only via React Context requires the call site to be inside a React component — which async callbacks are not. The module-level singleton is the correct choice for this use case.
+**Why it's wrong:** The `'explorer-filters'` key has `version: 1` with an existing whitelist. Adding fields without a migrate function causes existing users to lose their newsletter state on next load (Zustand persist discards unrecognized keys at the old version). Also, `filterSlice.resetFilters()` semantically should not touch newsletter state — keeping them separate makes intent clear.
 
-**Do this instead:** Use module-level `create()`. The store is globally accessible via `useExplorerStore.getState()` from any async function.
+**Do this instead:** Standalone `create()` store with `'nltr-state'` key. Zero migration risk.
 
-### Anti-Pattern 3: Streaming /api/explore as SSE
+### Anti-Pattern 3: Recomputing t-SNE Per-Request
 
-**What people do:** Return `/api/explore` as SSE because `/api/chat` uses SSE, assuming all expensive operations need streaming.
+**What people do:** Call `TSNE.fit_transform()` inside the `/embedding-map` route handler.
 
-**Why it's wrong:** The marketplace grid must render all 20 experts at once — partial renders of 3 or 5 experts while loading causes layout shift and poor UX. The hybrid search pipeline completes in under 50ms — SSE overhead exceeds the actual computation time. SSE also complicates error handling and pagination.
+**Why it's wrong:** 2–8 seconds of CPU-bound computation per admin page load. Railway's single process means this blocks all other requests for that duration.
 
-**Do this instead:** Return synchronous JSON with `ExploreResponse`. Run the hybrid search in `run_in_executor` to keep FastAPI's event loop unblocked. Use cursor-based pagination for "load more" interactions.
+**Do this instead:** Compute at lifespan startup, cache in `app.state.tsne_cache`. Return cached data instantly. Invalidate on index rebuild (`tsne_cache = []`).
 
-### Anti-Pattern 4: Syncing FTS5 via SQLAlchemy ORM events
+### Anti-Pattern 4: Calling reconstruct_n on IndexIVFPQ Without Direct Map
 
-**What people do:** Register `@event.listens_for(Expert, 'after_insert')` SQLAlchemy events to auto-sync FTS5.
+**What people do:** Upgrade index to `IndexIVFPQ` for compression, then call `reconstruct_n` expecting exact vectors.
 
-**Why it's wrong:** SQLAlchemy events fire at ORM flush time, but FTS5 sync requires raw SQL `text()`. Transaction ordering between the ORM event and the raw SQL insert is not guaranteed. The FTS5 insert may commit before the Expert row is visible, causing "rowid not found in content table" errors.
+**Why it's wrong:** PQ quantization loses precision — reconstructed vectors are approximations. Without `make_direct_map()`, `reconstruct_n` raises `RuntimeError`. Even with it, the approximation distorts the t-SNE layout.
 
-**Do this instead:** Explicitly sync FTS5 immediately after the Expert write commits, in the same request handler using `db.execute(text(...))`. For bulk updates, call `INSERT INTO experts_fts(experts_fts) VALUES('rebuild')` at the end of the batch operation.
+**Do this instead:** For this codebase, IndexFlatIP is correct at 536 vectors. If upgrading to IndexIVFFlat (the recommended step at 5K+ vectors), call `index.make_direct_map()` before `faiss.write_index()` in ingest.py.
 
-### Anti-Pattern 5: Building co-pilot as a server-side agent that pushes state
+### Anti-Pattern 5: Replacing localStorage Gate With nltrSlice
 
-**What people do:** Implement the co-pilot entirely on the backend, having FastAPI maintain filter state and push updates to the frontend via SSE.
+**What people do:** Replace `localStorage['tcs_email_unlocked']` check with `useNltrStore.subscribed` as the gate bypass condition.
 
-**Why it's wrong:** Filter state is owned by Zustand on the frontend. Duplicating it on the backend creates two sources of truth. Any SSE push that tries to override Zustand state will conflict with direct user interactions (e.g., user moves a slider while co-pilot is responding). The frontend becomes a dumb terminal instead of a rich interactive UI.
+**Why it's wrong:** The existing `useState(() => localStorage.getItem('tcs_email_unlocked') === 'true')` pattern reads synchronously in the initializer — it prevents flash of locked state for returning visitors. Zustand `persist` rehydration is asynchronous (it fires after first render). Switching to Zustand as the sole gate check causes a flash of the locked modal for every returning visitor on page load.
 
-**Do this instead:** Keep the backend as a thin Gemini proxy that returns `functionCall` or text. The frontend is responsible for all state transitions. The backend has no filter state.
-
----
+**Do this instead:** Keep localStorage as the gate check. Use `nltrSlice` only for UI state (confirmation display, email in header, etc.). Both can coexist — they use different keys.
 
 ## Sources
 
-- [FAISS: Setting search parameters for one query](https://github.com/facebookresearch/faiss/wiki/Setting-search-parameters-for-one-query) — IDSelectorBatch + SearchParameters Python API (HIGH confidence — official FAISS wiki)
-- [FAISS IDSelectorBatch C++ API](https://faiss.ai/cpp_api/struct/structfaiss_1_1IDSelectorBatch.html) — confirmed Python interface accepts numpy int64 arrays (HIGH confidence)
-- [FAISS GitHub issue #3112](https://github.com/facebookresearch/faiss/issues/3112) — IDSelectorBatch hash collision warning (MEDIUM confidence — user-reported issue)
-- [FAISS GitHub issue #3046](https://github.com/facebookresearch/faiss/issues/3046) — IDSelectorBatch batch subset search (MEDIUM confidence — feature discussion)
-- [SQLite FTS5 official docs](https://sqlite.org/fts5.html) — external content tables, `content=`, `content_rowid=`, rebuild command, `IF NOT EXISTS` (HIGH confidence — official SQLite documentation)
-- [SQLite Forum: VTables triggers and FTS5](https://sqlite.org/forum/info/71272bd7607a6408fefa3610ea640df8df1a7a29bb8f69cb8d316f966baa8a40) — trigger "unsafe use of virtual table" limitation (MEDIUM confidence — SQLite forum)
-- [Gemini function calling docs](https://ai.google.dev/gemini-api/docs/function-calling) — `functionCall` response structure, two-turn tool loop (HIGH confidence — official Google AI docs)
-- [Zustand persist middleware](https://zustand.docs.pmnd.rs/integrations/persisting-store-data) — `partialize` for selective persistence (HIGH confidence — official Zustand docs)
-- [Zustand GitHub](https://github.com/pmndrs/zustand) — `getState()` outside React components (HIGH confidence — official repo)
-- [react-virtuoso endless scrolling](https://virtuoso.dev/endless-scrolling/) — `endReached` callback pattern (HIGH confidence — official docs)
-- [FastAPI bigger applications](https://fastapi.tiangolo.com/tutorial/bigger-applications/) — router-per-file best practice (HIGH confidence — official FastAPI docs)
-- Direct codebase inspection: `app/main.py`, `app/models.py`, `app/routers/chat.py`, `app/routers/admin.py`, `app/services/retriever.py`, `app/services/search_intelligence.py`, `frontend/src/main.tsx`, `frontend/src/admin/hooks/useAdminData.ts` — (HIGH confidence — ground truth)
+- Direct codebase inspection (HIGH confidence — ground truth):
+  - `app/main.py` — lifespan startup sequence, existing migrations, app.state pattern
+  - `app/routers/admin.py` — `_run_ingest_job`, `_ingest` dict, existing endpoints
+  - `app/routers/email_capture.py` — EmailLead insert pattern, on_conflict_do_nothing
+  - `app/routers/explore.py` — route structure, app_state access pattern
+  - `app/services/explorer.py` — run_explore() pipeline, ExploreResponse schema, scored list structure
+  - `app/models.py` — all existing model conventions, Mapped[T] style, DateTime defaults
+  - `app/config.py` — OUTPUT_DIM=768, FAISS_INDEX_PATH
+  - `scripts/ingest.py` — IndexFlatIP confirmed, faiss.normalize_L2, staging rename pattern
+  - `frontend/src/store/index.ts` — persist config, partialize whitelist, version: 1
+  - `frontend/src/store/filterSlice.ts` — filterDefaults, resetFilters pattern
+  - `frontend/src/components/sidebar/TagMultiSelect.tsx` — toggleTag/setTags interface
+- FAISS index type confirmed locally: `IndexFlatIP 536 768` (HIGH confidence — loaded production index)
+- IndexFlatIP reconstruct_n: flat indices store verbatim vectors; reconstruct_n is always supported (HIGH confidence — fundamental FAISS property, no special conditions)
+- Zustand persist behavior: rehydration is async, state initializer reads synchronously (HIGH confidence — Zustand docs + known React hydration behavior)
+- scikit-learn TSNE startup estimate (2–8s for 536×768): MEDIUM confidence — typical range on shared CPU; Railway instance allocation varies
 
 ---
 
-*Architecture research for: Tinrate Expert Marketplace v2.0 integration*
-*Researched: 2026-02-21*
+*Architecture research for: TCS v2.2 Evolved Discovery Engine integration points*
+*Researched: 2026-02-22*

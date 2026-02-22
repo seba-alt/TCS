@@ -1,197 +1,277 @@
 # Project Research Summary
 
-**Project:** TCS — Tinrate Expert Marketplace v2.0 (Extreme Semantic Explorer)
-**Domain:** Expert/professional marketplace with AI-assisted search and lead capture
-**Researched:** 2026-02-21
-**Confidence:** HIGH — all four research areas resolved against official documentation, live codebase, and verified sources
+**Project:** TCS — Tinrate Expert Marketplace v2.2 Evolved Discovery Engine
+**Domain:** AI-augmented expert marketplace (visual overhaul + operational intelligence)
+**Researched:** 2026-02-22
+**Confidence:** HIGH (architecture grounded in production codebase inspection; stack confirmed against npm/PyPI; pitfalls verified against official docs and GitHub issues)
 
 ## Executive Summary
 
-TCS v2.0 is a brownfield rearchitecture of an existing production expert marketplace: replacing a chat-centric interface with a full professional marketplace (faceted search sidebar, virtualized expert grid, floating AI co-pilot) while preserving all existing infrastructure (FastAPI, SQLAlchemy, SQLite, FAISS, Gemini, admin dashboard). The dominant theme from research is that the existing technology stack covers almost all v2.0 needs — only three npm packages are added (Zustand, react-virtuoso, Framer Motion) and zero backend packages change. Everything new builds on validated foundations.
+TCS v2.2 is an additive milestone layering premium visual design, admin intelligence tooling, and operational robustness onto an already-shipping v2.0 marketplace. The v2.0 system — FastAPI + SQLite + FAISS + Gemini embeddings on Railway, React + Zustand + react-virtuoso on Vercel — is stable and unchanged. v2.2 adds six discrete capability groups: aurora/glassmorphism visual overhaul, claymorphic animated tag cloud, atomic FAISS index swap UI, admin intelligence metrics (OTR@K and Index Drift), t-SNE embedding scatter plot, and a newsletter subscription gate. Because the existing codebase is ground truth and the FAISS index type was confirmed by local inspection (IndexFlatIP, 536 vectors, 768 dimensions), all integration points are unambiguous. Frontend additions are three npm packages (zustand@^5, react-virtuoso@^4.18, framer-motion@^12); backend additions are two Python packages (scikit-learn==1.8.0, scipy==1.15.1). No infrastructure changes are required.
 
-The recommended approach is a strict sequential build order driven by data dependencies: the hybrid search backend (FTS5 migration + /api/explore endpoint) must ship first because every other component depends on its API contract. Zustand global state is the second dependency — the sidebar, grid, and AI co-pilot cannot share state without it. From there, the marketplace UI assembles in layers (page layout, then grid, then co-pilot). This is not a preference; it is the dependency graph. Attempting to build in parallel without a working API or store leads to mock-debt that must be unwound later.
+The recommended approach is to ship v2.2 in six sequential phases (22–27) that mirror the feature group dependencies. Visual infrastructure (aurora + glassmorphism, Phase 22) must precede all other visual phases because the glassmorphism glass effect is invisible on a white background — the aurora gradient must be rendering before any glass surface can be validated. The claymorphic tag cloud (Phase 23) builds on the OKLCH design tokens introduced in Phase 22. The atomic FAISS swap UI (Phase 24) is a pure admin capability with no frontend visual dependencies. Admin intelligence metrics (Phases 25–26) depend on schema changes from Phase 24 and require scikit-learn on Railway. The newsletter gate and Easter egg (Phase 27) are independent of all other groups.
 
-The key risks are specific and well-documented. FAISS IDSelectorBatch must be used exclusively as a search-time filter (not `remove_ids`). The FTS5 UPDATE trigger must capture old values before overwriting them, or the search index silently corrupts. Zustand persist must be scoped with `partialize` and `version` from day one to prevent returning users getting broken state on every deploy. Framer Motion `AnimatePresence` exit animations are incompatible with the virtualizer and must only be used outside it. Gemini function call output must be validated field-by-field before touching the store. Every pitfall has a clear, low-cost prevention strategy documented in PITFALLS.md.
+The top risk is deployment failure caused by placing the t-SNE `fit_transform` computation above the `yield` in FastAPI's lifespan context manager — this blocks Railway's healthcheck, triggers an infinite restart loop, and prevents the app from ever serving traffic. The second risk is the `backdrop-filter` stacking context trap: adding glass surfaces inside an `overflow: hidden` ancestor silently produces no visual effect with no error thrown. Both risks are 100% avoidable if the phase specifications encode the correct patterns before implementation begins. All eight critical pitfalls identified have clear, low-cost mitigations.
 
 ## Key Findings
 
 ### Recommended Stack
 
-The existing production stack (FastAPI + SQLAlchemy + SQLite + FAISS + Gemini + React + Vite + Tailwind v3) handles all v2.0 requirements without infrastructure change. Backend additions (FTS5, IDSelectorBatch, Gemini function calling) use packages already in `requirements.txt`. Frontend adds exactly three packages. See `STACK.md` for full version details.
+The production stack remains unchanged. Three frontend packages are added; two backend packages are added. All other v2.2 features (IDSelectorBatch, FTS5, Gemini function calling, asyncio.to_thread, OKLCH CSS) use packages already installed or built into the standard library.
 
-**Core technologies:**
-- `zustand@^5.0.0` — global state management for filters, results, and co-pilot — chosen for module-level singleton pattern required by the co-pilot's async dispatch outside React render cycle
-- `react-virtuoso@^4.18.0` — virtualized expert grid — use `Virtuoso` (list) not `VirtuosoGrid` (fixed-height grid) because expert cards have variable heights
-- `framer-motion@^12.0.0` — animations for co-pilot panel slide-in and card entry — use `LazyMotion` + `domAnimation` to keep bundle size at ~15KB; no exit animations on virtualized items
-- `faiss-cpu@1.13.*` (existing) — pre-filtered vector search via `IDSelectorBatch` + `SearchParameters` at search time, not destructive `remove_ids`
-- `google-genai@1.64.*` (existing) — Gemini 2.5 Flash for AI co-pilot with `apply_filters` function calling; `google-generativeai` is deprecated
-- SQLite FTS5 (built-in, no install) — BM25 full-text search for keyword matching in hybrid pipeline
-- Tailwind v3 (existing, no upgrade) — OKLCH colors via arbitrary values `bg-[oklch(...)]`; do not upgrade to v4 during this milestone
+**New frontend packages:**
+- `zustand@^5.0.10`: State management with `persist` middleware — covers search params, pilot state, and the new newsletter subscription slice. Use separate `create()` stores with unique `name` keys for orthogonal state (newsletter slice must use `'tinrate-newsletter-v1'`, not `'explorer-filters'`).
+- `react-virtuoso@^4.18.1`: Virtualized expert grid. Use `Virtuoso` (list, variable height) not `VirtuosoGrid` (fixed-height only); chunk experts into rows and render each row as a CSS grid inside `itemContent`.
+- `framer-motion@^12.34.3` (import from `motion/react`): Layout animations for tag cloud reordering and proximity-based scale. Already installed at v12.34 per PROJECT.md — verify before reinstalling.
 
-**What NOT to add:** Tailwind v4 (breaking changes, no feature value for v2.0), `VirtuosoGrid` (fixed-height only), `google-generativeai` (deprecated), any vector database (FAISS at 1,558 experts needs no change).
+**New backend packages:**
+- `scikit-learn==1.8.0`: Provides `sklearn.manifold.TSNE` and `sklearn.decomposition.PCA` for the t-SNE embedding map endpoint. Ships manylinux binary wheels for Python 3.11 on Linux x86-64 — Railway builds without compilation. Adds ~10–20s to Railway build time but not to cold-start latency.
+- `scipy==1.15.1`: Required transitive dependency of scikit-learn 1.8. Also ships manylinux wheels.
+
+**What NOT to add:**
+- `google-generativeai` (deprecated — use `google-genai` already in requirements.txt)
+- Tailwind v4 (breaking config changes; migration cost outweighs benefit for this milestone)
+- `umap-learn` (explicitly deferred to v2.3; heavy Railway build dependency)
+- `useSpring` per tag item in proximity scale (40+ concurrent springs = animation frame budget pressure)
+- `VirtuosoGrid` component (requires uniform fixed-height cards; expert cards are variable-height)
 
 ### Expected Features
 
-**Must have (v2.0 core — marketplace is incomplete without these):**
-- Zustand global state (filter + results + pilot slices with `partialize` persist) — unblocks everything else
-- `/api/explore` hybrid endpoint (SQLAlchemy pre-filter → FAISS IDSelectorBatch → FTS5 BM25 → fused weighted scoring)
-- Faceted sidebar (rate range slider, domain tag multi-select, text search, active filter chips, clear all)
-- Virtualized expert grid (react-virtuoso, variable-height cards, name/title/rate/tags/CTA)
-- Floating AI co-pilot (FAB → slide-in panel, Gemini conversation, context-aware of current grid results)
-- Gemini function calling `apply_filters` (AI updates Zustand filter state from conversation)
-- Email gate extended to "View Full Profile" trigger (existing gate mechanism, new trigger point)
-- Loading skeletons and empty state with co-pilot CTA (no dead ends)
+**Must have (table stakes — visual features must all ship together in Phase 22 or the design is incoherent):**
+- `backdrop-filter: blur` on FilterSidebar, SearchInput, and SagePanel — the defining affordance of glassmorphism; absent = flat cards
+- Semi-transparent background on glass surfaces (rgba alpha 0.08–0.15 over aurora)
+- 1px border on glass surfaces (rgba(255,255,255,0.18))
+- Keyframe-animated aurora mesh gradient background (15–30s cycles; GPU-composited via `transform` on pseudo-elements)
+- OKLCH color tokens in CSS custom properties (`--aurora-violet`, `--aurora-teal`, `--aurora-rose`)
+- `@supports` fallback for browsers without `backdrop-filter` (opaque dark background)
+- WCAG 4.5:1 contrast on all glass text surfaces (tested over the actual aurora gradient, not white)
+- Bento ExpertCard redesign (four zones: name/role, rate/badge, tags, match-reason; h-[180px] fixed height preserved)
 
-**Should have (v2.0 extended — after core works):**
-- "Download Match Report" lead magnet (personalized PDF, gated by email, server-side generation)
-- URL filter sync (serialize Zustand slice to query params for shareable filters)
-- Fuzzy search / "Did you mean?" (FTS5 prefix search + Levenshtein on tag vocabulary)
-- Match reason snippet on expert cards (Gemini-generated plain-language explanation per result)
-- Mobile bottom sheet sidebar (after desktop sidebar is complete)
+**Should have (competitive differentiators for v2.2):**
+- Claymorphic animated tag cloud: Framer Motion `layout` prop for reorder animation; dual-inset + outer shadow for 3D clay depth; proximity-based scale via `useMotionValue` + `useTransform` (not `useState`)
+- "Everything is possible" animated example phrases below tag cloud (AnimatePresence, 3s cycles, 4–6 phrases)
+- Atomic FAISS index swap admin UI: button that calls existing `POST /api/admin/ingest/run`; status polling via existing `GET /api/admin/ingest/status`
+- OTR@K metric in admin: fraction of top-10 results scoring ≥ 0.60 threshold; 7-day rolling average
+- Index Drift metric: time since last rebuild + expert count delta
+- t-SNE embedding scatter plot in admin: startup-computed, category-colored points, hover tooltips
+- Newsletter subscription gate: replaces raw email gate with value-exchange framing; single email field; writes to both `newsletter_subscribers` and `email_leads` tables
 
-**Defer to v2.1+:**
-- Saved filter presets (localStorage named filter sets — need is not validated)
-- Co-pilot suggested question chips (nice-to-have, patterns not yet understood)
-- Expert card detail slide-in drawer (conversion improvement to test post-v2.0)
+**Defer to v2.3+:**
+- UMAP visualization (heavy Railway build dependency; scikit-learn t-SNE is sufficient for 530 points)
+- Cursor-reactive JS aurora (mousemove-driven gradient = 60 events/sec GPU cost for no functional value)
+- `backdrop-filter: blur` on ExpertCards (530 cards × GPU compositor layer = performance failure)
+- External newsletter service integration (Mailchimp, Klaviyo) — CSV export sufficient for current scale
 
-**Anti-features to avoid:** Star ratings without Tinrate data sync, real-time availability/calendar integration, aggressive email gate on search access, full bio text in cards, more than 2-3 sort options, 20+ filter dimensions, numeric cosine similarity scores shown to users.
+**P3 (ship if time remains after P1/P2):**
+- Barrel roll Easter egg (FUN-01): Framer Motion 360° rotate applied to the VirtuosoGrid container, not individual ExpertCards; trigger on exact phrase match only
 
 ### Architecture Approach
 
-The architecture is a thin-router / fat-service pattern extended to two new backend endpoints (`explore.py` → `explorer.py` service, `pilot.py` as Gemini proxy) and a Zustand module-level singleton on the frontend. Admin routes and all existing services remain entirely unchanged. The homepage route changes from `App` (chat) to `MarketplacePage` (marketplace). React Router v7 lazy loading requires the marketplace component and its loader to be in separate files to prevent heavy dependencies from leaking into the initial bundle.
+The v2.2 architecture is strictly additive. The production system is a single-process Uvicorn FastAPI app with `app.state` holding the FAISS index, metadata list, and username-to-position mapping. New state follows the same pattern: `app.state.tsne_cache` (list, computed post-startup in background) and `app.state.tsne_ready` (bool, guards the endpoint).
 
-**Major components:**
-1. `app/services/explorer.py` (NEW) — three-stage hybrid search pipeline: SQLAlchemy pre-filter → FAISS IDSelectorBatch → FTS5 BM25 → fused rank (0.7 FAISS / 0.3 BM25) → cursor pagination
-2. `app/routers/pilot.py` (NEW) — thin Gemini API proxy with `apply_filters` function declaration; returns raw function call or text to frontend
-3. `frontend/src/store/useExplorerStore.ts` (NEW) — Zustand module-level singleton with three slices (filters, results, pilot); `partialize` persists only user-preference fields
-4. `frontend/src/components/marketplace/` (NEW) — `FilterSidebar`, `ExpertGrid`, `ExpertCard`, `CoPilot` — all read/write through `useExplorerStore`
-5. `frontend/src/hooks/usePilot.ts` (NEW) — Gemini two-turn function calling loop; dispatches to store via `useExplorerStore.getState()` from async callbacks
-6. `app/main.py` (MODIFIED, minimally) — FTS5 migration block, `username_to_faiss_pos` mapping at startup, two new router registrations
+The existing atomic swap in `_run_ingest_job` (admin.py lines 93–146) already performs the three-line reference assignment for FAISS index, metadata, and position mapping. The v2.2 change adds one line: `app.state.tsne_cache = []` to invalidate the t-SNE cache on swap completion. The admin UI only needs a frontend button calling the already-existing `POST /api/admin/ingest/run` endpoint.
 
-**Critical integration constraint:** FAISS uses positional indices (0 to 1557), not `Expert.id` values from SQLite. A `username_to_faiss_pos` mapping must be built at startup from `app.state.metadata` and stored in `app.state`. SQLAlchemy pre-filter results must be translated through this mapping before constructing `IDSelectorBatch`.
+**New/modified components (v2.2 delta):**
+
+Backend:
+1. `app/models.py` — add `NewsletterSubscriber` model; add `otr_at_k: Mapped[float | None]` to `Conversation`
+2. `app/main.py` — post-yield `asyncio.create_task(_compute_tsne_background(app))` background task; `ALTER TABLE conversations ADD COLUMN otr_at_k REAL` in existing migration block; register newsletter router
+3. `app/routers/newsletter.py` (NEW) — `POST /api/newsletter-subscribe`; idempotent writes to both `newsletter_subscribers` and `email_leads`
+4. `app/routers/admin.py` — add `GET /embedding-map`; `GET /newsletter-subscribers`; `otr_7day` array in `intelligence-stats` response
+5. `app/services/explorer.py` — add `otr_at_k: float | None = None` field to `ExploreResponse`; compute `top_k = scored[:10]; on_topic = sum(1 for s >= 0.60) / len(top_k)` after `scored.sort()`
+
+Frontend:
+1. `frontend/src/store/nltrSlice.ts` (NEW) — standalone `useNltrStore` with persist key `'nltr-state'`; initializes synchronously from localStorage to prevent gate flash
+2. `frontend/src/components/sidebar/AnimatedTagCloud.tsx` (NEW, replaces TagMultiSelect) — `layout` prop for reordering; `useMotionValue`/`useTransform` for proximity scale
+3. `frontend/src/components/marketplace/ExpertCard.tsx` — bento zones; CSS-only hover glow (no Framer Motion import in this file)
+4. `frontend/src/components/modals/ProfileGateModal.tsx` — newsletter CTA copy; calls `/api/newsletter-subscribe`; `localStorage['tcs_email_unlocked']` bypass logic unchanged
+5. `frontend/src/pages/MarketplacePage.tsx` — aurora mesh gradient wrapper div added
+
+**Files completely unchanged:** chat.py, feedback.py, email_capture.py, health.py, pilot.py, suggest.py, embedder.py, retriever.py, search_intelligence.py, tagging.py, database.py, config.py, all existing Zustand slices (filterSlice, resultsSlice, pilotSlice), entire admin frontend directory.
 
 ### Critical Pitfalls
 
-1. **FAISS `remove_ids` vs search-time `IDSelectorBatch`** — Never call `index.remove_ids()` on the production index; it mutates the index and silently shifts all sequential IDs. Use `faiss.SearchParameters(sel=faiss.IDSelectorBatch(ids))` exclusively. Add a unit test asserting `index.ntotal == 1558` after every code path that touches the index.
+1. **t-SNE `fit_transform` above `yield` in FastAPI lifespan blocks Railway healthcheck** — Even wrapped in `asyncio.to_thread`, calling `fit_transform` above the `yield` prevents the server from starting. Place the computation as `asyncio.create_task(_compute_tsne_background(app))` *after* the `yield`. Use `n_iter=300` (not 1000) + PCA pre-reduction to 50 dims. Guard `/api/admin/embedding-map` with `if not app.state.tsne_ready: return JSONResponse({"status": "computing"}, 202)`.
 
-2. **FTS5 UPDATE trigger capturing wrong (post-update) values** — The UPDATE trigger must explicitly delete old tokens using `old.` values and insert new tokens using `new.` values in a single AFTER UPDATE trigger. The naive pattern of three separate AFTER triggers corrupts the index ~10% of the time. Always run `INSERT INTO experts_fts(experts_fts) VALUES('rebuild')` after creating the table to backfill existing 1,558 rows (triggers do not backfill).
+2. **`overflow: hidden` ancestor silently kills `backdrop-filter` blur** — The existing layout has `overflow: hidden` flex containers that create stacking contexts. Glass surfaces inside them see only the ancestor's background (solid), not the aurora. Before writing any glass class, audit the full ancestor chain in DevTools. Use the `before:backdrop-blur-md before:-z-10` pseudo-element escape hatch if the ancestor cannot be modified. Always include `-webkit-backdrop-filter` (Tailwind v3 does not emit this prefix).
 
-3. **Zustand persist rehydrating stale/incompatible state across deploys** — Use `partialize` to persist only `emailGated` (and optionally filter preferences); never persist `results`, `isLoading`, or `messages`. Set `version: 1` from day one and implement `migrate` to reset incompatible old state. Bump `version` on every deploy that changes the persisted shape.
+3. **Tag cloud proximity scale using `useState` + `onMouseMove` causes 60 re-renders/sec** — With 40+ tags, this produces continuous orange React DevTools profiler highlights and visible jank alongside VirtuosoGrid. Mandate `useMotionValue` + `useTransform` from the start. These bypass React's render cycle entirely. Do NOT add `useSpring` per tag item — use CSS `transition: transform 80ms ease-out` instead.
 
-4. **Gemini function call output applied to Zustand without validation** — Gemini's structured output guarantees syntactic JSON validity, not semantic correctness. Write a strict `validateFilterArgs` function that whitelists only `minRate`, `maxRate`, `tags`, `query` and enforces valid ranges before any store dispatch. Treat Gemini output as untrusted input.
+4. **FAISS in-place mutation during rebuild races concurrent search requests** — Never call `.reset()` or `.add()` on `app.state.faiss_index` directly. Always build a new `faiss.IndexFlatIP(768)` object inside the rebuild thread and assign it to `app.state.faiss_index` only after the thread completes. Add `asyncio.Lock` on the rebuild endpoint to prevent double-rebuild OOM.
 
-5. **Framer Motion `AnimatePresence` exit animations inside Virtuoso** — Virtuoso unmounts DOM nodes immediately on scroll; `AnimatePresence` never gets to run exit animations. Use `animate` (entry only) on card `motion` elements; never define `exit` on virtualized items. Reserve `AnimatePresence` for the co-pilot panel, filter sidebar, and modals.
+5. **Zustand newsletter persist key collision silently overwrites `explorer-filters` state** — The new newsletter store must use `name: 'tinrate-newsletter-v1'`. Two stores sharing the same key perform a shallow merge on hydration, wiping user filter preferences. No error is thrown.
+
+6. **`motion.div` with `initial`/`animate` on ExpertCard causes scroll-triggered re-animations** — VirtuosoGrid unmounts cards outside the overscan boundary; Framer Motion treats each remount as a new entry animation. ExpertCard must use CSS-only hover transitions. No Framer Motion import belongs in `ExpertCard.tsx`.
+
+7. **Nested glass surfaces compound blur and wash out to white** — SagePanel using `backdrop-filter` over an already-blurred FilterSidebar blurs the composited result, not the aurora. Apply glass surfaces at the same stacking level. Test contrast over the actual aurora gradient at deployed opacity, not over white.
+
+8. **Newsletter gate flashes locked state for returning subscribers** — Zustand `persist` hydration is asynchronous; the first render uses the store's default state (`subscribed: false`), then hydrates. Read subscription status synchronously in the store's initial state: `() => localStorage.getItem('tinrate-newsletter-v1')`. Keep the existing `localStorage['tcs_email_unlocked']` check as the gate bypass — it is synchronous and must not be replaced.
 
 ## Implications for Roadmap
 
-Based on the dependency graph established in ARCHITECTURE.md and the feature priority matrix in FEATURES.md, research strongly supports a 5-phase build order with an optional 6th phase for extended features.
+Research confirms the six-phase structure identified in FEATURES.md (Phases 22–27). The ordering is determined by hard dependencies.
 
-### Phase 1: Hybrid Search Backend
-**Rationale:** Every other component (UI, state, co-pilot) is blocked until the API contract is established and the FTS5 index exists on Railway. This phase has no frontend dependency and can ship independently. FTS5 migration is idempotent (IF NOT EXISTS) and safe to deploy early.
-**Delivers:** Working `/api/explore` endpoint returning `ExploreResponse` with cursor pagination; FTS5 virtual table on Railway SQLite; `username_to_faiss_pos` mapping in `app.state`; `ExploreResponse` Pydantic schema (the contract all frontend phases depend on)
-**Addresses features:** `/api/explore` hybrid endpoint (P1 core), expert count display, pure filter mode (no query), hybrid search mode
-**Avoids:** FAISS `remove_ids` mutation (add code comment and unit test now), FTS5 UPDATE trigger bug (correct three-trigger pattern from day one), FTS5 missing rebuild (include in migration script with verification SQL)
-**Research flag:** STANDARD PATTERNS — all three pipeline stages are documented with exact code in ARCHITECTURE.md and STACK.md. No additional research needed.
+### Phase 22: Visual Infrastructure (VIS-01 through VIS-05)
 
-### Phase 2: Zustand State and Routing
-**Rationale:** Zustand is the load-bearing middleware for the entire frontend. The sidebar, grid, and co-pilot cannot share state without it. React Router route change (homepage to marketplace) must happen here so Phase 3 builds against the real route. This phase can begin in parallel with Phase 1 using a mock API response; it must finalize after Phase 1 API contract is confirmed.
-**Delivers:** `useExplorerStore.ts` with filter, results, and pilot slices; `partialize` + `version: 1` + `migrate` configured from day one; React Router route change (`/` to `MarketplacePage`); `ExpertCard` and `ExploreResponse` TypeScript types; `useExplore` hook (debounced fetch)
-**Uses:** `zustand@^5.0.0` with `persist` middleware; React Router v7 `lazy()` with loader/component in separate files
-**Avoids:** Double source of truth (write state ownership table before any code; grep for `useState` holding filter/result/gate data); persist rehydration (partialize + version from day one); React Router lazy loading bundle leak (separate `marketplace.loader.ts` from `MarketplacePage.tsx`); OKLCH browser decision (document now, add PostCSS plugin only if needed)
-**Research flag:** STANDARD PATTERNS — Zustand v5 and React Router v7 are well-documented. No additional research needed.
+**Rationale:** Aurora gradient and OKLCH tokens are prerequisites for every other visual feature. Glassmorphism is invisible on white — no glass surface can be validated until the aurora is rendering behind it. All visual features share the same OKLCH color token system, so tokens must exist first.
 
-### Phase 3: Marketplace Page and Filter Sidebar
-**Rationale:** Depends on Phase 1 (API works) and Phase 2 (store works). The page layout and sidebar controls are the visible frame that the grid and co-pilot attach to. Card design must be finalized here before virtualization is implemented — react-virtuoso requires stable card height to avoid measurement thrash.
-**Delivers:** `MarketplacePage.tsx` layout (sidebar + grid area + floating pilot FAB); `FilterSidebar.tsx` (rate range dual-handle slider, tag checkboxes with counts, text search, active filter chips, clear all); debounced filter-to-API wiring; loading skeletons; empty state with co-pilot CTA; expert count ("Showing X of 1,558")
-**Implements:** Left sidebar as primary navigation (non-negotiable industry pattern); sidebar controls as controlled components driven by Zustand; filter chips as single source of visual truth for active state
-**Avoids:** Mobile sidebar vs co-pilot panel conflict (design mutual-exclusion state machine before building either); card height decision (target fixed height with line-clamp to simplify Phase 4 virtualization)
-**Research flag:** STANDARD PATTERNS — faceted sidebar and card design are well-documented marketplace patterns with strong industry consensus.
+**Delivers:** Animated aurora mesh gradient background; glassmorphism on FilterSidebar, SearchInput, SagePanel; OKLCH design tokens in CSS custom properties; `@supports (backdrop-filter: blur(1px))` browser fallback; WCAG 4.5:1 contrast validation on all glass text.
 
-### Phase 4: Expert Grid with Virtualization
-**Rationale:** Depends on Phase 3 (page skeleton exists and card design is finalized). react-virtuoso requires finalized card content to avoid layout thrash. This phase virtualizes the grid for 1,558 experts and wires infinite scroll via cursor pagination.
-**Delivers:** `ExpertGrid.tsx` with react-virtuoso `Virtuoso` component (row-chunked CSS grid approach, not `VirtuosoGrid`); `ExpertCard.tsx` with fixed-height design (name, title, rate, 2-3 tag pills, CTA); `endReached` callback triggering cursor pagination via `appendResults`; Framer Motion entry-only card animation (no exit)
-**Uses:** `react-virtuoso@^4.18.0` (`Virtuoso` list with CSS grid row renderer); `framer-motion@^12.0.0` with `LazyMotion + domAnimation`
-**Avoids:** VirtuosoGrid jitter (use `Virtuoso` with row-chunked approach; use `padding` not `margin` on cards; fixed card height); AnimatePresence exit animations (entry `animate` only; no `exit` prop on card motion elements); Framer Motion bundle size (LazyMotion + domAnimation feature set targets ~15KB)
-**Research flag:** STANDARD PATTERNS — react-virtuoso docs and known VirtuosoGrid limitations are documented in PITFALLS.md. No additional research needed.
+**Addresses:** All VIS table-stakes features: backdrop-filter, semi-transparent backgrounds, 1px border, keyframe animation, contrast compliance.
 
-### Phase 5: Floating AI Co-Pilot
-**Rationale:** Depends on Phase 2 (Zustand store) and Phase 4 (grid exists to provide context). The co-pilot backend (`pilot.py`) can be built in parallel with Phase 4 — they share no code. The co-pilot is the primary differentiator and the last piece to snap into place.
-**Delivers:** `app/routers/pilot.py` (Gemini thin proxy with `apply_filters` tool declaration); `usePilot.ts` (two-turn function calling loop with `validateFilterArgs` before any store dispatch); `CoPilot.tsx` (bottom-right FAB, slide-in panel with context strip, conversation area, sticky input); `AnimatePresence` on panel open/close; mobile full-screen overlay
-**Uses:** `google-genai@1.64.*` (existing); Gemini 2.5 Flash with `apply_filters` FunctionDeclaration; `useExplorerStore.getState()` from async callbacks
-**Avoids:** Gemini output not validated (write `validateFilterArgs` before wiring; unit test with crafted invalid values); server-side state push anti-pattern (backend is a thin proxy only — no filter state on backend); `adminKey` never in Zustand persist (stays in `sessionStorage`)
-**Research flag:** MEDIUM COMPLEXITY — the Gemini two-turn proxy pattern (FastAPI forwarding function call to frontend, frontend returning tool result, second Gemini call for final text) has no official FastAPI reference implementation. The pattern is inferred from documented Gemini function calling behavior. Consider a short spike to validate the exact `PilotRequest` / `PilotResponse` shape against SDK behavior before full build.
+**Avoids:** Pitfalls 2 (overflow ancestor kills blur) and 7 (nested glass double-blur). Phase spec must require a DevTools ancestor chain audit as Step 1 before writing any glass class. Contrast audit must use the actual aurora gradient, not white.
 
-### Phase 6: Extended Features (v2.0 Polish)
-**Rationale:** These features add significant value but do not change the core architecture once Phases 1-5 are working. They can be sequenced independently of each other.
-**Delivers:** URL filter sync (Zustand → query params for shareable links); "Download Match Report" lead magnet (server-side PDF generation, WeasyPrint on Railway, gated by email); fuzzy search / "Did you mean?" (FTS5 prefix + tag vocabulary Levenshtein); match reason snippet on cards (lightweight Gemini call at retrieval time)
-**Research flag:** NEEDS RESEARCH for Download Match Report — WeasyPrint PDF generation on Railway (memory constraints, font availability on Railway's base image) is underexplored. Run a spike: generate a 5-expert report and measure memory and latency before committing. Alternative: send the report as a formatted HTML email (simpler, lower risk, easier to build). All other Phase 6 features follow standard patterns.
+**Research flag:** STANDARD PATTERNS — CSS glassmorphism and aurora animation are thoroughly documented with cross-verified recipes. Pitfall checklists from PITFALLS.md are the critical addition to the spec.
+
+### Phase 23: Discovery Engine (CARD-01..03, DISC-01..04)
+
+**Rationale:** Depends on Phase 22 OKLCH tokens for tag palette and card hover glow colors. Bento card redesign and claymorphic tag cloud are only visually coherent against the aurora background.
+
+**Delivers:** Bento ExpertCard with four visual zones (h-[180px] preserved); CSS-only aurora hover glow; AnimatedTagCloud replacing TagMultiSelect; Framer Motion `layout` prop for tag reorder animation; proximity-based scale via `useMotionValue`/`useTransform`; "Everything is possible" example phrases with `AnimatePresence`.
+
+**Uses:** `motion/react` already installed at v12.34 — `layout`, `useMotionValue`, `useTransform`. CSS claymorphism: `border-radius: 999px` + dual-inset shadow + outer drop shadow.
+
+**Avoids:** Pitfall 3 (useState re-render storm — mandate MotionValues from the start); Pitfall 6 (Framer Motion on VirtuosoGrid cards — CSS-only hover; no Framer Motion import in ExpertCard.tsx).
+
+**Research flag:** MEDIUM CONFIDENCE for proximity scale. The canonical pattern is confirmed via BuildUI Magnified Dock, but no v12-specific tag cloud example with exact `motion/react` imports exists. The phase spec must include the exact `useMotionValue`/`useTransform` code from STACK.md Q3 to prevent `useState` temptation during implementation.
+
+### Phase 24: Atomic Index Swap Admin UI (IDX-01..04)
+
+**Rationale:** Backend swap logic already exists in `_run_ingest_job` (admin.py:93–146). This phase adds only the admin frontend button and status polling UI. Must precede Phases 25–26 because t-SNE cache invalidation hooks into swap completion, and Index Drift state is sourced from the `_ingest` dict extended in this phase.
+
+**Delivers:** Admin rebuild button calling existing `POST /api/admin/ingest/run`; status display (idle/running/complete/failed + timestamp) via existing `GET /api/admin/ingest/status`; `last_rebuild_at` and `expert_count_at_rebuild` fields added to `_ingest` dict; `app.state.tsne_cache = []` invalidation line added to swap completion.
+
+**Avoids:** Pitfall 4 (in-place FAISS mutation) and double-rebuild OOM (asyncio.Lock already needed). Acceptance criteria must include: trigger rebuild, send concurrent explore requests, confirm zero search failures during rebuild.
+
+**Research flag:** STANDARD PATTERNS. The backend swap is already implemented; the admin UI pattern follows existing admin panel conventions. No architecture uncertainty.
+
+### Phase 25: Admin Intelligence Metrics (INTEL-01..04)
+
+**Rationale:** Depends on the `otr_at_k` schema change (ALTER TABLE conversations) established in Phase 24's deployment. OTR@K is computed in the explore pipeline (independent of FAISS rebuild) and logged per search query. Index Drift reads from the `_ingest` dict extended in Phase 24.
+
+**Delivers:** OTR@K computed per search query, stored in `conversations` table; 7-day rolling average in admin Intelligence tab (green ≥0.75, amber 0.60–0.74, red <0.60); Index Drift status display (time since rebuild + expert count delta); `newsletter_subscribers` SQLite table created.
+
+**Uses:** Existing SQLAlchemy + SQLite stack. No new packages. `ALTER TABLE conversations ADD COLUMN otr_at_k REAL` in the existing inline migration block.
+
+**Avoids:** OTR@K exposed to end users (admin-only metric; do not add to public ExploreResponse in user-facing API).
+
+**Research flag:** STANDARD PATTERNS. `SIMILARITY_THRESHOLD=0.60` aligns with existing `GAP_THRESHOLD=0.60` in admin.py — no calibration research needed. The SQL rolling average is a trivial GROUP BY query.
+
+### Phase 26: Embedding Heatmap (INTEL-05..06)
+
+**Rationale:** Depends on scikit-learn (new package requiring a Railway redeploy to cache) and on the production FAISS index being accessible via `reconstruct_n`. This is the highest-risk phase for deployment failure due to the t-SNE blocking pitfall.
+
+**Delivers:** t-SNE projection computed post-startup (PCA 768→50 dims, then TSNE 50→2 dims, n_iter=300, method='barnes_hut', random_state=42); cached in `app.state.tsne_cache`; `GET /api/admin/embedding-map` endpoint (returns 202 while computing); admin scatter plot colored by category with hover tooltips; t-SNE recompute triggered on atomic swap completion.
+
+**Uses:** `scikit-learn==1.8.0`, `scipy==1.15.1` (new backend packages). `asyncio.create_task` post-yield for background computation. `IndexFlatIP.reconstruct_n(0, ntotal, vectors)` — confirmed working on the production index type. PCA pre-reduction is mandatory (reduces 768→50 dims before TSNE; cuts compute time 4–8×).
+
+**Avoids:** Pitfall 1 (t-SNE blocking Railway healthcheck) — this is the highest-severity pitfall in the entire milestone. The phase spec must specify the post-yield `asyncio.create_task` pattern as a non-negotiable constraint and include the exact lifespan code.
+
+**Research flag:** HIGH PRIORITY for spec quality. The pattern is clear, but the blocking mistake is easy to make. The phase spec must reproduce the exact lifespan code from PITFALLS.md Pitfall 4 before any implementation begins. Accept criteria must include: Railway deploy completes and `/health` responds in under 10 seconds.
+
+### Phase 27: Newsletter Gate + Easter Egg (NLTR-01..04, FUN-01)
+
+**Rationale:** Fully independent of all visual and intelligence phases. The newsletter gate modifies an existing modal (ProfileGateModal); the Easter egg adds a Zustand flag and CSS keyframe on the VirtuosoGrid container. Both can be built and tested on the current main without the aurora background.
+
+**Delivers:** Newsletter CTA modal replacing email gate copy; `newsletter_subscribers` SQLite table; `useNltrStore` standalone persist store (`'tinrate-newsletter-v1'` key with synchronous initial state read); admin subscriber list; barrel roll Easter egg applied to the VirtuosoGrid container element (not ExpertCards).
+
+**Avoids:** Pitfall 5 (Zustand key collision — explicitly name the key `'tinrate-newsletter-v1'` in the spec); Pitfall 8 (hydration flash — synchronous localStorage read in initial state); email gate migration gap for v2.0 returning users (check `localStorage['tcs_email_unlocked']` to auto-bypass the newsletter gate for existing unlocked users).
+
+**Research flag:** STANDARD PATTERNS for newsletter gate UX. The barrel roll must use the VirtuosoGrid container element to avoid Pitfall 6 (scroll-triggered re-animations on ExpertCards).
 
 ### Phase Ordering Rationale
 
-- Phase 1 must come before all other phases: the API contract is the single dependency of all frontend phases. Without it, frontend builds against mocks that must be unwound.
-- Phase 2 can partially run in parallel with Phase 1: the Zustand store can be scaffolded against a mock API response, then finalized after Phase 1 ships. This is the only safe parallelization point.
-- Phase 3 before Phase 4: card design must be finalized before virtualization is implemented. Virtuoso requires stable card content to avoid measurement instability.
-- Phase 5 co-pilot backend in parallel with Phase 4: `pilot.py` has no dependency on the frontend grid. The co-pilot frontend (CoPilot.tsx, usePilot.ts) requires Phase 4 (grid must exist to provide context for the AI).
-- Phase 6 after all core phases: these features are additive to a working marketplace, not prerequisites.
+- Phase 22 before Phase 23: OKLCH tokens must exist before any component uses them; glassmorphism requires aurora to validate.
+- Phase 23 after Phase 22: Tag cloud uses aurora palette; card glow tokens reference Phase 22 CSS variables.
+- Phase 24 before Phases 25–26: `_ingest` dict extensions and tsne_cache invalidation are wired into the swap completion that Phase 24 surfaces in the UI.
+- Phase 26 after Phase 24: `reconstruct_n` reads `app.state.faiss_index` which must be valid after swap; tsne_cache invalidation hook lives in the swap completion added in Phase 24.
+- Phase 27 is fully independent: can be built in parallel with any other phase or interleaved if development bandwidth allows.
 
 ### Research Flags
 
-Phases needing deeper research during planning:
-- **Phase 5 (co-pilot two-turn loop):** MEDIUM — validate the exact FastAPI proxy implementation for the Gemini two-turn function calling flow before full build. The pattern is derived from documentation but has no official FastAPI+Gemini reference. A one-day spike is recommended.
-- **Phase 6 (Download Match Report):** LOW-MEDIUM — WeasyPrint on Railway requires environment validation (memory limits, font loading). Run a spike before committing to WeasyPrint. HTML email is the safe fallback.
+Phases likely needing extra care in spec writing:
 
-Standard patterns (skip research-phase):
-- **Phase 1:** SQLite FTS5, FAISS IDSelectorBatch, FastAPI router pattern — fully documented with exact code in ARCHITECTURE.md
-- **Phase 2:** Zustand v5 with persist middleware, React Router v7 lazy loading — official docs are comprehensive
-- **Phase 3:** Faceted sidebar, dual-handle rate slider, tag checkboxes, active filter chips — established marketplace UX patterns with strong consensus
-- **Phase 4:** react-virtuoso `Virtuoso` component, Framer Motion `LazyMotion` — well-documented, pitfalls already identified and mitigated in PITFALLS.md
+- **Phase 23 (DISC-02):** Proximity scale is MEDIUM confidence. The phase spec must include the exact `useMotionValue`/`useTransform` code to prevent the `useState` anti-pattern during implementation.
+- **Phase 26 (INTEL-05):** t-SNE parameter selection and startup integration are HIGH confidence, but the post-yield background task pattern is the most failure-prone in the milestone. Phase spec must include the exact lifespan pattern code as a mandatory constraint.
+
+Phases with standard, well-documented patterns where additional research is not needed:
+- **Phase 22:** CSS glassmorphism, aurora keyframes, OKLCH tokens — thoroughly documented with cross-verified implementations.
+- **Phase 24:** Backend swap already exists; admin UI pattern follows existing admin panel conventions.
+- **Phase 25:** OTR@K SQL query and ALTER TABLE migration follow established codebase patterns exactly.
+- **Phase 27:** Newsletter gate UX and Zustand persist patterns are standard; barrel roll is trivial.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | All packages version-confirmed from npm/PyPI. No new backend packages. Frontend additions (Zustand, react-virtuoso, Framer Motion) from official docs. Existing packages (faiss-cpu, google-genai, Tailwind v3) are unchanged and validated in production. |
-| Features | MEDIUM-HIGH | Table stakes (sidebar, cards, virtualization) are industry consensus with strong multi-source agreement. AI co-pilot anchoring patterns are 6-12 months old and less settled. Download Match Report conversion data is from secondary sources. |
-| Architecture | HIGH | Resolved against live codebase (direct file inspection of all production source files) plus official FAISS, SQLite, Gemini, Zustand, and FastAPI docs. Build order derived from actual dependency graph, not preference. |
-| Pitfalls | HIGH | FAISS, FTS5, and Zustand pitfalls are documented in official sources and verified GitHub issues. react-virtuoso jitter and AnimatePresence incompatibility are confirmed open issues with documented workarounds. Gemini validation pitfall is MEDIUM (community-informed). |
+| Stack | HIGH | npm versions confirmed from package registries; scikit-learn 1.8.0 manylinux wheel availability confirmed for Python 3.11 on Linux x86-64; framer-motion proximity API confirmed from official Motion docs. FTS5/SQLAlchemy pattern MEDIUM (community sources; no live Railway test). |
+| Features | MEDIUM | Glassmorphism and claymorphism CSS recipes HIGH (cross-verified). OTR@K formal definition MEDIUM (equivalent to Precision@K; LinkedIn OTR@K usage LOW confidence). Newsletter gate UX MEDIUM (conversion data from MailerLite 2025). "Everything is possible" element MEDIUM (Framer Motion AnimatePresence pattern is standard). |
+| Architecture | HIGH | All integration points grounded in actual production codebase file inspection. FAISS IndexFlatIP confirmed by local index load (`faiss.read_index('data/faiss.index')` → IndexFlatIP, ntotal=536, d=768). Zustand persist async hydration behavior confirmed from official docs and GitHub issues. scikit-learn startup timing is MEDIUM (2–8s estimate; Railway instance allocation varies). |
+| Pitfalls | HIGH | Eight pitfalls with concrete code patterns. Critical pitfalls (overflow ancestor, t-SNE blocking, FAISS in-place mutation, Zustand key collision) verified against official docs, GitHub issues, and production codebase inspection. |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **Gemini two-turn proxy exact implementation:** The architecture document gives the full pattern (inferred from Gemini function calling docs + Zustand docs), but the FastAPI `pilot.py` proxy has no official reference. Validate during Phase 5 planning or early spike. If the two-turn approach is too complex, a simplified one-shot approach (Gemini returns function call, frontend executes, no second Gemini turn for confirmation text) is a viable fallback.
-- **WeasyPrint on Railway:** PDF generation in a Railway container is not validated. Memory and font availability are unknowns. Gate this behind a spike before committing to the approach in Phase 6.
-- **FTS5 on Railway's SQLite:** The migration assumes Railway's Python image ships CPython's `sqlite3` with FTS5 compiled in (standard for CPython wheels). Almost certainly true, but add a startup check (`SELECT fts5('test')`) — if it raises, fall back to SQLAlchemy LIKE-only search until confirmed.
-- **Tag LIKE query performance at scale:** The SQLAlchemy tag filter uses `LIKE '%"tag"%'` — O(n) full-table scan. At 1,558 experts this is fast (<3ms). If the expert count grows beyond 10k, this needs SQLite JSON virtual columns or Postgres GIN index. Not a v2.0 issue, but flag for future milestones.
+- **t-SNE startup time on Railway:** The 2–8s estimate for 536 × 768 vectors has MEDIUM confidence. If Railway allocates a smaller CPU allocation than expected, the background task may take 15–20s. The post-yield pattern ensures this never blocks healthchecks, but the admin scatter plot loading state must communicate that computation is in progress.
+
+- **Framer Motion import path:** PROJECT.md states the project uses `motion/react` imports. Confirm the installed package is `framer-motion` (which re-exports `motion/react`) and not the separate `motion` npm package (web animations API only). Run `cat frontend/package.json | grep -i motion` before Phase 23.
+
+- **Safari `-webkit-backdrop-filter`:** Tailwind v3 `backdrop-blur-*` utilities do not emit the `-webkit-` prefix. Test on actual Safari (not Chrome DevTools responsive mode which uses Blink). Add the prefix via `@layer utilities` in Phase 22 if needed.
+
+- **Returning v2.0 email gate users:** Confirm the exact localStorage key used in v2.0 (`'tcs_email_unlocked'` or `'emailGateUnlocked'`) before writing the Phase 27 migration logic. The auto-bypass for returning users depends on the correct key name. Read `frontend/src/hooks/useEmailGate.ts` before Phase 27 spec.
+
+- **OTR@K threshold calibration:** The `SIMILARITY_THRESHOLD=0.60` aligns with existing `GAP_THRESHOLD=0.60`. After Phase 25 ships and accumulates real query data, validate the distribution of `otr_at_k` values — if the 7-day average is always >0.90 or always <0.40, the threshold needs recalibration. No action needed before shipping.
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- [FAISS wiki — Setting search parameters](https://github.com/facebookresearch/faiss/wiki/Setting-search-parameters-for-one-query) — IDSelectorBatch search-time API
-- [FAISS IDSelectorBatch C++ API](https://faiss.ai/cpp_api/struct/structfaiss_1_1IDSelectorBatch.html) — numpy int64 array input confirmation
-- [SQLite FTS5 official docs](https://sqlite.org/fts5.html) — external content tables, rebuild command, trigger patterns
-- [Gemini function calling docs](https://ai.google.dev/gemini-api/docs/function-calling) — two-turn loop, FunctionDeclaration schema
-- [Zustand persist middleware docs](https://zustand.docs.pmnd.rs/middlewares/persist) — partialize, version, migrate
-- [react-virtuoso official docs](https://virtuoso.dev) — Virtuoso vs VirtuosoGrid, endReached, troubleshooting (margin vs padding)
-- [FastAPI bigger applications](https://fastapi.tiangolo.com/tutorial/bigger-applications/) — router-per-file pattern
-- [React Router v7 SPA mode](https://reactrouter.com/how-to/spa) — lazy loading, loader/component separation
-- [Tailwind v4 blog](https://tailwindcss.com/blog/tailwindcss-v4) — OKLCH built-in (v4 only, not v3)
-- Direct codebase inspection: `app/main.py`, `app/models.py`, `app/routers/`, `app/services/`, `frontend/src/` — ground truth for all integration points
+
+- [Zustand npm 5.0.10](https://www.npmjs.com/package/zustand) — version, persist middleware API
+- [Zustand persist docs](https://zustand.docs.pmnd.rs/middlewares/persist) — partialize, createJSONStorage, unique name requirement
+- [Zustand onRehydrateStorage bug #1527](https://github.com/pmndrs/zustand/issues/1527) — do not call set() inside onRehydrateStorage callback
+- [react-virtuoso npm 4.18.1](https://www.npmjs.com/package/react-virtuoso) — version, VirtuosoGrid vs Virtuoso distinction
+- [react-virtuoso issue #298](https://github.com/petyosi/react-virtuoso/issues/298) — unmount/remount behavior on scroll
+- [framer-motion npm 12.34.3](https://www.npmjs.com/package/framer-motion) — version, React 18 minimum
+- [Motion docs — motion values](https://motion.dev/docs/react-motion-value) — useMotionValue bypasses React re-renders
+- [Motion docs — useTransform](https://motion.dev/docs/react-use-transform) — composable motion values
+- [Motion docs — layout animations](https://www.framer.com/motion/layout-animations/) — FLIP animation, layout prop
+- [FAISS IDSelectorBatch C++ API](https://faiss.ai/cpp_api/struct/structfaiss_1_1IDSelectorBatch.html) — Python binding availability
+- [FAISS wiki — search parameters](https://github.com/facebookresearch/faiss/wiki/Setting-search-parameters-for-one-query) — SearchParameters for flat index
+- [FAISS thread safety — Issue #367](https://github.com/facebookresearch/faiss/issues/367) — concurrent read/write not thread-safe
+- [SQLite FTS5 docs](https://sqlite.org/fts5.html) — FTS5 availability, content= mode, trigger patterns
+- [google-genai PyPI](https://pypi.org/project/google-genai/) — function calling API, FunctionDeclaration
+- [google-generativeai deprecated](https://github.com/google-gemini/deprecated-generative-ai-python) — deprecation confirmed
+- [Tailwind v4 blog](https://tailwindcss.com/blog/tailwindcss-v4) — OKLCH built-in in v4; confirms v3 requires manual CSS vars
+- [scikit-learn PyPI 1.8.0](https://pypi.org/project/scikit-learn/) — version, manylinux wheel for Python 3.11
+- [sklearn TSNE docs](https://scikit-learn.org/stable/modules/generated/sklearn.manifold.TSNE.html) — parameter reference, PCA pre-reduction recommendation, max_iter vs n_iter rename
+- [sklearn n_iter deprecation issue #25518](https://github.com/scikit-learn/scikit-learn/issues/25518) — n_iter removed in 1.7, use max_iter
+- [caniuse OKLCH](https://caniuse.com/mdn-css_types_color_oklch) — 93% browser support as of early 2026
+- [caniuse backdrop-filter](https://caniuse.com/css-backdrop-filter) — 92% browser support
+- [MDN backdrop-filter](https://developer.mozilla.org/en-US/docs/Web/CSS/backdrop-filter) — stacking context behavior documented
+- [Josh W. Comeau — Next-level frosted glass](https://www.joshwcomeau.com/css/backdrop-filter/) — overflow: hidden stacking context trap
+- [FastAPI Discussion #6526](https://github.com/fastapi/fastapi/discussions/6526) — lifespan above yield blocking startup
+- Direct codebase inspection: `app/main.py`, `app/routers/admin.py`, `app/routers/explore.py`, `app/services/explorer.py`, `app/models.py`, `app/config.py`, `scripts/ingest.py`, `frontend/src/store/index.ts`, `frontend/src/store/filterSlice.ts`, `frontend/src/components/marketplace/ExpertCard.tsx` — all integration points ground truth
 
 ### Secondary (MEDIUM confidence)
-- [SQLite forum — FTS5 trigger bug](https://sqlite.org/forum/info/da59bf102d7a7951740bd01c4942b1119512a86bfa1b11d4f762056c8eb7fc4e) — UPDATE trigger corruption documented by SQLite contributors
-- [FAISS issue #3112](https://github.com/facebookresearch/faiss/issues/3112) — IDSelectorBatch hash collision (not relevant for sequential IDs)
-- [react-virtuoso issue #479](https://github.com/petyosi/react-virtuoso/issues/479) and [#1086](https://github.com/petyosi/react-virtuoso/issues/1086) — VirtuosoGrid jitter with variable heights (open since 2021, unresolved)
-- [Framer Motion issue #1682](https://github.com/framer/motion/issues/1682) — AnimatePresence exit animation incompatibility with virtualizers
-- [Zustand hydration race condition fix — v5.0.10](https://github.com/pmndrs/zustand/discussions/2556) — reason to use 5.0.10+
-- [React Training blog — React Router v7 lazy loading pitfalls](https://reacttraining.com/blog/spa-lazy-loading-pitfalls) — loader/component separation required for true code splitting
-- [Brixon Group — B2B lead magnet conversion data](https://brixongroup.com/en/b2b-lead-magnets-compared-gated-pdf-vs-interactive-tool-which-strategy-will-deliver-better-results-in/) — personalized report 6.2% vs static 3.8%
-- [Microsoft Learn AI UX guidance](https://learn.microsoft.com/en-us/microsoft-cloud/dev/copilot/isv/ux-guidance) — floating AI co-pilot patterns
+
+- [Glassmorphism Implementation Guide 2025](https://playground.halfaccessible.com/blog/glassmorphism-design-trend-implementation-guide) — glass recipe values
+- [LogRocket — Implementing Claymorphism](https://blog.logrocket.com/implementing-claymorphism-css/) — clay shadow values
+- [hype4.academy — Claymorphism CSS](https://hype4.academy/articles/coding/how-to-create-claymorphism-using-css) — dual-inset shadow technique
+- [BuildUI Magnified Dock recipe](https://buildui.com/recipes/magnified-dock) — proximity scale canonical pattern (framer-motion imports; API identical to motion/react)
+- [Pinecone — Evaluation Measures in IR](https://www.pinecone.io/learn/offline-evaluation/) — OTR@K / Precision@K equivalence
+- [Omnisend — Newsletter Signup Examples 2026](https://www.omnisend.com/blog/newsletter-signup-examples/) — newsletter gate UX patterns
+- [MailerLite — Newsletter Form Best Practices](https://www.mailerlite.com/blog/optimize-email-signup-form) — single-field friction data (each additional field reduces conversion 4–11%)
+- [SQLAlchemy FTS5 Discussion #9466](https://github.com/sqlalchemy/sqlalchemy/discussions/9466) — text() is the only path for FTS5 DDL
+- [Railway nixpacks docs](https://docs.railway.com/reference/nixpacks) — Python build process, glibc version
+- [Zustand persist behavior — Discussion #426](https://github.com/pmndrs/zustand/discussions/426) — async hydration; synchronous read workaround
+- [scikit-learn t-SNE perplexity example](https://scikit-learn.org/stable/auto_examples/manifold/plot_t_sne_perplexity.html) — parameter tuning for N=530
+- [Dalton Walsh — Aurora CSS Background](https://daltonwalsh.com/blog/aurora-css-background-effect/) — aurora animation technique
 
 ### Tertiary (LOW confidence)
-- [Microsoft Bing floating Copilot — Windows Forum](https://windowsforum.com/threads/microsoft-bings-new-ai-features-floating-copilot-box-source-transparency-chat-driven-results.371429/) — FAB anchor position convention (bottom-right) used by industry-standard assistants
-- Prompt injection risk for Gemini function calling — community-informed, not officially documented as a specific attack vector for this architecture
+
+- Training data: LinkedIn OTR@K usage in production search evaluation — OTR@K term sourcing; mathematically equivalent to Precision@K regardless of term origin
 
 ---
-*Research completed: 2026-02-21*
+*Research completed: 2026-02-22*
 *Ready for roadmap: yes*
