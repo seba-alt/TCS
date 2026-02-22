@@ -42,12 +42,16 @@ A user describes any problem and instantly gets expertly matched professionals t
 - ✓ Bento-style ExpertCard redesign (CARD-01 – CARD-03) — Phase 23
 - ✓ Animated claymorphic tag cloud + "Everything is possible" element (DISC-01 – DISC-04) — Phase 23
 
+### Validated
+
+- ✓ Sage calls `run_explore()` in-process via `search_experts` FunctionDeclaration; results narrated + grid synced via `validateAndApplyFilters()` — Phase 28
+- ✓ Sage panel and grid kept in sync — `search_performed: true` triggers filter slate clear + search param apply + useExplore re-fetch — Phase 28
+- ✓ Zero-result handling: Sage narrates fallback alternatives (grid stays); double-zero resets grid to all experts — Phase 28
+
 ### Active
 
 <!-- v2.3 Sage Evolution & Marketplace Intelligence -->
 
-- [ ] Sage calls `/api/explore` search function and returns expert results in chat + syncs main grid
-- [ ] Sage panel and grid are kept in sync — Sage search updates the visible expert grid
 - [ ] Sage system prompt rewritten for warmer, wittier personality
 - [ ] Sage asks clarifying follow-up questions when query is ambiguous
 - [ ] Sage proactively nudges when the grid shows zero results
@@ -188,6 +192,10 @@ A user describes any problem and instantly gets expertly matched professionals t
 | Barrel roll intercepts before API in Sage | Sending "barrel roll" to Gemini would produce nonsensical results — short-circuit with canned message preserves quality UX | ✓ Good — playful without confusing AI |
 | VirtuosoGrid container rotation (not card rotation) | Individual ExpertCard rotation causes scroll-triggered re-animations on virtualized unmount/remount — container rotation avoids VirtuosoGrid internals | ✓ Good — smooth 360° with no visual artifacts |
 | rotate reset to 0 with duration:0 after spin | Framer Motion accumulates transform state — must explicitly reset after animate to prevent additive rotation on repeat triggers | ✓ Good — documented in SUMMARY; repeat triggers work cleanly |
+| search_experts FunctionDeclaration with mutually exclusive descriptions | apply_filters explicitly says "do NOT use when discovering experts"; search_experts description covers all discovery intent patterns — 20/20 routing accuracy, no tuning needed | ✓ Good — clean separation eliminates misrouting |
+| args = dict(fn_call.args) before all use | Gemini returns protobuf Struct, not dict — must unwrap before any key access; rate_min/rate_max need float(), tags need list() for nested types | ✓ Good — defensive casting prevents silent type errors |
+| search_performed check before data.filters truthy check | Zero-result search returns filters:null — without search_performed check first, null filters on a search path would silently skip grid update | ✓ Good — correct routing for all four states (search+results, search+zero, search+double-zero, refine) |
+| validateAndApplyFilters({reset:true}) then validateAndApplyFilters(filtersObj) | Two-call pattern for clean slate + Sage params — single call would layer on dirty existing filter state | ✓ Good — grid always reflects exactly Sage's intent |
 
 ---
-*Last updated: 2026-02-22 — Milestone v2.3 Sage Evolution & Marketplace Intelligence started*
+*Last updated: 2026-02-22 after Phase 28 (Sage Search Engine)*
