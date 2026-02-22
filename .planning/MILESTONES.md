@@ -60,3 +60,13 @@
 
 ---
 
+
+## v2.0 Extreme Semantic Explorer (Shipped: 2026-02-22)
+
+**Phases completed:** 18 phases, 55 plans, 19 tasks
+
+**Key accomplishments:**
+- (none recorded)
+
+---
+

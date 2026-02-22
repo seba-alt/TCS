@@ -2,11 +2,11 @@
 
 ## What This Is
 
-An AI-powered expert discovery experience for the Tinrate platform. Users describe their problem in natural language and the system semantically searches a database of 1,558 vetted experts, then responds with a personalized, conversational recommendation of exactly three best-fit experts — displayed as styled, clickable contact cards that link directly to their Tinrate profile pages. The platform includes an email gate for lead capture, thumbs up/down feedback on results, a full admin analytics dashboard, and a live intelligence steering panel where admins can toggle HyDE query expansion and feedback re-ranking flags and tune numeric thresholds without redeploying.
+A professional Expert Marketplace for the Tinrate platform. Users browse a pool of 530 vetted experts via a full-featured marketplace UI — faceted sidebar with rate slider, tag filter, and text search; virtualized infinite-scroll grid; and a floating Sage AI co-pilot that applies filters from natural language. An email gate captures leads when users click "View Full Profile". The platform includes URL-synced filter state (shareable filtered views), fuzzy search suggestions, a graceful no-results experience, and a full admin analytics dashboard with a live intelligence steering panel.
 
 ## Core Value
 
-A user describes any problem and instantly gets three expertly matched professionals they can contact — no searching, no filtering, no guesswork.
+A user describes any problem and instantly gets expertly matched professionals they can browse, filter, and contact — no searching, no guesswork.
 
 ## Requirements
 
@@ -21,8 +21,45 @@ A user describes any problem and instantly gets three expertly matched professio
 - ✓ Thumbs up/down feedback on expert results, stored in DB with optional detail — v1.0
 - ✓ Admin dashboard with login, search analytics, lead tracking, expert management — v1.0
 - ✓ Application deployed publicly — Railway backend, Vercel frontend — v1.0
+- ✓ Hybrid search backend (`/api/explore`) with SQLAlchemy pre-filter, FAISS IDSelectorBatch, FTS5 BM25 fusion, findability and feedback boosts — v2.0
+- ✓ Zustand global state (`useExplorerStore`) with filter, results, and pilot slices; localStorage persist for filter preferences — v2.0
+- ✓ Faceted sidebar: rate slider, domain tag multi-select, text search, filter chips; mobile vaul bottom-sheet drawer — v2.0
+- ✓ Virtualized expert grid with react-virtuoso infinite scroll; cards show name, title, company, rate, tags, findability badge, match reason — v2.0
+- ✓ Expert cards have CSS hover animation (lift + purple glow via `.expert-card` class); AnimatePresence for Sage FAB/panel and ProfileGateModal — v2.0
+- ✓ Floating Sage AI co-pilot: FAB → 380px slide-in panel, Gemini function calling (`apply_filters`), full-screen on mobile — v2.0
+- ✓ Free browsing without email gate; email gate only on "View Full Profile" — v2.0
+- ✓ Email gate + localStorage bypass for returning visitors — v2.0
+- ✓ URL reflects active filters as query params (shareable filtered views); filter state restores from URL on load — v2.0
+- ✓ No-results state shows 6 alternative tag suggestions, a Sage CTA, and a clear-all option — v2.0
+- ✓ FTS5 prefix-matching `/api/suggest` endpoint; SearchInput shows suggestions dropdown with AbortController — v2.0
+- ✓ Infinite scroll with active text query sends correct `query` param (pagination bug fixed) — v2.0
+- ✓ Rate filter chip reflects actual filter state on page load; RateSlider max=5000 aligned with store defaults — v2.0
+
+### Active
+
+(None — start fresh requirements for next milestone with `/gsd:new-milestone`)
+
+### Out of Scope
+
+- User authentication / accounts — users interact anonymously; admin uses session key
+- Booking/payment flow — cards link to Tinrate profiles where booking happens
+- Mobile native app — web-first
+- Real-time availability or calendar integration — not in CSV data
+- Multi-language support — English only for v1
+- Offline mode — real-time retrieval is core value
+- In-app match report download (LEAD-03) — deferred to v2.1 backlog
 
 ## Shipped Versions
+
+### v2.0 Extreme Semantic Explorer — Shipped 2026-02-22
+- Hybrid search backend: three-stage pipeline (SQLAlchemy + FAISS 0.7 + BM25 0.3) with findability/feedback boosts
+- Zustand global state with three slices, localStorage persist, Zustand selectors pattern
+- Marketplace UI: faceted sidebar, mobile vaul bottom-sheet, filter chips, virtualized react-virtuoso grid
+- Expert cards with CSS hover animation (lift + purple glow); AnimatePresence for modals and Sage panel
+- Floating Sage AI co-pilot: FAB, slide-in panel, Gemini two-turn function calling, mobile full-screen
+- Extended features: email gate (View Full Profile), URL filter sync, FTS5 suggestions, EmptyState with tag pills
+- Bug fixes: pagination `q`→`query` param, FilterChips/RateSlider/MobileFilterSheet rate defaults (all aligned to 5000)
+- Archive: `.planning/milestones/v2.0-ROADMAP.md`
 
 ### v1.2 Intelligence Activation & Steering Panel — Shipped 2026-02-21
 - SQLite `settings` table with runtime flag storage — toggle HyDE/feedback without Railway redeploy
@@ -44,39 +81,20 @@ A user describes any problem and instantly gets three expertly matched professio
 - Core AI chat with 3-expert recommendations, email gate, feedback, admin dashboard
 - Archive: `.planning/milestones/v1.0-ROADMAP.md`
 
-## Current Milestone: v2.0 — Extreme Semantic Explorer
-
-**Goal:** Rearchitect from AI chat into a professional Expert Marketplace with hybrid search, faceted sidebar, virtualized expert grid, and a floating AI co-pilot with function calling.
-
-**Target features:**
-- Hybrid search backend: `/api/explore` with SQLAlchemy pre-filter → FAISS IDSelectorBatch → FTS5 BM25 weighted fusion + findability/feedback boosts
-- Zustand global state: `useExplorerStore` with filters/results/pilot slices + localStorage persist
-- Marketplace UI: faceted sidebar (rate slider, tag filter, search), react-virtuoso expert grid, Framer Motion entry animations
-- Floating AI co-pilot: FAB → 380px slide-in panel, Gemini function calling (`apply_filters`), full-screen on mobile
-- Value-driven lead capture: gate "View Full Profile" + "Download Match Report" (in-app HTML AI report) behind email modal
-- Robustness: URL filter state, FTS5 fuzzy suggestions, graceful empty states
-
 ## Current State
 
-**Deployed version:** v1.2 (Railway + Vercel, auto-deploys on push to main)
-**Expert pool:** 1,558 experts, all AI-tagged, FAISS index at 1,558 vectors
-**Search intelligence:** HyDE + feedback re-ranking live; toggled via admin steering panel (DB-backed settings, no redeploy)
-**Admin panel:** Intelligence tab = live steering panel; Search Lab = A/B comparison with diff view
-
-### Out of Scope
-
-- User authentication / accounts — users interact anonymously; admin uses session key
-- Booking/payment flow — cards link to Tinrate profiles where booking happens
-- Mobile native app — web-first
-- Real-time availability or calendar integration — not in CSV data
-- Multi-language support — English only for v1
-- Offline mode — real-time retrieval is core value
+**Deployed version:** v2.0 (Railway + Vercel, auto-deploys on push to main)
+**Expert pool:** 530 experts (data/metadata.json), all AI-tagged; FAISS index at 530 vectors
+**Search intelligence:** Three-stage hybrid pipeline live; HyDE + feedback re-ranking toggled via admin steering panel
+**Marketplace:** Full expert browse/filter experience with Sage AI co-pilot; email gate on profile clicks
+**Admin panel:** Intelligence tab = live steering panel; Search Lab = A/B comparison; Expert tab = sort/filter/pagination
+**Next:** Planning v2.1 — start with `/gsd:new-milestone`
 
 ## Context
 
-- **Expert data:** SQLite table with 1,558 profiles; FAISS index at 1,558 tag-enriched vectors; all experts AI-tagged with 3–8 domain tags + findability scores
-- **AI stack:** Google GenAI (gemini-embedding-001) for embeddings, Gemini 2.5 Flash for generation and expert tagging
-- **Codebase:** ~8,000 LOC Python + TypeScript
+- **Expert data:** SQLite table with 530 profiles; FAISS index at 530 tag-enriched vectors; all experts AI-tagged with 3–8 domain tags + findability scores
+- **AI stack:** Google GenAI (gemini-embedding-001) for embeddings, Gemini 2.5 Flash for generation, expert tagging, and Sage co-pilot function calling
+- **Codebase:** ~6,356 LOC TypeScript/TSX · ~3,767 LOC Python
 - **Deployed:** Railway (FastAPI + SQLite + FAISS) + Vercel (React/Vite/Tailwind v3)
 - **Live since:** 2026-02-20
 - **Admin dashboard:** Available at /admin — search analytics, lead tracking, expert management, score explainer, intelligence steering panel, Search Lab A/B comparison
@@ -86,16 +104,16 @@ A user describes any problem and instantly gets three expertly matched professio
 - **Tech stack:** React frontend, Python FastAPI backend — already decided
 - **Hosting:** Vercel (frontend) + Railway (backend)
 - **AI provider:** Google GenAI (embeddings) + Gemini (generation) — no switching to OpenAI
-- **Output format:** Always exactly 3 expert recommendations per response (unless clarification needed)
+- **Output format:** Always exactly 3 expert recommendations per chat response (unless clarification needed)
 
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
 | RAG over fine-tuning | CSV data changes; retrieval is more maintainable than a fine-tuned model | ✓ Good — live in production, retrieval quality sufficient |
-| FAISS in-memory | 1,558 profiles is small enough; no vector DB needed for v1 | ✓ Good — 530 vectors indexed, fast retrieval |
+| FAISS in-memory | 530 profiles is small enough; no vector DB needed | ✓ Good — fast retrieval, zero ops |
 | Standalone site | Decoupled from main Tinrate app — faster to ship, easier to iterate | ✓ Good — shipped same day |
-| Exactly 3 recommendations | Clear, decisive UX — avoids overwhelming users with choice | ✓ Good — user-verified in production |
+| Exactly 3 recommendations (chat) | Clear, decisive UX — avoids overwhelming users with choice | ✓ Good — user-verified in production |
 | SQLite for v1 | Zero-config; Railway persistent volume; replace URL with Postgres for scale | ✓ Good — works on Railway, zero ops |
 | Expert SQLite table | Seeded from experts.csv at first startup; replaces fragile file-read on Railway | ✓ Good — fixed "Failed to fetch" production crash |
 | sessionStorage admin key | Replaces VITE_ADMIN_KEY baked into Vercel build — safer, no redeploy needed to rotate | ✓ Good — cleaner security model |
@@ -108,7 +126,8 @@ A user describes any problem and instantly gets three expertly matched professio
 | ToggleSwitch as plain button | button[role=switch] + aria-checked, no external library — keeps bundle small | ✓ Good — accessible, dependency-free |
 | Search Lab A/B overrides in-memory | Per-run overrides merged in-memory, never written to DB — global settings unchanged | ✓ Good — matches admin mental model |
 | VirtuosoGrid (not Virtuoso) for expert grid | Cards use fixed h-[180px] height → VirtuosoGrid's uniform-height assumption is correct; listClassName CSS grid handles 2/3-col responsive layout | ✓ Good — correct tool for fixed-height cards |
-| motion from 'motion/react' (not 'framer-motion') | New package name for Framer Motion v12+ — import path changed; entry-only animation on cards (no exit prop) to avoid VirtuosoGrid virtualization conflicts | ✓ Good — confirmed in Phase 17 implementation |
+| CSS hover animation for ExpertCard (not Framer Motion mount) | Mount stagger removed during Phase 17 — CSS hover (lift + purple glow) is lighter and avoids VirtuosoGrid virtualization conflicts | ✓ Good — MARKET-05 accepted as shipped |
+| motion from 'motion/react' for modals/FAB (not card mounts) | AnimatePresence used for Sage FAB show/hide, Sage panel slide-in, ProfileGateModal enter/exit only | ✓ Good — Framer Motion where it adds real value |
 | Expert interface snake_case | API returns snake_case (first_name, job_title, hourly_rate) — camelCase aliases removed entirely; all components updated to match | ✓ Good — eliminated undefined field bug on cards |
 | Individual Zustand selectors for isFetchingMore/appendResults | Same Phase 16 pattern — individual selectors in useExplore hook prevent stale closure and re-render loops for infinite scroll state | ✓ Good — consistent pattern across hooks |
 | flex-1 min-h-0 container for VirtuosoGrid | VirtuosoGrid requires known-height container; flex-1 min-h-0 within flex column gives measurable height for virtualization | ✓ Good — VirtuosoGrid renders correctly |
@@ -117,6 +136,9 @@ A user describes any problem and instantly gets three expertly matched professio
 | Gemini role mapping: 'assistant' → 'model' | pilotSlice uses 'user'/'assistant' (React convention); Gemini API requires 'user'/'model' — toGeminiRole() handles mapping in useSage | ✓ Good — prevents Gemini API 400 errors on history |
 | Two-turn Gemini pattern for Sage | Turn 1: extract apply_filters args; Turn 2: send function result back for confirmation text — keeps confirmation contextually accurate | ✓ Good — aligns with Gemini function calling spec |
 | FAB hides when panel is open | AnimatePresence with {!isOpen && <SageFAB>} — cleaner than FAB+panel coexisting; avoids z-index conflicts on mobile | ✓ Good — locked in CONTEXT.md before Phase 18 |
+| loadNextPage pagination: `query` param (not `q`) | useExplore.ts loadNextPage was sending `?q=` while backend expected `?query=`; fixed in Phase 20 gap closure | ✓ Good — pagination with active text query now correct |
+| DEFAULT_RATE_MAX=5000 aligned across all components | FilterChips, RateSlider, and MobileFilterSheet all align to store default of 5000; fixed spurious chip on page load | ✓ Good — rate filter chip only appears when user has actively filtered |
+| LEAD-03 deferred to v2.1 | In-app match report requires significant new backend + UI work; email gate alone is sufficient lead capture for v2.0 | — Deferred — capture as v2.1 requirement |
 
 ---
-*Last updated: 2026-02-21 after Phase 18 (Floating AI Co-Pilot)*
+*Last updated: 2026-02-22 after v2.0 milestone (Extreme Semantic Explorer)*
