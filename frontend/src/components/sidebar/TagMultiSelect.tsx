@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useFilterSlice } from '../../store'
 import { TOP_TAGS } from '../../constants/tags'
+import { trackEvent } from '../../tracking'
 
 export function TagMultiSelect() {
   const { tags, toggleTag } = useFilterSlice()
@@ -23,7 +24,16 @@ export function TagMultiSelect() {
           return (
             <button
               key={tag}
-              onClick={() => toggleTag(tag)}
+              onClick={() => {
+              if (!isSelected) {
+                // Only track tag ADD, not tag remove — reduces noise
+                void trackEvent('filter_change', {
+                  filter: 'tag',
+                  value: tag,
+                })
+              }
+              toggleTag(tag)
+            }}
               className={`text-xs px-2 py-1 rounded-full border transition-colors ${
                 isSelected
                   ? 'bg-brand-purple text-white border-brand-purple'
