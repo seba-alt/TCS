@@ -138,18 +138,18 @@ Plans:
   2. The admin Intelligence tab displays a 7-day rolling average OTR@K with color coding (green ≥ 0.75, amber 0.60–0.74, red < 0.60)
   3. The admin Intelligence tab shows how long ago the FAISS index was last rebuilt (e.g., "3 days ago")
   4. The admin Intelligence tab shows the expert count delta since the last rebuild (e.g., "+12 experts added since rebuild")
-**Plans**: TBD
+**Plans**: 2 plans
 
 **Planning notes (from research):**
-- OTR@K computed in `run_explore()` after `scored.sort()` — `top_k = scored[:10]; otr = sum(1 for s in top_k if s[1] >= 0.60) / len(top_k)`
+- OTR@K computed in chat pipeline (chat.py) after retrieve_with_intelligence() returns candidates — NOT in marketplace explore path
 - Add `otr_at_k REAL` column to conversations via inline `ALTER TABLE` in main.py (same pattern as existing migrations)
 - `SIMILARITY_THRESHOLD=0.60` aligns with existing `GAP_THRESHOLD=0.60` — no recalibration needed
 - OTR@K is admin-only — do NOT expose in public ExploreResponse
 - Index Drift reads from `_ingest` dict extended in Phase 24
 
 Plans:
-- [ ] 25-01: TBD
-- [ ] 25-02: TBD
+- [ ] 25-01-PLAN.md — DB migration + ORM field + OTR@K computation in chat.py + GET /api/admin/intelligence endpoint
+- [ ] 25-02-PLAN.md — IntelligenceMetrics TypeScript type + useIntelligenceMetrics hook + OTR@K and Index Drift metric panels in IntelligenceDashboardPage; human visual verification
 
 ### Phase 26: Embedding Heatmap
 **Goal**: The admin Intelligence tab displays an interactive scatter plot of all expert embeddings projected into 2D space via t-SNE, colored by category, with expert name visible on hover — enabling operators to see clustering and coverage of the expert pool.
