@@ -14,10 +14,13 @@ Uses ALLOWED_ORIGINS env var (comma-separated).
 Default: localhost:5173 (Vite dev server).
 Production: Railway injects the actual Vercel URL.
 """
+import asyncio
 import csv
 import json
 import os
 from contextlib import asynccontextmanager
+
+import numpy as np
 
 import app.models  # noqa: F401 — registers ORM models with Base metadata
 import faiss
@@ -219,6 +222,8 @@ async def lifespan(app: FastAPI):
         count=len(_username_to_pos),
     )
     app.state.tsne_cache = []   # Phase 26: t-SNE projection cache; invalidated on index rebuild
+    app.state.tsne_ready = False    # Phase 26: False until background task completes
+    app.state.embedding_map = []    # Phase 26: populated by _compute_tsne_background
 
     # Phase 14: category auto-classification (one-time startup migration)
     from app.routers.admin import _auto_categorize as _categorize  # noqa: PLC0415
@@ -236,6 +241,7 @@ async def lifespan(app: FastAPI):
             log.info("startup: category auto-classification", count=len(_uncategorized))
 
     yield
+    asyncio.create_task(_compute_tsne_background(app))  # Phase 26: post-yield — NEVER above yield
     # Shutdown: in-memory FAISS index is garbage-collected automatically
 
 
