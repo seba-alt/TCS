@@ -174,10 +174,11 @@ Plans:
   3. LEAD-03 is marked deferred in `REQUIREMENTS.md` with a v2.1 backlog note
   4. Dead `_state?.triggerSearch()` comment removed from Phase 15 store
   5. Phase 17 `VERIFICATION.md` `tags.slice` count corrected (0,2 not 0,3)
-**Plans**: 1 plan
+**Plans**: 2 plans
 
 Plans:
-- [ ] 21-01-PLAN.md — Write Phase 16 + Phase 19 VERIFICATION.md; update MARKET-05 + Phase 17 VERIFICATION.md; mark LEAD-03 deferred; remove dead comments
+- [ ] 21-01-PLAN.md — Write Phase 16 + Phase 19 VERIFICATION.md; fix Phase 17 VERIFICATION.md; update MARKET-05 + confirm LEAD-03 deferral
+- [ ] 21-02-PLAN.md — Remove dead code: triggerSearch comment in store/index.ts; dead index prop in ExpertCard/ExpertGrid
 
 ## Progress
 
@@ -195,4 +196,4 @@ Plans:
 | 18. Floating AI Co-Pilot | 4/4 | Complete    | 2026-02-21 | - |
 | 19. Extended Features | v2.0 | 6/6 | Complete | 2026-02-21 |
 | 20. Bug Fixes — Pagination & Rate Filter | 1/1 | Complete    | 2026-02-22 | — |
-| 21. Documentation & Cleanup | v2.0 | 0/1 | Pending | — |
+| 21. Documentation & Cleanup | v2.0 | 0/2 | Pending | — |
