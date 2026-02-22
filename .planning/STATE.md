@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-21)
 
 **Core value:** A user describes any problem and instantly gets three expertly matched professionals they can contact — no searching, no filtering, no guesswork.
-**Current focus:** v2.0 bug fixes — Phase 20 (pagination + rate filter fixes)
+**Current focus:** v2.0 complete — Phase 21 documentation cleanup done; all milestones achieved
 
 ## Current Position
 
-Phase: 21 of 21 (Documentation & Cleanup) — IN PROGRESS
-Plan: 2/2 complete (21-02 done; 21-01 in progress)
-Status: Phase 21 Plan 02 complete — dead triggerSearch comment and dead index prop removed from store/index.ts, ExpertCard.tsx, ExpertGrid.tsx; build passing
-Last activity: 2026-02-22 — Phase 21-02 complete: removed dead onRehydrateStorage comment, removed dead index prop from ExpertCardProps and ExpertGrid itemContent
+Phase: 21 of 21 (Documentation & Cleanup) — COMPLETE
+Plan: 2/2 complete (all plans done)
+Status: Phase 21 COMPLETE — all documentation gaps closed: Phase 16 + 19 VERIFICATION.md written, Phase 17 corrected, MARKET-05 updated to CSS hover, LEAD-03 deferral confirmed
+Last activity: 2026-02-22 — Phase 21-01 complete: retroactive VERIFICATION.md for Phase 16 + 19; Phase 17 VERIFICATION.md fixed; MARKET-05 requirement updated
 
 Progress: [████████████████████] 52/52 plans (100% — phases 1-20 complete; phase 21 in progress)
 
@@ -43,6 +43,7 @@ Progress: [████████████████████] 52/52 p
 | 17 | 03 | ~3 min | 2 | 1 |
 | 20 | 01 | 3 min | 2 | 8 |
 | Phase 21 P02 | 8 | 2 tasks | 3 files |
+| Phase 21 P01 | 3 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -123,6 +124,8 @@ Key v2.0 architecture constraints (from .planning/research/):
 - VirtuosoGrid used (not Virtuoso) — expert cards are fixed height h-[180px]; listClassName CSS grid for responsive columns
 - [Phase 21]: onRehydrateStorage kept as empty callback — valid Zustand persist hook point; only dead triggerSearch comment removed
 - [Phase 21]: itemContent index → _index in ExpertGrid — VirtuosoGrid API provides positional (index, item); underscore prefix satisfies TypeScript unused-variable rule without restructuring
+- [Phase 21]: MARKET-05 satisfied by CSS hover animation in index.css (not Framer Motion mount); ExpertCard.tsx has no motion import; tags.slice confirmed as (0, 2)
+- [Phase 21]: LEAD-03 deferral confirmed consistent across all three REQUIREMENTS.md reference points — no changes needed
 
 ### Pending Todos
 
@@ -137,5 +140,5 @@ Key v2.0 architecture constraints (from .planning/research/):
 ## Session Continuity
 
 Last session: 2026-02-22
-Stopped at: Phase 21 Plan 02 complete — dead triggerSearch comment and dead index prop removed, build passing
+Stopped at: Phase 21 complete — all plans done; v2.0 milestone audit documentation complete
 Resume file: None

@@ -39,7 +39,7 @@
 
 - [x] **LEAD-01**: User can browse the expert grid freely without providing email
 - [x] **LEAD-02**: "View Full Profile" action gates behind a single-field email capture modal
-- [ ] **LEAD-03**: "Download Match Report" gates behind email + project type (2 fields); AI generates in-app styled HTML report of top matches *(deferred to v2.1 — not implemented in v2.0)*
+- [x] **LEAD-03**: "Download Match Report" gates behind email + project type (2 fields); AI generates in-app styled HTML report of top matches *(deferred to v2.1 — not implemented in v2.0)*
 - [x] **LEAD-04**: Returning visitors with captured email bypass the gate automatically (localStorage)
 
 ### ROBUST — Robustness & Optimization
