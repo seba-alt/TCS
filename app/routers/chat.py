@@ -93,6 +93,13 @@ async def _stream_chat(body: ChatRequest, request: Request, db: Session):
         # Capture top FAISS score for gap analytics (None if no candidates)
         top_score = candidates[0].score if candidates else None
 
+        # OTR@K: fraction of top-10 candidates with score >= 0.60 (admin-only, not in response)
+        top_k = candidates[:10]
+        otr_at_k: float | None = (
+            sum(1 for c in top_k if c.score >= 0.60) / len(top_k)
+            if top_k else None
+        )
+
         # Generate response (sync — run in thread pool; has internal retry logic)
         llm_response = await loop.run_in_executor(
             None,
@@ -129,6 +136,7 @@ async def _stream_chat(body: ChatRequest, request: Request, db: Session):
             hyde_triggered=bool(intelligence.get("hyde_triggered", False)),
             feedback_applied=bool(intelligence.get("feedback_applied", False)),
             hyde_bio=intelligence.get("hyde_bio"),
+            otr_at_k=otr_at_k,
         )
         db.add(conversation)
         db.commit()
