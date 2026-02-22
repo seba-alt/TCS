@@ -25,10 +25,10 @@ export function ExpertCard({ expert, onViewProfile }: ExpertCardProps) {
   const hasSemanticFilter = query.trim().length > 0 || tags.length > 0
 
   return (
-    <div className="expert-card bg-white rounded-xl border border-gray-100 p-4 flex flex-col gap-2 h-[180px] overflow-hidden">
+    <div className="expert-card bg-white/90 rounded-xl border border-gray-100 p-4 flex flex-col gap-1.5 h-[180px] overflow-hidden">
 
-      {/* Primary hierarchy: name (large) + job title + company */}
-      <div className="min-w-0">
+      {/* Zone A: name/role/company — flex-shrink-0, content drives height (~52px) */}
+      <div className="flex-shrink-0 min-w-0">
         <h3 className="font-semibold text-gray-900 text-sm leading-snug truncate">
           {expert.first_name} {expert.last_name}
         </h3>
@@ -36,8 +36,8 @@ export function ExpertCard({ expert, onViewProfile }: ExpertCardProps) {
         <p className="text-xs text-gray-400 truncate">{expert.company}</p>
       </div>
 
-      {/* Rate + Findability badge (text label, not numeric score) */}
-      <div className="flex items-center gap-2 flex-wrap">
+      {/* Zone B: Rate + Findability badge — flex-shrink-0 */}
+      <div className="flex-shrink-0 flex items-center gap-2 flex-wrap">
         <span className="text-xs font-semibold text-brand-purple whitespace-nowrap">
           {expert.currency} {expert.hourly_rate}/hr
         </span>
@@ -48,38 +48,40 @@ export function ExpertCard({ expert, onViewProfile }: ExpertCardProps) {
         )}
       </div>
 
-      {/* Domain tag pills — hidden on mobile, max 2 on desktop, no-wrap so partial tags are
-          fully hidden (overflow-hidden + flex-shrink-0 = tags either fit or are invisible) */}
-      <div className="hidden sm:flex flex-nowrap gap-1 overflow-hidden">
+      {/* Zone C: Domain tag pills — flex-shrink-0, hidden on mobile, no-wrap so partial tags
+          are fully hidden (overflow-hidden + flex-nowrap = tags either fit or are invisible) */}
+      <div className="flex-shrink-0 hidden sm:flex flex-nowrap gap-1 overflow-hidden">
         {expert.tags.slice(0, 2).map((tag) => (
           <button
             key={tag}
             onClick={() => toggleTag(tag)}
-            className="flex-shrink-0 cursor-pointer text-xs bg-gray-100 text-gray-600 rounded-full px-2 py-0.5 hover:bg-brand-purple hover:text-white transition-colors whitespace-nowrap"
+            className="flex-shrink-0 cursor-pointer text-xs bg-gray-100/80 text-gray-600 rounded-full px-2 py-0.5 hover:bg-brand-purple hover:text-white transition-colors whitespace-nowrap"
           >
             {tag}
           </button>
         ))}
       </div>
 
-      {/* Match reason — only when a semantic filter (query or tag) is active.
-          Price-only filtering produces no meaningful semantic match reason. */}
-      {hasSemanticFilter && expert.match_reason && (
-        <p className="text-xs text-gray-500 line-clamp-2 border-t border-gray-100 pt-1.5 mt-auto">
-          {expert.match_reason}
-        </p>
-      )}
+      {/* Zone D: match reason + View Profile — flex-1 min-h-0, bento separator, justify-between
+          pins match reason to top and View Profile to bottom */}
+      <div className="flex-1 min-h-0 flex flex-col justify-between border-t border-gray-100/60 pt-1.5">
+        {hasSemanticFilter && expert.match_reason && (
+          <p className="text-xs text-gray-500 line-clamp-2">
+            {expert.match_reason}
+          </p>
+        )}
 
-      {/* View Full Profile — triggers email gate or direct open */}
-      <button
-        onClick={(e) => {
-          e.stopPropagation()
-          onViewProfile(expert.profile_url)
-        }}
-        className="mt-auto cursor-pointer text-xs text-brand-purple font-medium hover:underline self-start"
-      >
-        View Full Profile →
-      </button>
+        {/* View Full Profile — always rendered, mt-auto self-start pins to bottom */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            onViewProfile(expert.profile_url)
+          }}
+          className="mt-auto cursor-pointer text-xs text-brand-purple font-medium hover:underline self-start"
+        >
+          View Full Profile →
+        </button>
+      </div>
     </div>
   )
 }

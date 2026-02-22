@@ -5,18 +5,18 @@
 /* ===== OKLCH Design Tokens — Phase 22 Visual Infrastructure ===== */
 /* Brand purple #5128F2 = oklch(49.0% 0.270 279.0) — all aurora colors derive from this anchor */
 :root {
-  /* Aurora palette — cool blues, cyans, teals, violets */
-  --aurora-bg:        oklch(7% 0.020 279);    /* deep purple-tinted near-black base */
-  --aurora-purple:    oklch(49% 0.270 279 / 0.35); /* brand purple blob */
-  --aurora-violet:    oklch(42% 0.200 295 / 0.25); /* blue-violet blob */
-  --aurora-blue:      oklch(45% 0.175 250 / 0.30); /* deep blue blob */
-  --aurora-cyan:      oklch(55% 0.155 220 / 0.20); /* cyan-blue blob */
-  --aurora-teal:      oklch(52% 0.135 195 / 0.25); /* teal blob */
+  /* Aurora palette — light pastels on near-white base */
+  --aurora-bg:        oklch(98% 0.008 279);    /* near-white with faint lavender tint */
+  --aurora-purple:    oklch(88% 0.070 279 / 0.55); /* light lavender blob */
+  --aurora-violet:    oklch(90% 0.055 295 / 0.50); /* light violet blob */
+  --aurora-blue:      oklch(89% 0.050 250 / 0.50); /* light blue blob */
+  --aurora-cyan:      oklch(91% 0.045 210 / 0.45); /* light cyan blob */
+  --aurora-teal:      oklch(90% 0.040 190 / 0.45); /* light teal blob */
 
-  /* Glass surface tokens */
-  --glass-tint:        oklch(49% 0.270 279 / 0.08); /* brand purple at 8% opacity */
-  --glass-border:      oklch(100% 0 0 / 0.10);       /* white at 10% opacity */
-  --glass-fallback-bg: oklch(14% 0.022 279);          /* opaque dark purple — fallback for no backdrop-filter */
+  /* Glass surface tokens — white frosted for light aurora */
+  --glass-tint:        oklch(100% 0 0 / 0.75);  /* white at 75% opacity */
+  --glass-border:      oklch(0% 0 0 / 0.08);    /* subtle dark border */
+  --glass-fallback-bg: oklch(96% 0.008 279);    /* light opaque fallback */
 }
 
 /* ===== Aurora Mesh Gradient Animation ===== */
@@ -102,9 +102,9 @@
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background-color: var(--glass-tint); /* brand purple at 8% */
-  -webkit-backdrop-filter: blur(4px);  /* Safari — Tailwind v3.4.19 also emits this on backdrop-blur-sm */
-  backdrop-filter: blur(4px);          /* blur(4px) = blur-sm per CONTEXT.md */
+  background-color: var(--glass-tint); /* white at 75% */
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
   pointer-events: none;
   z-index: -1;
 }
@@ -127,7 +127,7 @@
 .expert-card:hover {
   transform: translateY(-4px);
   box-shadow:
-    0 0 0 1.5px #5128F2,
-    0 0 24px rgba(81, 40, 242, 0.25),
-    0 8px 20px rgba(0, 0, 0, 0.08);
+    0 0 0 1.5px oklch(65% 0.18 279),
+    0 0 24px oklch(72% 0.14 279 / 0.35),
+    0 8px 20px rgba(0, 0, 0, 0.06);
 }
