@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useFilterSlice } from '../../store'
+import { useFilterSlice, useExplorerStore } from '../../store'
 import { useNltrStore } from '../../store/nltrStore'
 import { trackEvent } from '../../tracking'
 
@@ -10,9 +10,12 @@ const BARREL_ROLL_PHRASES = ['barrel roll', 'do a flip']
 
 export function SearchInput() {
   const { query, setQuery } = useFilterSlice()
+  const sageMode = useExplorerStore((s) => s.sageMode)
   const [localValue, setLocalValue] = useState(query)
   const [suggestions, setSuggestions] = useState<string[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
+  const [showSageConfirm, setShowSageConfirm] = useState(false)
+  const [pendingQuery, setPendingQuery] = useState<string | null>(null)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const abortRef = useRef<AbortController | null>(null)
   const blurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -81,7 +84,15 @@ export function SearchInput() {
     // Fetch suggestions immediately (no debounce per CONTEXT.md)
     fetchSuggestions(value)
 
-    // Debounced query update (triggers grid refetch)
+    // Sage mode: show confirmation instead of immediately committing the query
+    if (sageMode) {
+      setPendingQuery(value)
+      setShowSageConfirm(true)
+      if (timerRef.current) clearTimeout(timerRef.current)
+      return  // Do NOT call setQuery yet
+    }
+
+    // Normal mode: debounced query update (triggers grid refetch)
     if (timerRef.current) clearTimeout(timerRef.current)
     timerRef.current = setTimeout(() => {
       setQuery(value)
@@ -92,6 +103,24 @@ export function SearchInput() {
         })
       }
     }, DEBOUNCE_MS)
+  }
+
+  function handleSageConfirmSwitch() {
+    setShowSageConfirm(false)
+    if (pendingQuery !== null) {
+      // setQuery calls setSageMode(false) via filterSlice and triggers useExplore
+      setQuery(pendingQuery)
+      void trackEvent('filter_change', { filter: 'query', value: pendingQuery.trim() })
+    }
+    setPendingQuery(null)
+  }
+
+  function handleSageConfirmCancel() {
+    setShowSageConfirm(false)
+    setLocalValue(query)  // revert input to committed store query
+    setSuggestions([])
+    setShowSuggestions(false)
+    setPendingQuery(null)
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
@@ -153,6 +182,29 @@ export function SearchInput() {
             </li>
           ))}
         </ul>
+      )}
+      {showSageConfirm && (
+        <div className="absolute top-full left-0 right-0 z-30 mt-1 bg-gray-900 text-white text-xs rounded-lg px-3 py-2 shadow-lg">
+          <p className="mb-1.5">Switch to search mode? Sage results will be replaced.</p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={handleSageConfirmSwitch}
+              className="bg-brand-purple text-white rounded px-2 py-0.5 hover:bg-purple-700 transition-colors"
+            >
+              Switch
+            </button>
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={handleSageConfirmCancel}
+              className="text-gray-300 hover:text-white transition-colors px-1"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
       )}
     </div>
   )
