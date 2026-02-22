@@ -149,7 +149,7 @@ Plans:
   2. Admin sees an expert exposure table showing appears and click counts per expert, broken down by grid vs Sage panel context
   3. Admin sees a Recharts BarChart of daily Sage query volume
   4. When the `user_events` table is empty (cold start), the page shows an explicit message with the tracking start timestamp and guidance that insights appear after approximately 50 page views — no blank or broken state
-**Plans**: TBD
+**Plans**: 2 plans
 
 **Architecture notes (encode in plan):**
 - New admin page `MarketplacePage.tsx` at `/admin/marketplace` — does NOT modify existing `GapsPage.tsx` or any other admin page
@@ -160,8 +160,8 @@ Plans:
 - SQL aggregations use standard `GROUP BY` + `ORDER BY COUNT DESC` with existing SQLAlchemy `text()` pattern
 
 Plans:
-- [ ] 31-01: Backend — `GET /api/admin/events/demand` + `/events/exposure` endpoints with cold-start `data_since`
-- [ ] 31-02: Frontend — `MarketplacePage.tsx` with DemandTable, ExposureTable, BarChart, empty state + sidebar nav entry
+- [ ] 31-01-PLAN.md — Backend: demand, exposure, trend aggregation endpoints + CSV exports in admin.py
+- [ ] 31-02-PLAN.md — Frontend: AdminMarketplacePage with DemandTable, ExposureTable, BarChart, cold-start state + sidebar nav
 
 ## Progress
 
