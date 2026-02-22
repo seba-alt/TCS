@@ -10,10 +10,10 @@ Requirements for v2.3 release. Each maps to roadmap phases.
 
 ### Sage Search
 
-- [ ] **SAGE-01**: Sage can find experts via a `search_experts` Gemini function that calls `/api/explore` in-process (direct Python import, no HTTP self-call)
-- [ ] **SAGE-02**: Sage search updates the main expert grid via filterSlice dispatch — single-ownership rule: `resultsSlice` written only by `useExplore`
-- [ ] **SAGE-03**: Sage narrates results in natural language after every function call ("I found 8 fintech experts who…" — no silent grid updates)
-- [ ] **SAGE-04**: Sage acknowledges zero-result searches and suggests alternatives or asks a clarifying question
+- [x] **SAGE-01**: Sage can find experts via a `search_experts` Gemini function that calls `/api/explore` in-process (direct Python import, no HTTP self-call)
+- [x] **SAGE-02**: Sage search updates the main expert grid via filterSlice dispatch — single-ownership rule: `resultsSlice` written only by `useExplore`
+- [x] **SAGE-03**: Sage narrates results in natural language after every function call ("I found 8 fintech experts who…" — no silent grid updates)
+- [x] **SAGE-04**: Sage acknowledges zero-result searches and suggests alternatives or asks a clarifying question
 
 ### Sage Personality
 
@@ -67,10 +67,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SAGE-01 | Phase 28 | Pending |
-| SAGE-02 | Phase 28 | Pending |
-| SAGE-03 | Phase 28 | Pending |
-| SAGE-04 | Phase 28 | Pending |
+| SAGE-01 | Phase 28 | Complete |
+| SAGE-02 | Phase 28 | Complete |
+| SAGE-03 | Phase 28 | Complete |
+| SAGE-04 | Phase 28 | Complete |
 | SAGE-05 | Phase 29 | Pending |
 | FAB-01 | Phase 29 | Pending |
 | TRACK-01 | Phase 30 | Pending |
