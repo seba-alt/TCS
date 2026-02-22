@@ -27,20 +27,20 @@ export function SagePanel() {
       animate={{ x: 0 }}
       exit={{ x: '100%' }}
       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-      className="fixed bottom-0 right-0 z-40 h-full w-full md:w-[380px] bg-white shadow-2xl flex flex-col"
+      className="fixed bottom-0 right-0 z-40 h-full w-full md:w-[380px] glass-surface shadow-2xl flex flex-col"
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 shrink-0">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 shrink-0">
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-full bg-brand-purple flex items-center justify-center">
             <span className="text-white text-xs font-bold">S</span>
           </div>
-          <span className="font-semibold text-gray-900 text-sm">Sage</span>
-          <span className="text-xs text-gray-400">AI assistant</span>
+          <span className="font-semibold text-white text-sm">Sage</span>
+          <span className="text-xs text-white/50">AI assistant</span>
         </div>
         <button
           onClick={() => setOpen(false)}
-          className="w-7 h-7 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+          className="w-7 h-7 rounded-full flex items-center justify-center text-white/40 hover:text-white/80 hover:bg-white/10 transition-colors"
         >
           <X size={16} />
         </button>
@@ -61,10 +61,10 @@ export function SagePanel() {
             <div className="w-6 h-6 rounded-full bg-brand-purple flex items-center justify-center mr-2 shrink-0">
               <span className="text-white text-xs font-bold">S</span>
             </div>
-            <div className="bg-gray-100 rounded-2xl rounded-tl-sm px-3.5 py-2.5 flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '0ms' }} />
-              <span className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '150ms' }} />
-              <span className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+            <div className="bg-white/10 rounded-2xl rounded-tl-sm px-3.5 py-2.5 flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-white/40 animate-bounce" style={{ animationDelay: '0ms' }} />
+              <span className="w-1.5 h-1.5 rounded-full bg-white/40 animate-bounce" style={{ animationDelay: '150ms' }} />
+              <span className="w-1.5 h-1.5 rounded-full bg-white/40 animate-bounce" style={{ animationDelay: '300ms' }} />
             </div>
           </div>
         )}
