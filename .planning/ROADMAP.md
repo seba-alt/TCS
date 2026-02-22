@@ -53,7 +53,7 @@ See `.planning/milestones/v2.0-ROADMAP.md`
 
 - [x] **Phase 22: Visual Infrastructure** - Aurora mesh gradient + OKLCH tokens + glassmorphism on all surfaces (completed 2026-02-22)
 - [ ] **Phase 23: Discovery Engine** - Bento ExpertCard redesign + animated claymorphic tag cloud
-- [ ] **Phase 24: Atomic Index Swap UI** - Admin rebuild trigger + status polling frontend
+- [x] **Phase 24: Atomic Index Swap UI** - Admin rebuild trigger + status polling frontend (completed 2026-02-22)
 - [ ] **Phase 25: Admin Intelligence Metrics** - OTR@K computation + Index Drift display
 - [ ] **Phase 26: Embedding Heatmap** - t-SNE projection endpoint + admin scatter plot
 - [ ] **Phase 27: Newsletter Gate + Easter Egg** - Newsletter subscription modal + barrel roll
@@ -208,7 +208,7 @@ Plans:
 | 14-21. Marketplace Phases | v2.0 | 23/23 | Complete | 2026-02-22 |
 | 22. Visual Infrastructure | 2/2 | Complete   | 2026-02-22 | - |
 | 23. Discovery Engine | v2.2 | 0/3 | Not started | - |
-| 24. Atomic Index Swap UI | 1/2 | In Progress|  | - |
+| 24. Atomic Index Swap UI | 2/2 | Complete   | 2026-02-22 | - |
 | 25. Admin Intelligence Metrics | v2.2 | 0/2 | Not started | - |
 | 26. Embedding Heatmap | v2.2 | 0/2 | Not started | - |
 | 27. Newsletter Gate + Easter Egg | v2.2 | 0/3 | Not started | - |
