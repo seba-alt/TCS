@@ -49,16 +49,13 @@ A user describes any problem and instantly gets expertly matched professionals t
 - ✓ Zero-result handling: Sage narrates fallback alternatives (grid stays); double-zero resets grid to all experts — Phase 28
 - ✓ Sage system prompt rewritten for "smart funny friend" voice — contractions, no filler affirmations, one-question hard cap with concrete options — Phase 29
 - ✓ Sage FAB animated boxShadow glow: purple on Sage reply, blue on filter change, inner button scale gestures unchanged — Phase 29
+- ✓ Expert card clicks tracked as events (expert_id, context, rank, active_filters snapshot) — Phase 30
+- ✓ Sage query interactions tracked (query_text, function_called, result_count, zero_results) — Phase 30
+- ✓ Filter usage events tracked for all three surfaces (debounced query, drag-end rate, add-only tags) — Phase 30
 
 ### Active
 
 <!-- v2.3 Sage Evolution & Marketplace Intelligence -->
-- [ ] Sage asks clarifying follow-up questions when query is ambiguous
-- [ ] Sage proactively nudges when the grid shows zero results
-- [ ] Sage FAB has animated reactions (pulse/glow) on user activity
-- [ ] Expert card clicks are tracked as events in the DB (expert ID, timestamp, context)
-- [ ] Sage query interactions are tracked (query text, function called, result count)
-- [ ] Filter usage events are tracked (which filters applied, values)
 - [ ] Admin Gaps tab shows unmet demand: searches/filter combos with poor results
 - [ ] Admin Gaps tab shows expert exposure distribution (which experts appear/get clicked most vs least)
 
@@ -198,6 +195,10 @@ A user describes any problem and instantly gets expertly matched professionals t
 | validateAndApplyFilters({reset:true}) then validateAndApplyFilters(filtersObj) | Two-call pattern for clean slate + Sage params — single call would layer on dirty existing filter state | ✓ Good — grid always reflects exactly Sage's intent |
 | motion.div wrapper for FAB glow (boxShadow only, no scale) | scale on wrapper div conflicts with inner button's whileHover/whileTap scale — outer div animates boxShadow only; inner motion.button owns all scale gestures | ✓ Good — no animation conflict, both glow and gesture work independently |
 | prevFilterKey=null initialization pattern | Initializing to null (not to current filterKey) allows clean "skip first render" detection — if null, set and return; if changed, glow | ✓ Good — no spurious glow on page load from localStorage-rehydrated filter state |
+| trackEvent() as module function (not hook) | Importable anywhere without React rules — async handlers, non-component code, debounce callbacks all need fire-and-forget without hook constraints | ✓ Good — zero rule violations across all 5 call sites |
+| void fetch with keepalive:true for events | Events survive page navigation; no await in any call path — truly fire-and-forget; 202 response ignored by design | ✓ Good — no missed events on profile click navigation |
+| Tag ADD-only tracking in TagMultiSelect | Remove events are noise for demand signal analysis — only add events indicate intent; halves event volume with no intelligence loss | ✓ Good — cleaner signal for Phase 31 aggregation |
+| expert_ids omitted from sage_query payload | Not in PilotResponse yet — Phase 31 uses result_count/zero_results for demand signals; ids can be added when search returns expert list | — Deferred — Phase 31 aggregates on counts, not ids |
 
 ---
-*Last updated: 2026-02-22 after Phase 29 (Sage Personality + FAB Reactions)*
+*Last updated: 2026-02-22 after Phase 30 (Behavior Tracking)*
