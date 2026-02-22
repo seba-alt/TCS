@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-22)
 ## Current Position
 
 Phase: 27 of 27 (Newsletter / Next Phase)
-Plan: Phase 26 complete — ready to begin Phase 27
+Plan: 27-01 complete — ready for 27-02
 Status: Active
-Last activity: 2026-02-22 — Phase 26-02 completed: human-verify checkpoint auto-approved, scatter plot deployed
+Last activity: 2026-02-22 — Phase 27-01 completed: NewsletterSubscriber model, subscribe endpoint, admin CSV export, useNltrStore
 
-Progress: [████████████████████] 42/43 plans (98%)
+Progress: [████████████████████] 43/44 plans (98%)
 
 ## Live URLs
 
@@ -32,6 +32,7 @@ Progress: [████████████████████] 42/43 p
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
 | 26-embedding-heatmap | 02 | 20min | 3/3 | 5 |
+| 27-newsletter-gate-easter-egg | 01 | 2min | 3/3 | 5 |
 
 ## Accumulated Context
 
@@ -62,6 +63,6 @@ Decisions are logged in PROJECT.md Key Decisions table.
 ## Session Continuity
 
 Last session: 2026-02-22
-Stopped at: Phase 26 complete — ready to plan Phase 27 (Newsletter Gate + Easter Egg)
+Stopped at: Completed 27-01-PLAN.md
 Resume signal: N/A
 Resume file: None
