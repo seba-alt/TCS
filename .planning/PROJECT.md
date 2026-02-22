@@ -52,12 +52,13 @@ A user describes any problem and instantly gets expertly matched professionals t
 - ✓ Expert card clicks tracked as events (expert_id, context, rank, active_filters snapshot) — Phase 30
 - ✓ Sage query interactions tracked (query_text, function_called, result_count, zero_results) — Phase 30
 - ✓ Filter usage events tracked for all three surfaces (debounced query, drag-end rate, add-only tags) — Phase 30
+- ✓ Admin Marketplace page shows unmet demand (zero-result queries by frequency) + expert click exposure — Phase 31
+- ✓ Admin Marketplace stacked BarChart shows daily Sage query volume with KPI pills — Phase 31
+- ✓ Cold-start empty state: no blank page when user_events table is empty — Phase 31
 
 ### Active
 
-<!-- v2.3 Sage Evolution & Marketplace Intelligence -->
-- [ ] Admin Gaps tab shows unmet demand: searches/filter combos with poor results
-- [ ] Admin Gaps tab shows expert exposure distribution (which experts appear/get clicked most vs least)
+<!-- No active requirements for current milestone — v2.3 complete -->
 
 ### Out of Scope
 
@@ -199,6 +200,9 @@ A user describes any problem and instantly gets expertly matched professionals t
 | void fetch with keepalive:true for events | Events survive page navigation; no await in any call path — truly fire-and-forget; 202 response ignored by design | ✓ Good — no missed events on profile click navigation |
 | Tag ADD-only tracking in TagMultiSelect | Remove events are noise for demand signal analysis — only add events indicate intent; halves event volume with no intelligence loss | ✓ Good — cleaner signal for Phase 31 aggregation |
 | expert_ids omitted from sage_query payload | Not in PilotResponse yet — Phase 31 uses result_count/zero_results for demand signals; ids can be added when search returns expert list | — Deferred — Phase 31 aggregates on counts, not ids |
+| json_extract boolean comparison uses = 1 not = true | SQLite stores JSON booleans as integers; `= true` never matches — must use `= 1` in all json_extract comparisons on payload fields | ✓ Good — demand/exposure queries work correctly |
+| Custom downloadMarketplaceCsv instead of extending useAdminExport | ExportSection type is 'searches' \| 'gaps' — extending for demand/exposure would couple shared hook to marketplace; inline helper keeps page self-contained | ✓ Good — no regression on existing export flows |
+| Cold-start guard per-section (not page-level) | Each section (demand, exposure, trend) independently checks its own data_since === null — prevents one endpoint's empty state from hiding another section's data | ✓ Good — sections degrade independently |
 
 ---
-*Last updated: 2026-02-22 after Phase 30 (Behavior Tracking)*
+*Last updated: 2026-02-22 after Phase 31 (Admin Marketplace Intelligence) — v2.3 complete*
