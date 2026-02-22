@@ -82,7 +82,7 @@ See `.planning/milestones/v2.2-ROADMAP.md`
   2. Sage responds with a natural-language summary ("I found 8 fintech experts who...") after every search — the grid never updates silently
   3. When a Sage search returns zero results, Sage acknowledges it explicitly and either suggests an alternative or asks a clarifying question
   4. Gemini correctly routes browsing-refinement queries to `apply_filters` and discovery queries to `search_experts` across 20 real test queries (verified in Railway logs before ship)
-**Plans**: TBD
+**Plans**: 2 plans
 
 **Architecture notes (encode in plan):**
 - `search_experts` calls `run_explore()` via direct Python import in `pilot_service.py` — NOT an HTTP self-call to `/api/explore`
@@ -94,8 +94,8 @@ See `.planning/milestones/v2.2-ROADMAP.md`
 - Test 20 real queries from `conversations` table; assert `fn_call.name` in logs before shipping
 
 Plans:
-- [ ] 28-01: Backend — `search_experts` FunctionDeclaration + `run_explore()` in-process call in `pilot_service.py`
-- [ ] 28-02: Frontend — `useSage` dual-function dispatch, grid sync via `validateAndApplyFilters`, zero-result handling
+- [ ] 28-01-PLAN.md — Backend: `search_experts` FunctionDeclaration + `run_explore()` in-process call + db/app_state injection in `pilot_service.py` + `pilot.py`
+- [ ] 28-02-PLAN.md — Frontend: `useSage` dual-function dispatch, grid sync via `validateAndApplyFilters`, zero-result handling, 20-query routing test
 
 ### Phase 29: Sage Personality + FAB Reactions
 **Goal**: Sage speaks with a warmer, wittier voice and the FAB pulses/glows on user activity
