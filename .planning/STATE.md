@@ -2,19 +2,19 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-21)
+See: .planning/PROJECT.md (updated 2026-02-22)
 
-**Core value:** A user describes any problem and instantly gets three expertly matched professionals they can contact — no searching, no filtering, no guesswork.
-**Current focus:** v2.0 complete — Phase 21 documentation cleanup done; all milestones achieved
+**Core value:** A user describes any problem and instantly gets expertly matched professionals they can browse, filter, and contact — no searching, no guesswork.
+**Current focus:** v2.2 Evolved Discovery Engine — Phase 22 not started (defining roadmap)
 
 ## Current Position
 
-Phase: 21 of 21 (Documentation & Cleanup) — COMPLETE
-Plan: 2/2 complete (all plans done)
-Status: Phase 21 COMPLETE — all documentation gaps closed: Phase 16 + 19 VERIFICATION.md written, Phase 17 corrected, MARKET-05 updated to CSS hover, LEAD-03 deferral confirmed
-Last activity: 2026-02-22 — Phase 21-01 complete: retroactive VERIFICATION.md for Phase 16 + 19; Phase 17 VERIFICATION.md fixed; MARKET-05 requirement updated
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-02-22 — Milestone v2.2 started (Evolved Discovery Engine)
 
-Progress: [████████████████████] 52/52 plans (100% — phases 1-20 complete; phase 21 in progress)
+Progress: [░░░░░░░░░░░░░░░░░░░░] 0/? plans (0% — phases 22-27 pending roadmap creation)
 
 ## Live URLs
 

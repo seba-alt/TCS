@@ -37,7 +37,13 @@ A user describes any problem and instantly gets expertly matched professionals t
 
 ### Active
 
-(None — start fresh requirements for next milestone with `/gsd:new-milestone`)
+- [ ] Aurora mesh gradient background + glassmorphism surfaces (VIS-01 – VIS-05)
+- [ ] Bento-style ExpertCard redesign (CARD-01 – CARD-03)
+- [ ] Animated claymorphic tag cloud + "Everything is possible" element (DISC-01 – DISC-04)
+- [ ] Atomic FAISS index swap with admin rebuild trigger (IDX-01 – IDX-04)
+- [ ] OTR@K + Index Drift metrics + t-SNE embedding heatmap (INTEL-01 – INTEL-06)
+- [ ] Newsletter subscription gate, Zustand-persisted (NLTR-01 – NLTR-04)
+- [ ] Easter egg barrel roll on playful queries (FUN-01)
 
 ### Out of Scope
 
@@ -81,6 +87,19 @@ A user describes any problem and instantly gets expertly matched professionals t
 - Core AI chat with 3-expert recommendations, email gate, feedback, admin dashboard
 - Archive: `.planning/milestones/v1.0-ROADMAP.md`
 
+## Current Milestone: v2.2 Evolved Discovery Engine
+
+**Goal:** Evolve the marketplace from a functional grid into an immersive, high-fidelity discovery engine — aurora aesthetics, glassmorphism depth, animated tag cloud, atomic index management, admin embedding heatmap, and newsletter-gated lead capture.
+
+**Target features:**
+- Aurora mesh gradient background + glassmorphism on sidebar, search, Sage panel
+- Bento-style ExpertCard redesign + aurora-adapted hover glow
+- Animated claymorphic tag cloud + "Everything is possible" element
+- Atomic FAISS index swap with admin rebuild trigger
+- Admin: OTR@K + Index Drift metrics + t-SNE embedding heatmap
+- Newsletter subscription gate (SQLite-backed, Zustand-persisted)
+- Easter egg: barrel roll on playful queries
+
 ## Current State
 
 **Deployed version:** v2.0 (Railway + Vercel, auto-deploys on push to main)
@@ -88,7 +107,7 @@ A user describes any problem and instantly gets expertly matched professionals t
 **Search intelligence:** Three-stage hybrid pipeline live; HyDE + feedback re-ranking toggled via admin steering panel
 **Marketplace:** Full expert browse/filter experience with Sage AI co-pilot; email gate on profile clicks
 **Admin panel:** Intelligence tab = live steering panel; Search Lab = A/B comparison; Expert tab = sort/filter/pagination
-**Next:** Planning v2.1 — start with `/gsd:new-milestone`
+**Next:** Executing v2.2 — 6 phases (22–27)
 
 ## Context
 
@@ -141,4 +160,4 @@ A user describes any problem and instantly gets expertly matched professionals t
 | LEAD-03 deferred to v2.1 | In-app match report requires significant new backend + UI work; email gate alone is sufficient lead capture for v2.0 | — Deferred — capture as v2.1 requirement |
 
 ---
-*Last updated: 2026-02-22 after v2.0 milestone (Extreme Semantic Explorer)*
+*Last updated: 2026-02-22 after v2.2 milestone initialization (Evolved Discovery Engine)*
