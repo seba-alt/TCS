@@ -233,6 +233,7 @@ def _handle_search_experts(fn_call, args, response, contents, config, db, app_st
         "message": narration,
         "search_performed": True,
         "total": result.total,
+        "experts": [e.model_dump() for e in result.experts],
     }
 
 
