@@ -24,6 +24,7 @@ export interface ResultsSlice {
   loading: boolean
   error: string | null
   isFetchingMore: boolean
+  sageMode: boolean
 
   // Results actions
   setResults: (experts: Expert[], total: number, cursor: number | null) => void
@@ -32,6 +33,7 @@ export interface ResultsSlice {
   resetResults: () => void
   appendResults: (experts: Expert[], cursor: number | null) => void
   setFetchingMore: (v: boolean) => void
+  setSageMode: (v: boolean) => void
 }
 
 export const createResultsSlice: StateCreator<
@@ -46,6 +48,7 @@ export const createResultsSlice: StateCreator<
   loading: false,
   error: null,
   isFetchingMore: false,
+  sageMode: false,
 
   setResults: (experts, total, cursor) => set({ experts, total, cursor }),
 
@@ -54,10 +57,12 @@ export const createResultsSlice: StateCreator<
   setError: (error) => set({ error }),
 
   resetResults: () =>
-    set({ experts: [], total: 0, cursor: null, loading: false, error: null }),
+    set({ experts: [], total: 0, cursor: null, loading: false, error: null, sageMode: false }),
 
   appendResults: (newExperts, cursor) =>
     set((state) => ({ experts: [...state.experts, ...newExperts], cursor })),
 
   setFetchingMore: (v) => set({ isFetchingMore: v }),
+
+  setSageMode: (v) => set({ sageMode: v }),
 })

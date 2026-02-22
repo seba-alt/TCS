@@ -74,12 +74,14 @@ export const useResultsSlice = () =>
       loading:          state.loading,
       error:            state.error,
       isFetchingMore:   state.isFetchingMore,
+      sageMode:         state.sageMode,
       setResults:       state.setResults,
       setLoading:       state.setLoading,
       setError:         state.setError,
       resetResults:     state.resetResults,
       appendResults:    state.appendResults,
       setFetchingMore:  state.setFetchingMore,
+      setSageMode:      state.setSageMode,
     }))
   )
 
