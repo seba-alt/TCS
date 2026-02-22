@@ -34,6 +34,7 @@ class Conversation(Base):
     hyde_triggered: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="0")
     feedback_applied: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="0")
     hyde_bio: Mapped[str | None] = mapped_column(Text, nullable=True)
+    otr_at_k: Mapped[float | None] = mapped_column(Float, nullable=True)
 
 
 class EmailLead(Base):

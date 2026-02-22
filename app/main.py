@@ -119,6 +119,7 @@ async def lifespan(app: FastAPI):
             "ALTER TABLE conversations ADD COLUMN hyde_triggered INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE conversations ADD COLUMN feedback_applied INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE conversations ADD COLUMN hyde_bio TEXT",
+            "ALTER TABLE conversations ADD COLUMN otr_at_k REAL",
         ]:
             try:
                 _conn.execute(_text(_col_ddl))
@@ -126,6 +127,7 @@ async def lifespan(app: FastAPI):
             except Exception:
                 pass  # Column already exists — idempotent
     log.info("startup: analytics columns migrated/verified")
+    log.info("startup: Phase 25 otr_at_k column migrated/verified")
 
     # Phase 8: expert enrichment columns
     with engine.connect() as _conn:
