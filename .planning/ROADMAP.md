@@ -212,8 +212,8 @@ Plans:
 - Easter egg: detect "tinrate" exactly in `handleChange`; clear input + call `store.setQuery('')`; fire tilt + particles; no one-shot guard (fires every time)
 
 Plans:
-- [ ] 33-01-PLAN.md — Build `useHeaderSearch.ts` hook + full `Header.tsx` component (glassmorphism, animated search, spring count, Sage pulse, tilt + particles easter egg)
-- [ ] 33-02-PLAN.md — Wire Header into MarketplacePage, delete SearchInput.tsx, deploy, human verify
+- [x] 33-01-PLAN.md — Build `useHeaderSearch.ts` hook + full `Header.tsx` component (glassmorphism, animated search, spring count, Sage pulse, tilt + particles easter egg)
+- [x] 33-02-PLAN.md — Wire Header into MarketplacePage, delete SearchInput.tsx, deploy, human verify
 
 ### Phase 34: Admin Platform Restructure
 **Goal**: Clean up the admin IA — dashboard gives a strong first impression, gap tracking and intelligence data are front and centre, and operational tools (Search Lab, Score Explainer, Index) are consolidated into a single "Tools" tab so the sidebar no longer feels like a junk drawer
@@ -253,5 +253,5 @@ Plans:
 | 30. Behavior Tracking | 2/2 | Complete    | 2026-02-22 | - |
 | 31. Admin Marketplace Intelligence | 2/2 | Complete   | 2026-02-22 | - |
 | 32. Sage Direct Search Integration | 3/3 | Complete    | 2026-02-22 | - |
-| 33. Command Center Header | 1/2 | In Progress|  | - |
+| 33. Command Center Header | 2/2 | Complete | 2026-02-23 | - |
 | 34. Admin Platform Restructure | 0/2 | Planned | - | - |
