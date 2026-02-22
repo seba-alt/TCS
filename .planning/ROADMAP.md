@@ -194,8 +194,8 @@ Plans: 2/2 complete
 - Barrel roll: detect trigger phrases in Sage query AND search query; apply Framer Motion `rotate` on VirtuosoGrid container element — NOT on individual ExpertCards (would cause scroll-triggered re-animations on VirtuosoGrid unmount/remount)
 
 Plans:
-- [ ] 27-01-PLAN.md — Backend foundation (NewsletterSubscriber model, subscribe endpoint, admin endpoints) + useNltrStore Zustand store
-- [ ] 27-02-PLAN.md — Newsletter gate modal redesign + MarketplacePage integration with useNltrStore; human visual verification
+- [x] 27-01-PLAN.md — Backend foundation (NewsletterSubscriber model, subscribe endpoint, admin endpoints) + useNltrStore Zustand store
+- [x] 27-02-PLAN.md — Newsletter gate modal redesign + MarketplacePage integration with useNltrStore; human visual verification
 - [ ] 27-03-PLAN.md — Barrel roll easter egg (ExpertGrid animation + Sage/SearchInput trigger detection) + Admin Leads subscriber section; human visual verification
 
 ## Progress
