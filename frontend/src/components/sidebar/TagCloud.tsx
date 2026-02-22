@@ -49,6 +49,7 @@ function TagPill({
     <motion.button
       ref={ref}
       layout="position"
+      transition={{ layout: { duration: 0.18, ease: 'easeOut' } }}
       style={{ scale }}
       onClick={onToggle}
       aria-pressed={isSelected}
@@ -82,11 +83,11 @@ export function TagCloud() {
     mouseY.set(-999)
   }
 
-  // Selected tags first, then unselected — visual reorder on toggle
-  const sortedTags = [
-    ...TOP_TAGS.filter((t) => tags.includes(t)),
-    ...TOP_TAGS.filter((t) => !tags.includes(t)),
-  ]
+  // Selected tags first, then up to 12 total — keeps cloud compact so "Everything is possible" is visible
+  const selected = TOP_TAGS.filter((t) => tags.includes(t))
+  const unselected = TOP_TAGS.filter((t) => !tags.includes(t))
+  const visibleCount = Math.max(12, selected.length)
+  const sortedTags = [...selected, ...unselected.slice(0, visibleCount - selected.length)]
 
   return (
     <LayoutGroup>

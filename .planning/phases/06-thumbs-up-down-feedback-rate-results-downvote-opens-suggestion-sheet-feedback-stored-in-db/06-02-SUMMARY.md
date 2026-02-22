@@ -124,3 +124,14 @@ None - no external service configuration required. FeedbackBar must be wired int
 ---
 *Phase: 06-thumbs-up-down-feedback-rate-results-downvote-opens-suggestion-sheet-feedback-stored-in-db*
 *Completed: 2026-02-20*
+
+## Self-Check: PASSED
+
+- FOUND: frontend/src/types.ts
+- FOUND: frontend/src/hooks/useChat.ts
+- FOUND: frontend/src/hooks/useFeedback.ts
+- FOUND: frontend/src/components/FeedbackBar.tsx
+- FOUND: frontend/src/components/DownvoteModal.tsx
+- FOUND: 06-02-SUMMARY.md
+- FOUND: commit 0756014 (feat: extend types.ts and useChat.ts)
+- FOUND: commit e49c547 (feat: add useFeedback hook, FeedbackBar, DownvoteModal)

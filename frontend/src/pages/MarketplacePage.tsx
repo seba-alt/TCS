@@ -7,6 +7,7 @@ import { useUrlSync } from '../hooks/useUrlSync'
 import { useEmailGate } from '../hooks/useEmailGate'
 import { AuroraBackground } from '../components/AuroraBackground'
 import { FilterSidebar } from '../components/sidebar/FilterSidebar'
+import { SearchInput } from '../components/sidebar/SearchInput'
 import { FilterChips } from '../components/marketplace/FilterChips'
 import { ExpertGrid } from '../components/marketplace/ExpertGrid'
 import { MobileFilterSheet } from '../components/sidebar/MobileFilterSheet'
@@ -65,69 +66,79 @@ export default function MarketplacePage() {
   }
 
   return (
-    // CRITICAL: No overflow wrapper around FilterSidebar — sticky fails with ancestor overflow (Pitfall 1)
-    // AuroraBackground renders relative min-h-screen wrapper — does NOT add overflow:hidden
     <AuroraBackground>
-    <div className="flex min-h-screen">
-      {/* Desktop sticky sidebar — hidden on mobile */}
-      <FilterSidebar />
-
-      {/* Main content area */}
-      <main className="flex-1 flex flex-col" style={{ height: '100vh' }}>
-        {/* Mobile toolbar — visible only on mobile */}
-        <div className="md:hidden flex items-center justify-between px-4 py-3 border-b border-gray-100 shrink-0">
-          <h1 className="text-lg font-semibold text-gray-900">Experts</h1>
-          <button
-            onClick={() => setSheetOpen(true)}
-            className="flex items-center gap-1.5 text-sm border border-gray-300 rounded-md px-3 py-1.5"
-          >
-            <SlidersHorizontal size={16} />
-            Filters
-            {activeFilterCount > 0 && (
-              <span className="bg-brand-purple text-white text-xs rounded-full px-1.5 py-0.5 leading-none">
-                {activeFilterCount}
-              </span>
-            )}
-          </button>
+    <div className="flex flex-col h-screen">
+      {/* Desktop top header — logo + centered search */}
+      <header
+        className="hidden md:flex items-center gap-6 px-6 py-3 border-b border-black/8 shrink-0 sticky top-0 z-10"
+        style={{ background: 'oklch(98% 0.008 279 / 0.88)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)' }}
+      >
+        <img
+          src="/logo.png"
+          alt="Tinrate"
+          className="h-8 w-auto shrink-0"
+          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+        />
+        <div className="flex-1 max-w-lg">
+          <SearchInput />
         </div>
+      </header>
 
-        {/* Desktop header — visible only on desktop */}
-        <div className="hidden md:flex items-center px-6 py-4 border-b border-gray-100 shrink-0">
-          <h1 className="text-xl font-semibold text-gray-900">Find an Expert</h1>
-        </div>
+      {/* Body row — sidebar + main */}
+      <div className="flex flex-1 min-h-0">
+        {/* Desktop sidebar — hidden on mobile, fills body row height */}
+        <FilterSidebar />
 
-        {/* Active filter chips strip */}
-        <FilterChips />
+        {/* Main content area */}
+        <main className="flex-1 flex flex-col min-h-0">
+          {/* Mobile toolbar — visible only on mobile */}
+          <div className="md:hidden flex items-center justify-between px-4 py-3 border-b border-gray-100 shrink-0">
+            <h1 className="text-lg font-semibold text-gray-900">Experts</h1>
+            <button
+              onClick={() => setSheetOpen(true)}
+              className="flex items-center gap-1.5 text-sm border border-gray-300 rounded-md px-3 py-1.5"
+            >
+              <SlidersHorizontal size={16} />
+              Filters
+              {activeFilterCount > 0 && (
+                <span className="bg-brand-purple text-white text-xs rounded-full px-1.5 py-0.5 leading-none">
+                  {activeFilterCount}
+                </span>
+              )}
+            </button>
+          </div>
 
-        {/* Results area — ExpertGrid with VirtuosoGrid for infinite scroll */}
-        {/* flex-1 + min-h-0 gives VirtuosoGrid a known height to virtualize against */}
-        <div className="flex-1 min-h-0">
-          <ExpertGrid
-            experts={experts}
-            loading={loading}
-            isFetchingMore={isFetchingMore}
-            onEndReached={loadNextPage}
-            onViewProfile={handleViewProfile}
-          />
-        </div>
-      </main>
+          {/* Active filter chips strip */}
+          <FilterChips />
+
+          {/* Results area — extra top padding so first row breathes below header */}
+          <div className="flex-1 min-h-0 pt-2">
+            <ExpertGrid
+              experts={experts}
+              loading={loading}
+              isFetchingMore={isFetchingMore}
+              onEndReached={loadNextPage}
+              onViewProfile={handleViewProfile}
+            />
+          </div>
+        </main>
+      </div>
 
       {/* Mobile filter bottom-sheet */}
       <MobileFilterSheet open={sheetOpen} onClose={() => setSheetOpen(false)} />
 
-      {/* Sage Co-Pilot — FAB hides when panel is open (per CONTEXT.md locked decision) */}
+      {/* Sage Co-Pilot — FAB hides when panel is open */}
       <AnimatePresence>
         {!isOpen && <SageFAB key="sage-fab" />}
       </AnimatePresence>
 
-      {/* Sage Panel + mobile backdrop */}
+      {/* Sage Panel popup + full-screen backdrop */}
       <AnimatePresence>
         {isOpen && (
           <>
-            {/* Mobile backdrop — click to close (desktop panel doesn't need full backdrop) */}
             <div
               key="sage-backdrop"
-              className="fixed inset-0 z-30 bg-black/20 md:hidden"
+              className="fixed inset-0 z-30 bg-black/30"
               onClick={() => setOpen(false)}
             />
             <SagePanel key="sage-panel" />
@@ -135,7 +146,7 @@ export default function MarketplacePage() {
         )}
       </AnimatePresence>
 
-      {/* Email gate modal — rendered at page level to avoid ExpertCard overflow-hidden constraint */}
+      {/* Email gate modal */}
       <AnimatePresence>
         {pendingProfileUrl && (
           <ProfileGateModal

@@ -41,7 +41,7 @@ export function ExpertGrid({ experts, loading, isFetchingMore, onEndReached, onV
       overscan={200}
       // listClassName: CSS grid — 2 cols mobile, 3 cols desktop (CONTEXT.md decision)
       // gap-4 = 16px. Padding on container, NOT margin on items (Virtuoso scroll height constraint)
-      listClassName="grid grid-cols-2 md:grid-cols-3 gap-4 p-4"
+      listClassName="grid grid-cols-2 md:grid-cols-3 gap-4 px-4 pb-4 pt-4"
       // itemClassName: min-h-0 prevents grid row blowout on fixed card height
       itemClassName="min-h-0"
       computeItemKey={(_, expert) => expert.username}
@@ -49,6 +49,8 @@ export function ExpertGrid({ experts, loading, isFetchingMore, onEndReached, onV
         <ExpertCard expert={expert} onViewProfile={onViewProfile} />
       )}
       components={{
+        // Header spacer — VirtuosoGrid measures this correctly, pushing first row below the filter bar
+        Header: () => <div style={{ height: '20px' }} />,
         // Footer renders skeleton row while fetching next page
         Footer: () => isFetchingMore ? <SkeletonFooter /> : null,
       }}

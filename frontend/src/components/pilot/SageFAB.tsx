@@ -49,7 +49,7 @@ export function SageFAB() {
         className="w-14 h-14 rounded-full bg-brand-purple text-white shadow-lg flex items-center justify-center hover:bg-purple-700 transition-colors"
         aria-label="Open Sage AI assistant"
       >
-        <span className="text-xl font-bold tracking-tight">S</span>
+        <img src="/icon.png" alt="Tinrate" className="w-8 h-8 object-contain brightness-0 invert" />
       </motion.button>
     </div>
   )

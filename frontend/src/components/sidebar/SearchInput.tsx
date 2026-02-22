@@ -112,17 +112,17 @@ export function SearchInput() {
         onBlur={handleBlur}
         onFocus={handleFocus}
         placeholder="Search experts..."
-        className="w-full px-3 py-2 text-sm bg-transparent text-white placeholder-white/50 focus:ring-1 focus:ring-brand-purple focus:border-transparent focus:outline-none"
+        className="w-full px-3 py-2 text-sm bg-transparent text-gray-800 placeholder-gray-400 focus:ring-1 focus:ring-brand-purple focus:border-transparent focus:outline-none"
       />
       {showSuggestions && suggestions.length > 0 && (
-        <ul className="absolute top-full left-0 right-0 z-20 mt-1 bg-[var(--glass-fallback-bg)] border border-white/10 rounded-md shadow-lg max-h-48 overflow-y-auto">
+        <ul className="absolute top-full left-0 right-0 z-20 mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto">
           {suggestions.map((suggestion) => (
             <li key={suggestion}>
               <button
                 type="button"
                 onMouseDown={(e) => e.preventDefault()} // prevent blur before click
                 onClick={() => handleSuggestionClick(suggestion)}
-                className="w-full text-left px-3 py-2 text-sm text-white/80 hover:bg-white/10 hover:text-white transition-colors"
+                className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors"
               >
                 {suggestion}
               </button>
