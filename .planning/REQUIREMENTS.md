@@ -1,109 +1,119 @@
-# Requirements: Tinrate AI Concierge Chatbot
+# Requirements: Tinrate AI Concierge
 
-**Defined:** 2026-02-21
-**Milestone:** v2.0 — Extreme Semantic Explorer
-**Core Value:** A user describes any problem and instantly gets three expertly matched professionals they can contact — no searching, no filtering, no guesswork.
+**Defined:** 2026-02-22
+**Core Value:** A user describes any problem and instantly gets expertly matched professionals they can browse, filter, and contact — no searching, no guesswork.
 
-## v2.0 Requirements
+## v2.2 Requirements
 
-### EXPL — Hybrid Search Backend
+Requirements for milestone v2.2 "Evolved Discovery Engine". Phases continue from Phase 22 (v2.0 ended at Phase 21).
 
-- [x] **EXPL-01**: System provides `/api/explore` endpoint returning paginated expert results (cursor, total, took_ms)
-- [x] **EXPL-02**: System pre-filters experts by rate range and domain tags via SQLAlchemy → FAISS IDSelectorBatch before vector search
-- [x] **EXPL-03**: System fuses FAISS semantic score (0.7) + FTS5 BM25 keyword score (0.3) into a single weighted rank
-- [x] **EXPL-04**: System applies findability score and feedback boosts to fused rankings
-- [x] **EXPL-05**: SQLite FTS5 virtual table is created at startup and synced with experts table on writes
+### VIS — Visual Metamorphosis
 
-### STATE — Global State & Routing
+- [ ] **VIS-01**: Marketplace renders with OKLCH-defined aurora mesh gradient background and slow ambient CSS keyframe animation
+- [ ] **VIS-02**: FilterSidebar renders with glassmorphism surface (backdrop-filter: blur, translucent bg, subtle border)
+- [ ] **VIS-03**: SearchInput renders with glassmorphism surface matching sidebar style
+- [ ] **VIS-04**: SagePanel renders with glassmorphism surface
+- [ ] **VIS-05**: All glass surfaces maintain legibility (contrast ≥ 4.5:1) and degrade gracefully on unsupported browsers
 
-- [x] **STATE-01**: Zustand `useExplorerStore` manages filters, results, and pilot conversation slices
-- [x] **STATE-02**: Filter slice persists to localStorage via `persist` middleware with `partialize` (results and pilot excluded)
-- [x] **STATE-03**: Homepage `/` renders `MarketplacePage`; chat interface is removed
+### CARD — Bento Expert Cards
 
-### MARKET — Marketplace UI
+- [ ] **CARD-01**: ExpertCard redesigned as bento-style card with distinct visual zones (name/role, rate+badge, tags, match reason)
+- [ ] **CARD-02**: ExpertCard maintains h-[180px] fixed height (VirtuosoGrid compatibility)
+- [ ] **CARD-03**: ExpertCard hover animation updated to complement aurora palette (glow shifts to match new tokens)
 
-- [x] **MARKET-01**: User sees faceted sidebar with rate range slider, domain tag multi-select, text search, and active filter chips
-- [x] **MARKET-02**: Expert grid renders via `react-virtuoso` with cursor-based pagination and scroll restoration
-- [x] **MARKET-03**: Expert cards display name, title, company, hourly rate, domain tag pills, findability badge, and match reason snippet
-- [x] **MARKET-04**: Clicking a domain tag pill on a card adds that tag to sidebar filters and re-fetches
-- [x] **MARKET-05**: Expert cards have a CSS hover animation (lift + purple glow via `.expert-card` class in `index.css`); `AnimatePresence` from `motion/react` is used for Sage FAB show/hide, Sage panel slide-in, and ProfileGateModal enter/exit transitions
-- [x] **MARKET-06**: Sidebar collapses into a bottom-sheet on mobile viewports
+### DISC — Discovery Engine
 
-### PILOT — Floating AI Co-Pilot
+- [ ] **DISC-01**: TagMultiSelect replaced with animated interactive tag cloud using Framer Motion layout animations
+- [ ] **DISC-02**: Tag cloud items exhibit proximity-based scale increase (claymorphism) on cursor hover/approach
+- [ ] **DISC-03**: "Everything is possible" animated element renders beneath tag cloud with example quirky tags
+- [ ] **DISC-04**: Tag cloud remains keyboard-navigable and aria-labeled (selection behavior unchanged)
 
-- [x] **PILOT-01**: Floating FAB (bottom-right) opens a 380px right-edge slide-in co-pilot panel
-- [x] **PILOT-02**: Co-pilot uses Gemini function calling (`apply_filters`) to update Zustand filter state from conversation
-- [x] **PILOT-03**: Co-pilot panel is full-screen on mobile
+### IDX — Atomic Index Swap
 
-### LEAD — Value-Driven Lead Capture
+- [ ] **IDX-01**: Admin can trigger FAISS index rebuild from admin panel
+- [ ] **IDX-02**: Index rebuild runs in `asyncio.to_thread` — live index serves requests without interruption
+- [ ] **IDX-03**: On completion, `app.state.faiss_index` swaps atomically (no inconsistency window)
+- [ ] **IDX-04**: Rebuild progress status (idle/running/complete/failed + timestamp) is visible in admin panel
 
-- [x] **LEAD-01**: User can browse the expert grid freely without providing email
-- [x] **LEAD-02**: "View Full Profile" action gates behind a single-field email capture modal
-- [x] **LEAD-03**: "Download Match Report" gates behind email + project type (2 fields); AI generates in-app styled HTML report of top matches *(deferred to v2.1 — not implemented in v2.0)*
-- [x] **LEAD-04**: Returning visitors with captured email bypass the gate automatically (localStorage)
+### INTEL — Admin Findability Intelligence
 
-### ROBUST — Robustness & Optimization
+- [ ] **INTEL-01**: OTR@K (On-Topic Rate, K=10) computed per search query and stored in `conversations` table
+- [ ] **INTEL-02**: Admin Intelligence dashboard displays OTR@K 7-day rolling average
+- [ ] **INTEL-03**: Index Drift metric tracks time since last rebuild and expert count delta since rebuild
+- [ ] **INTEL-04**: Admin Intelligence dashboard displays Index Drift status with last-rebuilt timestamp
+- [ ] **INTEL-05**: Backend exposes `/api/admin/embedding-map` returning t-SNE 2D projection (scikit-learn, computed at startup from FAISS index, cached in `app.state`)
+- [ ] **INTEL-06**: Admin displays interactive embedding scatter plot (points colored by category, expert name on hover)
 
-- [x] **ROBUST-01**: Active filter state encodes to URL query params (shareable, bookmarkable)
-- [x] **ROBUST-02**: Search bar provides fuzzy/prefix suggestions via FTS5 prefix matching
-- [x] **ROBUST-03**: No-results state shows alternative query suggestions and nearby tag options
+### NLTR — Newsletter Gate
 
-## Future Requirements
+- [ ] **NLTR-01**: Email gate redesigned as newsletter subscription CTA ("Get expert insights to your inbox. Unlock profiles.")
+- [ ] **NLTR-02**: Email submission creates record in new `newsletter_subscribers` table (email, created_at, source)
+- [ ] **NLTR-03**: Newsletter subscription state (subscribed, email) persists via Zustand + localStorage
+- [ ] **NLTR-04**: Admin Leads page shows newsletter subscriber count and subscriber list
 
-### Deferred to v2.1+
+### FUN — Easter Egg
 
-- **LEAD-03: Download Match Report** — explicitly removed from v2.0 scope in `19-CONTEXT.md`; no MatchReport component or `/api/match_report` endpoint built; requires full implementation in v2.1
-- HyDE in `/api/explore` — HyDE already exists in the chat endpoint; deferred here to reduce explore latency complexity
-- Skeleton loaders on AI-triggered filter apply — deferred; standard loading state is sufficient for v2.0
-- PDF/email delivery of Match Report — in-app HTML only for v2.0; email delivery requires SendGrid/Resend integration
+- [ ] **FUN-01**: Sage query or search containing playful trigger phrases (e.g. "barrel roll", "do a flip") triggers 360° card animation via Framer Motion on ExpertCards
+
+## Future Requirements (v2.3+)
+
+### HEATMAP — Advanced Visualisation
+
+- **UMAP**: Runtime UMAP projection (umap-learn) for higher-quality embedding layout — deferred (heavy Railway dep)
+
+### LEAD — Match Reports
+
+- **LEAD-03**: In-app match report download — deferred from v2.0, re-evaluate after v2.2 newsletter data
 
 ## Out of Scope
 
 | Feature | Reason |
 |---------|--------|
-| HyDE query expansion in /api/explore | Already in chat endpoint; adds latency to explore; excluded to keep explore <100ms |
-| Levenshtein "Did you mean?" | FTS5 prefix matching sufficient; true spelling correction requires separate library |
-| PDF generation for Match Report | WeasyPrint on Railway unvalidated; memory risk; in-app HTML achieves the same goal |
-| Email delivery for Match Report | Requires SendGrid/Resend; out of current stack; deferred |
-| User accounts / authentication | Users interact anonymously; admin uses session key — unchanged |
-| Booking / payment flow | Cards link to Tinrate profiles where booking happens |
-| Mobile native app | Web-first |
+| Tailwind v4 migration | Breaking config change, zero visual benefit over v3 with OKLCH tokens |
+| SQLModel migration | SQLAlchemy is fully capable; refactoring risks regressions across 6 routers |
+| External newsletter service (Mailchimp, etc.) | SQLite capture sufficient; export to service manually if needed |
+| Cursor-reactive aurora (JS mousemove) | CSS keyframe animation achieves ambient motion with zero JS cost |
+| Re-implementing hybrid scoring | FAISS 0.7 + BM25 0.3 already live in explorer.py since v2.0 Phase 14 |
 
 ## Traceability
 
+Which phases cover which requirements. Updated during roadmap creation.
+
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| EXPL-01 | Phase 14 | Complete |
-| EXPL-02 | Phase 14 | Complete |
-| EXPL-03 | Phase 14 | Complete |
-| EXPL-04 | Phase 14 | Complete |
-| EXPL-05 | Phase 14 | Complete |
-| STATE-01 | Phase 15 | Complete |
-| STATE-02 | Phase 15 | Complete |
-| STATE-03 | Phase 15 | Complete |
-| MARKET-01 | Phase 20 (gap closure) | Complete |
-| MARKET-02 | Phase 20 (gap closure) | Complete |
-| MARKET-03 | Phase 17 | Complete |
-| MARKET-04 | Phase 17 | Complete |
-| MARKET-05 | Phase 21 (gap closure) | Complete |
-| MARKET-06 | Phase 16 | Complete |
-| PILOT-01 | Phase 18 | Complete |
-| PILOT-02 | Phase 18 | Complete |
-| PILOT-03 | Phase 18 | Complete |
-| LEAD-01 | Phase 19 | Complete |
-| LEAD-02 | Phase 19 | Complete |
-| LEAD-03 | Phase 21 (deferred → v2.1) | Deferred |
-| LEAD-04 | Phase 19 | Complete |
-| ROBUST-01 | Phase 19 | Complete |
-| ROBUST-02 | Phase 19 | Complete |
-| ROBUST-03 | Phase 19 | Complete |
+| VIS-01 | Phase 22 | Pending |
+| VIS-02 | Phase 22 | Pending |
+| VIS-03 | Phase 22 | Pending |
+| VIS-04 | Phase 22 | Pending |
+| VIS-05 | Phase 22 | Pending |
+| CARD-01 | Phase 23 | Pending |
+| CARD-02 | Phase 23 | Pending |
+| CARD-03 | Phase 23 | Pending |
+| DISC-01 | Phase 23 | Pending |
+| DISC-02 | Phase 23 | Pending |
+| DISC-03 | Phase 23 | Pending |
+| DISC-04 | Phase 23 | Pending |
+| IDX-01 | Phase 24 | Pending |
+| IDX-02 | Phase 24 | Pending |
+| IDX-03 | Phase 24 | Pending |
+| IDX-04 | Phase 24 | Pending |
+| INTEL-01 | Phase 25 | Pending |
+| INTEL-02 | Phase 25 | Pending |
+| INTEL-03 | Phase 25 | Pending |
+| INTEL-04 | Phase 25 | Pending |
+| INTEL-05 | Phase 26 | Pending |
+| INTEL-06 | Phase 26 | Pending |
+| NLTR-01 | Phase 27 | Pending |
+| NLTR-02 | Phase 27 | Pending |
+| NLTR-03 | Phase 27 | Pending |
+| NLTR-04 | Phase 27 | Pending |
+| FUN-01 | Phase 27 | Pending |
 
 **Coverage:**
-- v2.0 requirements: 24 total
+- v2.2 requirements: 24 total
 - Mapped to phases: 24
-- Unmapped: 0
-- Complete: 23 | Pending (gap closure): 0 | Deferred: 1 (LEAD-03)
+- Unmapped: 0 ✓
 
 ---
-*Requirements defined: 2026-02-21*
-*Last updated: 2026-02-22 — gap closure phases 20-21 added after v2.0 audit*
+*Requirements defined: 2026-02-22*
+*Last updated: 2026-02-22 after v2.2 milestone initialization*
