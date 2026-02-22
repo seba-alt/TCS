@@ -26,6 +26,16 @@ const NAV_ITEMS = [
     ),
   },
   {
+    to: '/admin/marketplace',
+    label: 'Marketplace',
+    end: false,
+    icon: (
+      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+      </svg>
+    ),
+  },
+  {
     to: '/admin/gaps',
     label: 'Gaps',
     end: false,
@@ -132,7 +142,7 @@ export default function AdminSidebar({ onLogout }: Props) {
         <p className="px-3 pb-2 text-xs font-semibold text-slate-600 uppercase tracking-wider">
           Analytics
         </p>
-        {NAV_ITEMS.slice(0, 3).map(({ to, label, end, icon }) => (
+        {NAV_ITEMS.slice(0, 4).map(({ to, label, end, icon }) => (
           <NavLink
             key={to}
             to={to}
@@ -153,7 +163,7 @@ export default function AdminSidebar({ onLogout }: Props) {
         <p className="px-3 pb-2 pt-4 text-xs font-semibold text-slate-600 uppercase tracking-wider">
           Intelligence
         </p>
-        {NAV_ITEMS.slice(3).map(({ to, label, end, icon }) => (
+        {NAV_ITEMS.slice(4).map(({ to, label, end, icon }) => (
           <NavLink
             key={to}
             to={to}

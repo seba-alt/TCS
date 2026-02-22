@@ -18,6 +18,7 @@ import SettingsPage from './admin/pages/SettingsPage.tsx'
 import SearchLabPage from './admin/pages/SearchLabPage.tsx'
 import IntelligenceDashboardPage from './admin/pages/IntelligenceDashboardPage.tsx'
 import IndexPage from './admin/pages/IndexPage.tsx'
+import AdminMarketplacePage from './admin/pages/AdminMarketplacePage.tsx'
 
 const router = createBrowserRouter([
   {
@@ -53,6 +54,7 @@ const router = createBrowserRouter([
           { path: 'search-lab', element: <SearchLabPage /> },
           { path: 'intelligence', element: <IntelligenceDashboardPage /> },
           { path: 'index', element: <IndexPage /> },
+          { path: 'marketplace', element: <AdminMarketplacePage /> },
         ],
       },
     ],
