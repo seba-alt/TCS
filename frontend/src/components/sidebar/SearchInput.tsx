@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useFilterSlice } from '../../store'
 import { useNltrStore } from '../../store/nltrStore'
+import { trackEvent } from '../../tracking'
 
 const DEBOUNCE_MS = 350
 const API_BASE = import.meta.env.VITE_API_URL ?? ''
@@ -84,6 +85,12 @@ export function SearchInput() {
     if (timerRef.current) clearTimeout(timerRef.current)
     timerRef.current = setTimeout(() => {
       setQuery(value)
+      if (value.trim().length > 0) {
+        void trackEvent('filter_change', {
+          filter: 'query',
+          value: value.trim(),
+        })
+      }
     }, DEBOUNCE_MS)
   }
 
