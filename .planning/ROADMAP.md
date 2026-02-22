@@ -68,7 +68,7 @@ See `.planning/milestones/v2.2-ROADMAP.md`
 
 - [x] **Phase 28: Sage Search Engine** - Add `search_experts` Gemini function; Sage finds experts, narrates results, syncs main grid (completed 2026-02-22)
 - [x] **Phase 29: Sage Personality + FAB Reactions** - Rewrite system prompt for warmer/wittier tone; animated FAB boxShadow pulse on activity (completed 2026-02-22)
-- [ ] **Phase 30: Behavior Tracking** - `UserEvent` DB model + `POST /api/events` backend + frontend `trackEvent()` instrumentation for card clicks, Sage queries, and filter changes (2 plans ready)
+- [x] **Phase 30: Behavior Tracking** - `UserEvent` DB model + `POST /api/events` backend + frontend `trackEvent()` instrumentation for card clicks, Sage queries, and filter changes (2 plans ready) (completed 2026-02-22)
 - [ ] **Phase 31: Admin Marketplace Intelligence** - New `/admin/marketplace` page showing unmet demand, expert exposure, daily Sage trend, and cold-start empty state
 
 ## Phase Details
@@ -174,5 +174,5 @@ Plans:
 | 22-27. Evolved Discovery Engine | v2.2 | 14/14 | Complete | 2026-02-22 |
 | 28. Sage Search Engine | v2.3 | Complete    | 2026-02-22 | - |
 | 29. Sage Personality + FAB Reactions | v2.3 | Complete    | 2026-02-22 | - |
-| 30. Behavior Tracking | 1/2 | In Progress|  | - |
+| 30. Behavior Tracking | 2/2 | Complete   | 2026-02-22 | - |
 | 31. Admin Marketplace Intelligence | v2.3 | 0/2 | Not started | - |
