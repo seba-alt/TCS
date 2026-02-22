@@ -184,7 +184,7 @@ Plans: 2/2 complete
   3. Returning visitors who were already unlocked in v2.0 (localStorage key `tcs_email_unlocked`) bypass the newsletter gate automatically
   4. The admin Leads page shows a newsletter subscriber count and the full subscriber list
   5. Typing "barrel roll" or "do a flip" in Sage or the search input causes ExpertCards to spin 360 degrees via Framer Motion
-**Plans**: TBD
+**Plans**: 3 plans
 
 **Planning notes (from research):**
 - Standalone `useNltrStore` with persist key `'tinrate-newsletter-v1'` — do NOT use `'explorer-filters'` or modify `useExplorerStore` or its `partialize`
@@ -194,9 +194,9 @@ Plans: 2/2 complete
 - Barrel roll: detect trigger phrases in Sage query AND search query; apply Framer Motion `rotate` on VirtuosoGrid container element — NOT on individual ExpertCards (would cause scroll-triggered re-animations on VirtuosoGrid unmount/remount)
 
 Plans:
-- [ ] 27-01: TBD
-- [ ] 27-02: TBD
-- [ ] 27-03: TBD
+- [ ] 27-01-PLAN.md — Backend foundation (NewsletterSubscriber model, subscribe endpoint, admin endpoints) + useNltrStore Zustand store
+- [ ] 27-02-PLAN.md — Newsletter gate modal redesign + MarketplacePage integration with useNltrStore; human visual verification
+- [ ] 27-03-PLAN.md — Barrel roll easter egg (ExpertGrid animation + Sage/SearchInput trigger detection) + Admin Leads subscriber section; human visual verification
 
 ## Progress
 
