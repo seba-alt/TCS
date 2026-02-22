@@ -2,7 +2,7 @@
 
 ## What This Is
 
-A professional Expert Marketplace for the Tinrate platform. Users browse a pool of 530 vetted experts via a full-featured marketplace UI — faceted sidebar with rate slider, tag filter, and text search; virtualized infinite-scroll grid; and a floating Sage AI co-pilot that applies filters from natural language. An email gate captures leads when users click "View Full Profile". The platform includes URL-synced filter state (shareable filtered views), fuzzy search suggestions, a graceful no-results experience, and a full admin analytics dashboard with a live intelligence steering panel.
+A professional Expert Marketplace for the Tinrate platform. Users browse a pool of 530 vetted experts via an immersive aurora-aesthetic marketplace — animated aurora mesh background, glassmorphism surfaces, bento-style expert cards, animated claymorphic tag cloud with proximity-based scaling, and a floating Sage AI co-pilot. An newsletter gate captures leads when users click "View Full Profile". The platform includes URL-synced filter state, fuzzy search suggestions, and a full admin analytics dashboard with index management, intelligence metrics (OTR@K, Index Drift), and a t-SNE embedding scatter plot. Playful users can trigger a barrel roll easter egg.
 
 ## Core Value
 
@@ -38,12 +38,13 @@ A user describes any problem and instantly gets expertly matched professionals t
 - ✓ OTR@K + Index Drift metrics + t-SNE embedding heatmap (INTEL-01 – INTEL-06) — Phases 24–26
 - ✓ Newsletter subscription gate, Zustand-persisted (NLTR-01 – NLTR-04) — Phase 27
 - ✓ Easter egg barrel roll on playful queries (FUN-01) — Phase 27
+- ✓ Aurora mesh gradient background + glassmorphism surfaces (VIS-01 – VIS-05) — Phase 22
+- ✓ Bento-style ExpertCard redesign (CARD-01 – CARD-03) — Phase 23
+- ✓ Animated claymorphic tag cloud + "Everything is possible" element (DISC-01 – DISC-04) — Phase 23
 
 ### Active
 
-- [ ] Aurora mesh gradient background + glassmorphism surfaces (VIS-01 – VIS-05)
-- [ ] Bento-style ExpertCard redesign (CARD-01 – CARD-03)
-- [ ] Animated claymorphic tag cloud + "Everything is possible" element (DISC-01 – DISC-04)
+*(No active requirements — v2.2 milestone complete. Define next milestone requirements with `/gsd:new-milestone`.)*
 
 ### Out of Scope
 
@@ -56,6 +57,16 @@ A user describes any problem and instantly gets expertly matched professionals t
 - In-app match report download (LEAD-03) — deferred to v2.1 backlog
 
 ## Shipped Versions
+
+### v2.2 Evolved Discovery Engine — Shipped 2026-02-22
+- Aurora mesh gradient background (OKLCH tokens, CSS keyframe animation) + glassmorphism on sidebar, search, Sage panel
+- Bento-style ExpertCard redesign: four visual zones (name/role, rate+badge, tags, match reason) within h-[180px], aurora-palette OKLCH hover glow
+- Animated claymorphic tag cloud: proximity-scale spring physics, FLIP layout reordering, "Everything is possible" cycling element
+- Atomic FAISS index swap: admin rebuild trigger, asyncio.Lock OOM guard, atomic swap, live status polling
+- Admin Intelligence: OTR@K 7-day rolling average, Index Drift (rebuild age + expert delta), t-SNE embedding scatter plot (Recharts, jewel-tone category colors)
+- Newsletter gate: `newsletter_subscribers` table, subscription CTA modal, Zustand-persisted unlock, admin subscriber list + CSV export
+- Easter egg: "barrel roll" / "do a flip" triggers 360° Framer Motion spin on ExpertGrid container; Sage short-circuits with canned response
+- Archive: `.planning/milestones/v2.2-ROADMAP.md`
 
 ### v2.0 Extreme Semantic Explorer — Shipped 2026-02-22
 - Hybrid search backend: three-stage pipeline (SQLAlchemy + FAISS 0.7 + BM25 0.3) with findability/feedback boosts
@@ -87,27 +98,14 @@ A user describes any problem and instantly gets expertly matched professionals t
 - Core AI chat with 3-expert recommendations, email gate, feedback, admin dashboard
 - Archive: `.planning/milestones/v1.0-ROADMAP.md`
 
-## Current Milestone: v2.2 Evolved Discovery Engine
-
-**Goal:** Evolve the marketplace from a functional grid into an immersive, high-fidelity discovery engine — aurora aesthetics, glassmorphism depth, animated tag cloud, atomic index management, admin embedding heatmap, and newsletter-gated lead capture.
-
-**Target features:**
-- Aurora mesh gradient background + glassmorphism on sidebar, search, Sage panel
-- Bento-style ExpertCard redesign + aurora-adapted hover glow
-- Animated claymorphic tag cloud + "Everything is possible" element
-- Atomic FAISS index swap with admin rebuild trigger
-- Admin: OTR@K + Index Drift metrics + t-SNE embedding heatmap
-- Newsletter subscription gate (SQLite-backed, Zustand-persisted)
-- Easter egg: barrel roll on playful queries
-
 ## Current State
 
-**Deployed version:** v2.0 (Railway + Vercel, auto-deploys on push to main)
+**Deployed version:** v2.2 (Railway + Vercel, auto-deploys on push to main)
 **Expert pool:** 530 experts (data/metadata.json), all AI-tagged; FAISS index at 530 vectors
 **Search intelligence:** Three-stage hybrid pipeline live; HyDE + feedback re-ranking toggled via admin steering panel
-**Marketplace:** Full expert browse/filter experience with Sage AI co-pilot; email gate on profile clicks
-**Admin panel:** Intelligence tab = live steering panel; Search Lab = A/B comparison; Expert tab = sort/filter/pagination
-**Next:** Executing v2.2 — 6 phases (22–27)
+**Marketplace:** Immersive aurora-aesthetic marketplace with bento cards, animated tag cloud, Sage AI co-pilot; newsletter gate on profile clicks
+**Admin panel:** Index rebuild trigger + status; Intelligence tab with OTR@K, Index Drift, t-SNE scatter plot; Leads with newsletter subscriber list
+**Next milestone:** TBD — run `/gsd:new-milestone` to define
 
 ## Context
 
@@ -170,4 +168,4 @@ A user describes any problem and instantly gets expertly matched professionals t
 | rotate reset to 0 with duration:0 after spin | Framer Motion accumulates transform state — must explicitly reset after animate to prevent additive rotation on repeat triggers | ✓ Good — documented in SUMMARY; repeat triggers work cleanly |
 
 ---
-*Last updated: 2026-02-22 after Phase 27 (Newsletter Gate + Easter Egg) — v2.2 milestone complete*
+*Last updated: 2026-02-22 — v2.2 Evolved Discovery Engine milestone complete*

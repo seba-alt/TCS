@@ -70,3 +70,13 @@
 
 ---
 
+
+## v2.2 Evolved Discovery Engine (Shipped: 2026-02-22)
+
+**Phases completed:** 16 phases, 46 plans, 0 tasks
+
+**Key accomplishments:**
+- (none recorded)
+
+---
+
