@@ -68,7 +68,7 @@ See `.planning/milestones/v2.2-ROADMAP.md`
 
 - [x] **Phase 28: Sage Search Engine** - Add `search_experts` Gemini function; Sage finds experts, narrates results, syncs main grid (completed 2026-02-22)
 - [x] **Phase 29: Sage Personality + FAB Reactions** - Rewrite system prompt for warmer/wittier tone; animated FAB boxShadow pulse on activity (completed 2026-02-22)
-- [ ] **Phase 30: Behavior Tracking** - `UserEvent` DB model + `POST /api/events` backend + frontend `trackEvent()` instrumentation for card clicks, Sage queries, and filter changes
+- [ ] **Phase 30: Behavior Tracking** - `UserEvent` DB model + `POST /api/events` backend + frontend `trackEvent()` instrumentation for card clicks, Sage queries, and filter changes (2 plans ready)
 - [ ] **Phase 31: Admin Marketplace Intelligence** - New `/admin/marketplace` page showing unmet demand, expert exposure, daily Sage trend, and cold-start empty state
 
 ## Phase Details
@@ -137,8 +137,8 @@ Plans:
 - Verify `user_events` table creation in Railway logs within 60 seconds of first deploy
 
 Plans:
-- [ ] 30-01: Backend — `UserEvent` model + `events.py` router (`POST /api/events`, 202, no auth, Pydantic allowlist)
-- [ ] 30-02: Frontend — `tracking.ts` module + instrumentation in `ExpertCard.tsx`, `useSage.ts`, `filterSlice.ts`
+- [x] 30-01-PLAN.md — Backend: `UserEvent` model + `events.py` router (`POST /api/events`, 202, no auth, Pydantic allowlist)
+- [x] 30-02-PLAN.md — Frontend: `tracking.ts` module + instrumentation in `ExpertCard.tsx`, `useSage.ts`, `SearchInput.tsx`, `RateSlider.tsx`, `TagMultiSelect.tsx`
 
 ### Phase 31: Admin Marketplace Intelligence
 **Goal**: Admins can see which searches go unmet, which experts are invisible, and how Sage usage trends over time
@@ -174,5 +174,5 @@ Plans:
 | 22-27. Evolved Discovery Engine | v2.2 | 14/14 | Complete | 2026-02-22 |
 | 28. Sage Search Engine | v2.3 | Complete    | 2026-02-22 | - |
 | 29. Sage Personality + FAB Reactions | v2.3 | Complete    | 2026-02-22 | - |
-| 30. Behavior Tracking | v2.3 | 0/2 | Not started | - |
+| 30. Behavior Tracking | 1/2 | In Progress|  | - |
 | 31. Admin Marketplace Intelligence | v2.3 | 0/2 | Not started | - |
