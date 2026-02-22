@@ -6,8 +6,8 @@ import { useExplore } from '../hooks/useExplore'
 import { useUrlSync } from '../hooks/useUrlSync'
 import { useNltrStore } from '../store/nltrStore'
 import { AuroraBackground } from '../components/AuroraBackground'
+import Header from '../components/Header'
 import { FilterSidebar } from '../components/sidebar/FilterSidebar'
-import { SearchInput } from '../components/sidebar/SearchInput'
 import { FilterChips } from '../components/marketplace/FilterChips'
 import { ExpertGrid } from '../components/marketplace/ExpertGrid'
 import { MobileFilterSheet } from '../components/sidebar/MobileFilterSheet'
@@ -97,21 +97,8 @@ export default function MarketplacePage() {
   return (
     <AuroraBackground>
     <div className="flex flex-col h-screen">
-      {/* Desktop top header — logo + centered search */}
-      <header
-        className="hidden md:flex items-center gap-6 px-6 py-3 border-b border-black/8 shrink-0 sticky top-0 z-10"
-        style={{ background: 'oklch(98% 0.008 279 / 0.88)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)' }}
-      >
-        <img
-          src="/logo.png"
-          alt="Tinrate"
-          className="h-8 w-auto shrink-0"
-          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
-        />
-        <div className="flex-1 max-w-lg">
-          <SearchInput />
-        </div>
-      </header>
+      {/* Desktop top header — Command Center glassmorphic header */}
+      <Header />
 
       {/* Body row — sidebar + main */}
       <div className="flex flex-1 min-h-0">
