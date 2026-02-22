@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react'
-import { useAdminStats } from '../hooks/useAdminData'
+import { Link } from 'react-router-dom'
+import { LineChart, Line, ResponsiveContainer, Tooltip } from 'recharts'
+import { useAdminStats, adminFetch, useMarketplaceTrend } from '../hooks/useAdminData'
+import type { DemandResponse } from '../types'
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
 
@@ -95,6 +98,91 @@ function StatCard({
   )
 }
 
+function TopZeroResultsCard() {
+  const [data, setData] = useState<DemandResponse | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    adminFetch<DemandResponse>('/events/demand', { days: 30, page: 0, page_size: 5 })
+      .then(setData)
+      .catch(() => setData(null))
+      .finally(() => setLoading(false))
+  }, [])
+
+  const rows = data?.demand ?? []
+
+  return (
+    <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl p-5">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-sm font-semibold text-white">Top Zero-Result Queries</h2>
+        <Link to="/admin/gaps" className="text-xs text-purple-400 hover:text-purple-300 transition-colors">
+          See all →
+        </Link>
+      </div>
+      {loading ? (
+        <p className="text-slate-500 text-sm animate-pulse">Loading…</p>
+      ) : data?.data_since === null ? (
+        <p className="text-slate-500 text-sm">No tracking data yet — insights appear after ~50 page views</p>
+      ) : rows.length === 0 ? (
+        <p className="text-slate-500 text-sm">No zero-result queries in the last 30 days</p>
+      ) : (
+        <div className="space-y-2">
+          {rows.slice(0, 5).map((row, i) => (
+            <div key={i} className="flex items-center justify-between">
+              <span className="text-sm text-slate-300 truncate max-w-[75%]" title={row.query_text}>
+                {row.query_text}
+              </span>
+              <span className="text-xs text-red-400 font-mono ml-2 flex-shrink-0">{row.frequency}×</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function SageSparklineCard() {
+  const { data, loading } = useMarketplaceTrend()
+  const last7 = (data?.daily ?? []).slice(-7)
+
+  return (
+    <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl p-5">
+      <h2 className="text-sm font-semibold text-white mb-1">Sage Volume</h2>
+      <p className="text-xs text-slate-500 mb-4">Last 7 days</p>
+      {loading ? (
+        <div className="h-16 flex items-center">
+          <p className="text-slate-500 text-sm animate-pulse">Loading…</p>
+        </div>
+      ) : data?.data_since === null ? (
+        <div className="h-16 flex items-center">
+          <p className="text-slate-500 text-sm">No tracking data yet</p>
+        </div>
+      ) : (
+        <>
+          <div className="text-2xl font-bold text-white mb-3">
+            {data?.kpis?.total_queries ?? 0}
+            <span className="text-sm font-normal text-slate-500 ml-1.5">queries / 14d</span>
+          </div>
+          <ResponsiveContainer width="100%" height={56}>
+            <LineChart data={last7}>
+              <Line type="monotone" dataKey="total" stroke="#a855f7" strokeWidth={2} dot={false} />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: '#0f172a',
+                  border: '1px solid #334155',
+                  borderRadius: '6px',
+                  fontSize: '11px',
+                }}
+                labelStyle={{ color: '#94a3b8' }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </>
+      )}
+    </div>
+  )
+}
+
 export default function OverviewPage() {
   const { stats, loading, error } = useAdminStats()
   const { status: healthStatus, latency } = useHealthCheck()
@@ -118,33 +206,33 @@ export default function OverviewPage() {
   const maxQueryCount = stats.top_queries[0]?.count ?? 1
 
   return (
-    <div className="p-8 space-y-8">
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-white">Overview</h1>
-          <p className="text-slate-500 text-sm mt-1">Platform analytics at a glance</p>
-        </div>
-        {/* System health gauge */}
-        <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl px-6 py-4 flex flex-col items-center gap-1">
+    <div className="p-8 space-y-6">
+      {/* Section 1: Health strip — Speedometer left-aligned, KPI cards right */}
+      <div className="flex items-start gap-6">
+        <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl px-6 py-4 flex flex-col items-center gap-1 flex-shrink-0">
           <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">System</p>
           <Speedometer status={healthStatus} latency={latency} />
         </div>
+        <div className="flex-1 grid grid-cols-2 xl:grid-cols-4 gap-4">
+          <StatCard label="Total Searches" value={stats.total_searches} />
+          <StatCard
+            label="Matches"
+            value={stats.match_count}
+            sub={`${(stats.match_rate * 100).toFixed(1)}% match rate`}
+            accent
+          />
+          <StatCard label="Match Rate" value={`${(stats.match_rate * 100).toFixed(1)}%`} />
+          <StatCard label="Gaps" value={stats.gap_count} sub="queries needing improvement" />
+        </div>
       </div>
 
-      {/* KPI cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        <StatCard label="Total Searches" value={stats.total_searches} />
-        <StatCard
-          label="Matches"
-          value={stats.match_count}
-          sub={`${(stats.match_rate * 100).toFixed(1)}% match rate`}
-          accent
-        />
-        <StatCard label="Match Rate" value={`${(stats.match_rate * 100).toFixed(1)}%`} />
-        <StatCard label="Gaps" value={stats.gap_count} sub="queries needing improvement" />
+      {/* Section 2: Two-column insight cards */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <TopZeroResultsCard />
+        <SageSparklineCard />
       </div>
 
-      {/* Top queries + top feedback */}
+      {/* Section 3: Top Queries + Top Feedback */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         {/* Top Queries */}
         <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl p-5">
