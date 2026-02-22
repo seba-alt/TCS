@@ -106,7 +106,7 @@ Plans:
   2. Sage asks at most one clarifying question per conversation; after the user replies to any question, Sage always calls a function (never asks a second question)
   3. The Sage FAB displays a visible boxShadow pulse/glow animation in response to user activity
   4. FAB hover (scale up) and tap (scale down) gestures continue to work without conflict alongside the glow animation
-**Plans**: TBD
+**Plans**: 1 plan
 
 **Architecture notes (encode in plan):**
 - System prompt rewrite lives entirely in `pilot_service.py` — one-file change, instant rollback via `git push`
@@ -114,7 +114,7 @@ Plans:
 - FAB animation: outer `motion.div` animates `boxShadow` ONLY; inner `motion.button` retains `whileHover={{ scale: 1.05 }}` and `whileTap={{ scale: 0.95 }}` — NEVER animate `scale` on the wrapper div
 
 Plans:
-- [ ] 29-01: System prompt rewrite + FAB animated `motion.div` wrapper
+- [ ] 29-01-PLAN.md — System prompt rewrite (Sage personality) + SageFAB motion.div glow wrapper (purple on Sage reply, blue on filter change)
 
 ### Phase 30: Behavior Tracking
 **Goal**: Expert card clicks, Sage query interactions, and filter changes are durably recorded in the database without blocking any user interaction
