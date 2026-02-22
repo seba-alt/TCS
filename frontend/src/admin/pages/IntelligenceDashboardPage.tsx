@@ -1,6 +1,22 @@
 import { useState, useEffect, useRef } from 'react'
-import { useAdminSettings, adminPost } from '../hooks/useAdminData'
+import { useAdminSettings, useIntelligenceMetrics, adminPost } from '../hooks/useAdminData'
 import type { AdminSetting } from '../types'
+
+function otrColor(avg: number | null): string {
+  if (avg === null) return 'text-slate-400'
+  if (avg >= 0.75) return 'text-green-400'
+  if (avg >= 0.60) return 'text-yellow-400'
+  return 'text-red-400'
+}
+
+function timeAgo(unixTs: number | null): string {
+  if (unixTs === null) return '—'
+  const diffSec = Math.floor(Date.now() / 1000 - unixTs)
+  if (diffSec < 60) return 'just now'
+  if (diffSec < 3600) return `${Math.floor(diffSec / 60)} min ago`
+  if (diffSec < 86400) return `${Math.floor(diffSec / 3600)} hr ago`
+  return `${Math.floor(diffSec / 86400)} days ago`
+}
 
 function SourceBadge({ source }: { source: AdminSetting['source'] }) {
   if (source === 'db') return (
@@ -63,6 +79,7 @@ function friendlyLabel(key: string): string {
 const THRESHOLD_ORDER = ['SIMILARITY_THRESHOLD', 'STRONG_RESULT_MIN', 'FEEDBACK_BOOST_CAP']
 
 export default function IntelligenceDashboardPage() {
+  const { data: metrics, loading: metricsLoading } = useIntelligenceMetrics()
   const { data, loading, error, refetch } = useAdminSettings()
 
   // Local threshold state — initialized from fetched data
@@ -146,6 +163,50 @@ export default function IntelligenceDashboardPage() {
 
   return (
     <div className="p-8 space-y-8 max-w-2xl">
+      {/* Intelligence Metrics Cards — OTR@K + Index Drift */}
+      <div className="grid grid-cols-2 gap-4">
+        {/* OTR@K Card */}
+        <div className="bg-slate-800 border border-slate-700 rounded-lg p-4 space-y-2">
+          <p className="text-xs text-slate-400">On-Topic Rate (7-day)</p>
+          <p className={`text-2xl font-bold ${otrColor(metrics?.otr.rolling_avg_7d ?? null)}`}>
+            {metricsLoading
+              ? '—'
+              : metrics?.otr.rolling_avg_7d !== null && metrics?.otr.rolling_avg_7d !== undefined
+                ? `${Math.round(metrics.otr.rolling_avg_7d * 100)}%`
+                : '—'}
+          </p>
+          <p className="text-xs text-slate-500">
+            {metricsLoading
+              ? ''
+              : (metrics?.otr.query_count_7d ?? 0) > 0
+                ? `based on ${metrics!.otr.query_count_7d} queries`
+                : 'no data yet'}
+          </p>
+        </div>
+
+        {/* Index Drift Card */}
+        <div className="bg-slate-800 border border-slate-700 rounded-lg p-4 space-y-2">
+          <p className="text-xs text-slate-400">Index Drift</p>
+          <p className="text-sm text-slate-200">
+            Last rebuilt: {metricsLoading ? '—' : timeAgo(metrics?.index_drift.last_rebuild_at ?? null)}
+          </p>
+          {!metricsLoading && metrics && (
+            <p className="text-xs text-slate-500">
+              {metrics.index_drift.expert_count_at_rebuild !== null && metrics.index_drift.expert_delta !== null
+                ? <>
+                    {metrics.index_drift.current_expert_count} experts{' '}
+                    {metrics.index_drift.expert_delta > 0
+                      ? <span className="text-green-400">+{metrics.index_drift.expert_delta} since rebuild</span>
+                      : metrics.index_drift.expert_delta < 0
+                        ? <span className="text-red-400">{metrics.index_drift.expert_delta} since rebuild</span>
+                        : <span>no change since rebuild</span>}
+                  </>
+                : <>{metrics.index_drift.current_expert_count} experts — no rebuild recorded</>}
+            </p>
+          )}
+        </div>
+      </div>
+
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-white">Search Intelligence</h1>
