@@ -392,6 +392,44 @@ def get_intelligence_stats(db: Session = Depends(get_db)):
     return {"flags": flags, "totals": totals, "daily": daily}
 
 
+@router.get("/intelligence")
+def get_intelligence_metrics(request: Request, db: Session = Depends(get_db)):
+    """OTR@K 7-day rolling average + Index Drift from _ingest dict."""
+    from sqlalchemy import text as _text  # noqa: PLC0415
+
+    cutoff = (datetime.utcnow() - timedelta(days=7)).strftime("%Y-%m-%d")
+    row = db.execute(_text("""
+        SELECT AVG(otr_at_k) AS rolling_avg, COUNT(*) AS query_count
+        FROM conversations
+        WHERE otr_at_k IS NOT NULL
+          AND date(created_at) >= :cutoff
+    """), {"cutoff": cutoff}).one_or_none()
+
+    otr_rolling_avg = round(float(row.rolling_avg), 4) if row and row.rolling_avg is not None else None
+    otr_query_count = int(row.query_count) if row else 0
+
+    # Index Drift — reads from Phase 24 _ingest dict (in-memory, resets on deploy)
+    current_expert_count = len(request.app.state.metadata)
+    last_rebuild_at = _ingest.get("last_rebuild_at")
+    expert_count_at_rebuild = _ingest.get("expert_count_at_rebuild")
+
+    return {
+        "otr": {
+            "rolling_avg_7d": otr_rolling_avg,
+            "query_count_7d": otr_query_count,
+        },
+        "index_drift": {
+            "last_rebuild_at": last_rebuild_at,
+            "expert_count_at_rebuild": expert_count_at_rebuild,
+            "current_expert_count": current_expert_count,
+            "expert_delta": (
+                current_expert_count - expert_count_at_rebuild
+                if expert_count_at_rebuild is not None else None
+            ),
+        },
+    }
+
+
 # ── Searches ──────────────────────────────────────────────────────────────────
 
 @router.get("/searches")
