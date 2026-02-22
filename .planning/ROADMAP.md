@@ -70,7 +70,7 @@ See `.planning/milestones/v2.0-ROADMAP.md`
   3. All text on glass surfaces passes 4.5:1 contrast measured over the actual aurora gradient (not white)
   4. On a browser without backdrop-filter support, glass surfaces fall back to an opaque dark background (no invisible/broken surfaces)
   5. OKLCH color tokens are defined as CSS custom properties and consumed by all glass and aurora elements
-**Plans**: TBD
+**Plans**: 2 plans
 
 **Planning notes (from research):**
 - Audit full ancestor chain before writing any glass class — `overflow: hidden` ancestors silently kill `backdrop-filter`; use `before:` pseudo-element hack if ancestor cannot be modified
@@ -80,9 +80,8 @@ See `.planning/milestones/v2.0-ROADMAP.md`
 - Contrast audit must use deployed aurora gradient, not white background
 
 Plans:
-- [ ] 22-01: TBD
-- [ ] 22-02: TBD
-- [ ] 22-03: TBD
+- [ ] 22-01-PLAN.md — OKLCH tokens, aurora animation keyframes, glass-surface CSS class, and AuroraBackground React component
+- [ ] 22-02-PLAN.md — Apply aurora to MarketplacePage and glass surfaces to FilterSidebar, SearchInput, SagePanel; human visual verification
 
 ### Phase 23: Discovery Engine
 **Goal**: Expert discovery feels dynamic and tactile — the ExpertCard displays information in distinct visual zones (bento layout), the tag selector is replaced with an animated claymorphic tag cloud with proximity-based scaling, and an "Everything is possible" element invites exploration.
@@ -207,7 +206,7 @@ Plans:
 | 8-10. Intelligence Phases | v1.1 | Complete | Complete | 2026-02-21 |
 | 11-13. Steering Panel Phases | v1.2 | Complete | Complete | 2026-02-21 |
 | 14-21. Marketplace Phases | v2.0 | 23/23 | Complete | 2026-02-22 |
-| 22. Visual Infrastructure | v2.2 | 0/3 | Not started | - |
+| 22. Visual Infrastructure | v2.2 | 0/2 | Planning | - |
 | 23. Discovery Engine | v2.2 | 0/3 | Not started | - |
 | 24. Atomic Index Swap UI | v2.2 | 0/2 | Not started | - |
 | 25. Admin Intelligence Metrics | v2.2 | 0/2 | Not started | - |
