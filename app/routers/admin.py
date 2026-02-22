@@ -46,7 +46,7 @@ import structlog
 
 from app.config import FAISS_INDEX_PATH, METADATA_PATH
 from app.database import get_db, SessionLocal
-from app.models import Conversation, Expert, Feedback
+from app.models import Conversation, Expert, Feedback, NewsletterSubscriber
 from app.services.tagging import compute_findability_score, tag_expert_sync
 from app.services.retriever import retrieve
 from app.services.search_intelligence import (  # noqa: PLC2701
@@ -659,6 +659,62 @@ def get_leads(db: Session = Depends(get_db)):
 
     # Already sorted by first-seen (most recent) due to desc ordering above
     return {"leads": result}
+
+
+# ── Newsletter Subscribers ────────────────────────────────────────────────────
+
+@router.get("/newsletter-subscribers")
+def get_newsletter_subscribers(db: Session = Depends(get_db)):
+    """
+    Return all newsletter subscribers ordered by most recent first.
+
+    Response shape:
+        {count: int, subscribers: [{email, created_at, source}]}
+    """
+    rows = db.scalars(
+        select(NewsletterSubscriber).order_by(NewsletterSubscriber.created_at.desc())
+    ).all()
+    return {
+        "count": len(rows),
+        "subscribers": [
+            {
+                "email": r.email,
+                "created_at": r.created_at.isoformat(),
+                "source": r.source,
+            }
+            for r in rows
+        ],
+    }
+
+
+@router.get("/export/newsletter.csv")
+def export_newsletter_csv(db: Session = Depends(get_db)):
+    """
+    Download all newsletter subscribers as CSV.
+
+    CSV format:
+        Metadata header rows (# lines)
+        Blank row
+        Column header row
+        Data rows (ordered by most recent first)
+    """
+    rows = db.scalars(
+        select(NewsletterSubscriber).order_by(NewsletterSubscriber.created_at.desc())
+    ).all()
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(["# Export date", date.today().isoformat()])
+    writer.writerow(["# Total subscribers", len(rows)])
+    writer.writerow([])
+    writer.writerow(["email", "created_at", "source"])
+    for r in rows:
+        writer.writerow([r.email, r.created_at.isoformat(), r.source])
+    filename = f"newsletter-subscribers-{date.today().isoformat()}.csv"
+    return StreamingResponse(
+        iter([buf.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
 
 
 # ── Experts ───────────────────────────────────────────────────────────────────
