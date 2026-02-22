@@ -215,3 +215,16 @@ export interface EmbeddingMapResponse {
 export interface EmbeddingMapComputing {
   status: 'computing'
 }
+
+// ── Newsletter Subscribers (Phase 27) ────────────────────────────────────────
+
+export interface NewsletterSubscriber {
+  email: string
+  created_at: string  // ISO string
+  source: string
+}
+
+export interface NewsletterSubscribersResponse {
+  count: number
+  subscribers: NewsletterSubscriber[]
+}

@@ -11,6 +11,7 @@ import type {
   IntelligenceStats,
   IntelligenceMetrics,
   AdminSettingsResponse,
+  NewsletterSubscribersResponse,
 } from '../types'
 
 const getAdminKey = () => sessionStorage.getItem('admin_key') ?? ''
@@ -259,6 +260,22 @@ export function useAdminSettings() {
   useEffect(() => { fetchData() }, [fetchData])
 
   return { data, loading, error, refetch: fetchData }
+}
+
+export function useNewsletterSubscribers() {
+  const [data, setData] = useState<NewsletterSubscribersResponse | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    setLoading(true)
+    adminFetch<NewsletterSubscribersResponse>('/newsletter-subscribers')
+      .then(setData)
+      .catch((e: Error) => setError(e.message))
+      .finally(() => setLoading(false))
+  }, [])
+
+  return { data, loading, error }
 }
 
 export function useEmbeddingMap() {

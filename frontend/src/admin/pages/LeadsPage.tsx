@@ -1,10 +1,13 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { useAdminLeads } from '../hooks/useAdminData'
+import { useAdminLeads, useNewsletterSubscribers } from '../hooks/useAdminData'
 import type { LeadRow } from '../types'
+
+const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
 
 export default function LeadsPage() {
   const { data, loading, error } = useAdminLeads()
+  const { data: nltrData, loading: nltrLoading } = useNewsletterSubscribers()
   const navigate = useNavigate()
   const location = useLocation()
   const highlightEmail: string = location.state?.email ?? ''
@@ -26,6 +29,26 @@ export default function LeadsPage() {
     })
   }
 
+  function formatDateShort(iso: string) {
+    return new Date(iso).toLocaleDateString(undefined, { dateStyle: 'medium' })
+  }
+
+  function downloadNewsletterCsv() {
+    const adminKey = sessionStorage.getItem('admin_key') || ''
+    fetch(`${API_URL}/api/admin/export/newsletter.csv`, {
+      headers: { 'X-Admin-Key': adminKey },
+    })
+      .then(r => r.blob())
+      .then(blob => {
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `newsletter-subscribers-${new Date().toISOString().slice(0, 10)}.csv`
+        a.click()
+        URL.revokeObjectURL(url)
+      })
+  }
+
   return (
     <div className="p-8 space-y-6">
       <div>
@@ -35,6 +58,60 @@ export default function LeadsPage() {
         </p>
       </div>
 
+      {/* Newsletter Subscribers section */}
+      <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl overflow-hidden">
+        {/* Header row */}
+        <div className="px-5 py-3 bg-slate-900/40 border-b border-slate-700/60 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-semibold text-white">Newsletter Subscribers</span>
+            <span className="text-xs bg-purple-900/50 text-purple-300 border border-purple-800/50 px-2 py-0.5 rounded-full">
+              {nltrData?.count ?? 0} {(nltrData?.count ?? 0) === 1 ? 'subscriber' : 'subscribers'}
+            </span>
+          </div>
+          <button
+            onClick={downloadNewsletterCsv}
+            className="text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white border border-slate-600 px-3 py-1.5 rounded transition-colors"
+          >
+            Export CSV
+          </button>
+        </div>
+
+        {/* Subscriber list */}
+        {nltrLoading ? (
+          <p className="px-5 py-4 text-slate-500 text-sm animate-pulse">Loading subscribers…</p>
+        ) : !nltrData || nltrData.subscribers.length === 0 ? (
+          <p className="px-5 py-4 text-slate-600 text-sm">No subscribers yet.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-700/60">
+                  <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                    Email
+                  </th>
+                  <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                    Signed Up
+                  </th>
+                  <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                    Source
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {nltrData.subscribers.map((sub) => (
+                  <tr key={sub.email} className="border-b border-slate-700/40 hover:bg-slate-700/20">
+                    <td className="px-5 py-3 text-white font-medium">{sub.email}</td>
+                    <td className="px-5 py-3 text-slate-400">{formatDateShort(sub.created_at)}</td>
+                    <td className="px-5 py-3 text-slate-500 text-xs">{sub.source}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Existing leads section */}
       {loading && <p className="text-slate-500 text-sm animate-pulse">Loading leads…</p>}
       {error && <p className="text-red-400 text-sm">Error: {error}</p>}
 
