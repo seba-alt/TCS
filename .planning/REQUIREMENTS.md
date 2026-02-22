@@ -31,10 +31,10 @@ Requirements for v2.3 release. Each maps to roadmap phases.
 
 ### Admin Intelligence
 
-- [ ] **INTEL-01**: Admin Marketplace page shows unmet demand table (zero-result Sage queries sorted by frequency + underserved filter combos)
-- [ ] **INTEL-02**: Admin Marketplace page shows expert exposure distribution (appears + click counts per expert, grid vs Sage context breakdown)
-- [ ] **INTEL-03**: Admin Marketplace page shows daily Sage usage trend (Recharts BarChart)
-- [ ] **INTEL-04**: Admin Marketplace page shows cold-start empty state with tracking start timestamp when `user_events` table is empty
+- [x] **INTEL-01**: Admin Marketplace page shows unmet demand table (zero-result Sage queries sorted by frequency + underserved filter combos)
+- [x] **INTEL-02**: Admin Marketplace page shows expert exposure distribution (appears + click counts per expert, grid vs Sage context breakdown)
+- [x] **INTEL-03**: Admin Marketplace page shows daily Sage usage trend (Recharts BarChart)
+- [x] **INTEL-04**: Admin Marketplace page shows cold-start empty state with tracking start timestamp when `user_events` table is empty
 
 ## v2 Requirements
 
@@ -76,10 +76,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TRACK-01 | Phase 30 | Pending |
 | TRACK-02 | Phase 30 | Pending |
 | TRACK-03 | Phase 30 | Pending |
-| INTEL-01 | Phase 31 | Pending |
-| INTEL-02 | Phase 31 | Pending |
-| INTEL-03 | Phase 31 | Pending |
-| INTEL-04 | Phase 31 | Pending |
+| INTEL-01 | Phase 31 | Complete |
+| INTEL-02 | Phase 31 | Complete |
+| INTEL-03 | Phase 31 | Complete |
+| INTEL-04 | Phase 31 | Complete |
 
 **Coverage:**
 - v1 requirements: 13 total

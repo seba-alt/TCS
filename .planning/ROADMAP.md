@@ -175,4 +175,4 @@ Plans:
 | 28. Sage Search Engine | v2.3 | Complete    | 2026-02-22 | - |
 | 29. Sage Personality + FAB Reactions | v2.3 | Complete    | 2026-02-22 | - |
 | 30. Behavior Tracking | 2/2 | Complete    | 2026-02-22 | - |
-| 31. Admin Marketplace Intelligence | v2.3 | 0/2 | Not started | - |
+| 31. Admin Marketplace Intelligence | 1/2 | In Progress|  | - |

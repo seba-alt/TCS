@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-22)
 
 **Core value:** A user describes any problem and instantly gets expertly matched professionals they can browse, filter, and contact — no searching, no guesswork.
-**Current focus:** v2.3 — Sage Evolution & Marketplace Intelligence (Phase 30 complete, Phase 31 next)
+**Current focus:** v2.3 — Sage Evolution & Marketplace Intelligence (Phase 31 in progress, 31-01 complete)
 
 ## Current Position
 
 Phase: 31 of 31 (Marketplace Intelligence)
-Plan: 1 of ? in current phase
-Status: Phase 30 complete — ready to execute Phase 31
-Last activity: 2026-02-22 — 30-02 frontend tracking (trackEvent module + all event instrumentation) complete
+Plan: 2 of 2 in current phase (31-01 complete, 31-02 next)
+Status: Phase 31 in progress — 31-01 backend endpoints complete, 31-02 frontend next
+Last activity: 2026-02-22 — 31-01 demand/exposure/trend aggregation endpoints + CSV exports complete
 
-Progress: [████████████████████] 51/51 plans (100% through Phase 30) | v2.3: 5/7 plans
+Progress: [████████████████████] 52/52 plans (100% through Phase 31-01) | v2.3: 6/7 plans
 
 ## Live URLs
 
@@ -26,8 +26,12 @@ Progress: [████████████████████] 51/51 p
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 51 (through Phase 30-02)
+- Total plans completed: 52 (through Phase 31-01)
 - Average duration: ~15 min
+
+| Phase-Plan | Duration | Tasks | Files |
+|------------|----------|-------|-------|
+| 31-01 | 2 min | 2 | 1 |
 
 ## Accumulated Context
 
@@ -53,6 +57,8 @@ Decisions are logged in PROJECT.md Key Decisions table.
 
 **v2.3 critical constraints (remaining phases):**
 - Phase 31: New `MarketplacePage.tsx` at `/admin/marketplace` — does NOT modify `GapsPage.tsx`. Two new admin endpoints: `GET /api/admin/events/demand` + `/events/exposure`. Build empty state BEFORE data-loading logic (cold-start pitfall). Both endpoints return `data_since` field.
+- [Phase 31]: All 5 marketplace intelligence endpoints added to existing router object — inherits _require_admin, no main.py changes needed
+- [Phase 31]: json_extract boolean comparisons use = 1 not = true — SQLite stores JSON booleans as integers
 
 ### Pending Todos
 
@@ -66,6 +72,6 @@ Decisions are logged in PROJECT.md Key Decisions table.
 ## Session Continuity
 
 Last session: 2026-02-22
-Stopped at: Phase 30 complete (30-02: trackEvent module + full event instrumentation), ready for Phase 31
+Stopped at: Completed 31-01-PLAN.md (demand/exposure/trend + CSV export endpoints in admin.py)
 Resume signal: N/A
 Resume file: None
