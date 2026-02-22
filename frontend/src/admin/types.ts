@@ -192,3 +192,26 @@ export interface LabOverrides {
   QUERY_EXPANSION_ENABLED?: boolean
   FEEDBACK_LEARNING_ENABLED?: boolean
 }
+
+// ── Embedding Heatmap (Phase 26) ──────────────────────────────────────────
+
+/** One expert point in the t-SNE 2D projection */
+export interface EmbeddingPoint {
+  x: number
+  y: number
+  name: string        // "First Last"
+  category: string    // expert category or "Unknown"
+  username: string
+}
+
+/** Response when t-SNE projection is complete */
+export interface EmbeddingMapResponse {
+  status: 'ready'
+  points: EmbeddingPoint[]
+  count: number
+}
+
+/** Response while t-SNE is still computing (HTTP 202) */
+export interface EmbeddingMapComputing {
+  status: 'computing'
+}

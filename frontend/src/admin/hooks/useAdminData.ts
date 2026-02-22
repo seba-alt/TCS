@@ -260,3 +260,47 @@ export function useAdminSettings() {
 
   return { data, loading, error, refetch: fetchData }
 }
+
+export function useEmbeddingMap() {
+  const [data, setData] = useState<import('../types').EmbeddingMapResponse | null>(null)
+  const [status, setStatus] = useState<'loading' | 'computing' | 'ready' | 'error'>('loading')
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  const poll = useCallback(async () => {
+    try {
+      const res = await fetch(
+        `${API_URL}/api/admin/embedding-map`,
+        { headers: { 'X-Admin-Key': getAdminKey() } }
+      )
+      if (res.status === 202) {
+        setStatus('computing')
+        return // keep polling
+      }
+      if (!res.ok) {
+        setStatus('error')
+        if (intervalRef.current) clearInterval(intervalRef.current)
+        return
+      }
+      const json = await res.json() as import('../types').EmbeddingMapResponse
+      setData(json)
+      setStatus('ready')
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+        intervalRef.current = null
+      }
+    } catch {
+      setStatus('error')
+      if (intervalRef.current) clearInterval(intervalRef.current)
+    }
+  }, [])
+
+  useEffect(() => {
+    poll()
+    intervalRef.current = setInterval(poll, 5000)
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current)
+    }
+  }, [poll])
+
+  return { data, status }
+}
