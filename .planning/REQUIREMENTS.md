@@ -57,6 +57,18 @@ Deferred to future release. Tracked but not in current roadmap.
 - **INTEL-05**: Real-time Gaps dashboard (WebSocket/SSE polling) — retrospective analysis sufficient for v2.3
 - **INTEL-06**: UMAP visualization for embedding space — heavy Railway build dependency, deferred
 
+### Header (Phase 33)
+
+- **HDR-01**: Glassmorphic header — `backdrop-blur-md bg-white/70` with aurora radial gradient backdrop; sticky top-0, grid scrolls visibly underneath
+- **HDR-02**: Animated search bar — rotating playful placeholders, scale-1.02 focus via Framer Motion, Sage-in-flight pulse glow, controlled input reads from `store.query`
+- **HDR-03**: Expert count spring animation + easter egg — count reads `store.total` with spring transition; typing trigger phrase causes 3-degree header tilt
+
+### Admin Restructure (Phase 34)
+
+- **ADM-R-01**: Sidebar consolidation — max 7 nav items across 3 sections (Analytics, Tools, Admin); re-index moves to Settings
+- **ADM-R-02**: ToolsPage with tab navigation — Search Lab, Score Explainer, Index on one page; existing routes redirect
+- **ADM-R-03**: Dashboard first impression — OverviewPage shows top zero-result queries card, Sage volume sparkline, API health all above the fold
+
 ## Out of Scope
 
 | Feature | Reason |

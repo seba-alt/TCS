@@ -184,9 +184,60 @@ Plans:
 - Zero results: call `store.setResults([], 0, null)` + `store.setSageMode(true)` so empty-state renders
 
 Plans:
-- [ ] 32-01-PLAN.md — Backend: populate `experts` array in pilot response from `run_explore` results
-- [ ] 32-02-PLAN.md — Frontend: `sageMode` store flag + `useExplore` guard + `useSage` direct injection
-- [ ] 32-03-PLAN.md — Frontend UX: Sage icon in FilterChips, Sage empty state message, inline confirmation tooltips for search/rate
+- [x] 32-01-PLAN.md — Backend: populate `experts` array in pilot response from `run_explore` results
+- [x] 32-02-PLAN.md — Frontend: `sageMode` store flag + `useExplore` guard + `useSage` direct injection
+- [x] 32-03-PLAN.md — Frontend UX: Sage icon in FilterChips, Sage empty state message, inline confirmation tooltips for search/rate
+
+### Phase 33: Command Center Header
+**Goal**: Transform `Header.tsx` from a utilitarian nav into a premium "Command Center" — glassmorphic frosted glass panel, aurora glow radial background, rotating playful placeholders in the search bar, Framer Motion entrance animation, odometer-style expert count, and a tilt easter egg
+**Depends on**: Phase 22 (aurora visual infrastructure), Phase 32 (sageMode store + store.total for expert count)
+**Requirements**: HDR-01, HDR-02, HDR-03
+**Success Criteria** (what must be TRUE):
+  1. Header background is `backdrop-blur-md bg-white/70 border-b border-white/20` over a `radial-gradient` aurora backdrop — no flat `bg-white`
+  2. Search bar uses `bg-white/50 border-slate-200/50 shadow-sm focus-within:ring-2 focus-within:ring-purple/20` and scales to 1.02 on focus via Framer Motion
+  3. Placeholder text rotates through 4+ playful phrases on a 4s interval (no flicker on route change)
+  4. An "AI thinking" pulse glow appears left of the search icon while a Sage query is in-flight (`sageMode` transitioning)
+  5. Expert count reads from `store.total` and animates with a spring transition when the number changes
+  6. Typing the easter egg phrase triggers a smooth 3-degree tilt of the entire header, then resets
+  7. Header remains `sticky top-0 z-50` — grid scrolls visibly underneath through the glass
+**Plans**: 2 plans
+
+**Architecture notes (encode in plan):**
+- `Header.tsx` is the only file modified — keep all new logic co-located or in a single `useHeaderSearch.ts` hook
+- Zustand: read `store.query` (for controlled input), `store.setQuery` (on change), `store.total` (count), `sageMode` (pulse indicator) — no new store slices
+- `AuroraBackground.tsx` already wraps the page; the header's own radial gradient is a **separate** subtle layer scoped to the header element only (do not modify `AuroraBackground.tsx`)
+- Framer Motion `AnimatePresence` for placeholder crossfade; `useMotionValue` + `useSpring` for count animation
+- Easter egg: detect specific phrase client-side only (no backend); use `motion.header` with `rotate` spring — reset after 800ms
+- Tailwind v3 arbitrary values: `bg-[radial-gradient(circle_at_top_right,_rgba(139,92,246,0.08),_transparent_60%)]`
+- Logo drop-shadow via Tailwind: `drop-shadow-[0_0_12px_rgba(139,92,246,0.25)]`
+
+Plans:
+- [ ] 33-01-PLAN.md — Header redesign: glassmorphism, aurora radial, animated search bar, rotating placeholders, Framer Motion entrance, easter egg
+- [ ] 33-02-PLAN.md — Header store wiring: expert count spring animation, Sage pulse indicator, sticky glass scroll effect
+
+### Phase 34: Admin Platform Restructure
+**Goal**: Clean up the admin IA — dashboard gives a strong first impression, gap tracking and intelligence data are front and centre, and operational tools (Search Lab, Score Explainer, Index) are consolidated into a single "Tools" tab so the sidebar no longer feels like a junk drawer
+**Depends on**: Phase 31 (admin marketplace intelligence), Phase 25 (admin intelligence metrics)
+**Requirements**: ADM-R-01, ADM-R-02, ADM-R-03
+**Success Criteria** (what must be TRUE):
+  1. The Overview dashboard is the first page seen and immediately communicates key health signals: API status, total experts, zero-result query count (top 5), and Sage usage trend sparkline — all above the fold
+  2. The sidebar has at most 7 nav items, grouped clearly: **Analytics** (Overview, Searches, Marketplace, Gaps) | **Tools** (Search Lab, Score Explainer, Index consolidated into tabs on one page) | **Admin** (Experts, Leads, Settings)
+  3. `Re-index` functionality moves from its own nav entry into the Settings page under an "Index Management" section — no standalone Index page in the sidebar
+  4. The "Tools" page hosts Search Lab, Score Explainer, and Index tabs — switching tabs updates the URL hash, no full navigation
+  5. OverviewPage shows a "Top Zero-Result Queries" mini-table (top 5 from existing `/api/admin/events/demand` endpoint) directly on the dashboard so the gap signal is visible without navigating away
+**Plans**: 2 plans
+
+**Architecture notes (encode in plan):**
+- New `ToolsPage.tsx` with tab state (`searchlab` | `scorer` | `index`) driven by URL hash — renders existing page content inline, does NOT rewrite Search Lab / Score Explainer logic
+- `IndexPage.tsx` re-index trigger moves into `SettingsPage.tsx` under a new "Index Management" card — `IndexPage.tsx` can be deleted after migration
+- `AdminSidebar.tsx` NAV_ITEMS restructured: 3 sections ("Analytics", "Tools", "Admin") — max 7 visible links
+- `OverviewPage.tsx` gains a `TopZeroResultsCard` component that calls the existing `GET /api/admin/events/demand` endpoint already built in Phase 31 — read-only, no new backend work
+- Preserve all existing page functionality — this is a navigation/IA refactor, not a feature rewrite
+- `AdminApp.tsx` routes: add `/admin/tools` → `ToolsPage`, update `/admin/index` and `/admin/score-explainer` and `/admin/search-lab` to redirect to `/admin/tools`
+
+Plans:
+- [ ] 34-01-PLAN.md — Sidebar restructure + ToolsPage (Search Lab / Score Explainer / Index tabs) + re-index into Settings
+- [ ] 34-02-PLAN.md — OverviewPage dashboard uplift: top zero-result queries card, layout improvements, strong first impression
 
 ## Progress
 
@@ -202,3 +253,5 @@ Plans:
 | 30. Behavior Tracking | 2/2 | Complete    | 2026-02-22 | - |
 | 31. Admin Marketplace Intelligence | 2/2 | Complete   | 2026-02-22 | - |
 | 32. Sage Direct Search Integration | 3/3 | Complete    | 2026-02-22 | - |
+| 33. Command Center Header | 0/2 | Planned | - | - |
+| 34. Admin Platform Restructure | 0/2 | Planned | - | - |
