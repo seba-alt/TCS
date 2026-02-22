@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-22)
 ## Current Position
 
 Phase: 26 of 27 (Embedding Heatmap)
-Plan: 26-01 complete
-Status: Plan complete
-Last activity: 2026-02-22 — Phase 26-01 executed: t-SNE background task + GET /embedding-map endpoint
+Plan: 26-02 paused at checkpoint:human-verify (Task 3)
+Status: Awaiting human visual verification
+Last activity: 2026-02-22 — Phase 26-02 executed: recharts ScatterChart + useEmbeddingMap hook + EmbeddingPoint types
 
-Progress: [██████████          ] 1/? plans
+Progress: [████████████        ] 2/? plans
 
 ## Live URLs
 
@@ -26,8 +26,12 @@ Progress: [██████████          ] 1/? plans
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 55 (phases 1-21)
+- Total plans completed: 56 (phases 1-21 + 26-01 + 26-02)
 - Average duration: ~15 min
+
+| Phase | Plan | Duration | Tasks | Files |
+|-------|------|----------|-------|-------|
+| 26-embedding-heatmap | 02 | 20min | 2/3 | 5 |
 
 ## Accumulated Context
 
@@ -41,6 +45,7 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - Phase 24: Frontend-only. Backend swap already in admin.py `_run_ingest_job`. Extend `_ingest` dict with `last_rebuild_at` + `expert_count_at_rebuild`. Add `asyncio.Lock` for double-rebuild OOM prevention.
 - Phase 25: OTR@K computed post `scored.sort()` in `run_explore()`. `ALTER TABLE conversations ADD COLUMN otr_at_k REAL` via inline migration. Admin-only metric — not in public ExploreResponse.
 - Phase 26: t-SNE MUST run post-yield via `asyncio.create_task` — NEVER above yield (Railway healthcheck failure). PCA(50) then TSNE(perplexity=30, max_iter=1000, init='pca', random_state=42, metric='cosine'). Cache in `app.state.embedding_map`.
+- Phase 26-02: Use raw fetch (not adminFetch) for 202-polling because adminFetch throws on non-ok status codes. recharts@3.7.0 requires react-is explicit install for Vite/Rollup. One <Scatter> per category for recharts Legend support.
 - Phase 27: `useNltrStore` with persist key `'tinrate-newsletter-v1'`. Do NOT modify `useExplorerStore` or its `partialize`. `localStorage['tcs_email_unlocked']` bypass is unchanged. Barrel roll on VirtuosoGrid container (not ExpertCards).
 
 ### Pending Todos
@@ -58,5 +63,6 @@ Decisions are logged in PROJECT.md Key Decisions table.
 ## Session Continuity
 
 Last session: 2026-02-22
-Stopped at: Completed 26-01-PLAN.md (embedding heatmap backend)
+Stopped at: Checkpoint:human-verify in 26-02-PLAN.md (Task 3 — visual verification of scatter plot)
+Resume signal: Type "approved" if scatter plot renders correctly with colored points and tooltips
 Resume file: None

@@ -42,7 +42,7 @@ Requirements for milestone v2.2 "Evolved Discovery Engine". Phases continue from
 - [ ] **INTEL-03**: Index Drift metric tracks time since last rebuild and expert count delta since rebuild
 - [ ] **INTEL-04**: Admin Intelligence dashboard displays Index Drift status with last-rebuilt timestamp
 - [x] **INTEL-05**: Backend exposes `/api/admin/embedding-map` returning t-SNE 2D projection (scikit-learn, computed at startup from FAISS index, cached in `app.state`)
-- [ ] **INTEL-06**: Admin displays interactive embedding scatter plot (points colored by category, expert name on hover)
+- [x] **INTEL-06**: Admin displays interactive embedding scatter plot (points colored by category, expert name on hover)
 
 ### NLTR — Newsletter Gate
 
@@ -102,7 +102,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | INTEL-03 | Phase 25 | Pending |
 | INTEL-04 | Phase 25 | Pending |
 | INTEL-05 | Phase 26 | Complete |
-| INTEL-06 | Phase 26 | Pending |
+| INTEL-06 | Phase 26 | Complete |
 | NLTR-01 | Phase 27 | Pending |
 | NLTR-02 | Phase 27 | Pending |
 | NLTR-03 | Phase 27 | Pending |

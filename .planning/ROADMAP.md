@@ -55,7 +55,7 @@ See `.planning/milestones/v2.0-ROADMAP.md`
 - [ ] **Phase 23: Discovery Engine** - Bento ExpertCard redesign + animated claymorphic tag cloud
 - [x] **Phase 24: Atomic Index Swap UI** - Admin rebuild trigger + status polling frontend (completed 2026-02-22)
 - [x] **Phase 25: Admin Intelligence Metrics** - OTR@K computation + Index Drift display (completed 2026-02-22)
-- [ ] **Phase 26: Embedding Heatmap** - t-SNE projection endpoint + admin scatter plot
+- [x] **Phase 26: Embedding Heatmap** - t-SNE projection endpoint + admin scatter plot (completed 2026-02-22)
 - [ ] **Phase 27: Newsletter Gate + Easter Egg** - Newsletter subscription modal + barrel roll
 
 ## Phase Details
@@ -210,5 +210,5 @@ Plans:
 | 23. Discovery Engine | v2.2 | 0/3 | Not started | - |
 | 24. Atomic Index Swap UI | 2/2 | Complete   | 2026-02-22 | - |
 | 25. Admin Intelligence Metrics | 2/2 | Complete   | 2026-02-22 | - |
-| 26. Embedding Heatmap | 1/2 | In Progress|  | - |
+| 26. Embedding Heatmap | 2/2 | Complete   | 2026-02-22 | - |
 | 27. Newsletter Gate + Easter Egg | v2.2 | 0/3 | Not started | - |
