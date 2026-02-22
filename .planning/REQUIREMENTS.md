@@ -25,9 +25,9 @@ Requirements for v2.3 release. Each maps to roadmap phases.
 
 ### Tracking
 
-- [ ] **TRACK-01**: Expert card click events tracked to DB (expert_id, context: grid or sage_panel) — fire-and-forget, never awaited in click path
-- [ ] **TRACK-02**: Sage query interaction events tracked to DB (query_text, function_called, result_count) — emitted after each pilot response
-- [ ] **TRACK-03**: Filter change events tracked to DB (filter name + value) — debounced 1s after settled state, not per slider tick
+- [x] **TRACK-01**: Expert card click events tracked to DB (expert_id, context: grid or sage_panel) — fire-and-forget, never awaited in click path
+- [x] **TRACK-02**: Sage query interaction events tracked to DB (query_text, function_called, result_count) — emitted after each pilot response
+- [x] **TRACK-03**: Filter change events tracked to DB (filter name + value) — debounced 1s after settled state, not per slider tick
 
 ### Admin Intelligence
 
@@ -73,9 +73,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SAGE-04 | Phase 28 | Complete |
 | SAGE-05 | Phase 29 | Complete |
 | FAB-01 | Phase 29 | Complete |
-| TRACK-01 | Phase 30 | Pending |
-| TRACK-02 | Phase 30 | Pending |
-| TRACK-03 | Phase 30 | Pending |
+| TRACK-01 | Phase 30 | Complete |
+| TRACK-02 | Phase 30 | Complete |
+| TRACK-03 | Phase 30 | Complete |
 | INTEL-01 | Phase 31 | Complete |
 | INTEL-02 | Phase 31 | Complete |
 | INTEL-03 | Phase 31 | Complete |
