@@ -106,6 +106,25 @@ class Expert(Base):
     )
 
 
+class NewsletterSubscriber(Base):
+    """
+    Stores email addresses submitted via the newsletter gate.
+    Unique constraint on email prevents duplicates — use INSERT OR IGNORE (on_conflict_do_nothing)
+    at the query layer for idempotency.
+
+    # Migration note: if moving to Postgres, switch to sqlalchemy.dialects.postgresql.insert
+    """
+
+    __tablename__ = "newsletter_subscribers"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    email: Mapped[str] = mapped_column(String(320), unique=True, nullable=False, index=True)
+    source: Mapped[str] = mapped_column(String(50), nullable=False, default="gate")
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime, default=datetime.datetime.utcnow, nullable=False
+    )
+
+
 class AppSetting(Base):
     """
     Runtime configuration overrides for search intelligence.
