@@ -7,7 +7,7 @@
 - [x] **v1.2 Intelligence Activation & Steering Panel** - Phases 11-13 (shipped 2026-02-21)
 - [x] **v2.0 Extreme Semantic Explorer** - Phases 14-21 (shipped 2026-02-22)
 - [x] **v2.2 Evolved Discovery Engine** - Phases 22-27 (shipped 2026-02-22)
-- [ ] **v2.3 Sage Evolution & Marketplace Intelligence** - Phases 28-31 (in progress)
+- [ ] **v2.3 Sage Evolution & Marketplace Intelligence** - Phases 28-32 (in progress)
 
 ## Phases
 
@@ -163,6 +163,31 @@ Plans:
 - [x] 31-01-PLAN.md — Backend: demand, exposure, trend aggregation endpoints + CSV exports in admin.py
 - [x] 31-02-PLAN.md — Frontend: AdminMarketplacePage with DemandTable, ExposureTable, BarChart, cold-start state + sidebar nav
 
+### Phase 32: Sage Direct Search Integration
+**Goal**: Sage search results appear directly in the grid using the FAISS hybrid search — no search bar pollution, correct result counts, working zero-result state
+**Depends on**: Phase 28 (Sage search engine), Phase 31 (behavior tracking events)
+**Requirements**: SAGE-DX-01, SAGE-DX-02, SAGE-DX-03
+**Success Criteria** (what must be TRUE):
+  1. When Sage runs a discovery query, results appear in the expert grid without any text appearing in the search bar
+  2. The expert count shown in the header updates to reflect Sage's actual FAISS search result count (not the full 530-expert total)
+  3. Zero-result Sage queries trigger the empty-state UI (no results found) rather than showing all experts
+  4. Manual sidebar filter usage (search bar, rate slider, tags) always re-activates normal filter-driven results, overriding any Sage-injected results
+  5. `apply_filters` refinement path (rate/tag narrowing) still works correctly and does not break
+**Plans**: 3 plans
+
+**Architecture notes (encode in plan):**
+- Backend: `_handle_search_experts` in `pilot_service.py` returns full expert list (up to 20) as `experts` field — `PilotResponse.experts` is already reserved but never populated
+- Store: add `sageMode: boolean` + `setSageMode` to `resultsSlice` or a new sage slice — when `true`, `useExplore` skips its automatic re-fetch
+- `useSage.ts`: when `search_performed=true`, call `store.setResults(data.experts, data.total, null)` + `store.setSageMode(true)` directly — skip `validateAndApplyFilters` entirely for this path
+- `useExplore.ts`: add `sageMode` to dependency array and early-return if `sageMode=true`
+- Filter actions (`setQuery`, `setTags`, `setRateRange`, `resetFilters`): each calls `setSageMode(false)` so user sidebar input always exits Sage mode
+- Zero results: call `store.setResults([], 0, null)` + `store.setSageMode(true)` so empty-state renders
+
+Plans:
+- [ ] 32-01-PLAN.md — Backend: populate `experts` array in pilot response from `run_explore` results
+- [ ] 32-02-PLAN.md — Frontend: `sageMode` store flag + `useExplore` guard + `useSage` direct injection
+- [ ] 32-03-PLAN.md — Frontend UX: Sage icon in FilterChips, Sage empty state message, inline confirmation tooltips for search/rate
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -176,3 +201,4 @@ Plans:
 | 29. Sage Personality + FAB Reactions | v2.3 | Complete    | 2026-02-22 | - |
 | 30. Behavior Tracking | 2/2 | Complete    | 2026-02-22 | - |
 | 31. Admin Marketplace Intelligence | 2/2 | Complete   | 2026-02-22 | - |
+| 32. Sage Direct Search Integration | v2.3 | 0/3 | Not started | - |
