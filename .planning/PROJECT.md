@@ -44,7 +44,19 @@ A user describes any problem and instantly gets expertly matched professionals t
 
 ### Active
 
-*(No active requirements — v2.2 milestone complete. Define next milestone requirements with `/gsd:new-milestone`.)*
+<!-- v2.3 Sage Evolution & Marketplace Intelligence -->
+
+- [ ] Sage calls `/api/explore` search function and returns expert results in chat + syncs main grid
+- [ ] Sage panel and grid are kept in sync — Sage search updates the visible expert grid
+- [ ] Sage system prompt rewritten for warmer, wittier personality
+- [ ] Sage asks clarifying follow-up questions when query is ambiguous
+- [ ] Sage proactively nudges when the grid shows zero results
+- [ ] Sage FAB has animated reactions (pulse/glow) on user activity
+- [ ] Expert card clicks are tracked as events in the DB (expert ID, timestamp, context)
+- [ ] Sage query interactions are tracked (query text, function called, result count)
+- [ ] Filter usage events are tracked (which filters applied, values)
+- [ ] Admin Gaps tab shows unmet demand: searches/filter combos with poor results
+- [ ] Admin Gaps tab shows expert exposure distribution (which experts appear/get clicked most vs least)
 
 ### Out of Scope
 
@@ -98,6 +110,16 @@ A user describes any problem and instantly gets expertly matched professionals t
 - Core AI chat with 3-expert recommendations, email gate, feedback, admin dashboard
 - Archive: `.planning/milestones/v1.0-ROADMAP.md`
 
+## Current Milestone: v2.3 Sage Evolution & Marketplace Intelligence
+
+**Goal:** Evolve Sage from a filter adjuster into an active search engine with full personality, and add rich user behavior tracking with an admin Gaps dashboard for marketplace intelligence.
+
+**Target features:**
+- Sage active search — `search_experts` function calling `/api/explore`, results in panel + grid sync
+- Sage personality upgrade — warmer/wittier system prompt, follow-up questions, proactive empty-state nudge, FAB animated reactions
+- User behavior tracking — expert card clicks, Sage queries, filter events stored in DB
+- Admin Gaps & Exposure tab — unmet demand signals + expert visibility distribution
+
 ## Current State
 
 **Deployed version:** v2.2 (Railway + Vercel, auto-deploys on push to main)
@@ -105,7 +127,7 @@ A user describes any problem and instantly gets expertly matched professionals t
 **Search intelligence:** Three-stage hybrid pipeline live; HyDE + feedback re-ranking toggled via admin steering panel
 **Marketplace:** Immersive aurora-aesthetic marketplace with bento cards, animated tag cloud, Sage AI co-pilot; newsletter gate on profile clicks
 **Admin panel:** Index rebuild trigger + status; Intelligence tab with OTR@K, Index Drift, t-SNE scatter plot; Leads with newsletter subscriber list
-**Next milestone:** TBD — run `/gsd:new-milestone` to define
+**Next milestone:** v2.3 — Sage Evolution & Marketplace Intelligence (in progress)
 
 ## Context
 
@@ -168,4 +190,4 @@ A user describes any problem and instantly gets expertly matched professionals t
 | rotate reset to 0 with duration:0 after spin | Framer Motion accumulates transform state — must explicitly reset after animate to prevent additive rotation on repeat triggers | ✓ Good — documented in SUMMARY; repeat triggers work cleanly |
 
 ---
-*Last updated: 2026-02-22 — v2.2 Evolved Discovery Engine milestone complete*
+*Last updated: 2026-02-22 — Milestone v2.3 Sage Evolution & Marketplace Intelligence started*

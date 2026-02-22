@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-22)
 
 **Core value:** A user describes any problem and instantly gets expertly matched professionals they can browse, filter, and contact — no searching, no guesswork.
-**Current focus:** Planning next milestone — run `/gsd:new-milestone` to begin
+**Current focus:** v2.3 — Sage Evolution & Marketplace Intelligence
 
 ## Current Position
 
-Phase: v2.2 complete — all 27 phases shipped
+Phase: Not started (defining requirements)
 Plan: —
-Status: Milestone archived
-Last activity: 2026-02-22 — v2.2 Evolved Discovery Engine milestone complete and archived
+Status: Defining requirements
+Last activity: 2026-02-22 — Milestone v2.3 started
 
 Progress: [████████████████████] 44/44 plans (100%)
 
