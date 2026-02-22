@@ -1,8 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { useFilterSlice } from '../../store'
+import { useNltrStore } from '../../store/nltrStore'
 
 const DEBOUNCE_MS = 350
 const API_BASE = import.meta.env.VITE_API_URL ?? ''
+
+const BARREL_ROLL_PHRASES = ['barrel roll', 'do a flip']
 
 export function SearchInput() {
   const { query, setQuery } = useFilterSlice()
@@ -12,6 +15,7 @@ export function SearchInput() {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const abortRef = useRef<AbortController | null>(null)
   const blurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const { triggerSpin } = useNltrStore()
 
   // Sync local value when store query changes externally (e.g. chip dismiss, clear all, URL sync)
   useEffect(() => {
@@ -58,6 +62,19 @@ export function SearchInput() {
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const value = e.target.value
+    const lower = value.toLowerCase().trim()
+
+    // Barrel roll easter egg — intercept before debounce/setQuery
+    if (BARREL_ROLL_PHRASES.some(p => lower.includes(p))) {
+      triggerSpin()
+      // Clear input — do NOT call setQuery() to avoid polluting search state
+      setLocalValue('')
+      if (timerRef.current) clearTimeout(timerRef.current)
+      setSuggestions([])
+      setShowSuggestions(false)
+      return
+    }
+
     setLocalValue(value)
 
     // Fetch suggestions immediately (no debounce per CONTEXT.md)

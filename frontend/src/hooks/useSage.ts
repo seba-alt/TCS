@@ -1,11 +1,18 @@
 import { useCallback } from 'react'
 import { useExplorerStore } from '../store'
+import { useNltrStore } from '../store/nltrStore'
 
 const API_BASE = import.meta.env.VITE_API_URL ?? ''
 
 // Role mapping: pilotSlice uses 'user'/'assistant', Gemini needs 'user'/'model'
 function toGeminiRole(role: 'user' | 'assistant'): 'user' | 'model' {
   return role === 'assistant' ? 'model' : 'user'
+}
+
+const BARREL_ROLL_PHRASES = ['barrel roll', 'do a flip']
+function isBarrelRoll(text: string): boolean {
+  const lower = text.toLowerCase().trim()
+  return BARREL_ROLL_PHRASES.some(p => lower.includes(p))
 }
 
 function validateAndApplyFilters(filters: Record<string, unknown>) {
@@ -38,9 +45,28 @@ export function useSage() {
   const isStreaming = useExplorerStore((s) => s.isStreaming)
   const addMessage = useExplorerStore((s) => s.addMessage)
   const setStreaming = useExplorerStore((s) => s.setStreaming)
+  const { triggerSpin } = useNltrStore()
 
   const handleSend = useCallback(async (text: string) => {
     if (!text.trim() || isStreaming) return
+
+    // Barrel roll easter egg — intercept before API call
+    if (isBarrelRoll(text)) {
+      triggerSpin()
+      addMessage({
+        id: `${Date.now()}-user`,
+        role: 'user',
+        content: text.trim(),
+        timestamp: Date.now(),
+      })
+      addMessage({
+        id: `${Date.now()}-assistant`,
+        role: 'assistant',
+        content: "Wheee! Hold on tight — spinning up the best experts for you!",
+        timestamp: Date.now(),
+      })
+      return
+    }
 
     // Add user message immediately
     addMessage({
@@ -100,7 +126,7 @@ export function useSage() {
     } finally {
       setStreaming(false)
     }
-  }, [isStreaming, addMessage, setStreaming])
+  }, [isStreaming, addMessage, setStreaming, triggerSpin])
 
   return { messages, isStreaming, handleSend }
 }
