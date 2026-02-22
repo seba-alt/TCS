@@ -93,7 +93,7 @@ Plans:
   3. The tag selector area displays all tags as rounded pill items with Framer Motion layout reordering when tags are toggled
   4. Moving the cursor near (not just over) a tag pill causes it to scale up proportionally to cursor proximity, with no visible React re-render jank
   5. An "Everything is possible" phrase element below the tag cloud cycles through example quirky tags and is keyboard-navigable for tag selection
-**Plans**: TBD
+**Plans**: 3 plans
 
 **Planning notes (from research):**
 - ExpertCard MUST NOT import Framer Motion — CSS-only hover (Phase 17 decision); no `initial`/`animate` props on card mount
@@ -103,9 +103,9 @@ Plans:
 - DISC-04: keyboard navigation and aria-label must be preserved (selection behavior unchanged from TagMultiSelect)
 
 Plans:
-- [ ] 23-01: TBD
-- [ ] 23-02: TBD
-- [ ] 23-03: TBD
+- [ ] 23-01-PLAN.md — Bento four-zone ExpertCard layout + OKLCH aurora glow update in index.css
+- [ ] 23-02-PLAN.md — TagCloud.tsx with proximity-scale motion values + EverythingIsPossible.tsx with cycling crossfade
+- [ ] 23-03-PLAN.md — Wire TagCloud + EverythingIsPossible into FilterSidebar; human visual verification
 
 ### Phase 24: Atomic Index Swap UI
 **Goal**: Admins can trigger a FAISS index rebuild from the admin panel and watch its status in real time, while live search requests are served without interruption throughout the rebuild.
