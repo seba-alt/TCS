@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-02-22)
 
 ## Current Position
 
-Phase: 22 of 27 (Visual Infrastructure)
-Plan: 22-02 complete (all plans done)
-Status: Phase complete — verifying
-Last activity: 2026-02-22 — Phase 22 all plans executed (aurora CSS foundation + component wiring)
+Phase: 24 of 27 (Atomic Index Swap + UI)
+Plan: 24-01 complete
+Status: Wave 1 complete — executing Wave 2 (checkpoint plan)
+Last activity: 2026-02-22 — Plan 24-01 complete: asyncio.Lock, _ingest fields, tsne_cache, TS contract
 
-Progress: [██░░░░░░░░░░░░░░░░░░] 2/15 plans (13%)
+Progress: [████████████░░░░░░░░] 1/2 plans (50%)
 
 ## Live URLs
 
