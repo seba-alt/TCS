@@ -40,9 +40,7 @@ export const useExplorerStore = create<ExplorerStore>()(
         sortBy:    state.sortBy,
         sortOrder: state.sortOrder,
       }),
-      // Hook point for Phase 16 auto-search on rehydration
       onRehydrateStorage: () => (_state) => {
-        // Phase 16+ wires: _state?.triggerSearch()
       },
     }
   )
