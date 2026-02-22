@@ -36,14 +36,14 @@ A user describes any problem and instantly gets expertly matched professionals t
 - ✓ Rate filter chip reflects actual filter state on page load; RateSlider max=5000 aligned with store defaults — v2.0
 - ✓ Atomic FAISS index swap with admin rebuild trigger (IDX-01 – IDX-04) — Phase 24
 - ✓ OTR@K + Index Drift metrics + t-SNE embedding heatmap (INTEL-01 – INTEL-06) — Phases 24–26
+- ✓ Newsletter subscription gate, Zustand-persisted (NLTR-01 – NLTR-04) — Phase 27
+- ✓ Easter egg barrel roll on playful queries (FUN-01) — Phase 27
 
 ### Active
 
 - [ ] Aurora mesh gradient background + glassmorphism surfaces (VIS-01 – VIS-05)
 - [ ] Bento-style ExpertCard redesign (CARD-01 – CARD-03)
 - [ ] Animated claymorphic tag cloud + "Everything is possible" element (DISC-01 – DISC-04)
-- [ ] Newsletter subscription gate, Zustand-persisted (NLTR-01 – NLTR-04)
-- [ ] Easter egg barrel roll on playful queries (FUN-01)
 
 ### Out of Scope
 
@@ -163,4 +163,11 @@ A user describes any problem and instantly gets expertly matched professionals t
 | recharts requires react-is explicit install | recharts@3.7.0 declares react-is as peer dep but Vite/Rollup fails if not in node_modules — must npm install react-is alongside recharts | ✓ Good — documented in SUMMARY; blocked CI otherwise |
 
 ---
-*Last updated: 2026-02-22 after Phase 26 (Embedding Heatmap)*
+| Standalone useNltrStore (not in useExplorerStore) | Newsletter state must not contaminate marketplace filter persistence — separate store with its own persist key avoids partialize conflicts | ✓ Good — no explorer state regression |
+| Zustand write before fire-and-forget POST | User unlock must be immediate and not depend on API success — write to store first, then POST in background | ✓ Good — UX feels instant even on slow connections |
+| Barrel roll intercepts before API in Sage | Sending "barrel roll" to Gemini would produce nonsensical results — short-circuit with canned message preserves quality UX | ✓ Good — playful without confusing AI |
+| VirtuosoGrid container rotation (not card rotation) | Individual ExpertCard rotation causes scroll-triggered re-animations on virtualized unmount/remount — container rotation avoids VirtuosoGrid internals | ✓ Good — smooth 360° with no visual artifacts |
+| rotate reset to 0 with duration:0 after spin | Framer Motion accumulates transform state — must explicitly reset after animate to prevent additive rotation on repeat triggers | ✓ Good — documented in SUMMARY; repeat triggers work cleanly |
+
+---
+*Last updated: 2026-02-22 after Phase 27 (Newsletter Gate + Easter Egg) — v2.2 milestone complete*
