@@ -126,7 +126,7 @@ function TrendSection() {
           <span className="text-slate-400">total queries</span>
         </span>
         <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-700/60 border border-slate-600/50 text-sm text-slate-200">
-          <span className="font-bold text-red-400">{(zeroResultRate * 100).toFixed(1)}%</span>
+          <span className="font-bold text-red-400">{zeroResultRate.toFixed(1)}%</span>
           <span className="text-slate-400">zero-result rate</span>
         </span>
         <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-700/60 border border-slate-600/50 text-sm text-slate-200">
