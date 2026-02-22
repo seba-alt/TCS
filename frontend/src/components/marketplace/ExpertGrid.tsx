@@ -65,8 +65,8 @@ export function ExpertGrid({ experts, loading, isFetchingMore, onEndReached, onV
         // itemClassName: min-h-0 prevents grid row blowout on fixed card height
         itemClassName="min-h-0"
         computeItemKey={(_, expert) => expert.username}
-        itemContent={(_index, expert) => (
-          <ExpertCard expert={expert} onViewProfile={onViewProfile} />
+        itemContent={(index, expert) => (
+          <ExpertCard expert={expert} onViewProfile={onViewProfile} rank={index} />
         )}
         components={{
           // Header spacer — VirtuosoGrid measures this correctly, pushing first row below the filter bar
