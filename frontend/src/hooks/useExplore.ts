@@ -29,8 +29,16 @@ export function useExplore() {
   const controllerRef = useRef<AbortController | null>(null)
 
   useEffect(() => {
-    // Sage mode guard — must come FIRST, before abort or setLoading to avoid loading flash
-    if (sageMode) return
+    // Sage mode guard — abort any in-flight explore request and yield control to useSage.
+    // Must come FIRST (before setLoading) to avoid loading flash.
+    // Aborting here ensures a mid-flight /api/explore response cannot overwrite sage results.
+    if (sageMode) {
+      if (controllerRef.current) {
+        controllerRef.current.abort()
+        controllerRef.current = null
+      }
+      return
+    }
 
     // Abort any in-flight request from the previous effect run
     if (controllerRef.current) {
