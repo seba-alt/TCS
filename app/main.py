@@ -195,6 +195,7 @@ async def lifespan(app: FastAPI):
             "ALTER TABLE conversations ADD COLUMN feedback_applied INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE conversations ADD COLUMN hyde_bio TEXT",
             "ALTER TABLE conversations ADD COLUMN otr_at_k REAL",
+            "ALTER TABLE conversations ADD COLUMN source TEXT DEFAULT 'chat'",
         ]:
             try:
                 _conn.execute(_text(_col_ddl))

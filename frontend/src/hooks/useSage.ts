@@ -100,6 +100,7 @@ export function useSage() {
           message: text.trim(),
           history,
           current_filters: currentFilters,
+          email: localStorage.getItem('tcs_gate_email') || undefined,
         }),
       })
 

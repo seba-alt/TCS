@@ -35,6 +35,8 @@ class Conversation(Base):
     feedback_applied: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="0")
     hyde_bio: Mapped[str | None] = mapped_column(Text, nullable=True)
     otr_at_k: Mapped[float | None] = mapped_column(Float, nullable=True)
+    # source: origin of the search — "chat" (email gate flow) or "sage" (Sage co-pilot)
+    source: Mapped[str | None] = mapped_column(String(50), nullable=True, default="chat")
 
 
 class EmailLead(Base):

@@ -21,6 +21,7 @@ export interface SearchRow {
   is_gap: boolean
   gap_resolved: boolean
   response_experts: string // Raw JSON string — parsed by ExpandedExpertRow component
+  source: string           // "chat" | "sage"
 }
 
 export interface SearchesResponse {

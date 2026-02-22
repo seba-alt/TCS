@@ -165,15 +165,16 @@ function SageSparklineCard() {
           </div>
           <ResponsiveContainer width="100%" height={56}>
             <LineChart data={last7}>
-              <Line type="monotone" dataKey="total" stroke="#a855f7" strokeWidth={2} dot={false} />
+              <Line type="monotone" dataKey="total" stroke="#22d3ee" strokeWidth={2} dot={{ r: 3, fill: '#22d3ee', strokeWidth: 0 }} />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: '#0f172a',
-                  border: '1px solid #334155',
+                  backgroundColor: '#1e293b',
+                  border: '1px solid #22d3ee40',
                   borderRadius: '6px',
                   fontSize: '11px',
                 }}
                 labelStyle={{ color: '#94a3b8' }}
+                itemStyle={{ color: '#22d3ee' }}
               />
             </LineChart>
           </ResponsiveContainer>

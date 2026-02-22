@@ -130,7 +130,7 @@ def _handle_apply_filters(fn_call, args, response, contents, config, client) -> 
     }
 
 
-def _handle_search_experts(fn_call, args, response, contents, config, db, app_state, client) -> dict:
+def _handle_search_experts(fn_call, args, response, contents, config, db, app_state, client, email: str | None = None) -> dict:
     """
     Handle search_experts function call — calls run_explore() in-process, narrates results.
 
@@ -228,6 +228,28 @@ def _handle_search_experts(fn_call, args, response, contents, config, db, app_st
         query=args.get("query", ""),
     )
 
+    # Log Sage search to Conversation table so it appears in the admin searches dashboard
+    if db is not None and email:
+        try:
+            from app.models import Conversation as _Conv  # noqa: PLC0415
+            import json as _json  # noqa: PLC0415
+            top_score = result.experts[0].score if result.experts and hasattr(result.experts[0], "score") else None
+            experts_payload = [e.model_dump() for e in result.experts]
+            _conv = _Conv(
+                email=email,
+                query=args.get("query", ""),
+                history="[]",
+                response_type="match",
+                response_narrative=narration,
+                response_experts=_json.dumps(experts_payload),
+                top_match_score=top_score,
+                source="sage",
+            )
+            db.add(_conv)
+            db.commit()
+        except Exception as _exc:
+            log.warning("pilot: failed to log sage search to conversations", error=str(_exc))
+
     return {
         "filters": filters_to_apply,
         "message": narration,
@@ -241,6 +263,7 @@ def run_pilot(
     message: str,
     history: list[dict],
     current_filters: dict,
+    email: str | None = None,
     db=None,        # SQLAlchemy Session — passed from pilot.py router
     app_state=None, # FastAPI app.state — FAISS index + metadata
 ) -> dict:
@@ -333,7 +356,7 @@ def run_pilot(
         args = dict(fn_call.args)  # unwrap protobuf Struct before use
 
         if fn_call.name == "search_experts":
-            return _handle_search_experts(fn_call, args, response, contents, config, db, app_state, client)
+            return _handle_search_experts(fn_call, args, response, contents, config, db, app_state, client, email=email)
         elif fn_call.name == "apply_filters":
             return _handle_apply_filters(fn_call, args, response, contents, config, client)
         else:

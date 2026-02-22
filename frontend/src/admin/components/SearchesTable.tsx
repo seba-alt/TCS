@@ -33,9 +33,14 @@ export default function SearchesTable({ data, pageSize, onPageSizeChange }: Sear
     {
       accessorKey: 'query',
       header: 'Query',
-      cell: ({ getValue }) => (
-        <span className="block max-w-xs truncate text-white" title={getValue<string>()}>
-          {getValue<string>()}
+      cell: ({ getValue, row }) => (
+        <span className="flex items-center gap-2 max-w-xs">
+          <span className="truncate text-white" title={getValue<string>()}>{getValue<string>()}</span>
+          {row.original.source === 'sage' && (
+            <span className="shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-violet-500/20 text-violet-300 border border-violet-500/30">
+              Sage
+            </span>
+          )}
         </span>
       ),
     },

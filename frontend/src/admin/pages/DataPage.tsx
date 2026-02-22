@@ -13,7 +13,7 @@ export default function DataPage() {
   const navigate = useNavigate()
 
   const hashTab = location.hash.replace('#', '') as DataTab
-  const activeTab: DataTab = TABS.some(t => t.id === hashTab) ? hashTab : 'searches'
+  const activeTab: DataTab = TABS.some(t => t.id === hashTab) ? hashTab : 'marketplace'
 
   return (
     <div className="flex-1 overflow-auto">

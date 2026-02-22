@@ -35,6 +35,7 @@ class PilotRequest(BaseModel):
     message: str = Field(..., min_length=1, max_length=2000)
     history: list[HistoryItem] = Field(default_factory=list)
     current_filters: dict = Field(default_factory=dict)
+    email: str | None = Field(default=None, max_length=320)
 
 
 class PilotResponse(BaseModel):
@@ -62,6 +63,7 @@ async def pilot(
             message=body.message,
             history=[h.model_dump() for h in body.history],
             current_filters=body.current_filters,
+            email=body.email,
             db=db,
             app_state=request.app.state,
         ),

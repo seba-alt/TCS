@@ -137,6 +137,7 @@ async def _stream_chat(body: ChatRequest, request: Request, db: Session):
             feedback_applied=bool(intelligence.get("feedback_applied", False)),
             hyde_bio=intelligence.get("hyde_bio"),
             otr_at_k=otr_at_k,
+            source="chat",
         )
         db.add(conversation)
         db.commit()

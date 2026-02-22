@@ -525,6 +525,7 @@ def get_searches(
             "is_gap": _is_gap(row),
             "gap_resolved": row.gap_resolved,
             "response_experts": row.response_experts or "[]",
+            "source": getattr(row, "source", None) or "chat",
         }
 
     return {
