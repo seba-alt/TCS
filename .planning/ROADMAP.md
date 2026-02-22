@@ -207,7 +207,7 @@ Plans:
 | 11-13. Steering Panel Phases | v1.2 | Complete | Complete | 2026-02-21 |
 | 14-21. Marketplace Phases | v2.0 | 23/23 | Complete | 2026-02-22 |
 | 22. Visual Infrastructure | 2/2 | Complete   | 2026-02-22 | - |
-| 23. Discovery Engine | 3/3 | Complete   | 2026-02-22 | - |
+| 23. Discovery Engine | 3/3 | Complete    | 2026-02-22 | - |
 | 24. Atomic Index Swap UI | 2/2 | Complete   | 2026-02-22 | - |
 | 25. Admin Intelligence Metrics | 2/2 | Complete   | 2026-02-22 | - |
 | 26. Embedding Heatmap | 2/2 | Complete    | 2026-02-22 | - |
