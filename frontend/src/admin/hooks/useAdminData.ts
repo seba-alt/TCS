@@ -12,6 +12,9 @@ import type {
   IntelligenceMetrics,
   AdminSettingsResponse,
   NewsletterSubscribersResponse,
+  DemandResponse,
+  ExposureResponse,
+  MarketplaceTrendResponse,
 } from '../types'
 
 const getAdminKey = () => sessionStorage.getItem('admin_key') ?? ''
@@ -320,4 +323,58 @@ export function useEmbeddingMap() {
   }, [poll])
 
   return { data, status }
+}
+
+export function useMarketplaceDemand(days: number, page: number) {
+  const [data, setData] = useState<DemandResponse | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const fetchData = useCallback(() => {
+    setLoading(true)
+    adminFetch<DemandResponse>('/events/demand', { days, page, page_size: 25 })
+      .then(setData)
+      .catch((e: Error) => setError(e.message))
+      .finally(() => setLoading(false))
+  }, [days, page])
+
+  useEffect(() => { fetchData() }, [fetchData])
+
+  return { data, loading, error, refetch: fetchData }
+}
+
+export function useMarketplaceExposure(days: number) {
+  const [data, setData] = useState<ExposureResponse | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const fetchData = useCallback(() => {
+    setLoading(true)
+    adminFetch<ExposureResponse>('/events/exposure', { days })
+      .then(setData)
+      .catch((e: Error) => setError(e.message))
+      .finally(() => setLoading(false))
+  }, [days])
+
+  useEffect(() => { fetchData() }, [fetchData])
+
+  return { data, loading, error, refetch: fetchData }
+}
+
+export function useMarketplaceTrend() {
+  const [data, setData] = useState<MarketplaceTrendResponse | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const fetchData = useCallback(() => {
+    setLoading(true)
+    adminFetch<MarketplaceTrendResponse>('/events/trend')
+      .then(setData)
+      .catch((e: Error) => setError(e.message))
+      .finally(() => setLoading(false))
+  }, [])
+
+  useEffect(() => { fetchData() }, [fetchData])
+
+  return { data, loading, error, refetch: fetchData }
 }

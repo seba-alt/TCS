@@ -228,3 +228,49 @@ export interface NewsletterSubscribersResponse {
   count: number
   subscribers: NewsletterSubscriber[]
 }
+
+// --- Marketplace Intelligence types ---
+
+export interface DemandRow {
+  query_text: string
+  frequency: number
+  last_seen: string      // ISO datetime string
+  unique_users: number
+}
+
+export interface DemandResponse {
+  data_since: string | null  // null = cold start (no events yet)
+  demand: DemandRow[]
+  total: number
+  page: number
+  page_size: number
+}
+
+export interface ExposureRow {
+  expert_id: string      // username / expert identifier
+  total_clicks: number
+  grid_clicks: number
+  sage_clicks: number
+}
+
+export interface ExposureResponse {
+  data_since: string | null
+  exposure: ExposureRow[]
+}
+
+export interface DailyTrendRow {
+  day: string            // YYYY-MM-DD
+  total: number
+  hits: number
+  zero_results: number
+}
+
+export interface MarketplaceTrendResponse {
+  data_since: string | null
+  daily: DailyTrendRow[]
+  kpis: {
+    total_queries: number
+    zero_result_rate: number
+    prior_period_total: number
+  }
+}
