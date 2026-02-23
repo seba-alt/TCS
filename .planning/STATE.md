@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-22)
 
 **Core value:** A user describes any problem and instantly gets expertly matched professionals they can browse, filter, and contact — no searching, no guesswork.
-**Current focus:** Phase 34 — Admin Platform Restructure — awaiting human verification of Task 2 in plan 34-02
+**Current focus:** Phase 34.1 — Fix zero-result searches missing from admin gap + Dutch Sage — COMPLETE
 
 ## Current Position
 
-Phase: 34 of 34+ (Admin Platform Restructure) — IN PROGRESS
-Plan: 34-01 complete (committed), 34-02 Task 1 complete (committed), 34-02 Task 2 pending human verification
-Status: Both plans code-complete, pushed to main, Vercel deploy triggered — awaiting human sign-off at live URL
-Last activity: 2026-02-23 — 34-01 + 34-02 Task 1 complete, pushed to main
+Phase: 34.1 (Fix zero-result searches + Dutch Sage) — COMPLETE
+Plan: 34.1-01 complete (NULL gap fix), 34.1-02 complete (Dutch Sage)
+Status: Both plans executed and verified, all commits on main
+Last activity: 2026-02-23 — Phase 34.1 complete (2/2 plans)
 
-Progress: [████████████████████] 58/58 plans | v2.4 complete
+Progress: [████████████████████] 60/60 plans | v2.4 complete
 
 ## Live URLs
 
@@ -96,6 +96,17 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - No props passed to `<Header />` — zero-prop interface, reads from Zustand store directly
 - SearchInput.tsx deleted outright — no dead-code stub kept, FilterSidebar confirmed search-free before deletion
 
+**Phase 34.1-01 key decisions:**
+- Used `.is_(None)` for ORM predicates, `IS NULL` for raw SQL — consistent SQLAlchemy best practice
+- gap_flag=False branches use `is_not(None) &` to explicitly exclude NULLs
+- `_is_gap()` uses `is None or` instead of `is not None and` — NULL = no candidates = gap by definition
+
+**Phase 34.1-02 key decisions:**
+- Used gemini-2.0-flash-lite for detection — fast structured JSON extraction, not complex reasoning
+- Only search_experts path translates queries — apply_filters handles rate/tag adjustments without text
+- Original Dutch message passed to Gemini in contents — only FAISS search uses English translation
+- Expert names/titles kept in English as proper nouns — data is not translatable content
+
 ### Roadmap Evolution
 
 - Phase 34.1 inserted after Phase 34: Fix zero-result searches missing from admin gap and enable the sage in dutch (URGENT)
@@ -112,5 +123,5 @@ None active.
 ## Session Continuity
 
 Last session: 2026-02-23
-Stopped at: Completed Phase 33 — Command Center Header live and human-verified on https://tcs-three-sigma.vercel.app
-Resume signal: Phase 33 complete. Phase 34 (Admin Platform Restructure) is next.
+Stopped at: Phase 34.1 complete — NULL gap fix + Dutch Sage both verified
+Resume signal: Phase 34.1 complete. No next phase defined — milestone work done.
