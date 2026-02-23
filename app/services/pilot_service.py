@@ -13,6 +13,8 @@ The browser owns filter state. This service extracts intent and generates narrat
 """
 from __future__ import annotations
 
+import json as _json
+
 import structlog
 from google import genai
 from google.genai import types
@@ -94,6 +96,39 @@ def _get_client() -> genai.Client:
     return _client
 
 
+def _detect_and_translate(message: str, client: genai.Client) -> tuple[str, str]:
+    """Detect language; if Dutch, translate to English for FAISS search.
+
+    Returns (detected_lang, english_message):
+      - detected_lang: 'nl', 'en', or 'other'
+      - english_message: English translation (or original if already English)
+
+    Uses gemini-2.0-flash-lite for speed -- this is a structured JSON extraction,
+    not a complex reasoning task. Falls back to ('en', original) on any error.
+    """
+    prompt = (
+        'Detect the language of this text. If Dutch (NL), translate to English. '
+        'Respond ONLY as JSON: {"lang": "nl"|"en"|"other", "english": "<translation or original>"}.\n'
+        f'Text: {message}'
+    )
+    try:
+        resp = client.models.generate_content(
+            model="gemini-2.0-flash-lite",
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+            ),
+        )
+        data = _json.loads(resp.text)
+        lang = data.get("lang", "en")
+        english = data.get("english", message)
+        log.info("pilot.lang_detected", lang=lang, original_len=len(message))
+        return lang, english
+    except Exception as e:
+        log.warning("pilot.lang_detect_failed", error=str(e))
+        return "en", message
+
+
 def _handle_apply_filters(fn_call, args, response, contents, config, client) -> dict:
     """Handle apply_filters function call — Turn 2 confirmation."""
     filters_applied = {k: v for k, v in args.items()}
@@ -130,7 +165,7 @@ def _handle_apply_filters(fn_call, args, response, contents, config, client) -> 
     }
 
 
-def _handle_search_experts(fn_call, args, response, contents, config, db, app_state, client, email: str | None = None) -> dict:
+def _handle_search_experts(fn_call, args, response, contents, config, db, app_state, client, email: str | None = None, search_message: str | None = None) -> dict:
     """
     Handle search_experts function call — calls run_explore() in-process, narrates results.
 
@@ -140,8 +175,10 @@ def _handle_search_experts(fn_call, args, response, contents, config, db, app_st
     """
     from app.services.explorer import run_explore
 
+    # Use English-translated query for FAISS search (Dutch queries translated upstream)
+    query = search_message if search_message else args.get("query", "")
     result = run_explore(
-        query=args.get("query", ""),
+        query=query,
         rate_min=float(args.get("rate_min", 0.0)),
         rate_max=float(args.get("rate_max", 10000.0)),
         tags=list(args.get("tags", [])),
@@ -152,9 +189,9 @@ def _handle_search_experts(fn_call, args, response, contents, config, db, app_st
     )
 
     if result.total == 0:
-        # Fallback: relax all constraints except query
+        # Fallback: relax all constraints except query (use translated query for FAISS)
         fallback = run_explore(
-            query=args.get("query", ""),
+            query=query,
             rate_min=0.0,
             rate_max=10000.0,
             tags=[],
@@ -287,6 +324,10 @@ def run_pilot(
         - total: result count from search_experts (None for apply_filters)
     """
     client = _get_client()
+
+    # Dutch language detection + query translation
+    detected_lang, search_message = _detect_and_translate(message, client)
+
     tool = types.Tool(function_declarations=[
         APPLY_FILTERS_DECLARATION,
         SEARCH_EXPERTS_DECLARATION,
@@ -317,6 +358,13 @@ def run_pilot(
         "Just search and narrate the outcome naturally.\n"
         f"Current active filters: {current_filters}."
     )
+
+    if detected_lang == "nl":
+        system_instruction += (
+            "\n\nIMPORTANT: The user is writing in Dutch. You MUST respond entirely in Dutch. "
+            "Expert names, job titles, and company names are proper nouns — keep them in English. "
+            "All your narrative, explanation, and conversational text must be in Dutch."
+        )
 
     config = types.GenerateContentConfig(
         tools=[tool],
@@ -357,7 +405,7 @@ def run_pilot(
         args = dict(fn_call.args)  # unwrap protobuf Struct before use
 
         if fn_call.name == "search_experts":
-            return _handle_search_experts(fn_call, args, response, contents, config, db, app_state, client, email=email)
+            return _handle_search_experts(fn_call, args, response, contents, config, db, app_state, client, email=email, search_message=search_message)
         elif fn_call.name == "apply_filters":
             return _handle_apply_filters(fn_call, args, response, contents, config, client)
         else:
