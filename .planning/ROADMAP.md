@@ -255,3 +255,14 @@ Plans:
 | 32. Sage Direct Search Integration | 3/3 | Complete    | 2026-02-22 | - |
 | 33. Command Center Header | 2/2 | Complete | 2026-02-23 | - |
 | 34. Admin Platform Restructure | 0/2 | Planned | - | - |
+
+### Phase 34.1: Fix zero-result searches missing from admin gap and enable the sage in dutch (INSERTED)
+
+**Goal:** Fix NULL gap detection bug across all admin query sites so zero-candidate searches appear in gap analytics, and enable Dutch language auto-detection in the Sage co-pilot with server-side translation for FAISS search
+**Depends on:** Phase 34
+**Requirements:** GAP-NULL-FIX, DUTCH-SAGE
+**Plans:** 2 plans
+
+Plans:
+- [ ] 34.1-01-PLAN.md — Backend: Patch all 8 NULL gap conditions + _is_gap helper in admin.py
+- [ ] 34.1-02-PLAN.md — Backend: Dutch language detection + translation in pilot_service.py (Gemini flash-lite)
