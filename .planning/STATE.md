@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-22)
 
 **Core value:** A user describes any problem and instantly gets expertly matched professionals they can browse, filter, and contact — no searching, no guesswork.
-**Current focus:** Phase 33 — Command Center Header (complete) — Phase 34 Admin Platform Restructure is next
+**Current focus:** Phase 34 — Admin Platform Restructure — awaiting human verification of Task 2 in plan 34-02
 
 ## Current Position
 
-Phase: 33 of 33+ (Command Center Header) — COMPLETE
-Plan: 2 of 2 in current phase (33-01 + 33-02 complete, human-verified)
-Status: All Phase 33 requirements live and verified — Command Center Header deployed to Vercel
-Last activity: 2026-02-23 — 33-02 complete, human verification passed
+Phase: 34 of 34+ (Admin Platform Restructure) — IN PROGRESS
+Plan: 34-01 complete (committed), 34-02 Task 1 complete (committed), 34-02 Task 2 pending human verification
+Status: Both plans code-complete, pushed to main, Vercel deploy triggered — awaiting human sign-off at live URL
+Last activity: 2026-02-23 — 34-01 + 34-02 Task 1 complete, pushed to main
 
 Progress: [████████████████████] 58/58 plans | v2.4 complete
 
@@ -95,6 +95,10 @@ Decisions are logged in PROJECT.md Key Decisions table.
 **Phase 33-02 key decisions:**
 - No props passed to `<Header />` — zero-prop interface, reads from Zustand store directly
 - SearchInput.tsx deleted outright — no dead-code stub kept, FilterSidebar confirmed search-free before deletion
+
+### Roadmap Evolution
+
+- Phase 34.1 inserted after Phase 34: Fix zero-result searches missing from admin gap and enable the sage in dutch (URGENT)
 
 ### Pending Todos
 
