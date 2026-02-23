@@ -202,9 +202,11 @@ router = APIRouter(prefix="/api/admin", dependencies=[Depends(_require_admin)])
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _is_gap(row: Conversation) -> bool:
-    """Return True if the conversation qualifies as a gap."""
+    """Return True if the conversation qualifies as a gap.
+    NULL top_match_score = no candidates found = gap by definition.
+    """
     return (
-        row.top_match_score is not None and row.top_match_score < GAP_THRESHOLD
+        row.top_match_score is None or row.top_match_score < GAP_THRESHOLD
     ) or row.response_type == "clarification"
 
 
@@ -274,7 +276,8 @@ def get_stats(db: Session = Depends(get_db)):
 
     gap_count = db.scalar(
         select(func.count()).select_from(Conversation).where(
-            (Conversation.top_match_score < GAP_THRESHOLD)
+            (Conversation.top_match_score.is_(None))
+            | (Conversation.top_match_score < GAP_THRESHOLD)
             | (Conversation.response_type == "clarification")
         )
     ) or 0
@@ -338,7 +341,8 @@ def get_intelligence_stats(db: Session = Depends(get_db)):
     ) or 0
     gap_count = db.scalar(
         select(func.count()).select_from(Conversation).where(
-            (Conversation.top_match_score < GAP_THRESHOLD)
+            (Conversation.top_match_score.is_(None))
+            | (Conversation.top_match_score < GAP_THRESHOLD)
             | (Conversation.response_type == "clarification")
         )
     ) or 0
@@ -369,7 +373,7 @@ def get_intelligence_stats(db: Session = Depends(get_db)):
             COUNT(*) AS conversations,
             SUM(CASE WHEN hyde_triggered = 1 THEN 1 ELSE 0 END) AS hyde_triggered,
             SUM(CASE WHEN feedback_applied = 1 THEN 1 ELSE 0 END) AS feedback_applied,
-            SUM(CASE WHEN top_match_score < :threshold OR response_type = 'clarification' THEN 1 ELSE 0 END) AS gaps,
+            SUM(CASE WHEN top_match_score IS NULL OR top_match_score < :threshold OR response_type = 'clarification' THEN 1 ELSE 0 END) AS gaps,
             AVG(top_match_score) AS avg_score
         FROM conversations
         WHERE date(created_at) >= :cutoff
@@ -494,12 +498,14 @@ def get_searches(
 
     if gap_flag is True:
         stmt = stmt.where(
-            (Conversation.top_match_score < GAP_THRESHOLD)
+            (Conversation.top_match_score.is_(None))
+            | (Conversation.top_match_score < GAP_THRESHOLD)
             | (Conversation.response_type == "clarification")
         )
     elif gap_flag is False:
         stmt = stmt.where(
-            (Conversation.top_match_score >= GAP_THRESHOLD)
+            Conversation.top_match_score.is_not(None)
+            & (Conversation.top_match_score >= GAP_THRESHOLD)
             & (Conversation.response_type != "clarification")
         )
 
@@ -558,7 +564,8 @@ def get_gaps(db: Session = Depends(get_db)):
             func.min(Conversation.gap_resolved.cast(Integer)).label("resolved"),
         )
         .where(
-            (Conversation.top_match_score < GAP_THRESHOLD)
+            (Conversation.top_match_score.is_(None))
+            | (Conversation.top_match_score < GAP_THRESHOLD)
             | (Conversation.response_type == "clarification")
         )
         .group_by(Conversation.query)
@@ -1100,12 +1107,14 @@ def export_searches_csv(
             stmt = stmt.where(Conversation.created_at <= datetime.fromisoformat(date_to))
         if gap_flag is True:
             stmt = stmt.where(
-                (Conversation.top_match_score < GAP_THRESHOLD)
+                (Conversation.top_match_score.is_(None))
+                | (Conversation.top_match_score < GAP_THRESHOLD)
                 | (Conversation.response_type == "clarification")
             )
         elif gap_flag is False:
             stmt = stmt.where(
-                (Conversation.top_match_score >= GAP_THRESHOLD)
+                Conversation.top_match_score.is_not(None)
+                & (Conversation.top_match_score >= GAP_THRESHOLD)
                 & (Conversation.response_type != "clarification")
             )
 
@@ -1326,7 +1335,8 @@ def export_gaps_csv(db: Session = Depends(get_db)):
             func.min(Conversation.gap_resolved.cast(Integer)).label("resolved"),
         )
         .where(
-            (Conversation.top_match_score < GAP_THRESHOLD)
+            (Conversation.top_match_score.is_(None))
+            | (Conversation.top_match_score < GAP_THRESHOLD)
             | (Conversation.response_type == "clarification")
         )
         .group_by(Conversation.query)
