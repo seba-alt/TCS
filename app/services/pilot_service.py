@@ -233,7 +233,8 @@ def _handle_search_experts(fn_call, args, response, contents, config, db, app_st
         try:
             from app.models import Conversation as _Conv  # noqa: PLC0415
             import json as _json  # noqa: PLC0415
-            top_score = result.experts[0].score if result.experts and hasattr(result.experts[0], "score") else None
+            # Use final_score from ExpertCard; zero-result searches score 0.0 so they register as gaps
+            top_score = result.experts[0].final_score if result.experts else 0.0
             experts_payload = [e.model_dump() for e in result.experts]
             _conv = _Conv(
                 email=email,
