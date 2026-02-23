@@ -142,36 +142,39 @@ function TrendSection() {
           data={data?.daily ?? []}
           margin={{ top: 8, right: 8, bottom: 8, left: 0 }}
         >
-          <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
+          <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
           <XAxis
             dataKey="day"
-            tick={{ fill: '#94a3b8', fontSize: 11 }}
+            tick={{ fill: '#64748b', fontSize: 11 }}
             axisLine={false}
             tickLine={false}
             tickFormatter={(v: string) => v.slice(5)} // MM-DD
           />
           <YAxis
-            tick={{ fill: '#94a3b8', fontSize: 11 }}
+            tick={{ fill: '#64748b', fontSize: 11 }}
             axisLine={false}
             tickLine={false}
             width={32}
           />
           <Tooltip
+            cursor={{ fill: 'rgba(255,255,255,0.04)' }}
             contentStyle={{
               backgroundColor: '#0f172a',
               border: '1px solid #334155',
               borderRadius: '8px',
               fontSize: '12px',
-              color: '#e2e8f0',
+              boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
             }}
-            labelStyle={{ color: '#94a3b8' }}
+            labelStyle={{ color: '#cbd5e1', fontWeight: 600, marginBottom: 4 }}
+            itemStyle={{ color: '#cbd5e1' }}
           />
           <Legend
-            wrapperStyle={{ fontSize: '12px', paddingTop: '8px' }}
-            iconSize={10}
+            wrapperStyle={{ fontSize: '12px', paddingTop: '12px', color: '#94a3b8' }}
+            iconType="circle"
+            iconSize={8}
           />
-          <Bar dataKey="hits" name="Matched" fill="#a855f7" stackId="a" />
-          <Bar dataKey="zero_results" name="Zero Results" fill="#ef4444" stackId="a" radius={[3, 3, 0, 0]} />
+          <Bar dataKey="hits" name="Matched" fill="#6366f1" stackId="a" />
+          <Bar dataKey="zero_results" name="Zero Results" fill="#f97316" stackId="a" radius={[3, 3, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
     </div>
