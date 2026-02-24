@@ -16,8 +16,8 @@ Requirements for v3.0 Netflix Browse & Agentic Navigation. Each maps to roadmap 
 
 ### Photos
 
-- [ ] **PHOTO-01**: Admin can bulk import expert photo URLs from a new CSV into the Expert model
-- [ ] **PHOTO-02**: Backend serves expert photos via GET /api/photos/{username} proxy endpoint with CORS-safe headers and 24h cache
+- [x] **PHOTO-01**: Admin can bulk import expert photo URLs from a new CSV into the Expert model
+- [x] **PHOTO-02**: Backend serves expert photos via GET /api/photos/{username} proxy endpoint with CORS-safe headers and 24h cache
 - [ ] **PHOTO-03**: Frontend displays monogram initials fallback when no photo is available for an expert
 
 ### Navigation
@@ -71,8 +71,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | BROWSE-02 | Phase 38 | Pending |
 | BROWSE-03 | Phase 38 | Pending |
 | BROWSE-04 | Phase 38 | Pending |
-| PHOTO-01 | Phase 37 | Pending |
-| PHOTO-02 | Phase 37 | Pending |
+| PHOTO-01 | Phase 37 | Complete |
+| PHOTO-02 | Phase 37 | Complete |
 | PHOTO-03 | Phase 38 | Pending |
 | NAV-01 | Phase 36 | Complete |
 | NAV-02 | Phase 38 | Pending |
