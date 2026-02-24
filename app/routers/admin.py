@@ -35,7 +35,7 @@ from datetime import date, datetime, timedelta
 from typing import Optional
 
 import faiss
-from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Request, Security, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, Request, Security, UploadFile, status
 from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.security import APIKeyHeader
 from pydantic import BaseModel, Field
@@ -1062,6 +1062,127 @@ async def import_experts_csv(file: UploadFile = File(...), db: Session = Depends
 
     db.commit()
     return {"inserted": inserted, "updated": updated, "skipped": skipped}
+
+
+# --- Photo management endpoints ---
+
+@router.post("/experts/photos")
+async def import_expert_photos(
+    file: UploadFile = File(...),
+    dry_run: bool = Query(default=True),
+    db: Session = Depends(get_db),
+):
+    """
+    Bulk-import expert photo URLs from a CSV file.
+
+    CSV format: first_name,last_name,photo_url (with header row).
+    Matches experts by first_name + last_name (case-insensitive).
+
+    - dry_run=True (default): preview matches without writing
+    - dry_run=False: write photo URLs to matched Expert records
+
+    Ambiguous matches (2+ experts with same name) are skipped and reported.
+    """
+    content = await file.read()
+    text = content.decode("utf-8-sig")  # handle UTF-8 BOM from Excel
+    reader = csv.DictReader(io.StringIO(text))
+
+    # Validate required columns
+    fieldnames = reader.fieldnames or []
+    required = {"first_name", "last_name", "photo_url"}
+    missing = required - {f.strip().lower() for f in fieldnames}
+    if missing:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Missing required CSV columns: {', '.join(sorted(missing))}. "
+                   f"Found: {', '.join(fieldnames)}",
+        )
+
+    # Normalize fieldname lookup (handle case variations)
+    def _get(row: dict, key: str) -> str:
+        """Get a value from a CSV row with case-insensitive key lookup."""
+        for k, v in row.items():
+            if k.strip().lower() == key:
+                return (v or "").strip()
+        return ""
+
+    details: list[dict] = []
+    matched_count = 0
+    not_found_count = 0
+    ambiguous_count = 0
+    will_overwrite = 0
+    experts_to_update: list[tuple] = []  # (expert, new_photo_url)
+
+    for row in reader:
+        first_name = _get(row, "first_name")
+        last_name = _get(row, "last_name")
+        photo_url = _get(row, "photo_url")
+
+        if not first_name or not last_name:
+            details.append({
+                "first_name": first_name,
+                "last_name": last_name,
+                "status": "not_found",
+            })
+            not_found_count += 1
+            continue
+
+        # Case-insensitive name match
+        matches = db.scalars(
+            select(Expert).where(
+                func.lower(Expert.first_name) == first_name.lower(),
+                func.lower(Expert.last_name) == last_name.lower(),
+            )
+        ).all()
+
+        if len(matches) == 0:
+            details.append({
+                "first_name": first_name,
+                "last_name": last_name,
+                "status": "not_found",
+            })
+            not_found_count += 1
+        elif len(matches) == 1:
+            expert = matches[0]
+            existing_photo = expert.photo_url if expert.photo_url else None
+            if existing_photo:
+                will_overwrite += 1
+            details.append({
+                "first_name": first_name,
+                "last_name": last_name,
+                "status": "matched",
+                "username": expert.username,
+                "existing_photo": existing_photo,
+            })
+            matched_count += 1
+            experts_to_update.append((expert, photo_url))
+        else:
+            matching_usernames = [m.username for m in matches]
+            details.append({
+                "first_name": first_name,
+                "last_name": last_name,
+                "status": "ambiguous",
+                "matches": matching_usernames,
+            })
+            ambiguous_count += 1
+
+    # Write if not dry run
+    if not dry_run:
+        for expert, new_photo_url in experts_to_update:
+            expert.photo_url = new_photo_url
+        db.commit()
+
+    return {
+        "dry_run": dry_run,
+        "summary": {
+            "total": len(details),
+            "matched": matched_count,
+            "not_found": not_found_count,
+            "ambiguous": ambiguous_count,
+            "will_overwrite": will_overwrite,
+        },
+        "details": details,
+    }
 
 
 # ── CSV Exports ───────────────────────────────────────────────────────────────
