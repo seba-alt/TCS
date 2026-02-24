@@ -15,10 +15,11 @@ structlog==24.2.*
 sqlalchemy==2.0.*
 tqdm==4.66.*
 
+httpx==0.28.*
+
 sentry-sdk
 
 # Dev / testing
 pytest==8.2.*
 pytest-asyncio==0.23.*
-httpx==0.28.*
 ruff
