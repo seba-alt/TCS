@@ -232,6 +232,7 @@ def _serialize_expert(e: Expert) -> dict:
         "category": e.category,
         "tags": json.loads(e.tags or "[]"),
         "findability_score": e.findability_score,
+        "photo_url": e.photo_url,
     }
 
 
