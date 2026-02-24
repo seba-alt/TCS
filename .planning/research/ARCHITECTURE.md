@@ -1,991 +1,986 @@
-# Architecture Research
+# Architecture Patterns: v3.0 Netflix Browse & Agentic Navigation
 
-**Domain:** AI-powered Expert Marketplace — v2.3 Sage Evolution & Marketplace Intelligence
-**Researched:** 2026-02-22
-**Confidence:** HIGH (all findings based on direct codebase inspection)
-
----
-
-## Context: Subsequent Milestone Research
-
-This document answers the five concrete integration questions for v2.3. The v2.2 system is ground truth. All components not explicitly listed in the "Modified/New" table below remain unchanged. This document focuses exclusively on the three new feature areas: Sage `search_experts`, user event tracking, and the Admin Gaps tab for marketplace intelligence.
+**Project:** Tinrate AI Concierge — v3.0 milestone
+**Researched:** 2026-02-24
+**Confidence:** HIGH — all findings from direct codebase inspection of v2.3 source
+**Scope:** Integration points for new features only. Existing v2.3 system is ground truth — only deltas documented.
 
 ---
 
-## System Overview
+## Context: v2.3 Ground Truth (verified by file inspection)
 
 ```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                          FRONTEND (Vercel)                               │
-│                                                                          │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌─────────────┐ │
-│  │ ExpertGrid   │  │  SagePanel   │  │ FilterSidebar│  │  AdminApp   │ │
-│  │ (VirtuosoGrid│  │  (380px FAB) │  │  (sidebar +  │  │  (/admin/   │ │
-│  │  h-[180px])  │  │  SageMessage │  │  vaul sheet) │  │  Marketplace│ │
-│  │              │  │  + SageExpert│  │              │  │  Page NEW)  │ │
-│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘  └──────┬──────┘ │
-│         │                 │                 │                 │         │
-│  ┌──────▼─────────────────▼─────────────────▼─────────────┐  │         │
-│  │              useExplorerStore (Zustand)                  │  │         │
-│  │  filterSlice: query, rateMin, rateMax, tags, sortBy      │  │         │
-│  │  resultsSlice: experts[], total, cursor, loading         │  │         │
-│  │  pilotSlice: messages[], isOpen, isStreaming             │  │         │
-│  │  (PilotMessage now has optional experts?: Expert[])      │  │         │
-│  └──────┬──────────────────────────────────────────────────┘  │         │
-│         │                                                       │         │
-│  ┌──────▼───────────┐  ┌─────────────────┐  ┌────────────────┐│         │
-│  │   useExplore     │  │    useSage      │  │ useAdminData   ││         │
-│  │  (filter-driven  │  │  Gemini 2-turn  │  │ adminFetch()   ││         │
-│  │   GET /explore)  │  │  search_experts │  │ + Marketplace  ││         │
-│  │  UNCHANGED       │  │  + apply_filters│  │   hooks (NEW)  ││         │
-│  └──────┬───────────┘  └────────┬────────┘  └───────┬────────┘│         │
-│         │                        │                    │                   │
-│  ┌──────▼────────────────────────▼────────────────┐  │                   │
-│  │     tracking.ts (NEW)                           │  │                   │
-│  │     trackEvent() — fire-and-forget POST         │  │                   │
-│  │     called from filterSlice, ExpertCard, useSage│  │                   │
-│  └──────────────────────────────────────────────────┘  │                  │
-└───────────────────────────────────────────────────────────────────────────┘
-          │  HTTP/JSON             │  HTTP/JSON         │  HTTP/JSON
-          ▼                        ▼                    ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│                          BACKEND (Railway)                               │
-│                                                                          │
-│  GET /api/explore      POST /api/pilot (MODIFIED)   POST /api/events     │
-│  ┌─────────────────┐  ┌──────────────────────────┐  ┌─────────────────┐ │
-│  │ explorer.py     │  │ pilot_service.py          │  │ events.py (NEW) │ │
-│  │ run_explore()   │  │ search_experts +          │  │ INSERT INTO     │ │
-│  │ UNCHANGED       │◄─┤ apply_filters functions   │  │ user_events     │ │
-│  └─────────────────┘  │ run_explore() direct call │  └─────────────────┘ │
-│                        └──────────────────────────┘                       │
-│                                                                          │
-│  GET /api/admin/events/demand                                            │
-│  GET /api/admin/events/exposure   (new endpoints in admin.py)            │
-│                                                                          │
-│  ┌─────────────────────────────────────────────────────────────────┐    │
-│  │                     SQLite (Railway volume)                       │    │
-│  │  conversations  feedback  email_leads  newsletter_subscribers    │    │
-│  │  experts  settings  experts_fts (FTS5)                          │    │
-│  │  user_events (NEW)                                               │    │
-│  └─────────────────────────────────────────────────────────────────┘    │
-│  ┌────────────────────────────────────────────────────────────────┐     │
-│  │            FAISS in-memory (530 vectors) — UNCHANGED            │     │
-│  └────────────────────────────────────────────────────────────────┘     │
-└─────────────────────────────────────────────────────────────────────────┘
+ROUTES  (frontend/src/main.tsx)
+  /             -> Navigate to /marketplace (CURRENT)
+  /marketplace  -> MarketplacePage          (CURRENT — becomes /explore)
+  /chat         -> App (legacy)
+  /admin/*      -> AdminApp (protected)
+
+FILE PATHS (corrected from prompt context)
+  Marketplace page:   frontend/src/pages/MarketplacePage.tsx
+  Sage hook:          frontend/src/hooks/useSage.ts          (NOT in marketplace/hooks/)
+  SageFAB:            frontend/src/components/pilot/SageFAB.tsx
+  SagePanel:          frontend/src/components/pilot/SagePanel.tsx
+  Store entry:        frontend/src/store/index.ts
+  ExpertCard (grid):  frontend/src/components/marketplace/ExpertCard.tsx
+  ExploreGrid:        frontend/src/components/marketplace/ExpertGrid.tsx
+
+ZUSTAND (useExplorerStore — frontend/src/store/index.ts)
+  filterSlice:    query, rateMin, rateMax, tags, sortBy, sortOrder  — persisted to localStorage
+  resultsSlice:   experts[], total, cursor, loading, error,
+                  isFetchingMore, sageMode                          — ephemeral (not persisted)
+  pilotSlice:     messages[], isOpen, isStreaming, sessionId        — ephemeral (not persisted)
+  persist key:    'explorer-filters' (localStorage)
+  partialize:     query, rateMin, rateMax, tags, sortBy, sortOrder (never actions, results, or pilot)
+
+Expert TypeScript interface (frontend/src/store/resultsSlice.ts — CURRENT fields)
+  username, first_name, last_name, job_title, company,
+  hourly_rate, currency, profile_url,
+  tags: string[], findability_score: number | null, match_reason: string | null
+  NOTE: NO photo_url, NO category, NO faiss/bm25/final_score fields in TS type yet
+
+Expert Python model (app/models.py — CURRENT fields)
+  id, username, email, first_name, last_name, job_title, company, bio,
+  hourly_rate, currency, profile_url, profile_url_utm,
+  category, tags, findability_score, created_at
+  NOTE: NO photo_url column yet
+
+ExpertCard Pydantic schema (app/services/explorer.py — CURRENT fields)
+  username, first_name, last_name, job_title, company, hourly_rate, currency,
+  profile_url, tags, findability_score, category,
+  faiss_score, bm25_score, final_score, match_reason
+  NOTE: category, faiss_score, bm25_score, final_score exist in Python but NOT in TS Expert type
+
+SAGE DATA FLOW (current)
+  useSage.handleSend() -> POST /api/pilot
+  -> { filters, message, search_performed, total, experts }
+  search_experts path: store.setResults(experts, total, null) + store.setSageMode(true)
+  apply_filters path:  validateAndApplyFilters(filters) (store mutation -> useExplore refetch)
+  Navigation:          NONE — useSage has no useLocation/useNavigate
+  Location:            NO React Router imports in useSage.ts currently
+
+SAGE CONVERSATION RESET RISK (CRITICAL — found by code inspection)
+  MarketplacePage.tsx line 34-36:
+    const resetPilot = useExplorerStore((s) => s.resetPilot)
+    useEffect(() => { resetPilot() }, [resetPilot])
+  This useEffect has [resetPilot] as dep — resetPilot is a Zustand action (stable ref).
+  It runs ONCE on mount. This CLEARS all messages when MarketplacePage mounts.
+  For cross-page conversation preservation, this resetPilot() call must be removed or gated.
+
+SAGE GUARD in useExplore.ts
+  Lines 31-41: if (sageMode) { abort any in-flight fetch; return }
+  This guard is intact and must remain — it is what prevents useExplore from overwriting
+  Sage-injected results when MarketplacePage mounts with pendingSageResults + sageMode:true.
+
+BACKEND ROUTES (app/main.py — registered routers)
+  /api/health, /api/chat, /api/email, /api/newsletter/*,
+  /api/feedback, /api/events, /api/admin/*, /api/explore,
+  /api/pilot, /api/suggest
+  No /api/browse or /api/photos/* yet.
 ```
-
-### Component Responsibilities
-
-| Component | Responsibility | File | Status |
-|-----------|----------------|------|--------|
-| `useExplorerStore` | Global state hub — filter, results, pilot slices | `store/index.ts` | UNCHANGED |
-| `filterSlice` | Filter fields + actions; calls `trackEvent()` after each set | `store/filterSlice.ts` | MODIFIED |
-| `resultsSlice` | Expert results array, pagination cursor, loading state | `store/resultsSlice.ts` | UNCHANGED |
-| `pilotSlice` | Sage conversation messages; `PilotMessage.experts` field added | `store/pilotSlice.ts` | MODIFIED |
-| `useExplore` | Reactive filter watcher; fires GET /api/explore on filter change | `hooks/useExplore.ts` | UNCHANGED |
-| `useSage` | Handles `data.experts` + `data.filters`; tracks sage_query events | `hooks/useSage.ts` | MODIFIED |
-| `ExpertCard` | Marketplace card; triggers `trackEvent(card_click)` on click | `components/marketplace/ExpertCard.tsx` | MODIFIED |
-| `SagePanel` | 380px panel; renders `SageMessage` with optional expert list | `components/pilot/SagePanel.tsx` | UNCHANGED |
-| `SageMessage` | Renders text content; now renders `SageExpertCard` list if `experts` present | `components/pilot/SageMessage.tsx` | MODIFIED |
-| `SageExpertCard` | Compact expert card for Sage panel (no bento constraints) | `components/pilot/SageExpertCard.tsx` | NEW |
-| `tracking.ts` | `trackEvent()` fire-and-forget utility; `keepalive: true` | `src/lib/tracking.ts` | NEW |
-| `pilot_service.py` | Two-turn Gemini; `search_experts` + `apply_filters` functions; calls `run_explore()` | `services/pilot_service.py` | MODIFIED |
-| `pilot.py` (router) | Injects `db` + `app.state` into `run_pilot()` | `routers/pilot.py` | MODIFIED |
-| `events.py` (router) | `POST /api/events` — inserts `UserEvent`; no auth required | `routers/events.py` | NEW |
-| `models.py` | Adds `UserEvent` SQLAlchemy model | `app/models.py` | MODIFIED |
-| `admin.py` | Adds `/events/demand` + `/events/exposure` aggregation endpoints | `routers/admin.py` | MODIFIED |
-| `MarketplacePage.tsx` | New admin page — exposure distribution + demand signals | `admin/pages/MarketplacePage.tsx` | NEW |
 
 ---
 
-## Feature 1: Sage `search_experts` Function
+## Question 1: Route Reorganization
 
-### The Critical Difference From `apply_filters`
+### Current State
 
-`apply_filters` mutates the Zustand store; `useExplore` reactively fires GET /api/explore when the store changes. Filter args are the payload — no results come back from the backend.
+```typescript
+// frontend/src/main.tsx (current)
+{ path: '/',           element: <Navigate to="/marketplace" replace /> },
+{ path: '/marketplace', element: <MarketplacePage /> },
+{ path: '/chat',        element: <App /> },
+{ path: '/admin/login', element: <LoginPage /> },
+{ path: '/admin',       element: <RequireAuth />, children: [...] },
+```
 
-`search_experts` must do three things simultaneously:
-1. Call the actual search pipeline and get real expert results
-2. Give those results to Sage to narrate in chat
-3. Sync the main grid to show the same search (so the user can browse the full result set)
+### Target State
 
-This requires the backend to call `run_explore()` and return the expert list in the `/api/pilot` response — not just filter arguments.
+```typescript
+// frontend/src/main.tsx (v3.0)
+// Root layout: wraps BrowsePage + MarketplacePage with AnimatedOutlet for aurora transition.
+// Admin routes are NOT children of the layout — admin has its own styling, no aurora background.
+{
+  path: '/',
+  element: <RootLayout />,      // NEW: renders <AnimatedOutlet /> (see Feature 6)
+  children: [
+    { index: true, element: <BrowsePage /> },        // NEW page at /
+    { path: 'explore', element: <MarketplacePage /> }, // MOVED from /marketplace
+  ],
+},
+{ path: '/marketplace', element: <Navigate to="/explore" replace /> }, // backward compat
+{ path: '/chat',        element: <App /> },          // unchanged
+{ path: '/admin/login', element: <LoginPage /> },    // unchanged
+{ path: '/admin',       element: <RequireAuth />, children: [...] }, // unchanged
+```
 
-### Data Flow
+### Modified File
+- `frontend/src/main.tsx` — add BrowsePage import, add RootLayout/AnimatedOutlet, restructure two routes
+
+### What Stays the Same
+- Admin routes: unchanged, outside AnimatedOutlet
+- `/chat` route: unchanged
+- All `/admin/*` child routes: unchanged
+
+---
+
+## Question 2: BrowsePage Component Tree
+
+### Component Hierarchy
 
 ```
-User types in SageInput: "Find me a blockchain expert under €200/hr"
-    │
-    ▼
-useSage.handleSend(text)
-    │ addMessage (user) → pilotSlice
-    │ setStreaming(true)
-    │
-    │ POST /api/pilot { message, history, current_filters }
-    ▼
-pilot.py injects db + app.state → run_pilot(message, history, current_filters, db, app_state)
-    │
-    │ Turn 1: Gemini sees search_experts FunctionDeclaration
-    │         Extracts args: { query: "blockchain", rate_max: 200 }
-    │         Returns FunctionCall(name="search_experts", args={...})
-    │
-    ▼
-pilot_service calls run_explore() directly (service import — no HTTP)
-    │ run_explore(query="blockchain", rate_max=200, limit=5, cursor=0, db=db, app_state=app_state)
-    │ Returns ExploreResponse: { experts: [top 5], total: N, cursor: ... }
-    │
-    │ Turn 2: Gemini receives function response with expert summary strings
-    │         Generates Sage's natural language narrative
-    │
-    ▼
-PilotResponse: {
-    filters: { query: "blockchain", rate_max: 200 },   ← filter diff for grid sync
-    experts: [ ExpertCard, ... ],                       ← NEW: top 5 for Sage display
-    message: "Found 12 blockchain experts under €200/hr. Here are the top matches..."
+BrowsePage (NEW: frontend/src/pages/BrowsePage.tsx)
+  AuroraBackground (EXISTING: reused as-is)
+    BrowseHeader (NEW: frontend/src/components/browse/BrowseHeader.tsx)
+    BillboardHero (NEW: frontend/src/components/browse/BillboardHero.tsx)
+    CategoryRows (NEW: frontend/src/components/browse/CategoryRows.tsx)
+      CategoryRow x4 (NEW: frontend/src/components/browse/CategoryRow.tsx)
+        BrowseExpertCard x12 (NEW: frontend/src/components/browse/BrowseExpertCard.tsx)
+    SageFAB (EXISTING: frontend/src/components/pilot/SageFAB.tsx — reused as-is)
+    SagePanel (EXISTING: frontend/src/components/pilot/SagePanel.tsx — reused as-is)
+```
+
+### Component Specifications
+
+#### BrowsePage (frontend/src/pages/BrowsePage.tsx) — NEW
+```typescript
+// Props: none (page-level component)
+// Imports:
+//   useBrowse (new hook)
+//   AuroraBackground, BrowseHeader, BillboardHero, CategoryRows (new components)
+//   SageFAB, SagePanel (existing pilot components — no changes needed)
+//   AnimatePresence (motion/react — same pattern as MarketplacePage)
+//   useExplorerStore (for isOpen, setOpen — same Sage panel pattern)
+// Responsibilities:
+//   - call useBrowse() to fetch /api/browse
+//   - render loading skeleton or full page content
+//   - render SageFAB/SagePanel (same AnimatePresence pattern as MarketplacePage)
+//   - manage newsletter gate (same handleViewProfile/handleSubscribe pattern)
+```
+
+#### BrowseHeader (frontend/src/components/browse/BrowseHeader.tsx) — NEW
+```typescript
+// Props: none
+// Imports: Link (react-router-dom)
+// Renders:
+//   - Tinrate logo (left)
+//   - "Explore All Experts" Link to="/explore" (right) — glassmorphic button
+//   - NO search bar (Browse is visual discovery, not search-driven)
+// Styling: glassmorphic, similar to existing Header but without search/filter controls
+```
+
+#### BillboardHero (frontend/src/components/browse/BillboardHero.tsx) — NEW
+```typescript
+// Props: { expert: BrowseFeaturedExpert }  (from /api/browse response)
+// Imports: expertPhotoUrl (new utility), useNavigate (react-router-dom)
+// Renders:
+//   - Full-width ~60vh height container
+//   - Blurred expert photo as CSS background-image (background-size: cover)
+//   - Glassmorphic panel (left-aligned): name, job_title, company, hourly_rate
+//   - Holographic badge: findability_score >= 88 → "Top Expert" | >= 75 → "Highly Rated"
+//   - "Start Discovery" button: navigate('/explore', { state: { from: 'browse' } })
+//   - Initials fallback (no external dependencies — pure CSS)
+```
+
+#### CategoryRows (frontend/src/components/browse/CategoryRows.tsx) — NEW
+```typescript
+// Props: { rows: BrowseRow[] }
+// Imports: CategoryRow
+// Renders: maps rows to CategoryRow instances
+// Simple pass-through container — no state, no logic
+```
+
+#### CategoryRow (frontend/src/components/browse/CategoryRow.tsx) — NEW
+```typescript
+// Props: { label: string, experts: BrowseFeaturedExpert[], onViewProfile: (url: string) => void }
+// Imports: BrowseExpertCard, useRef (React)
+// Renders:
+//   - Row label (h2)
+//   - Horizontal scroll container: flex + overflow-x-auto + scroll-snap-x mandatory
+//   - Prev/next scroll buttons: useRef + scrollBy({left: ±240, behavior: 'smooth'})
+//   - BrowseExpertCard x N (max 12 per row from API)
+// No VirtuosoGrid — max 12 items, CSS scroll is sufficient
+```
+
+#### BrowseExpertCard (frontend/src/components/browse/BrowseExpertCard.tsx) — NEW
+```typescript
+// Props: { expert: BrowseFeaturedExpert, onViewProfile: (url: string) => void }
+// Imports: expertPhotoUrl, trackEvent
+// Size: w-[200px] h-[280px] — taller than ExpertGrid cards (photo-first layout)
+// Layout:
+//   - Photo zone (h-[160px]): <img src={expertPhotoUrl(username)} onError={showInitials} />
+//   - Overlay gradient (bottom 40%): linear-gradient(transparent, rgba(0,0,0,0.7))
+//   - Name + rate: absolute bottom-2 left-2, text-white
+//   - Hover reveal: tag pills animate up (CSS transition), "View Profile" CTA
+// Interaction:
+//   - click → onViewProfile(expert.profile_url)
+//   - trackEvent('card_click', { expert_id: username, context: 'browse', rank: index })
+// Photo fallback:
+//   img onError → e.currentTarget.style.display = 'none' + CSS sibling shows initials div
+```
+
+### BrowseFeaturedExpert Type
+```typescript
+// frontend/src/types/browse.ts — NEW (or co-locate in useBrowse.ts)
+export interface BrowseFeaturedExpert {
+  username: string
+  first_name: string
+  last_name: string
+  job_title: string
+  company: string
+  hourly_rate: number
+  currency: string
+  profile_url: string
+  tags: string[]
+  findability_score: number | null
+  bio?: string  // only present on featured expert, not row cards
 }
-    │
-    ▼
-useSage receives response
-    ├── validateAndApplyFilters(data.filters)
-    │       filterSlice.setQuery("blockchain") + setRateRange(0, 200)
-    │       useExplore reacts → GET /api/explore?query=blockchain&rate_max=200
-    │       setResults(experts, total, cursor) → ExpertGrid re-renders with full 20-item page
-    │
-    └── addMessage({ content: data.message, experts: data.experts })
-            pilotSlice.messages updates
-            SageMessage renders SageExpertCard list (top 5 with narrative)
 
-[Grid shows full paginated results] [Sage panel shows top 5 with narrative]
+export interface BrowseRow {
+  id: string         // 'trending' | 'recently_joined' | 'top_findability' | 'highest_rate'
+  label: string
+  experts: BrowseFeaturedExpert[]
+}
+
+export interface BrowseResponse {
+  featured: BrowseFeaturedExpert | null
+  rows: BrowseRow[]
+}
 ```
 
-### Grid Sync Mechanism
+---
 
-Grid sync reuses the existing reactive mechanism — no new code. When `useSage` calls `validateAndApplyFilters()` with `{ query: "blockchain", rate_max: 200 }`, the filterSlice updates, `useExplore`'s dependency array `[query, rateMin, rateMax, tags, sortBy]` triggers, and the grid re-fetches automatically.
+## Question 3: New Backend Endpoint GET /api/browse
 
-The key design decision: the pilot response carries both `filters` (for grid sync) and `experts` (for Sage display). These are different views of the same query: Sage shows top 5 with narrative context; the grid shows the full paginated result set.
+### Why a Dedicated Endpoint (not 4x /api/explore calls)
+
+`/api/explore` is designed for paginated filtered search with FAISS + FTS5 pipeline. For Browse we need:
+- Named category rows with different sort criteria
+- All rows in one network round-trip (4 parallel fetches would be a race condition risk)
+- No text query embedding (no Gemini call, no FAISS, pure DB queries)
+- Cold-start guard (trending falls back gracefully when user_events is empty)
+
+### New Files
+
+```
+app/routers/browse.py          — FastAPI router, GET /api/browse
+app/services/browse_service.py — assembles rows from DB queries
+```
+
+### API Contract
+
+```python
+# GET /api/browse
+# Response body:
+{
+  "featured": {
+    "username": "...", "first_name": "...", "last_name": "...",
+    "job_title": "...", "company": "...", "hourly_rate": 150.0,
+    "currency": "EUR", "profile_url": "...", "tags": ["..."],
+    "findability_score": 92.0, "bio": "...",
+  } | null,
+  "rows": [
+    { "id": "trending",         "label": "Trending This Week",  "experts": [...] },
+    { "id": "recently_joined",  "label": "Recently Joined",     "experts": [...] },
+    { "id": "top_findability",  "label": "Top Rated Experts",   "experts": [...] },
+    { "id": "highest_rate",     "label": "Premium Experts",     "experts": [...] },
+  ]
+}
+# Max 12 experts per row. featured expert bio field included; row experts bio omitted.
+```
+
+### Row Data Sources (all use existing Expert + UserEvent models — no new tables)
+
+| Row | Query | Cold-Start Fallback |
+|-----|-------|---------------------|
+| `trending` | JOIN user_events WHERE event_type='card_click', GROUP BY expert_id, ORDER BY count DESC, LIMIT 12 | Falls back to top_findability row if user_events is empty |
+| `recently_joined` | SELECT FROM experts ORDER BY created_at DESC LIMIT 12 | None needed — always has data |
+| `top_findability` | SELECT FROM experts WHERE findability_score IS NOT NULL ORDER BY findability_score DESC LIMIT 12 | None needed |
+| `highest_rate` | SELECT FROM experts ORDER BY hourly_rate DESC LIMIT 12 | None needed |
+| `featured` | Index 0 of top_findability row + bio field | null if no experts exist |
+
+### Backend Implementation
+
+```python
+# app/routers/browse.py — NEW
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
+from app.database import get_db
+from app.services.browse_service import build_browse_response, BrowseResponseSchema
+
+router = APIRouter()
+
+@router.get("/api/browse", response_model=BrowseResponseSchema)
+async def browse(db: Session = Depends(get_db)):
+    import asyncio
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(None, lambda: build_browse_response(db))
+```
+
+```python
+# app/services/browse_service.py — NEW
+# build_browse_response(db) executes 4 SQLAlchemy queries
+# Returns BrowseResponseSchema Pydantic model
+# Trending query uses:
+#   SELECT json_extract(payload, '$.expert_id') as expert_id, COUNT(*) as cnt
+#   FROM user_events WHERE event_type = 'card_click'
+#   GROUP BY expert_id ORDER BY cnt DESC LIMIT 12
+# Trending cold-start: if no card_click events, fall back to top_findability query
+```
+
+### Registration in app/main.py
+
+```python
+# app/main.py — MODIFIED (additive only)
+from app.routers import browse  # add to import line
+app.include_router(browse.router)  # add after suggest.router
+```
+
+---
+
+## Question 4: Photo Serving
+
+### Data Situation
+
+Current `Expert` SQLite model has NO `photo_url` column. Photos come from a new CSV. Two decisions required: (a) where to store photo URLs, (b) how to serve photos to the frontend.
+
+### Recommended Approach: Proxy Endpoint
+
+Why proxy (`GET /api/photos/{username}`) over direct `<img src={externalUrl}>`:
+- Tinrate photo URLs may have CORS restrictions on `<img>` tags from a different origin
+- Proxy adds `Cache-Control: public, max-age=86400` — 48 Browse card photos cached 24h on first load
+- If photo storage moves (S3, CDN), only backend proxy changes — frontend unchanged
+- One stable URL pattern (`/api/photos/{username}`) regardless of where photos actually live
 
 ### Backend Changes
 
-**`pilot.py` router** — inject `db` and `app.state`:
-
+#### 1. Expert model: add photo_url column (app/models.py — MODIFIED)
 ```python
-# BEFORE
-@router.post("/api/pilot", response_model=PilotResponse)
-async def pilot(body: PilotRequest) -> PilotResponse:
-    loop = asyncio.get_event_loop()
-    result = await loop.run_in_executor(
-        None,
-        lambda: run_pilot(
-            message=body.message,
-            history=[h.model_dump() for h in body.history],
-            current_filters=body.current_filters,
-        ),
-    )
-
-# AFTER
-@router.post("/api/pilot", response_model=PilotResponse)
-async def pilot(
-    request: Request,
-    body: PilotRequest,
-    db: Session = Depends(get_db),
-) -> PilotResponse:
-    loop = asyncio.get_event_loop()
-    result = await loop.run_in_executor(
-        None,
-        lambda: run_pilot(
-            message=body.message,
-            history=[h.model_dump() for h in body.history],
-            current_filters=body.current_filters,
-            db=db,
-            app_state=request.app.state,
-        ),
-    )
+class Expert(Base):
+    # ... existing fields ...
+    photo_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    # Add AFTER findability_score, BEFORE created_at
 ```
 
-**`PilotResponse`** — add experts field:
-
+#### 2. Migration in lifespan (app/main.py — MODIFIED)
+Add to the Phase 8 column migration block:
 ```python
-class PilotResponse(BaseModel):
-    filters: dict | None
-    experts: list[dict] | None = None   # NEW: ExpertCard dicts from run_explore()
-    message: str
+"ALTER TABLE experts ADD COLUMN photo_url TEXT",
 ```
+Safe: SQLite OperationalError if column exists → caught and ignored (existing pattern, lines 209-218).
 
-**`pilot_service.py`** — add `search_experts` declaration and handler:
-
+#### 3. Photo proxy endpoint (app/routers/photos.py — NEW)
 ```python
-from app.services.explorer import run_explore, ExpertCard as ExploreExpertCard
+import httpx
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import Response
+from sqlalchemy.orm import Session
+from app.database import get_db
+from app.models import Expert
 
-SEARCH_EXPERTS_DECLARATION = types.FunctionDeclaration(
-    name="search_experts",
-    description=(
-        "Search the expert marketplace for professionals matching the user's request. "
-        "Use this when the user wants to find experts, not just adjust filters. "
-        "Returns real expert results that will appear in Sage's chat and in the main grid."
-    ),
-    parameters_json_schema={
-        "type": "object",
-        "properties": {
-            "query": {"type": "string", "description": "Semantic search query."},
-            "rate_min": {"type": "number", "description": "Minimum hourly rate."},
-            "rate_max": {"type": "number", "description": "Maximum hourly rate."},
-            "tags": {
-                "type": "array",
-                "items": {"type": "string"},
-                "description": "Domain tags to filter by (AND logic).",
-            },
-        },
-        "required": ["query"],
-    },
-)
+router = APIRouter()
 
-# In run_pilot(), update tool to include both declarations:
-tool = types.Tool(function_declarations=[APPLY_FILTERS_DECLARATION, SEARCH_EXPERTS_DECLARATION])
-
-# In the function call handler:
-if fn_call.name == "search_experts":
-    args = fn_call.args
-    explore_result = run_explore(
-        query=args.get("query", ""),
-        rate_min=args.get("rate_min", 0.0),
-        rate_max=args.get("rate_max", 10000.0),
-        tags=args.get("tags", []),
-        limit=5,          # Top 5 for Sage display; grid gets full set via filter sync
-        cursor=0,
-        db=db,
-        app_state=app_state,
+@router.get("/api/photos/{username}")
+async def get_photo(username: str, db: Session = Depends(get_db)):
+    """
+    Proxy expert profile photo by username.
+    Returns photo bytes with Content-Type from upstream.
+    404 when expert not found or photo_url is null/empty.
+    Cache-Control: public, max-age=86400 (24-hour browser cache).
+    """
+    expert = db.query(Expert).filter(Expert.username == username).first()
+    if not expert or not expert.photo_url:
+        raise HTTPException(status_code=404, detail="No photo")
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        resp = await client.get(expert.photo_url, follow_redirects=True)
+        if resp.status_code != 200:
+            raise HTTPException(status_code=404, detail="Photo unavailable")
+    content_type = resp.headers.get("content-type", "image/jpeg")
+    return Response(
+        content=resp.content,
+        media_type=content_type,
+        headers={"Cache-Control": "public, max-age=86400"},
     )
-    experts_for_sage = [e.model_dump() for e in explore_result.experts]
-    filters_applied = {  # Also sync the grid
-        "query": args.get("query", ""),
-        "rate_min": args.get("rate_min", 0.0),
-        "rate_max": args.get("rate_max", 10000.0),
-        "tags": args.get("tags", []),
-    }
-    # Build summary string for Turn 2 Gemini context
-    expert_summaries = "\n".join(
-        f"- {e['first_name']} {e['last_name']}: {e['job_title']} @ {e['company']} "
-        f"({e['currency']} {e['hourly_rate']}/hr)"
-        for e in experts_for_sage
-    )
-    function_response = {
-        "result": "success",
-        "total_found": explore_result.total,
-        "experts": expert_summaries,
-    }
-    # Turn 2: generate Sage narrative referencing the actual experts...
+```
+Verify `httpx` is in `requirements.txt` — it is a FastAPI transitive dep but must be declared explicitly.
+
+#### 4. Photo ingest admin endpoint (app/routers/admin.py — MODIFIED)
+```python
+# New endpoint: POST /api/admin/experts/photos
+# Accepts multipart CSV upload: columns username, photo_url
+# Bulk UPDATE experts SET photo_url = ? WHERE username = ?
+# Returns { updated: N, not_found: M }
+# Admin-only (requires X-Admin-Key header, uses _require_admin dependency)
+```
+Separate from `_seed_experts_from_csv()` — seed runs at every startup and must stay atomic.
+
+#### 5. Register new router (app/main.py — MODIFIED)
+```python
+from app.routers import photos  # add to import
+app.include_router(photos.router)  # add alongside browse
 ```
 
 ### Frontend Changes
 
-**`pilotSlice.ts`** — `PilotMessage` gains optional `experts` field:
-
+#### Photo URL utility (frontend/src/constants/photos.ts — NEW)
 ```typescript
-export interface PilotMessage {
-  id: string
-  role: 'user' | 'assistant'
-  content: string
-  timestamp: number
-  experts?: Expert[]   // NEW: populated when Sage did a search_experts call
+const API_BASE = import.meta.env.VITE_API_URL ?? ''
+
+export function expertPhotoUrl(username: string): string {
+  return `${API_BASE}/api/photos/${username}`
 }
 ```
 
-**`useSage.ts`** — handle `data.experts`:
+#### Expert TypeScript interface (frontend/src/store/resultsSlice.ts — MODIFIED)
+```typescript
+export interface Expert {
+  // ... existing fields ...
+  photo_url: string | null  // ADD — backwards-compatible optional (API returns null when absent)
+}
+```
+
+#### ExpertCard Pydantic schema (app/services/explorer.py — MODIFIED)
+```python
+class ExpertCard(BaseModel):
+    # ... existing fields ...
+    photo_url: str | None = None  # ADD — optional, defaults None
+```
+And populate in `_build_card()`:
+```python
+return ExpertCard(
+    # ... existing fields ...
+    photo_url=expert.photo_url,  # ADD
+)
+```
+
+---
+
+## Question 5: Cross-Page Sage Navigation
+
+### Problem
+
+`useSage.ts` currently has no routing awareness. On BrowsePage, `useExplore` is NOT mounted — calling `store.setResults()` writes to the store but there is no grid to render it. Users also need to navigate to `/explore` to see the results.
+
+### Critical Complication: resetPilot on MarketplacePage Mount
+
+`MarketplacePage.tsx` lines 33-36 call `resetPilot()` on every mount:
+```typescript
+const resetPilot = useExplorerStore((s) => s.resetPilot)
+useEffect(() => { resetPilot() }, [resetPilot])
+```
+`resetPilot` clears `messages: [], isOpen: false, isStreaming: false, sessionId: null`.
+This means Browse-to-Explore navigation currently DESTROYS the Sage conversation history.
+This `resetPilot()` call must be removed or gated for conversation preservation to work.
+
+### Solution: navigationSlice + useSage modification + resetPilot gate
+
+#### Step 1: New navigationSlice (frontend/src/store/navigationSlice.ts — NEW)
 
 ```typescript
-// After receiving pilot response:
-if (data.filters && typeof data.filters === 'object') {
-  validateAndApplyFilters(data.filters as Record<string, unknown>)
+import type { StateCreator } from 'zustand'
+import type { ExplorerStore } from './index'
+import type { Expert } from './resultsSlice'
+
+export interface PendingSageResults {
+  experts: Expert[]
+  total: number
+  message: string
 }
 
-addMessage({
-  id: `${Date.now()}-assistant`,
-  role: 'assistant',
-  content: data.message ?? "Here's what I found!",
-  experts: data.experts?.slice(0, 5) ?? undefined,  // NEW
-  timestamp: Date.now(),
+export interface NavigationSlice {
+  pendingSageResults: PendingSageResults | null
+  setPendingSageResults: (r: PendingSageResults) => void
+  clearPendingSageResults: () => void
+}
+
+export const createNavigationSlice: StateCreator<
+  ExplorerStore,
+  [['zustand/persist', unknown]],
+  [],
+  NavigationSlice
+> = (set) => ({
+  pendingSageResults: null,
+  setPendingSageResults: (r) => set({ pendingSageResults: r }),
+  clearPendingSageResults: () => set({ pendingSageResults: null }),
 })
 ```
 
-**New component: `SageExpertCard.tsx`** — compact card for Sage panel. Intentionally different from marketplace `ExpertCard`: no `h-[180px]` constraint, no CSS hover animation, no bento zones. Simple name/title/rate/tag layout optimized for the narrow 380px panel.
+#### Step 2: Add slice to store (frontend/src/store/index.ts — MODIFIED)
 
-**`SageMessage.tsx`** — render expert list when present:
+```typescript
+import { createNavigationSlice } from './navigationSlice'
+import type { NavigationSlice } from './navigationSlice'
 
-```tsx
-// After the text bubble, if message.experts exists:
-{message.experts && message.experts.length > 0 && (
-  <div className="mt-2 space-y-2">
-    {message.experts.map(expert => (
-      <SageExpertCard key={expert.username} expert={expert} />
-    ))}
+export type ExplorerStore = FilterSlice & ResultsSlice & PilotSlice & NavigationSlice
+
+// In combined store:
+(...a) => ({
+  ...createFilterSlice(...a),
+  ...createResultsSlice(...a),
+  ...createPilotSlice(...a),
+  ...createNavigationSlice(...a),  // ADD
+})
+
+// partialize: DO NOT add pendingSageResults — must not survive page refresh
+```
+
+#### Step 3: Modify useSage.ts (frontend/src/hooks/useSage.ts — MODIFIED)
+
+```typescript
+// ADD these imports at top of file:
+import { useLocation, useNavigate } from 'react-router-dom'
+
+// ADD inside useSage():
+const location = useLocation()
+const navigate = useNavigate()
+const isOnBrowsePage = location.pathname === '/'
+
+// MODIFY the search_performed branch inside handleSend:
+if (data.search_performed === true) {
+  const store = useExplorerStore.getState()
+  const experts = data.experts ?? []
+  const total = data.total ?? 0
+
+  if (isOnBrowsePage) {
+    // NAVIGATE mode: write pending results, then navigate to Explorer
+    store.setPendingSageResults({ experts, total, message: data.message })
+    navigate('/explore')
+    // Do NOT call store.setResults() here — MarketplacePage will apply on mount
+  } else {
+    // DIRECT mode: existing v2.3 behavior — inject into grid immediately
+    store.setLoading(false)
+    store.setResults(experts, total, null)
+    store.setSageMode(true)
+  }
+}
+
+// ADD: apply_filters from Browse also navigates to Explorer
+// (filterSlice writes happen immediately; useExplore will refetch when page mounts)
+if (!data.search_performed && data.filters && typeof data.filters === 'object' && isOnBrowsePage) {
+  validateAndApplyFilters(data.filters as Record<string, unknown>)
+  navigate('/explore')
+}
+
+// Add isOnBrowsePage to useCallback dep array:
+// [isStreaming, addMessage, setStreaming, triggerSpin, isOnBrowsePage, navigate]
+```
+
+#### Step 4: Modify MarketplacePage.tsx (frontend/src/pages/MarketplacePage.tsx — MODIFIED)
+
+```typescript
+// ADD import:
+import { useLocation } from 'react-router-dom'
+
+// ADD selectors:
+const pendingSageResults = useExplorerStore((s) => s.pendingSageResults)
+const clearPendingSageResults = useExplorerStore((s) => s.clearPendingSageResults)
+const location = useLocation()
+
+// REPLACE the current resetPilot useEffect with this gated version:
+// OLD (remove this):
+//   useEffect(() => { resetPilot() }, [resetPilot])
+//
+// NEW: only reset pilot when NOT arriving from Browse with pending results
+useEffect(() => {
+  if (pendingSageResults) return  // preserve Browse conversation history
+  resetPilot()
+}, []) // intentional empty dep — runs once on mount only
+
+// ADD: consume pending Sage results on mount (BEFORE resetPilot effect — order matters)
+useEffect(() => {
+  if (!pendingSageResults) return
+  const store = useExplorerStore.getState()  // snapshot pattern — async-safe
+  store.setLoading(false)
+  store.setResults(pendingSageResults.experts, pendingSageResults.total, null)
+  store.setSageMode(true)
+  clearPendingSageResults()
+}, [])  // intentional empty dep — runs once on mount only
+
+// ADD: "Continue Browsing" breadcrumb based on navigation state
+const { state: navState } = useLocation()
+```
+
+### Sage Conversation History: How It Works
+
+`pilotSlice.messages` lives in in-memory Zustand (not persisted to localStorage). The store instance is a module-level singleton — it survives SPA navigation. When BrowsePage unmounts and MarketplacePage mounts, `messages[]` is intact. The gate on `resetPilot()` (Step 4) prevents it from being wiped. The SagePanel on `/explore` shows the full Browse conversation. No additional work required.
+
+---
+
+## Question 6: Aurora Page Transition
+
+### Approach: AnimatedOutlet with location-keyed PageTransition
+
+The aurora canvas (`AuroraBackground`) is `position: fixed` — it persists across route changes without re-animating. Only page content div needs to animate.
+
+#### PageTransition component (frontend/src/components/PageTransition.tsx — NEW)
+```typescript
+import { motion } from 'motion/react'
+
+interface PageTransitionProps {
+  children: React.ReactNode
+}
+
+export function PageTransition({ children }: PageTransitionProps) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, filter: 'blur(8px)' }}
+      animate={{ opacity: 1, filter: 'blur(0px)' }}
+      exit={{ opacity: 0, filter: 'blur(8px)' }}
+      transition={{ duration: 0.35, ease: 'easeOut' }}
+      style={{ minHeight: '100dvh' }}
+    >
+      {children}
+    </motion.div>
+  )
+}
+```
+
+#### AnimatedOutlet (frontend/src/components/AnimatedOutlet.tsx — NEW)
+```typescript
+import { Outlet, useLocation } from 'react-router-dom'
+import { AnimatePresence } from 'motion/react'
+import { PageTransition } from './PageTransition'
+
+export function AnimatedOutlet() {
+  const location = useLocation()
+  return (
+    <AnimatePresence mode="wait">
+      <PageTransition key={location.pathname}>
+        <Outlet />
+      </PageTransition>
+    </AnimatePresence>
+  )
+}
+```
+
+#### RootLayout (frontend/src/components/RootLayout.tsx — NEW, or inline in main.tsx)
+```typescript
+// Thin wrapper that renders AnimatedOutlet
+// Admin routes are NOT children of RootLayout — admin has no aurora background
+import { AnimatedOutlet } from './AnimatedOutlet'
+
+export function RootLayout() {
+  return <AnimatedOutlet />
+}
+```
+
+#### Route structure in main.tsx (for AnimatedOutlet to work)
+```typescript
+{
+  path: '/',
+  element: <RootLayout />,
+  children: [
+    { index: true, element: <BrowsePage /> },
+    { path: 'explore', element: <MarketplacePage /> },
+  ],
+},
+```
+`AnimatePresence mode="wait"` ensures exit animation completes before next route mounts — prevents both pages being visible simultaneously.
+
+### AuroraBackground Note
+
+`BrowsePage` and `MarketplacePage` both render `<AuroraBackground>` internally. When using the AnimatedOutlet pattern, each page's `AuroraBackground` mounts/unmounts with the route. This is acceptable: the PageTransition blur/fade wraps the entire page including its AuroraBackground, so the transition is seamless. If flicker is observed, hoist AuroraBackground to RootLayout and remove it from individual pages.
+
+---
+
+## Question 7: "Continue Browsing" Breadcrumb
+
+### Implementation
+
+BrowsePage navigates to `/explore` with location state:
+```typescript
+// In BillboardHero.tsx "Start Discovery" button:
+navigate('/explore', { state: { from: 'browse' } })
+
+// In useSage.ts (navigate mode):
+navigate('/explore')
+// Note: Sage navigation does NOT pass state: { from: 'browse' } here — the SagePanel
+// is open and visible on Explorer, so user has contextual awareness. The breadcrumb
+// is for the BillboardHero CTA path only (user clicked "Start Discovery" without Sage).
+// Optionally, Sage navigation can also pass { state: { from: 'browse' } } — design call.
+```
+
+In `MarketplacePage.tsx`:
+```typescript
+import { useLocation, Link } from 'react-router-dom'
+const { state: navState } = useLocation()
+
+// Render above FilterChips, in the main content area top bar:
+{navState?.from === 'browse' && (
+  <div className="px-4 py-2 text-sm">
+    <Link
+      to="/"
+      className="text-brand-purple hover:text-purple-700 flex items-center gap-1"
+    >
+      <ChevronLeft size={14} />
+      Back to Browse
+    </Link>
   </div>
 )}
 ```
 
----
-
-## Feature 2: User Event Tracking
-
-### SQLite `user_events` Table Schema
-
-A single table with discriminated `event_type` column handles all three event types. Using one table (not three) because admin gap queries aggregate across event types; cross-event analysis (e.g., "what filters changed before a card click?") is simpler with a single table.
-
-```sql
-CREATE TABLE user_events (
-    id               INTEGER PRIMARY KEY AUTOINCREMENT,
-    event_type       TEXT    NOT NULL,   -- 'card_click' | 'sage_query' | 'filter_change'
-    created_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    -- card_click fields
-    expert_username  TEXT,          -- which expert was clicked
-    context          TEXT,          -- 'grid' | 'sage_panel'
-
-    -- sage_query fields
-    query_text       TEXT,          -- raw user message to Sage
-    function_called  TEXT,          -- 'apply_filters' | 'search_experts' | null
-    result_count     INTEGER,       -- experts returned (search_experts only)
-
-    -- filter_change fields
-    filter_field     TEXT,          -- 'query' | 'rate_range' | 'tags' | 'reset'
-    filter_value     TEXT           -- JSON-serialized value(s) for the field
-);
-
-CREATE INDEX idx_user_events_type_ts ON user_events (event_type, created_at);
-CREATE INDEX idx_user_events_expert  ON user_events (expert_username)
-    WHERE expert_username IS NOT NULL;
-```
-
-Sparse columns (NULL for irrelevant event types) are intentional. SQLite handles NULLs efficiently; no wasted storage.
-
-### SQLAlchemy Model
-
-Add to `app/models.py`:
-
-```python
-class UserEvent(Base):
-    """
-    User behavior events for marketplace intelligence.
-    Single table with sparse nullable columns per event_type.
-
-    event_type values:
-        'card_click'     — expert card click; expert_username + context populated
-        'sage_query'     — Sage send; query_text + function_called + result_count
-        'filter_change'  — filter state changed; filter_field + filter_value (JSON)
-
-    No FK constraints — consistent with existing models.py style.
-    Auto-created by Base.metadata.create_all at startup.
-    """
-    __tablename__ = "user_events"
-
-    id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    event_type: Mapped[str] = mapped_column(String(30), nullable=False, index=True)
-    created_at: Mapped[datetime.datetime] = mapped_column(
-        DateTime, default=datetime.datetime.utcnow, nullable=False
-    )
-    # card_click
-    expert_username: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
-    context: Mapped[str | None] = mapped_column(String(20), nullable=True)
-    # sage_query
-    query_text: Mapped[str | None] = mapped_column(Text, nullable=True)
-    function_called: Mapped[str | None] = mapped_column(String(30), nullable=True)
-    result_count: Mapped[int | None] = mapped_column(nullable=True)
-    # filter_change
-    filter_field: Mapped[str | None] = mapped_column(String(30), nullable=True)
-    filter_value: Mapped[str | None] = mapped_column(Text, nullable=True)
-```
-
-No `ALTER TABLE` or migration script needed. `Base.metadata.create_all()` in `main.py` lifespan creates missing tables idempotently on next Railway deploy.
-
-### Backend Ingestion Endpoint
-
-New router: `app/routers/events.py`. No auth required — public, like `/api/explore`.
-
-```python
-"""POST /api/events — user behavior event ingestion. No auth required."""
-from fastapi import APIRouter, Depends
-from pydantic import BaseModel
-from sqlalchemy.orm import Session
-from app.database import get_db
-from app.models import UserEvent
-
-router = APIRouter()
-
-class EventRequest(BaseModel):
-    event_type: str
-    expert_username: str | None = None
-    context: str | None = None
-    query_text: str | None = None
-    function_called: str | None = None
-    result_count: int | None = None
-    filter_field: str | None = None
-    filter_value: str | None = None
-
-@router.post("/api/events", status_code=202)
-def record_event(body: EventRequest, db: Session = Depends(get_db)):
-    """
-    Fire-and-forget event ingestion. Returns 202 (no body) immediately.
-    Frontend does not await a meaningful response.
-    """
-    db.add(UserEvent(**body.model_dump()))
-    db.commit()
-    return None
-```
-
-Register in `main.py` alongside existing routers. `status_code=202` signals "accepted but not processed further" — semantically correct and reduces frontend expectations.
-
-### Frontend Tracking Utility
-
-New file: `frontend/src/lib/tracking.ts`
-
-```typescript
-const API_BASE = import.meta.env.VITE_API_URL ?? ''
-
-export function trackEvent(payload: Record<string, unknown>): void {
-  // keepalive: true ensures event fires even if user navigates away immediately
-  // No error handling — analytics loss on failure is acceptable
-  fetch(`${API_BASE}/api/events`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-    keepalive: true,
-  }).catch(() => { /* silent */ })
-}
-```
-
-`trackEvent` is a plain module function (not a hook). It can be called from Zustand slice actions, event handlers, and `useCallback` — anywhere without hook rules constraints.
-
-### Tracking Integration Points
-
-| Event | Where Called | Code Location | Fields |
-|-------|-------------|---------------|--------|
-| `card_click` (grid) | `ExpertCard.tsx` onClick on "View Full Profile" | `components/marketplace/ExpertCard.tsx` | `expert_username`, `context: 'grid'` |
-| `card_click` (sage) | `SageExpertCard.tsx` onClick | `components/pilot/SageExpertCard.tsx` | `expert_username`, `context: 'sage_panel'` |
-| `sage_query` | `useSage.ts` after pilot response received | `hooks/useSage.ts` | `query_text`, `function_called`, `result_count` |
-| `filter_change` | `filterSlice.ts` set actions | `store/filterSlice.ts` | `filter_field`, `filter_value` |
-
-**Filter tracking pattern** — tracking lives in `filterSlice.ts` set actions (not in UI components). This ensures tracking fires regardless of whether the change came from the sidebar, URL sync, or Sage:
-
-```typescript
-// filterSlice.ts (modified)
-import { trackEvent } from '../lib/tracking'
-
-setQuery: (q) => {
-  set({ query: q })
-  if (q) trackEvent({ event_type: 'filter_change', filter_field: 'query', filter_value: q })
-},
-setRateRange: (min, max) => {
-  set({ rateMin: min, rateMax: max })
-  trackEvent({ event_type: 'filter_change', filter_field: 'rate_range',
-                filter_value: JSON.stringify({ min, max }) })
-},
-setTags: (tags) => {
-  set({ tags })
-  trackEvent({ event_type: 'filter_change', filter_field: 'tags',
-                filter_value: JSON.stringify(tags) })
-},
-resetFilters: () => {
-  set({ ...filterDefaults })
-  trackEvent({ event_type: 'filter_change', filter_field: 'reset', filter_value: 'true' })
-},
-```
-
-Do not track `setQuery('')` (empty string clears) to avoid noise — add a `if (q)` guard as shown.
-
-**Sage query tracking in `useSage.ts`** — after pilot response:
-
-```typescript
-// After receiving pilot response:
-trackEvent({
-  event_type: 'sage_query',
-  query_text: text.trim(),
-  function_called: data.filters ? (data.experts ? 'search_experts' : 'apply_filters') : null,
-  result_count: data.experts?.length ?? null,
-})
-```
+Location: rendered between `<FilterChips />` and the results area `<div>`, visible on desktop and mobile (no conditional `md:hidden`). `navState?.from` is only set when arriving from BrowsePage — the breadcrumb disappears if user refreshes or navigates directly to `/explore`.
 
 ---
 
-## Feature 3: Admin Gaps Tab — Unmet Demand + Exposure
+## Question 8: Shared Zustand State — What's New vs Modified
 
-### Existing vs New Gaps
+### Summary of Zustand Changes
 
-The current `GapsPage.tsx` + `GET /api/admin/gaps` endpoint surfaces **chat-API gaps** (queries where `conversations.top_match_score < 0.60`). This is unrelated to the new marketplace intelligence data from `user_events`.
+| Slice | Status | Changes |
+|-------|--------|---------|
+| `filterSlice` | UNMODIFIED | No changes — filter state is already shared and works across pages |
+| `resultsSlice` | MODIFIED | Add `photo_url: string \| null` to `Expert` interface |
+| `pilotSlice` | MODIFIED | Remove or gate `resetPilot()` call in MarketplacePage (not slice change — page change) |
+| `navigationSlice` | NEW | `pendingSageResults`, `setPendingSageResults`, `clearPendingSageResults` |
+| `nltrStore` | UNMODIFIED | Newsletter gate logic unchanged |
 
-The v2.3 intelligence view is a **new admin page**: `MarketplacePage.tsx` at `/admin/marketplace`. It does not modify the existing GapsPage — it adds a sibling page. Add a sidebar entry in `AdminSidebar.tsx`.
+### No browseSlice Needed
 
-### Admin Aggregation Queries
+Browse page data (`featured`, `rows`) is local hook state in `useBrowse` — it does not need to be in the global Zustand store. The global store's job is cross-page shared state; Browse data does not need to survive navigation. `useBrowse` is a simple `useState` + `useEffect` fetch hook.
 
-**Unmet Demand — Sage searches with poor results:**
+### persist partialize (store/index.ts)
 
-```sql
-SELECT
-    query_text,
-    COUNT(*)           AS query_count,
-    AVG(result_count)  AS avg_result_count,
-    MIN(created_at)    AS first_seen,
-    MAX(created_at)    AS last_seen
-FROM user_events
-WHERE event_type = 'sage_query'
-  AND function_called = 'search_experts'
-  AND (result_count IS NULL OR result_count < 3)
-GROUP BY query_text
-ORDER BY query_count DESC
-LIMIT 50;
-```
-
-**Unmet Demand — Most searched filter terms:**
-
-```sql
-SELECT
-    filter_value        AS search_term,
-    COUNT(*)            AS frequency,
-    MAX(created_at)     AS last_seen
-FROM user_events
-WHERE event_type = 'filter_change'
-  AND filter_field = 'query'
-  AND filter_value != ''
-  AND filter_value IS NOT NULL
-GROUP BY filter_value
-ORDER BY frequency DESC
-LIMIT 50;
-```
-
-**Expert Exposure Distribution:**
-
-```sql
-SELECT
-    e.username,
-    e.first_name || ' ' || e.last_name  AS name,
-    e.job_title,
-    e.findability_score,
-    COUNT(ue.id)                        AS click_count
-FROM experts e
-LEFT JOIN user_events ue
-    ON ue.expert_username = e.username
-    AND ue.event_type = 'card_click'
-GROUP BY e.username
-ORDER BY click_count DESC;
-```
-
-**Click source breakdown (grid vs Sage panel):**
-
-```sql
-SELECT
-    expert_username,
-    SUM(CASE WHEN context = 'grid'       THEN 1 ELSE 0 END) AS grid_clicks,
-    SUM(CASE WHEN context = 'sage_panel' THEN 1 ELSE 0 END) AS sage_clicks,
-    COUNT(*) AS total_clicks
-FROM user_events
-WHERE event_type = 'card_click'
-GROUP BY expert_username
-ORDER BY total_clicks DESC
-LIMIT 100;
-```
-
-**Daily Sage usage trend:**
-
-```sql
-SELECT
-    DATE(created_at)    AS day,
-    COUNT(*)            AS sage_queries,
-    SUM(CASE WHEN function_called = 'search_experts' THEN 1 ELSE 0 END) AS search_calls,
-    SUM(CASE WHEN function_called = 'apply_filters'  THEN 1 ELSE 0 END) AS filter_calls
-FROM user_events
-WHERE event_type = 'sage_query'
-GROUP BY day
-ORDER BY day DESC
-LIMIT 30;
-```
-
-### New Admin Endpoints
-
-Add to `admin.py` under the existing auth-gated `router`:
-
-```python
-@router.get("/events/demand")
-def get_demand_signals(db: Session = Depends(get_db)):
-    """Unmet demand: Sage searches with few results + most-searched filter terms."""
-    # Run SQL aggregations above
-    return {
-        "sage_gaps": [...],          # query_text, query_count, avg_result_count
-        "filter_terms": [...],       # search_term, frequency, last_seen
-    }
-
-@router.get("/events/exposure")
-def get_exposure_distribution(db: Session = Depends(get_db)):
-    """Expert click counts, grid vs Sage panel breakdown, vs findability score."""
-    # Run SQL aggregations above
-    return {
-        "experts": [...],            # username, name, click_count, findability_score
-        "daily_trend": [...],        # day, sage_queries, search_calls, filter_calls
-    }
-```
-
-### Frontend Admin Page
-
-New file: `frontend/src/admin/pages/MarketplacePage.tsx`
-
-Two sections:
-1. **Demand Signals** — table of Sage searches with poor results + most-searched filter terms
-2. **Expert Exposure** — sortable table of experts by click count vs findability score; highlights over- and under-exposed experts
-
-New hook in `useAdminData.ts`:
-
-```typescript
-export function useMarketplaceEvents() {
-  // Parallel fetch: demand + exposure
-  const [demand, setDemand] = useState<DemandResponse | null>(null)
-  const [exposure, setExposure] = useState<ExposureResponse | null>(null)
-  ...
-  useEffect(() => {
-    Promise.all([
-      adminFetch<DemandResponse>('/events/demand'),
-      adminFetch<ExposureResponse>('/events/exposure'),
-    ]).then(([d, e]) => { setDemand(d); setExposure(e) })
-  }, [])
-}
-```
-
-New types in `admin/types.ts`:
-
-```typescript
-export interface DemandRow {
-  query_text: string
-  query_count: number
-  avg_result_count: number | null
-  last_seen: string
-}
-
-export interface FilterTermRow {
-  search_term: string
-  frequency: number
-  last_seen: string
-}
-
-export interface ExposureRow {
-  username: string
-  name: string
-  job_title: string
-  click_count: number
-  grid_clicks: number
-  sage_clicks: number
-  findability_score: number | null
-}
-```
+The `partialize` object must remain unchanged: `{ query, rateMin, rateMax, tags, sortBy, sortOrder }`. Specifically:
+- Do NOT add `pendingSageResults` — pending results must not survive page refresh (ephemeral cross-page handoff)
+- Do NOT add `messages` — conversation history is session-only
+- Do NOT add any browse data — all ephemeral
 
 ---
 
-## Recommended Project Structure (v2.3 delta only)
+## Component Inventory: New vs Modified
 
-```
-app/
-├── models.py               MODIFIED — add UserEvent model
-├── main.py                 MODIFIED — register events.router
-├── routers/
-│   ├── pilot.py            MODIFIED — inject db + app.state into run_pilot()
-│   ├── admin.py            MODIFIED — add /events/demand, /events/exposure endpoints
-│   └── events.py           NEW — POST /api/events (public, no auth)
-└── services/
-    └── pilot_service.py    MODIFIED — add SEARCH_EXPERTS_DECLARATION; call run_explore();
-                                       accept db + app_state params; return experts in response
+### New Files
 
-frontend/src/
-├── lib/
-│   └── tracking.ts         NEW — trackEvent() fire-and-forget utility
-├── store/
-│   ├── filterSlice.ts      MODIFIED — call trackEvent() in set actions
-│   └── pilotSlice.ts       MODIFIED — PilotMessage.experts?: Expert[] field
-├── hooks/
-│   └── useSage.ts          MODIFIED — handle data.experts; call trackEvent(sage_query)
-├── components/
-│   ├── marketplace/
-│   │   └── ExpertCard.tsx  MODIFIED — call trackEvent(card_click) on profile click
-│   └── pilot/
-│       ├── SageMessage.tsx MODIFIED — render SageExpertCard list when experts present
-│       └── SageExpertCard.tsx  NEW — compact expert card for 380px Sage panel
-└── admin/
-    ├── pages/
-    │   └── MarketplacePage.tsx  NEW — demand signals + exposure distribution
-    ├── components/
-    │   ├── AdminSidebar.tsx     MODIFIED — add Marketplace nav entry
-    │   ├── DemandTable.tsx      NEW — sage gaps + filter terms tables
-    │   └── ExposureTable.tsx    NEW — expert click distribution table
-    ├── hooks/
-    │   └── useAdminData.ts      MODIFIED — add useMarketplaceEvents() hook
-    └── types.ts                 MODIFIED — add DemandRow, FilterTermRow, ExposureRow
-```
+| File | Type | Key Imports | Depends On |
+|------|------|-------------|------------|
+| `frontend/src/pages/BrowsePage.tsx` | Page | useBrowse, AuroraBackground, SageFAB, SagePanel | useBrowse, all browse components |
+| `frontend/src/components/browse/BrowseHeader.tsx` | Component | Link | react-router-dom |
+| `frontend/src/components/browse/BillboardHero.tsx` | Component | useNavigate, expertPhotoUrl | react-router-dom, photos util |
+| `frontend/src/components/browse/CategoryRows.tsx` | Component | CategoryRow | CategoryRow |
+| `frontend/src/components/browse/CategoryRow.tsx` | Component | BrowseExpertCard, useRef | BrowseExpertCard |
+| `frontend/src/components/browse/BrowseExpertCard.tsx` | Component | expertPhotoUrl, trackEvent | photos util, tracking |
+| `frontend/src/components/PageTransition.tsx` | Component | motion | motion/react |
+| `frontend/src/components/AnimatedOutlet.tsx` | Component | Outlet, useLocation, AnimatePresence, PageTransition | react-router-dom, motion/react |
+| `frontend/src/components/RootLayout.tsx` | Component | AnimatedOutlet | AnimatedOutlet |
+| `frontend/src/hooks/useBrowse.ts` | Hook | BrowseResponse type | VITE_API_URL, BrowseResponse |
+| `frontend/src/store/navigationSlice.ts` | Zustand slice | StateCreator, ExplorerStore, Expert | store/index |
+| `frontend/src/constants/photos.ts` | Utility | — | VITE_API_URL env |
+| `frontend/src/types/browse.ts` | Types | — | — |
+| `app/routers/browse.py` | Backend router | browse_service, FastAPI | browse_service |
+| `app/routers/photos.py` | Backend router | Expert model, httpx | models, database |
+| `app/services/browse_service.py` | Backend service | Expert, UserEvent, Session | models |
 
-### Files Completely Unchanged
+### Modified Files
 
-`app/routers/chat.py`, `app/routers/feedback.py`, `app/routers/email_capture.py`, `app/routers/health.py`, `app/routers/explore.py`, `app/routers/suggest.py`, `app/routers/newsletter.py`, `app/services/embedder.py`, `app/services/explorer.py`, `app/services/retriever.py`, `app/services/search_intelligence.py`, `app/services/tagging.py`, `app/database.py`, `app/config.py`, `frontend/src/store/index.ts`, `frontend/src/store/resultsSlice.ts`, `frontend/src/store/nltrStore.ts`, `frontend/src/components/pilot/SagePanel.tsx`, `frontend/src/hooks/useExplore.ts`, `frontend/src/admin/pages/GapsPage.tsx`.
+| File | What Changes | Risk |
+|------|-------------|------|
+| `frontend/src/main.tsx` | Add BrowsePage, RootLayout imports; restructure route table (BrowsePage at `/`, MarketplacePage at `/explore`, AnimatedOutlet layout) | LOW — additive restructure |
+| `frontend/src/hooks/useSage.ts` | Add `useLocation`, `useNavigate`; add `isOnBrowsePage` branch; add `setPendingSageResults` + `navigate` call; add isOnBrowsePage to useCallback deps | MEDIUM — modifies critical hook; test both Browse and Explorer paths |
+| `frontend/src/pages/MarketplacePage.tsx` | Replace `resetPilot` useEffect with gated version; add `pendingSageResults` consumer useEffect; add breadcrumb via `useLocation().state` | MEDIUM — resetPilot gate is subtle; test conversation preservation |
+| `frontend/src/store/index.ts` | Add `NavigationSlice` to `ExplorerStore` type; spread `createNavigationSlice`; keep `partialize` unchanged | LOW — additive slice, no persist change |
+| `frontend/src/store/resultsSlice.ts` | Add `photo_url: string \| null` to `Expert` interface | LOW — backwards-compatible; existing components ignore unknown fields |
+| `app/main.py` | Add `browse` and `photos` router imports + `app.include_router()` calls; add `"ALTER TABLE experts ADD COLUMN photo_url TEXT"` to Phase 8 migration block | LOW — additive; migration is idempotent |
+| `app/models.py` | Add `photo_url: Mapped[str \| None]` to `Expert` class | LOW — nullable, no impact on existing rows |
+| `app/services/explorer.py` | Add `photo_url: str \| None = None` to `ExpertCard` Pydantic model; populate in `_build_card()` | LOW — optional field, default None |
+| `app/routers/admin.py` | Add `POST /api/admin/experts/photos` endpoint | LOW — new admin-only endpoint, no existing behavior changes |
 
 ---
 
-## Architectural Patterns
+## Data Flow Diagrams
 
-### Pattern 1: Zustand Snapshot in Async Handlers
+### Browse Page Load
 
-**What:** Use `useExplorerStore.getState()` (snapshot) inside `async` functions instead of reactive selectors.
-**When to use:** Any async handler in `useSage`, `useExplore`, or similar hooks that reads store state mid-flight.
-**Trade-offs:** Snapshot is slightly stale if state changes during async wait, but prevents stale closures and re-render loops.
-
-```typescript
-// CORRECT — snapshot at call time
-const handleSend = useCallback(async (text: string) => {
-  const storeState = useExplorerStore.getState()  // snapshot
-  const currentFilters = { query: storeState.query, ... }
-}, [isStreaming, addMessage, setStreaming])
+```
+USER navigates to /  (BrowsePage mounts)
+  |
+  useBrowse(): GET /api/browse
+    |
+    browse_service.build_browse_response(db):
+      trending:  user_events card_click GROUP BY → cold-start → top_findability
+      recently_joined: experts ORDER BY created_at DESC LIMIT 12
+      top_findability: experts ORDER BY findability_score DESC LIMIT 12
+      highest_rate: experts ORDER BY hourly_rate DESC LIMIT 12
+    |
+    Response: { featured: ExpertCard+bio, rows: [4 BrowseRow] }
+      |
+      BillboardHero → <img src="/api/photos/{username}">
+        |
+        GET /api/photos/{username}
+          DB: SELECT photo_url FROM experts WHERE username = ?
+          photo_url = null → 404 → img.onError → CSS initials fallback
+          photo_url = "https://..." → httpx.get(url, timeout=10s)
+          → Response(bytes, Cache-Control: public, max-age=86400)
+          → Browser caches 24h
+      |
+      CategoryRows → 4x CategoryRow → 12x BrowseExpertCard each
+        Same /api/photos/{username} pattern per card
+        Browser cache hit after BillboardHero loaded first photo (same expert)
 ```
 
-### Pattern 2: Service-to-Service Call (No HTTP Self-Call)
+### Browse → Explorer Sage Navigation
 
-**What:** `pilot_service.py` imports and calls `run_explore()` directly rather than making HTTP request to `/api/explore`.
-**When to use:** When one backend service needs results from another in the same process (Railway single-container).
-**Trade-offs:** Tighter coupling, but avoids network overhead, auth complications, and double error handling.
+```
+USER on BrowsePage (/)
+  types "find me a Shopify expert" in SagePanel
+    |
+    useSage.handleSend(text)
+      location.pathname === '/' → isOnBrowsePage = true
+      |
+      POST /api/pilot → { search_performed: true, experts: [...12], total: 12, message: "Found 12 Shopify experts..." }
+      |
+      store.setPendingSageResults({ experts, total, message })
+      navigate('/explore')
 
-```python
-# CORRECT — direct import
-from app.services.explorer import run_explore
-
-result = run_explore(query=..., db=db, app_state=app_state)
-
-# WRONG — HTTP self-call
-import httpx
-result = httpx.get("http://localhost:8000/api/explore?query=...")
+MarketplacePage mounts (/explore)
+  useEffect #1 (pendingSageResults consumer — runs first):
+    pendingSageResults != null
+    store.setLoading(false)
+    store.setResults(experts, total, null)
+    store.setSageMode(true)
+    clearPendingSageResults()
+  useEffect #2 (resetPilot gate — runs second):
+    pendingSageResults == null (cleared above)
+    → would still skip resetPilot? No — pendingSageResults is already null here.
+    SOLUTION: Check pendingSageResults BEFORE clearing, or use a ref.
+    SAFER: Use location.state instead of pendingSageResults to gate resetPilot:
+      const fromBrowseWithSage = location.state?.sageResults === true
+      if (!fromBrowseWithSage) resetPilot()
+    OR: Simply remove resetPilot() entirely (it was a Phase 15 pattern; Sage state
+      is ephemeral and session-based — resetting on every Explorer visit is aggressive)
+  |
+  useExplore: sageMode === true → guard fires → no /api/explore fetch
+  ExpertGrid renders Sage-injected experts immediately
+  SagePanel: pilotSlice.messages[] intact (Browse conversation visible)
+  Breadcrumb: only shown when navigate('/explore', { state: { from: 'browse' } }) was used
 ```
 
-`pilot.py` must pass `db` (from `Depends(get_db)`) and `app_state` (from `request.app.state`) down to `run_pilot()`. This is a dependency injection change — `run_pilot` signature gains two new params.
+### Apply Filters from Browse (no Sage search, just filter refinement)
 
-### Pattern 3: Fire-and-Forget Tracking
+```
+USER on BrowsePage (/)
+  types "show me experts under €100/hour" in SagePanel
+    |
+    POST /api/pilot → { search_performed: false, filters: { rate_max: 100 }, message: "..." }
+    |
+    validateAndApplyFilters({ rate_max: 100 }) → store.setRateRange(0, 100)
+    navigate('/explore')  (no pendingSageResults — useExplore will fetch on mount)
 
-**What:** Post analytics events without blocking user interaction or awaiting response.
-**When to use:** All `trackEvent()` calls. Never on critical paths.
-**Trade-offs:** No retry on failure; analytics loss is acceptable. `keepalive: true` handles navigation.
-
-```typescript
-// CORRECT — synchronous dispatch, async fetch ignored
-setQuery: (q) => {
-  set({ query: q })                     // state update is synchronous
-  trackEvent({ event_type: 'filter_change', filter_field: 'query', filter_value: q })
-}
-
-// WRONG — awaiting blocks the action
-setQuery: async (q) => {
-  set({ query: q })
-  await trackEvent(...)   // never do this
-}
+MarketplacePage mounts (/explore)
+  pendingSageResults == null → resetPilot() runs
+  useExplore: sageMode === false → filter change triggered → GET /api/explore?rate_max=100
+  Grid renders filtered results
+  SagePanel messages: cleared by resetPilot (acceptable — filter refinement, not discovery)
 ```
 
-### Pattern 4: Discriminated Single Table for Events
+### resetPilot Problem Resolution
 
-**What:** One `user_events` table with `event_type` column and sparse nullable fields per type.
-**When to use:** When multiple event types share common fields (`id`, `created_at`) and admin queries benefit from cross-type analytics.
-**Trade-offs:** Sparse NULLs use minimal space in SQLite. Cross-event queries (GROUP BY event_type, date range filtering) work on one table. At this scale, simpler than 3-table JOIN architecture.
-
-### Pattern 5: Individual Zustand Selectors (Not useShallow)
-
-**What:** Subscribe to each store field individually, never via `useShallow` with an object selector.
-**When to use:** Always in this codebase. The `tags` array causes identity pitfalls with `useShallow` (new array ref every render triggers `useExplore` infinite loop).
-**Trade-offs:** More verbose. Correct for referential stability.
+The cleanest solution is to **remove the `resetPilot()` useEffect from MarketplacePage entirely**. Evidence for this:
+- `pilotSlice.messages` is ephemeral (not persisted) — resets naturally on browser refresh
+- There is no user value in clearing messages when navigating between `/` and `/explore`
+- The Phase 15 rationale for `resetPilot()` was to clear stale session state when returning to the page — but with cross-page Sage navigation, this is now harmful
+- If session isolation is needed in future, use `resetPilot()` only when sessionId is stale (compare sessionId to server session)
 
 ---
 
-## Data Flow
+## Build Order (Dependency-Aware)
 
-### Sage Search + Grid Sync Flow
+### Group 1: Foundation — build in parallel, no mutual dependencies
 
-```
-[User types in SageInput]
-    │
-    ▼
-useSage.handleSend(text)
-    │ addMessage (user) → pilotSlice
-    │ setStreaming(true)
-    │
-    │ POST /api/pilot { message, history, current_filters }
-    ▼
-pilot_service.run_pilot(message, history, current_filters, db, app_state)
-    │ Turn 1: Gemini sees search_experts FunctionDeclaration
-    │         → FunctionCall(search_experts, { query: "blockchain", rate_max: 200 })
-    │ run_explore(query, rate_max, limit=5) → ExploreResponse(experts=[5], total=12)
-    │ Turn 2: Gemini receives expert summaries → narrative response
-    │
-    ▼
-PilotResponse { filters: {...}, experts: [5 ExpertCards], message: "..." }
-    │
-    ├── validateAndApplyFilters(data.filters)
-    │       filterSlice.setQuery("blockchain") + setRateRange(0, 200)
-    │           ↓
-    │       useExplore re-fetches GET /api/explore?query=blockchain&rate_max=200
-    │       setResults(20 experts, total=12, cursor=null) → ExpertGrid re-renders
-    │
-    ├── addMessage({ content, experts: data.experts.slice(0,5) })
-    │       SageMessage renders SageExpertCard × 5
-    │
-    └── trackEvent({ sage_query, query_text, function_called: 'search_experts', result_count: 5 })
-```
+1. **Route restructure** (`frontend/src/main.tsx`): BrowsePage stub at `/`, MarketplacePage at `/explore`, `/marketplace` redirect. Enables correct routing for all subsequent work. Stub BrowsePage can be a simple `<div>Browse coming soon</div>`.
+2. **navigationSlice** (`frontend/src/store/navigationSlice.ts` + `frontend/src/store/index.ts`): Zero UI impact. Enables cross-page Sage navigation.
+3. **Expert.photo_url column** (`app/models.py` + `app/main.py` lifespan ALTER TABLE): Zero impact on existing queries.
 
-### Event Tracking Flow
+### Group 2: Backend Endpoints — depends on Group 1 model changes
 
-```
-[User clicks "View Full Profile" on ExpertCard]
-    │
-    ├── onViewProfile(url) → ProfileGateModal (EXISTING — unchanged)
-    └── trackEvent({ event_type: 'card_click', expert_username, context: 'grid' })
-            │ fetch POST /api/events (keepalive: true, no await)
-            ▼
-        events.py: db.add(UserEvent(...)); db.commit()
-        → user_events table INSERT
-```
+4. **GET /api/browse** (`app/routers/browse.py` + `app/services/browse_service.py`): 4 DB queries, structured row response.
+5. **GET /api/photos/{username}** (`app/routers/photos.py`): httpx proxy. Add `httpx` to `requirements.txt` explicitly.
+6. **ExpertCard.photo_url** (`app/services/explorer.py` + `frontend/src/store/resultsSlice.ts`): Pydantic optional field + TypeScript interface field.
+7. **POST /api/admin/experts/photos** (`app/routers/admin.py`): Bulk photo URL ingest. Needs `photo_url` column (Group 1) to exist.
 
-### Admin Gaps Query Flow
+### Group 3: Browse UI Components — depends on Group 2 endpoints
 
-```
-[Admin opens /admin/marketplace]
-    │
-    ▼
-MarketplacePage renders → useMarketplaceEvents()
-    │ Promise.all([
-    │   GET /api/admin/events/demand,
-    │   GET /api/admin/events/exposure
-    │ ])
-    ▼
-admin.py runs SQL aggregations
-    │ Sage gaps: GROUP BY query_text WHERE result_count < 3
-    │ Filter terms: GROUP BY filter_value WHERE filter_field='query'
-    │ Exposure: LEFT JOIN experts ON expert_username GROUP BY username
-    ▼
-DemandTable + ExposureTable render
-```
+8. **`frontend/src/constants/photos.ts`** and **`frontend/src/types/browse.ts`**: Utility + types — no dependencies, can be done in Group 1.
+9. **BrowseExpertCard**: photo display, hover reveal, trackEvent on click.
+10. **CategoryRow**: horizontal scroll, prev/next buttons via useRef.
+11. **CategoryRows**: composes CategoryRow instances.
+12. **BillboardHero**: featured expert, blurred photo background, "Start Discovery" CTA.
+13. **BrowseHeader**: logo, "Explore All Experts" link.
+14. **useBrowse hook**: single fetch to /api/browse, returns `{ featured, rows, loading, error }`.
+15. **BrowsePage**: assembles all browse components, SageFAB, SagePanel, AuroraBackground.
+
+### Group 4: Sage Navigation — depends on Groups 1 and 3 (BrowsePage must exist)
+
+16. **useSage.ts modification**: add useLocation, useNavigate, isOnBrowsePage, navigate + setPendingSageResults.
+17. **MarketplacePage.tsx modification**: remove/gate resetPilot, consume pendingSageResults on mount, add breadcrumb.
+
+### Group 5: Aurora Transition — depends on Group 1 route structure only
+
+18. **PageTransition** component: motion.div blur/opacity.
+19. **AnimatedOutlet** + **RootLayout**: location-keyed layout wrapper.
+20. **main.tsx layout route**: wrap BrowsePage + MarketplacePage with RootLayout/AnimatedOutlet.
 
 ---
 
-## Build Order (Dependency Graph)
+## Critical Constraints (Carry Forward from v2.3)
 
-The three v2.3 features have dependencies that constrain sequencing:
+**sageMode guard in useExplore must remain intact.**
+`useExplore` line 35: `if (sageMode) { abort(); return }`. When MarketplacePage mounts with pending Sage results and calls `setSageMode(true)`, this guard fires and prevents `/api/explore` from overwriting the Sage-injected results. Do not modify this guard.
 
-```
-Phase A — SQLite UserEvent model + POST /api/events
-    → Nothing depends on this except B and C.
-    → Can ship alone. Table auto-created on next deploy.
+**`useExplorerStore.getState()` snapshot pattern in async handlers.**
+`useSage.handleSend` uses `useExplorerStore.getState()` at line 84. The new `store.setPendingSageResults()` call must also use `useExplorerStore.getState()` (not reactive selectors) inside the async handler. Confirmed pattern is correct.
 
-Phase B — Event tracking (trackEvent utility + filterSlice + ExpertCard + useSage)
-    → Depends on Phase A (endpoint must exist before tracking fires)
-    → Ship: tracking.ts, filterSlice changes, ExpertCard click, useSage sage_query event
+**`validateAndApplyFilters` uses `useExplorerStore.getState()` snapshot.**
+Already correct — `validateAndApplyFilters` at line 21 calls `useExplorerStore.getState()` directly. No stale closure risk.
 
-Phase C — Admin Marketplace Intelligence page
-    → Depends on Phase A + B (needs events in DB to be useful)
-    → Ship: MarketplacePage, DemandTable, ExposureTable, admin endpoints, types
+**useCallback dep array must include navigation state.**
+`handleSend` in useSage.ts uses `useCallback` with a dep array. Adding `useLocation` and `useNavigate` introduces `location.pathname` as a dep. Use `isOnBrowsePage` derived value or `location.pathname` in the dep array. Either is correct; `isOnBrowsePage` is cleaner.
 
-Phase D — Sage search_experts function
-    → Independent: no dependency on A/B/C
-    → Highest-value user-facing feature
-    → Ship: pilot_service changes, pilot.py injection, PilotMessage.experts,
-             useSage experts handling, SageMessage rendering, SageExpertCard
-```
+**`pilotSlice.messages` is intentionally NOT persisted.**
+Cross-page conversation preservation works via in-memory Zustand state. On browser refresh, messages reset — this is by design (per v2.3 key decisions). Do NOT add `messages` or `pendingSageResults` to `partialize`.
 
-**Recommended sequence: D → A → B → C**
+**VirtuosoGrid on MarketplacePage is unaffected.**
+Browse uses CSS flex/overflow-x-auto with max 12 items per row. VirtuosoGrid on `/explore` is unchanged.
 
-Rationale: `search_experts` (D) is the primary user-facing capability and unblocks immediately without tracking infrastructure. Shipping D first means the feature is live while A/B/C are being built. Doing A before B ensures events endpoint exists when tracking code ships. C ships last — it needs events accumulated in the DB to display meaningful data.
+**filterSlice actions exit sageMode.**
+When any sidebar filter interaction fires after Sage navigation, `sageMode` resets to false and `useExplore` resumes normal fetching. This is v2.3 behavior — intentional, unchanged.
 
----
+**CORS headers: no changes needed.**
+`GET /api/browse` and `GET /api/photos/{username}` are GET requests — no new CORS headers required. The existing `CORSMiddleware` with `allow_methods=["GET", "POST"]` covers these endpoints.
 
-## Integration Points
-
-### External Services
-
-| Service | Integration Pattern | Notes |
-|---------|---------------------|-------|
-| Gemini 2.5 Flash | Add `SEARCH_EXPERTS_DECLARATION` to `types.Tool`; two-turn pattern unchanged | Both declarations in same `Tool` object; Gemini selects the appropriate function |
-| Railway SQLite | `UserEvent` added to `models.py`; `Base.metadata.create_all()` handles table creation | No migration script; auto-created on next Railway deploy |
-
-### Internal Boundaries
-
-| Boundary | Communication | Notes |
-|----------|---------------|-------|
-| `useSage` ↔ `useExplorerStore` | `useExplorerStore.getState()` snapshot for async reads; `validateAndApplyFilters()` for writes | UNCHANGED pattern; extend to handle `data.experts` from `search_experts` response |
-| `pilot_service` ↔ `explorer` | Direct Python import + function call via `run_explore()` | NEW: `run_pilot()` must receive `db` and `app_state` params injected by `pilot.py` router |
-| `filterSlice` → `tracking.ts` | Synchronous call after `set()` inside slice actions | NEW: side-effect in slice actions; tracking is not reactive |
-| `ExpertCard` → `tracking.ts` | Direct call in onClick handler | NEW: no hook, no effect — inline in event handler |
-| `useSage` → `tracking.ts` | Direct call after pilot response | NEW: tracks `sage_query` events post-send |
-| `admin.py` ↔ `user_events` | SQLAlchemy SELECT + GROUP BY via `text()` | NEW: two new aggregation endpoints under existing auth-gated `router` |
+**httpx dependency.**
+`httpx` is used by the photo proxy. FastAPI/Starlette may bring it transitively, but it must be in `requirements.txt` explicitly to avoid version conflicts on Railway.
 
 ---
 
-## Anti-Patterns
+## Scalability Considerations
 
-### Anti-Pattern 1: HTTP Self-Call for search_experts
-
-**What people do:** `pilot_service.py` makes an HTTP request to `http://localhost:8000/api/explore` to fetch experts.
-**Why it's wrong:** Network latency inside the same process; hardcoded internal URL breaks on Railway's dynamic routing; duplicates error handling; requires auth bypass or header forwarding.
-**Do this instead:** Import `run_explore` from `app.services.explorer`; call it directly. Pass `db` and `app_state` from the pilot router's dependency injection.
-
-### Anti-Pattern 2: Awaiting trackEvent
-
-**What people do:** `await trackEvent(...)` or `return trackEvent(...).then(...)` to ensure event is logged.
-**Why it's wrong:** Blocks the critical path (filter dispatch, Sage response display). If the `/api/events` endpoint is slow or returns 5xx, user sees degraded performance.
-**Do this instead:** `trackEvent()` is always fire-and-forget. The `.catch(() => {})` suppresses errors. Analytics loss on failure is acceptable.
-
-### Anti-Pattern 3: Tracking in useEffect
-
-**What people do:** `useEffect(() => { trackEvent(...) }, [lastClickedExpert])` to track events reactively.
-**Why it's wrong:** Fires on mount if dependency is non-null at mount time; creates stale closure risk; couples analytics to render lifecycle.
-**Do this instead:** Call `trackEvent()` directly in onClick handlers and Zustand set actions — synchronous calls that start async fire-and-forget fetches.
-
-### Anti-Pattern 4: Separate Tables per Event Type
-
-**What people do:** Create `card_click_events`, `sage_query_events`, `filter_change_events` tables.
-**Why it's wrong:** Cross-event gap analysis requires JOIN across three tables. Admin aggregation queries become complex. At this scale, three tables provide no query optimization benefit over a well-indexed single table.
-**Do this instead:** Single `user_events` table with discriminated `event_type` and sparse nullable fields. Composite index on `(event_type, created_at)` makes per-type queries fast.
-
-### Anti-Pattern 5: Storing Full Expert Objects in user_events
-
-**What people do:** Store the full expert JSON blob in `user_events` for `card_click` events.
-**Why it's wrong:** Redundant data (expert profile already in `experts` table); makes events table large; complicates queries.
-**Do this instead:** Store only `expert_username`. JOIN to `experts` table in aggregation queries when name/title/score is needed.
-
-### Anti-Pattern 6: Adding search_experts Results to resultsSlice Directly
-
-**What people do:** When Sage calls `search_experts`, directly call `setResults()` on resultsSlice with the backend-returned experts, bypassing `useExplore`.
-**Why it's wrong:** Breaks the invariant that resultsSlice is always a reflection of the current filterSlice state. Infinite scroll (`loadNextPage`) uses the cursor from resultsSlice — if results were injected directly, cursor is wrong. URL sync reads from filterSlice — direct result injection means URL doesn't reflect the search.
-**Do this instead:** Update filterSlice via `validateAndApplyFilters(data.filters)`. `useExplore` reacts and re-fetches GET /api/explore with the new filters. The grid gets consistent data with correct cursor, URL sync, and infinite scroll.
-
----
-
-## Scaling Considerations
-
-| Scale | Architecture Adjustments |
-|-------|--------------------------|
-| Current (530 experts, low traffic) | All v2.3 patterns correct as described. SQLite `user_events` grows slowly. |
-| 10k events/day | Add `(event_type, created_at)` composite index (already in schema). Consider archiving events older than 90 days. |
-| 100k+ events/day | SQLite write contention on Railway's single-instance deployment. Consider batch writes (collect events in memory, flush periodically) or WAL mode (`PRAGMA journal_mode=WAL` — already Railway default). At this scale, Postgres migration is warranted. |
-| 50k+ experts | `run_explore()` call from `pilot_service` becomes heavier (FAISS + FTS5 at scale). Move to IndexIVFFlat; pilot endpoint's `run_in_executor` already handles thread offload correctly. |
-
-**First bottleneck for v2.3:** The `run_explore()` call inside `pilot_service.run_pilot()` is CPU-bound (FAISS + FTS5). At the router level, `run_pilot()` is already offloaded to `run_in_executor`. The inner `run_explore()` call executes in that same thread — this is correct and safe. No additional concurrency machinery needed.
+| Concern | At 530 Experts (now) | At 5K Experts |
+|---------|---------------------|---------------|
+| Browse API latency | 4 DB queries < 50ms total | Add DB indexes on `findability_score`, `created_at`, `hourly_rate` |
+| Photo proxy on Browse load | ~48 concurrent requests (1 per card across 4 rows) | 24h browser cache eliminates repeats; add CDN in front of Railway if needed |
+| Trending row computation | Simple COUNT GROUP BY on user_events | Add `ix_user_events_expert_id` index if trending query slows |
+| Sage navigation intent | navigate() is instant, store write synchronous | Same — store is module-level singleton |
+| AnimatePresence overhead | Two routes max in animation (300ms) | Same — only ever 2 routes in transition |
+| BrowsePage card count | Max 12 per row (design cap from API) | Cap stays at 12 — no virtualization ever needed |
 
 ---
 
 ## Sources
 
-- Direct codebase inspection (HIGH confidence — ground truth):
-  - `app/routers/pilot.py` — current PilotRequest/PilotResponse shapes, run_in_executor pattern
-  - `app/services/pilot_service.py` — APPLY_FILTERS_DECLARATION, two-turn pattern, run_pilot() signature
-  - `app/routers/explore.py` — run_explore() signature, app_state injection pattern
-  - `app/services/explorer.py` — ExploreResponse schema, ExpertCard model, pipeline structure
-  - `app/models.py` — Conversation, Expert, EmailLead patterns (Mapped[T], DateTime, nullable conventions)
-  - `app/routers/admin.py` — router auth pattern, existing SQL aggregation style, _require_admin dep
-  - `frontend/src/hooks/useSage.ts` — handleSend flow, validateAndApplyFilters, storeState snapshot pattern
-  - `frontend/src/hooks/useExplore.ts` — reactive filter dependency array, how grid re-fetches on state change
-  - `frontend/src/store/filterSlice.ts` — set actions, filterDefaults, slice structure
-  - `frontend/src/store/pilotSlice.ts` — PilotMessage interface, addMessage action
-  - `frontend/src/store/resultsSlice.ts` — Expert interface, setResults/appendResults actions
-  - `frontend/src/components/marketplace/ExpertCard.tsx` — onViewProfile handler, existing onClick pattern
-  - `frontend/src/components/pilot/SagePanel.tsx` — SageMessage rendering, panel structure
-  - `frontend/src/admin/hooks/useAdminData.ts` — adminFetch, hook patterns, existing admin data shapes
-  - `frontend/src/admin/types.ts` — existing type conventions for admin responses
-  - `.planning/PROJECT.md` — v2.3 requirements, existing key decisions table
+All findings are HIGH confidence — derived from direct inspection of v2.3 source files:
+- `frontend/src/main.tsx` (routing)
+- `frontend/src/hooks/useSage.ts` (Sage hook — no routing today)
+- `frontend/src/hooks/useExplore.ts` (sageMode guard)
+- `frontend/src/pages/MarketplacePage.tsx` (resetPilot pattern)
+- `frontend/src/store/index.ts`, `resultsSlice.ts`, `pilotSlice.ts` (Zustand structure)
+- `frontend/src/components/pilot/SageFAB.tsx` (Sage FAB — no routing)
+- `app/models.py` (Expert model — no photo_url today)
+- `app/routers/explore.py` (ExploreResponse contract)
+- `app/services/explorer.py` (ExpertCard Pydantic schema)
+- `app/main.py` (router registration, lifespan migrations)
 
----
-
-*Architecture research for: TCS v2.3 Sage Evolution & Marketplace Intelligence*
-*Researched: 2026-02-22*
+Supplementary references (MEDIUM confidence):
+- React Router v7 `useNavigate` state passing: https://reactrouter.com/api/hooks/useNavigate
+- Framer Motion AnimatePresence `mode="wait"`: https://motion.dev/docs/react-animate-presence
+- Zustand cross-route state: module-level store survives SPA navigation (confirmed by zustand docs)

@@ -1,286 +1,407 @@
-# Pitfalls Research
+# Domain Pitfalls
 
-**Domain:** Adding dual-function Gemini calling, proactive AI personality, event tracking, and gap analysis dashboard to a live AI expert marketplace (v2.3 milestone)
-**Researched:** 2026-02-22
-**Confidence:** HIGH — based on direct codebase analysis of the actual running v2.2 system (`useSage.ts`, `pilot_service.py`, `useExplore.ts`, `store/index.ts`, `models.py`, `SageFAB.tsx`)
+**Domain:** Adding Netflix-style Browse page, cross-page Sage navigation, photo serving, and route reorganization to an existing React + FastAPI expert marketplace
+**Researched:** 2026-02-24
+**Confidence:** HIGH — based on direct codebase analysis of the actual v2.3 system (`useSage.ts`, `useExplore.ts`, `store/index.ts`, `pilotSlice.ts`, `SageFAB.tsx`, `main.tsx`, `MarketplacePage.tsx`, `useUrlSync.ts`) plus targeted web research on each pitfall class
 
 ---
 
 ## Critical Pitfalls
 
-### Pitfall 1: Gemini Chooses the Wrong Function — `search_experts` vs `apply_filters` Ambiguity
-
-**What goes wrong:**
-When both `apply_filters` and `search_experts` are declared in the same `types.Tool`, Gemini must choose between them on every turn. The two functions overlap semantically: "Find me a UX designer" could legitimately call either. Gemini will sometimes call `apply_filters` when the user intends a full search (no results shown yet), or call `search_experts` when the user wants to narrow existing results by rate. The user sees confusing behavior — the grid changes but Sage doesn't show results in-panel, or Sage shows results in-panel but the grid doesn't match.
-
-**Why it happens:**
-The existing `apply_filters` description in `pilot_service.py` says "Update the expert marketplace search filters based on user request" — this is generic enough to capture search intent. Adding `search_experts` alongside it without a clear semantic boundary creates a two-function disambiguation problem. Gemini 2.5 Flash will consistently misroute on short or ambiguous queries (< 5 words) because neither function clearly dominates for those inputs. This has been documented as a systemic behavior of Gemini function calling when descriptions overlap.
-
-**How to avoid:**
-- Write function descriptions that are mutually exclusive and define the trigger condition explicitly. `apply_filters` should say: "Adjust active search filters (rate range, tags, text query) when the user asks to narrow or refine the current results." `search_experts` should say: "Perform a fresh semantic search for experts when the user asks 'find me X', 'who can help with Y', or 'search for Z' — use this when the user wants to discover experts, not just filter existing ones."
-- Seriously consider whether `search_experts` needs to call the backend at all, or whether it should simply write a `query` string to Zustand and let `useExplore`'s reactive `useEffect` handle the `/api/explore` call. The backend is already called reactively on every filter state change — a second direct call from Sage would be redundant and creates the race condition described in Pitfall 2.
-- If keeping two functions: test with the 20 most recent real queries from the `conversations` table in SQLite before shipping. Assert `fn_call.name` in logs for each.
-
-**Warning signs:**
-- In QA testing: "find me a blockchain expert" calls `apply_filters` instead of `search_experts`
-- Users report Sage search doesn't update the grid
-- Log line `pilot: request processed` shows `has_filters=True` for messages that should have triggered `search_experts`
-- Two simultaneous `/api/explore` requests visible in DevTools Network tab when Sage sends a message
-
-**Phase to address:**
-The phase adding `search_experts` — define function descriptions and decide whether the function calls the backend directly or dispatches to Zustand first. Lock this decision before writing any integration code.
+Mistakes that cause rewrites, broken state, or production crashes.
 
 ---
 
-### Pitfall 2: Grid Sync Race Condition — Sage Search vs `useExplore` Reactive Re-fetch Collision
+### Pitfall 1: `resetPilot()` on Explorer Mount Destroys Cross-Page Sage Conversation History
 
 **What goes wrong:**
-`useExplore.ts` fires a fresh `/api/explore` fetch any time `query`, `rateMin`, `rateMax`, or `tags` changes in Zustand. If `search_experts` also calls `/api/explore` directly and writes results to the store via `setResults`, there are two concurrent writers racing to overwrite `experts`, `total`, and `cursor` in `resultsSlice`. The `AbortController` in `useExplore` cancels the previous in-flight request when state changes — but if `search_experts` wrote results first, then `useExplore` fires (triggered by the filter update that `search_experts` also dispatched), the grid will briefly flash the Sage results then be overwritten by `useExplore`'s response.
+`MarketplacePage.tsx` calls `resetPilot()` in a `useEffect` on mount (Phase 15 pattern). This clears `messages`, `isOpen`, `isStreaming`, and `sessionId` every time the Explorer page mounts. When Sage on Browse navigates the user to Explorer to show results, Explorer's mount immediately calls `resetPilot()`, wiping out the entire Sage conversation — including the search context Sage just explained. The user sees an empty panel with no history on Explorer.
 
 **Why it happens:**
-`useExplore`'s `useEffect` dependency array is `[query, rateMin, rateMax, tags, sortBy, ...]`. Any filter change dispatched from `useSage` — whether via `apply_filters` or a side effect from `search_experts` — will trigger `useExplore` to re-fetch. If `search_experts` also calls `setResults` independently, there are now two code paths writing to `experts` in `resultsSlice`. The `AbortController` in `useExplore` only cancels its own previous request — it does not cancel Sage's request.
+The `resetPilot()` on Explorer mount was added in Phase 15 to ensure a clean Sage state on page load. With only one page, this was correct. With two pages sharing the same store, Explorer mounting means "user arrived from Browse" as often as "user refreshed the page". The hook cannot distinguish between these cases.
 
-**How to avoid:**
-- Establish a single ownership rule: `setResults` is called exclusively from `useExplore`. No other hook or function calls `setResults` directly.
-- If Sage must show results in its panel (per v2.3 requirement): add a `sageResults: Expert[]` field to `pilotSlice` (already non-persisted per the store's `partialize` config). Sage populates `sageResults` independently. The main `experts` array in `resultsSlice` remains owned exclusively by `useExplore`.
-- The grid sync then works automatically: Sage dispatches filter state (e.g., calls `setQuery`), `useExplore` reacts and fetches the grid results, Sage shows its own `sageResults` in the panel. Grid and panel may show slightly different result sets briefly, which is acceptable.
-- Never call `setResults` from `useSage`. Make this a code review requirement.
+**Consequences:**
+- Sage conversation context is lost every time Browse navigates to Explorer
+- Users cannot see what Sage just told them when they arrive at Explorer
+- Sage results injected by Browse are wiped before ExpertGrid can render them
 
-**Warning signs:**
-- Grid flickers when Sage runs a search
-- `cursor` resets unexpectedly mid-scroll after a Sage interaction
-- Two simultaneous GET `/api/explore` requests visible in DevTools when Sage sends a message
-- `appendResults` being called while `setResults` was also called in the same render cycle
+**Prevention:**
+- Remove the unconditional `resetPilot()` from Explorer's `useEffect`.
+- Add a `navigatedFromBrowse` flag to `pilotSlice` (non-persisted). Set it `true` before programmatic navigation from Browse. Check it in Explorer's mount: if `true`, skip `resetPilot()` and clear the flag. If `false` (direct URL load or refresh), call `resetPilot()` as before.
+- Alternative: remove `resetPilot()` entirely from Explorer mount and let Sage panel state persist naturally across navigation — the existing `partialize` config already excludes `messages` from localStorage, so refreshes still clear it.
 
-**Phase to address:**
-The phase implementing Sage search — define data ownership boundary (who owns `experts` in the store) as the first architectural decision before any code is written.
+**Detection:**
+- Sage panel is empty every time user lands on Explorer via Sage navigation from Browse
+- `messages` array in Zustand DevTools is empty immediately after routing to Explorer
+
+**Phase to address:** Phase introducing Sage cross-page navigation — the `resetPilot()` guard must be added before any programmatic navigation is implemented.
 
 ---
 
-### Pitfall 3: Proactive Empty-State Nudge Fires at Wrong Times — On Page Load or Repeatedly
+### Pitfall 2: `useUrlSync` Hook on Explorer Rewrites URL on Mount, Clobbering Sage Navigation Params
 
 **What goes wrong:**
-The proactive nudge ("Your search returned no results — want me to help?") must fire exactly once when the grid enters an empty state. Implemented naively — watching `experts.length === 0` in a `useEffect` — it fires on page load before the first fetch completes (the initial store state has `experts: []`), when the user rapidly types and gets intermediate empty results, and every time the user returns to an empty state after clearing filters.
+`useUrlSync` runs its "Store → URL" effect on every filter change, and its "URL → Store" effect once on mount. When Sage on Browse dispatches filters to Zustand then calls `navigate('/explore')`, Explorer mounts, `useUrlSync` reads the URL (which has no `?q=` params since the navigation was programmatic) and its "URL → Store" branch finds empty params. Then its "Store → URL" branch fires and writes the current filter state to the URL. If this races with the Sage filter dispatch that happened on Browse, the result depends on effect ordering — the URL may reflect partial state or cleared state.
 
 **Why it happens:**
-The initial state of `resultsSlice` is `experts: [], total: 0, loading: false`. The `useEffect` watching `!loading && experts.length === 0` fires immediately on mount before the first fetch has been initiated, because `loading` hasn't been set to `true` yet. The sequence is: mount → `useEffect` nudge fires (false positive) → `useExplore` fires → `loading=true` → `loading=false, experts=[results]`. Additionally, if the user clears all filters back to empty results, the nudge fires again even though the user is actively exploring.
+`useUrlSync` has a `skipFirst` ref that skips the first "Store → URL" render to avoid overwriting URL with localStorage state. But on a navigation from Browse, the filter state is already set (by Sage on Browse), the URL is empty (programmatic navigation has no params), and `skipFirst` is `true` only for the very first render cycle — by the time Sage has dispatched filters and `navigate()` fires, the next render is not considered "first" by `skipFirst`. The two effects are not ordered relative to each other.
 
-**How to avoid:**
-- Guard the nudge with a `hasFetchedOnce` ref (not state — avoids extra renders): set it to `true` after `loading` transitions from `true` to `false` for the first time. Only check the empty condition after `hasFetchedOnce === true`.
-- Track `nudgeSent` as a boolean in `pilotSlice` (non-persisted). Set it to `true` once the nudge message is added to `messages`. Never fire the nudge again in the same session unless `resetPilot` is called.
-- Full guard: `hasFetchedOnce && !loading && experts.length === 0 && total === 0 && !nudgeSent && !isStreaming`.
-- Debounce the trigger by 1500ms after `loading` goes false — prevents firing during rapid filter changes where the user bounces through empty states.
+**Consequences:**
+- URL shows empty params even though Sage filters are active on Explorer
+- Worse: a race where URL params overwrite Sage-dispatched filters with empty values
+- Shareable Sage result URLs don't work
 
-**Warning signs:**
-- Sage adds "I noticed your results are empty" on page load before any results appear
-- Nudge fires multiple times in the same session when user toggles filters
-- Nudge fires while `isStreaming` is true (Sage is already processing something)
-- Nudge fires while user is mid-typing in the search input
+**Prevention:**
+- Add a `sagePendingNavigation: boolean` field to the store. Set it `true` when Sage initiates Browse → Explorer navigation. In `useUrlSync`, check this flag: if `true`, skip the "URL → Store" read-on-mount (URL is empty by design; store already has correct state from Sage). Clear the flag after the mount effect runs.
+- Alternatively: pass Sage filter state as URL search params in the `navigate()` call (`navigate('/explore?q=marketing+expert&tags=marketing')`). Then `useUrlSync` reads them correctly on mount, and no flag is needed. This also makes Sage result links shareable.
 
-**Phase to address:**
-The phase implementing Sage personality — the nudge trigger logic must be built with all guard conditions from the start, not added as an afterthought.
+**Detection:**
+- URL on Explorer shows `?` with no params after Sage navigation even though filters are active
+- Filter state in Zustand DevTools is correct but URL is empty — confirms the race
+
+**Phase to address:** Phase introducing Sage cross-page navigation — implement the navigation trigger before writing any URL sync logic.
 
 ---
 
-### Pitfall 4: FAB Pulse/Glow Animation Conflicts with Existing `whileHover`/`whileTap` Gesture Props
+### Pitfall 3: Horizontal Scroll Row Causes CLS When Expert Photos Load Without Reserved Dimensions
 
 **What goes wrong:**
-`SageFAB.tsx` already uses `motion.button` with `whileHover={{ scale: 1.05 }}` and `whileTap={{ scale: 0.95 }}`. Adding a continuous pulse/glow animation (e.g., `animate={{ boxShadow: [...keyframes] }}` loop) to the same `motion.button` can conflict with Framer Motion's internal animation state machine. The hover scale and the loop animation may compete — Framer Motion drops the hover scale when the loop fires, or the loop pauses when the user hovers, breaking the visual feedback chain.
+Each horizontal scroll card reserves space based on the card's rendered dimensions. If expert photos have unknown dimensions and no `aspect-ratio` or explicit `width`/`height` set, the browser allocates no space for the image until it loads. When images load inside a horizontally scrolling row, they expand the card height — pushing the row taller and causing the entire page to reflow (Cumulative Layout Shift). On slow connections, all cards in the row pop to different heights as images trickle in.
 
 **Why it happens:**
-Framer Motion's `animate` prop and gesture props (`whileHover`, `whileTap`) both write to the same motion values. When both animate `scale`, the last write wins. A continuous `keyframes` loop on `animate` will be interrupted by `whileHover` and may not resume correctly after hover ends. This is a documented Framer Motion behavior when the same property is driven by both `animate` and gesture variants.
+The current `Expert` interface has no `photo_url` field. Photos are a new addition. Without `width` and `height` attributes (or CSS `aspect-ratio`), browsers cannot pre-calculate image dimensions. Horizontal scroll containers with `overflow-x: auto` do not virtualize — all cards in the row are in the DOM simultaneously. Every image that loads triggers a layout calculation.
 
-**How to avoid:**
-- Separate the pulse/glow into a wrapper element that does not have gesture props. The outer `motion.div` handles the pulse animation on `boxShadow` only; the inner `motion.button` retains `whileHover`/`whileTap` on `scale` only. `boxShadow` and `scale` are independent CSS properties — no collision.
-- Alternatively, implement the glow ring as a pure CSS `@keyframes` animation on a pseudo-element (`::before` or `::after`) positioned around the button. CSS animations do not conflict with Framer Motion's transform animations.
-- If using Framer Motion for the pulse: animate only `opacity` or `boxShadow` on the wrapper — never `scale` — and keep `scale` exclusively on the `motion.button`'s gesture props.
+**Consequences:**
+- Visible layout shift as user watches the page; Lighthouse CLS score degrades
+- Cards in horizontal rows resize inconsistently if some photos load faster than others
+- Billboard hero image loading shifts the entire page down
 
-**Warning signs:**
-- FAB hover doesn't scale when pulse is active
-- Glow animation freezes when user hovers over the FAB
-- FAB feels sluggish on mobile (gesture recognition competing with animation loop)
-- Framer Motion devtools shows multiple animations targeting the same property
+**Prevention:**
+- Set a fixed `aspect-ratio` on every card image container via CSS before the image loads: `aspect-ratio: 3/4` for portrait expert photos, `aspect-ratio: 16/9` for the billboard hero. This reserves space before the image arrives — no CLS.
+- Use `object-fit: cover` on the `<img>` tag with explicit `width` and `height` attributes that match the CSS slot dimensions.
+- For the billboard hero: use a CSS background-color placeholder (brand purple at low opacity) while the photo loads — avoids a jarring white flash.
+- Never use `auto` height on any image wrapper in the horizontal row. Fixed height (`h-[200px]`, `h-[180px]`) is acceptable; `aspect-ratio` with `w-full` is better.
 
-**Phase to address:**
-The phase implementing FAB animated reactions — prototype the glow/pulse in isolation before integrating with the existing gesture props.
+**Detection:**
+- Chrome DevTools Performance tab shows "Layout" events when images load in horizontal rows
+- Lighthouse CLS score > 0.1 on the Browse page
+- Cards visibly shift height as different photos load
+
+**Phase to address:** Browse page and photo serving phase — card image slot dimensions must be specified in the design before any card component is written.
 
 ---
 
-### Pitfall 5: Event Tracking `await`-ing in Click Handlers Blocks the Interaction Path
+### Pitfall 4: Expert Photos Served Over HTTP from Railway While Frontend Is HTTPS on Vercel — Mixed Content Block
 
 **What goes wrong:**
-Expert card clicks and filter events must feel instant. If the tracking `POST /api/events` is awaited in the click handler — even with a 50ms Railway SQLite round-trip — the profile gate modal will appear late. Users on mobile notice this latency as a "broken" click. The existing `onViewProfile` call in `ExpertCard.tsx` is synchronous; any tracking added before it that blocks will break the expected instant response.
+Vercel serves the frontend over HTTPS. Railway serves the FastAPI backend over HTTPS in production. But if photos are served from a Railway persistent volume via FastAPI's `StaticFiles` mount, the photo URL constructed on the frontend might use `import.meta.env.VITE_API_URL` which is set to the Railway URL. If the Railway URL is accessed via HTTP (e.g., `http://...railway.app/photos/username.jpg`), modern browsers block the request as mixed content and the image fails silently — no error, just a broken image icon.
 
 **Why it happens:**
-`ExpertCard.tsx` calls `onViewProfile(expert.profile_url)` directly in the button's `onClick`. Adding `await fetch('/api/track', ...)` before `onViewProfile` introduces a mandatory network round-trip before the UI responds. Railway's SQLite volume has higher latency than local disk (50–200ms per write), making this worse in production than in development.
+Railway terminates TLS at the edge and forwards requests to the container over HTTP internally. The `X-Forwarded-Proto` header is not always forwarded into the FastAPI process. If `uvicorn` thinks the app is served over HTTP, any URL it generates (e.g., in a redirect or a constructed URL in JSON) will use `http://`. If the frontend constructs photo URLs from `VITE_API_URL` and that var is set to the https Railway URL, this specific pitfall won't occur — but if any code generates photo URLs server-side and returns them in JSON, those URLs may be `http://`.
 
-**How to avoid:**
-- Use `void fetch('/api/track', { method: 'POST', body: ... })` — the `void` keyword makes the fire-and-forget intent explicit in code review and suppresses unhandled promise warnings.
-- For card click tracking specifically, prefer `navigator.sendBeacon('/api/track', JSON.stringify(payload))` — `sendBeacon` is designed for analytics payloads and survives page transitions/unloads, which is relevant if clicking a card triggers navigation.
-- Never `await` tracking in any user interaction handler. This must be a code review requirement.
-- On the backend: the tracking endpoint must use `async def` with `await loop.run_in_executor(None, lambda: ...)` for the SQLite write, following the same pattern as `explore.py`. A synchronous DB write in a FastAPI async endpoint blocks the event loop.
+**Consequences:**
+- All expert photos fail to load in production with no console error (just broken image)
+- Photos work in local dev (both HTTP) but break on Vercel (HTTPS required)
+- Difficult to debug because the Network tab shows the request as "blocked" not "failed"
 
-**Warning signs:**
-- Profile modal takes > 100ms to open after clicking a card
-- Filter chip interactions feel laggy after tracking code is added
-- DevTools Network tab shows the tracking request completing before the modal appears (confirms it was awaited)
-- Railway logs show tracking endpoint avg > 50ms
+**Prevention:**
+- Construct photo URLs entirely on the frontend: `${API_BASE}/photos/${expert.username}.jpg` where `API_BASE = import.meta.env.VITE_API_URL`. The Railway HTTPS URL is already in `VITE_API_URL` for production — never let the backend construct or return photo URLs.
+- Add `app.mount("/photos", StaticFiles(directory="/data/photos"), name="photos")` in `main.py`. The directory must be the Railway persistent volume mount path (typically `/data` or the `$VAR_DIR` equivalent).
+- Ensure `VITE_API_URL` in Vercel's environment variables starts with `https://` — verify this before photo phase begins.
+- Add CORS headers for the `/photos` static route: Railway's `StaticFiles` mount doesn't automatically inherit the CORSMiddleware applied to the FastAPI app. Serving static files through FastAPI's `StaticFiles` mount bypasses middleware. Solution: set `ALLOW_ORIGINS` in Nginx/proxy level, OR serve photos through a FastAPI endpoint (`GET /api/photos/{username}`) that returns a `FileResponse` — this route goes through CORSMiddleware normally.
 
-**Phase to address:**
-The phase implementing event tracking — the fire-and-forget pattern is non-negotiable and must be specified in the implementation plan before writing any click handler code.
+**Detection:**
+- Photos load in `localhost:5173` (local dev) but show broken image on Vercel production URL
+- DevTools Network tab shows photo requests as "blocked" or "mixed content" in production
+- `StaticFiles` CORS issue: browser console shows `No 'Access-Control-Allow-Origin' header` for photo requests
+
+**Phase to address:** Photo serving backend phase — verify HTTPS and CORS before any frontend photo rendering is built.
 
 ---
 
-### Pitfall 6: SQLite Migration Missing — New Columns Not Added to Existing Tables on Railway
+### Pitfall 5: Sage Navigation from Browse Triggers `useExplore` Before Store Is Fully Set — Stale Fetch
 
 **What goes wrong:**
-Adding tracking columns to `Conversation` (e.g., `sage_function_called`, `result_count`) or adding a new `UserEvent` model requires a database migration. The existing codebase uses `Base.metadata.create_all(engine)` at startup in `main.py`. `create_all` creates new tables but does not add columns to existing tables — SQLite has no automatic schema diffing. The `conversations` table already exists on Railway's persistent volume from v1.0. After deploying new `models.py` columns, `create_all` silently skips the existing table, and the first query touching a new column crashes with `OperationalError: no such column`.
+The intended flow: user asks Sage something on Browse → Sage dispatches filters to Zustand → Sage calls `navigate('/explore')` → Explorer mounts → `useExplore` fires with Sage's filters → grid shows Sage results. The actual flow: Sage dispatches filters → `navigate()` fires → React begins rendering Explorer → `useExplore`'s `useEffect` fires with the filter state at the moment of first render — which may still be the default state if Zustand's batch update hasn't flushed yet. `useExplore` fetches `/api/explore` with empty filters, returns all 530 experts, then Sage's filter dispatch arrives and triggers a second fetch. The user sees the grid flash "all experts" then re-filter to Sage results.
 
 **Why it happens:**
-Developers add a new field to `Conversation` in `models.py`, run `create_all` locally (which creates the column on a fresh local SQLite), and it works. On Railway, the persistent volume has an existing DB from v1 — `create_all` sees the table exists and skips it entirely. There is no Alembic or migration framework in this codebase, and the `main.py` lifespan has no migration logic.
+Zustand dispatches are synchronous and immediate in the current render cycle. But `navigate()` causes a React commit, and `useEffect` fires after the paint. If the Sage dispatch and the `navigate()` call happen in the same event handler microtask queue, React may batch the render with the pre-dispatch state before committing the post-dispatch state. This is React 18 automatic batching — state updates inside `Promise.then()` and `setTimeout` are batched, but the batch may not include the preceding synchronous state updates before navigate.
 
-**How to avoid:**
-- For new tables (e.g., `UserEvent`): `create_all` is sufficient. New tables don't exist yet and will be created on first deploy.
-- For new columns on existing tables: add a startup migration using raw SQLite `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` in `main.py`'s `lifespan` function, executed before the `yield`. The `IF NOT EXISTS` syntax makes it idempotent:
-  ```python
-  from sqlalchemy import text
-  with SessionLocal() as db:
-      db.execute(text("ALTER TABLE conversations ADD COLUMN sage_function_called TEXT"))
-      db.execute(text("ALTER TABLE conversations ADD COLUMN result_count INTEGER"))
-      db.commit()
-  ```
-  Note: SQLite's `ALTER TABLE ADD COLUMN` is idempotent by default if the column doesn't exist — if not, wrap in try/except for `OperationalError: duplicate column name`.
-- Keep a `MIGRATIONS.md` note of every `ALTER TABLE` run, indexed by version.
+**Consequences:**
+- Grid flashes "530 experts" briefly before showing Sage results when navigating from Browse
+- Two consecutive `/api/explore` fetches — wasteful on Railway
+- Sage-injected `sageMode: true` may be overwritten by the first fetch's `setResults` call
 
-**Warning signs:**
-- `OperationalError: no such column: conversations.X` in Railway logs immediately after deploy
-- Admin Searches tab stops loading after adding new tracking fields to `Conversation`
-- Local dev works but Railway deploy breaks (confirms it's a migration issue, not a code bug)
-- `create_all` output in logs says "table already exists" for `conversations`
+**Prevention:**
+- Set `sageMode: true` in Zustand BEFORE dispatching filters and before `navigate()`. `useExplore` has a guard: `if (sageMode) return` — this aborts the effect entirely when `sageMode` is true. Sage's direct result injection then sets results without competing with `useExplore`.
+- Order of operations in Sage navigation handler: `store.setSageMode(true)` → `store.setResults(experts, total, null)` → `navigate('/explore')`. Never dispatch filters first, navigate second without setting `sageMode`.
+- This is the same pattern already used in `useSage.ts` for in-page search: `setSageMode(true)` + `setResults` before any navigation.
 
-**Phase to address:**
-Any phase adding columns to existing models — the `ALTER TABLE` migration must be the first task in that phase, before any code that queries the new columns.
+**Detection:**
+- DevTools Network tab shows two GET `/api/explore` requests when navigating from Browse
+- Grid briefly shows all 530 experts on Explorer arrival before filtering
+- `sageMode` in Zustand DevTools is `false` during the first Explorer render
+
+**Phase to address:** Sage cross-page navigation phase — the `sageMode` guard in `useExplore` must be verified as active before implementing any navigation logic.
 
 ---
 
-### Pitfall 7: Sage Personality Loops Clarifying Questions — Grid Never Updates
+### Pitfall 6: Route Change from `/` to `/marketplace` to `/explore` Breaks Existing Bookmarks and Shared Filter URLs
 
 **What goes wrong:**
-A warmer Sage personality that asks follow-up clarifying questions can trap the user in a loop where Sage keeps asking instead of ever calling a function. The user answers the question, Sage asks another, user answers again, Sage asks a third. The grid never updates. The current system prompt already includes "If unsure, ask a clarifying question rather than guessing" — strengthening this instruction increases the clarification rate significantly, especially for short queries.
+The current routing has `/` → redirect to `/marketplace`, and `/marketplace` is the Explorer page. v3.0 changes `/` to Browse and `/explore` to Explorer (renaming `/marketplace`). Any user who bookmarked `https://tinrate.ai/marketplace?q=UX+designer&tags=ux` will land on a 404 after the route rename. Shared filter URLs (the `useUrlSync` feature) break for all existing shareable links.
 
 **Why it happens:**
-Gemini 2.5 Flash, when given explicit permission to ask clarifying questions, frequently prefers asking over committing to a function call — particularly for queries under 5 words or queries with multiple plausible interpretations. The model's default behavior is conservative: if the function arguments could be wrong, it asks. The warmer personality rewrite risks amplifying this by adding instructions like "make sure you understand what the user needs" which Gemini interprets as permission to ask more questions.
+`createBrowserRouter` in `main.tsx` is the sole source of truth for route-to-component mapping. Renaming `/marketplace` to `/explore` in that config removes the old route entirely unless an explicit redirect is added. React Router client-side redirects don't help if the user visits the URL directly — the browser requests `/marketplace` from Vercel, which serves `index.html` (SPA fallback), and React Router then 404s because `/marketplace` is no longer in the config.
 
-**How to avoid:**
-- Hard-limit clarification depth in the system prompt: "You may ask at most ONE clarifying question per conversation. After the user responds to any question, always take action by calling a function — never ask a second question."
-- Add a conversation context signal: include the current turn index in the system prompt context so Gemini knows to act on later turns: `f"This is turn {turn_number} of the conversation. After turn 2, always call a function."`.
-- In `useSage.ts`, track consecutive turns where `data.filters === null` (no function call). After 2 consecutive non-function turns, automatically add a frontend-generated message: "Let me show you some results based on what you've described." and trigger a reset of filters. This is a safety net, not the primary mechanism.
+**Consequences:**
+- All existing shared filter URLs break silently — users see a blank or error page
+- Any admin or partner who bookmarked `/marketplace` loses their link
+- SEO: if any links to `/marketplace` exist externally, they break
 
-**Warning signs:**
-- QA testing shows 3+ clarifying questions before any filter update for ambiguous queries
-- `data.filters === null` for more than 2 consecutive messages in the Sage panel
-- System prompt includes "make sure you understand" or "clarify before acting" phrases that Gemini interprets too broadly
+**Prevention:**
+- Keep `/marketplace` in the router config as a redirect to `/explore`: `{ path: '/marketplace', element: <Navigate to="/explore" replace /> }`. This handles direct URL visits and bookmark cases.
+- Keep the existing `{ path: '/', element: <Navigate to="/marketplace" replace /> }` in place until `/` becomes Browse, then switch it to render `<BrowsePage />` directly.
+- The `Navigate to="/explore" replace` pattern is already established in the codebase for admin routes (e.g., `{ path: 'search-lab', element: <Navigate to="/admin/tools" replace /> }`) — use the same pattern.
+- Test: after route changes, manually visit `/marketplace`, `/marketplace?q=test`, and `/` — all should resolve correctly.
 
-**Phase to address:**
-The phase implementing the system prompt rewrite — clarification depth must be a hard constraint in the prompt, not a soft guideline. Test with at least 10 ambiguous real-world queries before shipping.
+**Detection:**
+- Browser console shows React Router "No routes matched" warning after rename
+- Visiting `/marketplace` directly shows a blank page or React Router error boundary
+
+**Phase to address:** Route reorganization phase (whichever comes first in v3.0) — the redirect must be added in the same commit as the route rename.
 
 ---
 
-### Pitfall 8: Event Tracking Noise Makes Gap Analysis Misleading from Day One
+### Pitfall 7: Photo File Not Found at Railway Volume Path on First Deploy — Silent 404s
 
 **What goes wrong:**
-The Admin Gaps tab surfaces "unmet demand" — filter combos and queries with poor results. If tracking captures every intermediate filter state (e.g., user drags the rate slider through 50 positions before settling), the Gaps table is polluted with filter combos representing UI noise, not real user intent. An admin sees "€100–€200 + Finance" as a high-frequency gap signal when in reality one user dragged a slider. This makes the entire Gaps analysis untrustworthy on day one.
+Photos are ingested from a new CSV and stored on Railway's persistent volume. On first deploy, the `/data/photos/` directory may not exist on the volume, causing `StaticFiles(directory="/data/photos")` to raise a `RuntimeError` at startup that prevents the app from starting at all. Alternatively, photos are uploaded to `/data/photos/` but filenames don't match usernames in `metadata.json` — every photo request returns 404 but there's no console error on the frontend (broken image icon only).
 
 **Why it happens:**
-Filter events are tempting to track on every Zustand store mutation — it's the simplest implementation. But `useExplorerStore` dispatches `setRateRange` on every rate slider position (debounce in the UI component, but not in the store). Tracking every `setRateRange` dispatch would generate 10–100 events per slider interaction.
+Railway persistent volumes persist between deploys but start empty on first mount. The directory must be created programmatically in the lifespan if it doesn't exist. Additionally, if the CSV uses `Username` as the key and photos are named `john.doe.jpg` while the code expects `johndoe.jpg`, every filename lookup misses. Photo ingestion is a one-time data operation that must match the serving key exactly.
 
-**How to avoid:**
-- Track filter events only on "settled" state: after a debounce of 1000ms since the last filter mutation, not on every store write. Use a `useEffect` with `setTimeout` that resets on every filter change.
-- For the rate slider specifically: track only on drag-end (`onMouseUp`/`onTouchEnd` from `RateSlider.tsx`), not on every drag position.
-- Sage query tracking is the highest-signal event (high intent, explicit user action) — prioritize this as the primary gap signal and treat filter events as secondary.
-- In the admin Gaps tab backend: aggregate filter events by session (using a browser-generated `sessionId` or `Date.now()` bucketed to 30-minute windows) before computing gap frequency.
+**Consequences:**
+- App fails to start entirely if `StaticFiles(directory=...)` path doesn't exist on Railway
+- All photos show broken icons if filename convention doesn't match the lookup key
+- Billboard hero shows no image — the most visually prominent failure in the UI
 
-**Warning signs:**
-- Gaps table shows dozens of rate-range combinations as high-frequency signals
-- A single rate slider drag generates > 10 tracking events in the Network tab
-- Gap analysis shows rate filters as the dominant unmet demand category (almost always noise)
-- `user_events` table grows by 100+ rows per active user session
+**Prevention:**
+- In `main.py` lifespan, add: `os.makedirs("/data/photos", exist_ok=True)` before `app.mount("/photos", StaticFiles(directory="/data/photos"), ...)`. `exist_ok=True` makes this idempotent across all deploys.
+- Establish filename convention as `{username.lower()}.jpg` (all lowercase, no spaces) and enforce it at photo ingestion time. The `username` field in `metadata.json` uses values like `"johndoe"` already — use that directly.
+- Add a startup health check log: count files in `/data/photos/` and log the count. Zero files on first deploy is expected; log it as a warning not an error.
+- Never rely on `StaticFiles` auto-discovery to surface missing files — add an admin endpoint `GET /api/admin/photos/status` that returns `{total_experts: N, photos_found: M, missing: [username, ...]}` for the first 20 missing.
 
-**Phase to address:**
-The phase implementing event tracking — debounced settled-state tracking must be the default design, not an optimization added after the fact.
+**Detection:**
+- Railway logs show `RuntimeError: directory '/data/photos' does not exist` on startup
+- All photos return 404 in DevTools Network tab after the app starts
+- `total_experts: 530, photos_found: 0` from the status endpoint
+
+**Phase to address:** Photo ingestion backend phase — the `os.makedirs` guard must be the first task, before mounting `StaticFiles` or writing any ingest code.
 
 ---
 
-### Pitfall 9: Cold Start — Admin Gaps Tab Is Empty and Looks Broken on Day One
+### Pitfall 8: Horizontal Scroll Row Paint Jank from Non-Composited Properties
 
 **What goes wrong:**
-The Admin Gaps tab showing "unmet demand" and "expert exposure distribution" requires collected tracking data to be useful. On day 1 of v2.3 deployment, there are zero click events, zero Sage query tracking events, and zero filter events. The admin opens the Gaps tab and sees either an empty table or a loading error. Admins interpret empty as "broken" and file a report.
+A naively implemented horizontal scroll row that animates card entrance with `opacity` + `translateY` on each card will trigger main thread paint on every scroll event. If 8–12 cards are in the DOM simultaneously (all rendered, not virtualized), and each card has `transition: all 0.3s ease` or a Framer Motion `AnimatePresence` exit animation, scrolling the row causes every card to repaint on the main thread. On mobile or lower-end hardware, this produces visible jank at 30fps or below.
 
 **Why it happens:**
-Any analytics feature built on newly-collected data has this structural cold-start problem. The UX of an empty admin page is underestimated — admins have no baseline for what "normal" looks like on day one.
+`overflow-x: auto` horizontal scroll containers do not virtualize — all cards are in the DOM. CSS `transform` and `opacity` are compositor-only and cheap. But `box-shadow`, `filter`, `border-radius` with `overflow: hidden`, and `background-color` transitions all trigger main-thread paint. The existing `ExpertCard` uses a CSS `box-shadow` hover effect which is fine for a stationary grid — but inside a scrolling row with many cards, scroll-triggered repaints compound.
 
-**How to avoid:**
-- Design the Gaps tab for empty state explicitly: show "Tracking started [timestamp] — insights will appear after ~50 page views" as the empty state message. Never show an empty table or loading spinner that persists indefinitely.
-- Use existing data for the initial version: the `conversations` table already has gap data (`top_match_score < GAP_THRESHOLD`, `response_type = 'clarification'`) from the v1/v2 chat endpoint. This can populate a "Sage Gaps" section of the Gaps tab immediately on day one without any new tracking data.
-- For expert exposure distribution: the `conversations.response_experts` JSON column already stores which experts were returned in chat responses. Backfill the exposure chart from this data for the initial launch.
-- Add a `data_since` field to every Gaps API response so the frontend can show "Event tracking since: [date]" to set admin expectations.
+**Consequences:**
+- Horizontal scroll feels sluggish on mobile (iPhone SE, older Android)
+- Cards "blur" or "stutter" during fast scroll
+- Chrome DevTools Performance tab shows "Recalculate Style" and "Layout" events on every scroll frame
 
-**Warning signs:**
-- Admin opens Gaps tab with empty `user_events` table and sees no helpful context
-- Charts render with 1–3 data points showing misleadingly large percentage values
-- No empty state UI — just an empty `<table>` or a null error
+**Prevention:**
+- Use `will-change: transform` on the scroll container (not individual cards) to promote the container to its own compositor layer. Do NOT use `will-change` on every card — this creates too many layers and increases GPU memory.
+- Keep card hover effects to `transform` (scale, translateY) and `opacity` only — never animate `box-shadow`, `filter`, or `background-color` on scroll-adjacent elements.
+- Disable card hover effects entirely during scroll: add a CSS class `is-scrolling` to the row container via a `scroll` event listener with a 150ms debounce, and apply `pointer-events: none` on cards while scrolling. Re-enable after scroll ends.
+- For card entrance animations: use CSS `@keyframes` with `opacity` and `transform` only — not Framer Motion `AnimatePresence` (which adds JS overhead per card).
 
-**Phase to address:**
-The phase implementing the Admin Gaps tab frontend — empty state UX must be built before the data-loading logic. Build the empty state first, then layer in data.
+**Detection:**
+- Chrome DevTools Performance tab shows "Layout" or "Paint" events during horizontal scroll
+- Scroll frame rate drops below 60fps in DevTools overlay
+- Disabling all card CSS transitions makes scroll feel smooth — confirms a paint trigger
+
+**Phase to address:** Browse page horizontal scroll implementation phase — performance must be validated on a mobile viewport before shipping, not after.
 
 ---
 
-### Pitfall 10: Reactive Zustand Selector vs `getState()` Snapshot Used Incorrectly for Proactive Nudge
+## Moderate Pitfalls
 
-**What goes wrong:**
-The existing `useSage.ts` uses `useExplorerStore.getState()` to snapshot filter state at the time of the async Gemini call. This is the correct pattern for async handlers (documented in Phase 18 as "async handler captures store state at call time; reactive selectors cause stale closure in async context"). But the proactive nudge must observe `experts.length` reactively as it changes over time. If the nudge logic is placed inside `handleSend` (which uses `getState()` snapshots), it will only see the store state at the moment the user sends a message — not when the grid becomes empty later due to a filter change.
-
-**Why it happens:**
-The `getState()` pattern is established and works well for its intended purpose. When adding the nudge feature, the natural place to put the trigger is inside `useSage`'s `handleSend` — but that only fires on user input, not on store state changes. Copy-pasting the `getState()` snapshot pattern into a reactive observer context produces a hook that never observes state changes between user messages.
-
-**How to avoid:**
-- The nudge trigger must live in a separate `useEffect` that uses reactive Zustand selectors, not `getState()`. Place this in a `useSageNudge` hook or directly in `SagePanel`:
-  ```ts
-  const experts = useExplorerStore(s => s.experts)   // reactive
-  const loading = useExplorerStore(s => s.loading)   // reactive
-  const total = useExplorerStore(s => s.total)       // reactive
-  const isStreaming = useExplorerStore(s => s.isStreaming)
-
-  useEffect(() => {
-    if (!hasFetchedOnce.current) return
-    if (loading || isStreaming || nudgeSent) return
-    if (experts.length === 0 && total === 0) {
-      // fire nudge
-    }
-  }, [experts.length, loading, total, isStreaming, nudgeSent])
-  ```
-- Reserve `getState()` exclusively for async handlers (inside `useCallback` or `async` functions). Use reactive selectors for everything that reacts to state changes.
-- Enforce this in code review: any `getState()` call outside of an async handler is a red flag.
-
-**Warning signs:**
-- Nudge never fires even when the grid is visibly empty for > 2 seconds
-- Nudge fires once and then never again after the user sees another empty state
-- The nudge logic lives inside `handleSend` or another user-triggered handler instead of a `useEffect`
-
-**Phase to address:**
-The phase implementing the proactive nudge — the reactive-vs-snapshot distinction must be called out explicitly in the implementation spec.
+Mistakes that degrade UX or require targeted fixes but don't cause complete breakdowns.
 
 ---
 
-## Technical Debt Patterns
+### Pitfall 9: SageFAB `prevFilterKey` Ref Fires Spurious Glow on Browse Page
 
-| Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
-|----------|-------------------|----------------|-----------------|
-| Track all event types in one `user_events` table | One table, one endpoint | Querying event-type subsets requires WHERE filters; schema evolution harder as event types grow | Acceptable for v2.3 at low volume |
-| Store Sage search results in `pilotSlice` instead of a dedicated `sageResultsSlice` | No new slice file | Pilot slice grows; risk of accidentally persisting pilot state | Acceptable if `sageResults` is explicitly excluded from `partialize` |
-| Use `Date.now()` bucketed to 30-min windows as session ID for event deduplication | Zero setup | Multi-tab users create separate sessions; can't distinguish one user from another across sessions | Acceptable for anonymous users in v2.3 |
-| Track filter events on every `useEffect` fire without debounce | Simple implementation | DB grows 50–100x faster; Gaps analysis becomes noise immediately | Never — debounce is required from day one |
-| `search_experts` function dispatches to Zustand instead of calling backend directly | Eliminates race condition with `useExplore` | Sage panel cannot show results independently from the grid | Acceptable tradeoff — grid is the authoritative result display |
+**What goes wrong:**
+`SageFAB.tsx` tracks filter changes via `prevFilterKey = useRef<string | null>(null)`. The first render sets `prevFilterKey.current` to the current filter state and skips glowing. But when the user navigates from Browse to Explorer, `SageFAB` stays mounted (it's a persistent UI element across both pages). On Explorer's first render, `useUrlSync` may dispatch filter state that changes `query`, `rateMin`, `rateMax`, or `tags`. `SageFAB` sees the filter key change — from whatever Browse had — and fires the blue "filter change" glow. The user sees the FAB glow unprompted on Explorer arrival.
+
+**Why it happens:**
+`prevFilterKey.current` was initialized on Browse with Browse's filter state. The URL sync on Explorer mount may change filter state. The FAB's `useEffect` fires after the state change with `prevFilterKey.current !== filterKey` — triggering a glow. The `null` initialization pattern in `SageFAB` only prevents the first mount from glowing; it doesn't handle cross-page state changes.
+
+**Prevention:**
+- Reset `prevFilterKey.current` to the current filter key whenever the route changes. Use `useLocation()` from React Router in `SageFAB` and add a `useEffect([location.pathname])` that resets `prevFilterKey.current = null` to reinitialize on each page.
+- Alternatively: only mount `SageFAB` inside each page component (not at the router level) so it remounts on navigation and gets a fresh `prevFilterKey` initialization.
+
+**Detection:**
+- FAB glows blue immediately on Explorer arrival after navigating from Browse
+- No filter change was made by the user — the glow was triggered by URL sync
+
+**Phase to address:** Browse page phase — FAB must be tested across both pages before shipping.
+
+---
+
+### Pitfall 10: Aurora Transition Animation Blocks Perceived Navigation Speed
+
+**What goes wrong:**
+A full-screen aurora mesh transition between Browse and Explorer that takes 600–800ms to complete feels slow if the destination page's content isn't ready when the animation ends. Users experience two waits: one for the transition animation, one for the grid to load. The transition gives the illusion of "preparing content" but if Explorer's first data fetch takes 300ms (normal Railway latency), the total wait is 1100ms — well above the 300ms threshold for perceived instantaneity.
+
+**Why it happens:**
+Page transition animations are a UI layer over network latency. If the transition is purely cosmetic (not data-loading), the user waits for both. Common mistake: implement the transition first, then discover that data fetching hasn't been parallelized with the animation.
+
+**Prevention:**
+- Pre-fetch Explorer data on Browse before navigating: when Sage determines it will navigate to Explorer, trigger a background `useExplore`-equivalent fetch while still on Browse. By the time the aurora transition completes, Explorer's data is already in the Zustand store.
+- This is already possible because `useExplorerStore` is shared — call `store.setResults(experts, total, null)` from Sage before calling `navigate()`. Explorer then renders with data immediately, no grid loading state.
+- Keep the aurora transition to 400ms maximum. A longer transition causes perceived lag regardless of data readiness.
+
+**Detection:**
+- After transition ends, user sees loading skeleton for 300–500ms before results appear
+- Total time from Sage button click to visible results is > 1000ms
+
+**Phase to address:** Sage cross-page navigation and aurora transition phase — data must be in the store before `navigate()` fires, not after.
+
+---
+
+### Pitfall 11: Billboard Hero Expert Selection Is Static — Becomes Stale Without Refresh Logic
+
+**What goes wrong:**
+The Billboard Hero shows "algorithmically featured" expert. If the algorithm runs once at startup (e.g., picks the highest `findability_score` expert at app load) and caches the result in memory, the same expert is featured for hours or days until Railway restarts. If that expert has a poor photo or is deactivated, the hero shows stale content with no way to refresh without a Railway redeploy.
+
+**Why it happens:**
+Simplest implementation: select the featured expert in the lifespan at startup, store in `app.state.featured_expert`. This works but is static.
+
+**Prevention:**
+- Serve the featured expert from a dedicated `GET /api/browse/hero` endpoint that runs the selection query fresh on each request (with a 1-minute `Cache-Control` response header to avoid hammering Railway on every page load).
+- The selection algorithm should be deterministic for a given time window: `selected_expert = sorted_by_findability[hour_of_day % len(experts)]` cycles through top experts hourly. No state stored on the server.
+- Alternatively: make the featured expert configurable from the admin panel — add a `featured_expert_username` setting to the existing `settings` table (already built in v1.2). Admin can override the algorithm pick.
+
+**Detection:**
+- Same expert featured for 24+ hours without admin intervention
+- Expert has `findability_score: null` or a placeholder photo but is still shown as hero
+
+**Phase to address:** Browse page backend phase — decide static vs. dynamic hero selection before writing any hero component.
+
+---
+
+### Pitfall 12: Adding `photo_url` to Expert Interface Breaks All Existing Components That Destructure Expert
+
+**What goes wrong:**
+The `Expert` interface in `resultsSlice.ts` defines the shape of every expert object throughout the codebase. Adding `photo_url?: string` is backwards compatible. But if it's added as required (`photo_url: string`) or if any component starts requiring it, TypeScript will show errors across `ExpertCard.tsx`, `SageMessage.tsx` (if it renders experts), admin expert list, and any other component that constructs a partial Expert object in tests or mock data. Fixing TypeScript errors one-by-one without a plan is error-prone under time pressure.
+
+**Why it happens:**
+The `Expert` interface is a shared contract. New required fields force updates to every construction site. Mock data and test fixtures are the most likely to miss updates.
+
+**Prevention:**
+- Always add `photo_url` as optional: `photo_url?: string | null`. Never required.
+- Add a `photoUrl` utility function used everywhere: `function expertPhotoUrl(expert: Expert): string | null { return expert.photo_url ?? null }`. Centralizes the "does this expert have a photo?" logic and makes it easy to change the URL construction strategy later.
+- Update the backend's `/api/explore` response to include `photo_url` from the start — even for experts without photos (return `null`). Avoids a situation where some endpoints return the field and others don't.
+
+**Detection:**
+- TypeScript errors across multiple files after adding `photo_url` to the `Expert` interface
+- Some expert cards show photos, others silently fail (inconsistent field presence)
+
+**Phase to address:** Photo serving phase — add `photo_url?: string | null` to the interface immediately and propagate through the backend response.
+
+---
+
+### Pitfall 13: `useUrlSync` Runs on Browse Page If SageFAB or Any Component Imports It
+
+**What goes wrong:**
+`useUrlSync` is only called in `MarketplacePage.tsx` today. If Browse page uses `useExplorerStore` for filter state (to drive horizontal category rows), and some developer adds `useUrlSync()` to Browse by mistake or includes a component that calls it, Browse's URL will be overwritten with filter params every time a category is selected. Browse page should have no URL query params — its state is purely category/row-level.
+
+**Why it happens:**
+`useUrlSync` is a well-established pattern in the codebase. A developer building Browse page might add it "just in case" thinking it's harmless. It's not — it will add `?q=&rate_min=0&rate_max=5000` to the Browse URL on every filter state change, breaking the clean `/` URL for Browse.
+
+**Prevention:**
+- Do not call `useUrlSync` in `BrowsePage` or any component mounted only on Browse. The hook is an Explorer-specific concern.
+- Add a JSDoc comment to `useUrlSync.ts`: `/** Only call from MarketplacePage (Explorer). Do not use on BrowsePage. */`
+- Verify in code review: `grep -r "useUrlSync" frontend/src/` should only appear in `MarketplacePage.tsx` (now `ExplorePage.tsx`) and the hook definition itself.
+
+**Detection:**
+- Browse page URL shows `?q=&tags=` after selecting a category row
+- Navigating to Browse from Explorer appends Explorer's filter params to the Browse URL
+
+**Phase to address:** Browse page phase — verify `useUrlSync` is not imported in any Browse-related component before shipping.
+
+---
+
+## Minor Pitfalls
+
+---
+
+### Pitfall 14: Horizontal Scroll Containers on iOS Safari Break with `overflow-x: auto` Without `-webkit-overflow-scrolling`
+
+**What goes wrong:**
+On iOS Safari (pre-iOS 13), `overflow-x: auto` scroll containers don't have momentum scrolling by default — they scroll jerkily. Modern iOS (13+) enables it automatically, but the `-webkit-overflow-scrolling: touch` property is still recommended for maximum compatibility. Without it, horizontal scroll rows feel sticky and unresponsive on older iOS devices.
+
+**Prevention:**
+Add `overflow-x-auto` (Tailwind) plus the CSS property in global styles: `.horizontal-scroll-row { -webkit-overflow-scrolling: touch; scrollbar-width: none; }`. Hide the scrollbar on webkit: `.horizontal-scroll-row::-webkit-scrollbar { display: none; }` for the Netflix-clean look.
+
+**Phase to address:** Browse page horizontal scroll implementation.
+
+---
+
+### Pitfall 15: Billboard Hero Renders with 404 Photo Before API Responds — Flash of Broken Image
+
+**What goes wrong:**
+If the hero expert is fetched from the API after component mount, there's a render cycle where `photo_url` is `undefined` and the `<img>` renders with an empty `src`. Browsers show a broken image icon for that frame. Even at 50ms API latency, this flickers visibly at 60fps.
+
+**Prevention:**
+- Always render a placeholder (CSS background color or a skeleton shimmer) when `photo_url` is null or the fetch is in flight.
+- Use the `loading="lazy"` attribute on non-hero images. Use `loading="eager"` on the billboard hero image and add a `<link rel="preload">` in `index.html` if the hero image URL is known at build time (it won't be — so use the placeholder pattern instead).
+- Use `onError` handler on `<img>` to swap to a CSS fallback if the photo 404s.
+
+**Phase to address:** Billboard hero implementation phase.
+
+---
+
+### Pitfall 16: Category Row Data (`/api/browse/categories`) Makes N+1 Queries if Not Pre-Aggregated
+
+**What goes wrong:**
+Each horizontal category row (trending tags, recently joined, most clicked, highest findability) requires a different sort/filter of the expert pool. If the Browse page calls a separate API endpoint for each row — 4 endpoints × 530 experts each — that's 4 database queries plus 4 FAISS operations on every Browse page load. At 100 concurrent users, this becomes 400 simultaneous queries against Railway's SQLite.
+
+**Why it happens:**
+The simplest implementation: reuse `/api/explore` for each row with different params. Works fine in dev, becomes a bottleneck at scale.
+
+**Prevention:**
+- Serve all Browse category data from a single `GET /api/browse` endpoint that returns all rows in one response: `{ trending: [...], recently_joined: [...], most_clicked: [...], highest_findability: [...] }`. One endpoint, one request from the frontend.
+- The backend runs 4 sorted SQLite queries and returns top 10–20 experts per category. No FAISS needed for Browse rows (category rows don't require semantic search). 4 simple SQLite queries in series is < 50ms.
+- Cache the response with a 5-minute TTL using an in-memory dict (`app.state.browse_cache`): `{ data: ..., expires_at: datetime }`. Most Browse category content doesn't change in 5 minutes.
+
+**Phase to address:** Browse page backend phase.
+
+---
+
+## Phase-Specific Warnings
+
+| Phase Topic | Likely Pitfall | Mitigation |
+|-------------|----------------|------------|
+| Route reorganization | Breaking `/marketplace` bookmarks and shareable filter URLs | Add `<Navigate to="/explore" replace />` for old route before removing it |
+| Browse page (UI) | Horizontal scroll jank on mobile | `will-change: transform` on container; test on iPhone SE before merge |
+| Browse page (UI) | CLS from photos without fixed dimensions | `aspect-ratio` CSS on all card image slots before any photo code |
+| Browse page (backend) | Railway `StaticFiles` startup crash on missing `/data/photos` dir | `os.makedirs("/data/photos", exist_ok=True)` in lifespan before mount |
+| Photo serving | Mixed content HTTPS/HTTP block | Construct photo URLs on frontend from `VITE_API_URL`; verify HTTPS in Railway env |
+| Photo serving | CORS block on `StaticFiles` mount | Serve photos via `FileResponse` endpoint or configure CORS at proxy level |
+| Sage cross-page navigation | `resetPilot()` wiping conversation on Explorer mount | Add `navigatedFromBrowse` flag or remove unconditional `resetPilot()` |
+| Sage cross-page navigation | `useExplore` race before `sageMode` flag is set | Set `sageMode: true` before `navigate()` — existing guard in `useExplore` blocks competing fetch |
+| Sage cross-page navigation | `useUrlSync` overwriting Sage filter state on Explorer mount | Pass filters as URL params in `navigate()` call, or use `sagePendingNavigation` flag |
+| Aurora transition | Perceived lag if data not pre-fetched | Store results in Zustand before calling `navigate()` — user arrives at loaded page |
+| Expert interface expansion | TypeScript errors across codebase from new required field | Add `photo_url?: string | null` (optional) to `Expert` interface; never required |
+| SageFAB cross-page | Spurious filter glow on page arrival | Reset `prevFilterKey.current` on route change using `useLocation()` |
 
 ---
 
@@ -288,13 +409,17 @@ The phase implementing the proactive nudge — the reactive-vs-snapshot distinct
 
 | Integration | Common Mistake | Correct Approach |
 |-------------|----------------|------------------|
-| Gemini function calling with 2 functions | Declaring both in same `Tool` with overlapping descriptions | Write mutually exclusive semantic descriptions; test against 20 real queries before shipping |
-| Zustand + proactive nudge | Placing nudge trigger inside `handleSend` using `getState()` snapshot | Nudge trigger lives in a `useEffect` using reactive `useExplorerStore(s => s.experts)` selector |
-| SQLite `ALTER TABLE` on Railway | Adding a column to `models.py` and relying on `create_all` | Add `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` to `main.py` lifespan before the `yield` |
-| ExpertCard click tracking | Adding `await fetch(...)` before `onViewProfile` in the click handler | `void fetch(...)` or `navigator.sendBeacon` — never `await` in click paths |
-| VirtuosoGrid + new tracking wrapper | Wrapping `ExpertCard` in a new `div` inside `itemContent` that adds props | Track via the existing `onViewProfile` prop; do not add new DOM wrappers inside `itemContent` — VirtuosoGrid's fixed-height assumption breaks |
-| Framer Motion FAB pulse + gesture props | Adding `animate={{ scale: loop }}` on the same `motion.button` that has `whileHover={{ scale: 1.05 }}` | Separate glow into a wrapper `motion.div`; keep `scale` exclusively on gesture props of inner `motion.button` |
-| FastAPI event tracking endpoint | Using `def` (synchronous) for the tracking endpoint; SQLite write blocks the event loop | Use `async def` with `await loop.run_in_executor` (same pattern as `explore.py`) |
+| Shared Zustand store across Browse + Explorer | Calling `resetPilot()` unconditionally on Explorer mount | Guard with `navigatedFromBrowse` flag; skip reset if navigating from Browse |
+| `useUrlSync` on Browse page | Calling `useUrlSync()` in `BrowsePage` or any Browse component | Keep `useUrlSync` exclusively in the Explorer page component |
+| Sage `navigate()` from Browse | Dispatching filters then navigating without setting `sageMode: true` | `setSageMode(true)` → `setResults(...)` → `navigate('/explore')` — never navigate without sageMode guard |
+| FastAPI `StaticFiles` for photos | Mounting before creating the directory | `os.makedirs(exist_ok=True)` before `app.mount(...)` in lifespan |
+| FastAPI `StaticFiles` CORS | Expecting CORSMiddleware to cover static files | Static files bypass middleware; serve via `FileResponse` endpoint, or configure CORS at Railway proxy level |
+| Expert photos URL construction | Building photo URLs in backend JSON response | Build photo URLs on frontend from `VITE_API_URL` to guarantee HTTPS |
+| Horizontal scroll card images | Unknown image dimensions at render time | Fixed `aspect-ratio` on image wrapper; `object-fit: cover` on `<img>` |
+| Aurora page transition | Running animation then loading data | Store data in Zustand before `navigate()` so destination page renders immediately |
+| `/marketplace` route rename | Removing old route from `createBrowserRouter` | Keep old route as `<Navigate to="/explore" replace />` in same commit |
+| Billboard hero selection | Picking featured expert once at startup | Serve from API endpoint with time-window algorithm; do not cache in `app.state` |
+| `photo_url` on `Expert` interface | Adding as required field | Always `photo_url?: string | null` — optional, with null for experts without photos |
 
 ---
 
@@ -302,49 +427,29 @@ The phase implementing the proactive nudge — the reactive-vs-snapshot distinct
 
 | Trap | Symptoms | Prevention | When It Breaks |
 |------|----------|------------|----------------|
-| Tracking every Zustand filter mutation | Hundreds of DB writes per session; Railway SQLite I/O lock contention | Debounce 1000ms after last mutation; settled-state pattern | From day 1 with any active user |
-| Sage `search_experts` calling `/api/explore` while `useExplore` fires simultaneously | Two concurrent requests; grid flickers; AbortController kills the wrong request | Single source of truth: `useExplore` owns all grid fetches; Sage dispatches filter state only | Any time a Sage search is triggered |
-| Framer Motion continuous loop animation on FAB while VirtuosoGrid is scrolling | Jank on mobile — browser paints FAB animation + virtualizes grid simultaneously | Use CSS `@keyframes` for the glow ring; keep Framer Motion only for the gesture `scale` | Immediately on mobile/low-end hardware |
-| Loading all `user_events` rows for Gaps tab without aggregation | Admin Gaps tab hangs after > 10k events | Aggregate at query time with `GROUP BY`; add index on `(event_type, created_at)` | After ~30 days of active tracking |
-| `useEffect` nudge with broad dependency array (all store state) | Re-evaluates nudge on every store mutation; performance regression | Narrow deps to `[experts.length, loading, total, isStreaming]` only | From day 1 if implemented with broad deps |
-
----
-
-## Security Mistakes
-
-| Mistake | Risk | Prevention |
-|---------|------|------------|
-| Tracking endpoint accepts arbitrary `event_type` strings from client | Admin Gaps tab gets attacker-injected event categories | Validate `event_type` against an explicit allowlist (`["card_click", "sage_query", "filter_change"]`) in the Pydantic model |
-| Tracking endpoint has no rate limiting | Spam tracking writes from bots or accidental loops inflate Gap analysis and grow SQLite storage | Add a per-IP request counter in Railway's NGINX config or a simple in-memory rate limiter; 20 req/s per IP is sufficient |
-| Storing raw user queries in `user_events` with no length cap | Adversarially long queries bloat SQLite storage | Cap `query` field at 2000 chars in the Pydantic model (matches the existing `/api/pilot` limit) |
-| Admin Gaps tab exposure distribution endpoint exposed without auth | Expert popularity/exposure data visible to anyone | Wrap in the existing `_require_admin` dependency (already on all `/api/admin/*` routes) — no new security work needed |
-
----
-
-## UX Pitfalls
-
-| Pitfall | User Impact | Better Approach |
-|---------|-------------|-----------------|
-| Sage shows search results in panel AND grid updates simultaneously, with different results momentarily | Users don't know where to look; conflicting result sets break trust | Show only result count + "Check the grid for all results" in Sage panel; let grid be the authoritative display |
-| Proactive nudge fires while user is mid-typing | Sage interrupts the user's search flow with unsolicited help | Only fire nudge when `loading === false` and `experts.length === 0` for at least 1500ms — well after typing debounce |
-| Sage asks "what kind of expert are you looking for?" when user already has a text query active | Sage ignores the user's active query context; feels stupid | `current_filters.query` is already passed in the system prompt — the warmer personality rewrite must preserve this context injection |
-| FAB pulse animation fires at unpredictable times | Users learn to ignore the FAB; animation loses meaning | Pulse should have explicit semantic triggers: "new results available" or "empty state detected" — not random idle pulses |
-| Empty Gaps tab on day 1 confuses admin into thinking tracking is broken | Support ticket; feature perceived as non-functional | Explicit empty state with "Tracking started [timestamp]" and estimated time to first insights |
+| N+1 API calls for Browse category rows | 4 separate API requests on every Browse page load | Single `/api/browse` endpoint with all rows in one response | Immediately; 4× Railway latency on every Browse load |
+| Non-composited CSS properties on horizontal scroll cards | Scroll jank at < 60fps on mobile | Only animate `transform` and `opacity`; avoid `box-shadow` transitions during scroll | On mobile/low-end hardware from day 1 |
+| All horizontal scroll cards in DOM simultaneously | Memory grows with long rows; many images loading at once | Limit each row to 10–15 items (not all 530 experts) with a "View all" link to Explorer | With long rows on low-memory devices |
+| `will-change: transform` on every card | Too many GPU compositor layers; GPU memory exhaustion | Apply `will-change` only to the scroll container, not individual cards | On mobile with many rows |
+| Aurora transition delays data rendering | Perceived wait of 1000ms+ | Pre-fetch destination data before starting transition | Any time network latency > 200ms |
+| Photos without `aspect-ratio` in scroll row | CLS; row height unstable during photo load | Fixed `aspect-ratio` on all image containers | From first page load on slow connections |
 
 ---
 
 ## "Looks Done But Isn't" Checklist
 
-- [ ] **Sage dual functions:** Tested with 20+ real user queries from the existing `conversations` table in SQLite to verify correct function routing — check `fn_call.name` in Railway logs
-- [ ] **Grid sync:** DevTools Network tab confirms only ONE `/api/explore` request fires when Sage sends a message (not two simultaneous requests)
-- [ ] **Proactive nudge:** Does NOT fire on page load before first fetch resolves; does NOT fire twice in one session for the same empty state; does NOT fire while `isStreaming === true`
-- [ ] **FAB animation:** `whileHover` scale still works while pulse is active; tested on mobile Safari (gesture + animation coexistence)
-- [ ] **SQLite migration:** New `user_events` table (or added columns) confirmed to exist on Railway after first deploy — check Railway logs for `OperationalError` in first 60 seconds
-- [ ] **Fire-and-forget tracking:** Zero `await` in any click handler path; card click → modal open latency is < 16ms in DevTools Performance tab
-- [ ] **Event tracking debounce:** Rate slider drag generates exactly 1 tracking event per settled position, not per pixel of movement — confirmed in DevTools Network tab
-- [ ] **Admin Gaps tab empty state:** Opening the tab with zero `user_events` rows shows a helpful message with tracking start timestamp, not an empty table or JS error
-- [ ] **Tracking endpoint security:** `event_type` field is validated against an explicit allowlist; any arbitrary string returns HTTP 422
-- [ ] **Personality depth limit:** Sage asks at most 1 clarifying question before calling a function — confirmed across 10 ambiguous test queries
+- [ ] **`resetPilot()` guard:** Navigate from Browse → Explorer → Sage panel still shows the conversation from Browse. Messages are NOT cleared on Explorer arrival.
+- [ ] **`sageMode` before navigate:** DevTools Network tab shows zero GET `/api/explore` requests on Explorer mount when navigating from Sage (sageMode blocks the fetch).
+- [ ] **Photo HTTPS:** Open the Vercel production URL in an Incognito window — photos load. DevTools Security tab shows no mixed content warnings.
+- [ ] **Photo CORS:** Photos load from Vercel production domain without a `No 'Access-Control-Allow-Origin'` error in DevTools console.
+- [ ] **Photo directory startup:** Railway logs show no `RuntimeError` for missing photos directory on first deploy after new photo code lands.
+- [ ] **Horizontal scroll performance:** Chrome DevTools Performance tab on a throttled Mobile profile shows no "Layout" or "Paint" events during horizontal scroll of category rows.
+- [ ] **CLS:** Lighthouse score for Browse page shows CLS < 0.1 with images loading on a simulated slow connection.
+- [ ] **Route redirect:** Visiting `/marketplace` directly in the browser after the route rename resolves to Explorer (not a blank page or 404).
+- [ ] **Spurious FAB glow:** Navigate from Browse to Explorer — FAB does NOT glow blue on arrival. Glow only fires on deliberate filter changes.
+- [ ] **Browse URL clean:** The Browse page URL is exactly `/` with no query params after selecting any category row.
+- [ ] **Billboard hero photo:** Hero shows a placeholder/skeleton while photo is loading — never a broken image icon.
+- [ ] **Aurora transition speed:** Browse → Explorer transition completes in ≤ 400ms total; Explorer content is visible immediately after.
 
 ---
 
@@ -352,50 +457,35 @@ The phase implementing the proactive nudge — the reactive-vs-snapshot distinct
 
 | Pitfall | Recovery Cost | Recovery Steps |
 |---------|---------------|----------------|
-| Wrong function chosen by Gemini in production | LOW | Update `APPLY_FILTERS_DECLARATION` and `SEARCH_EXPERTS_DECLARATION` descriptions in `pilot_service.py`; push to `main` — Railway auto-deploys; no DB changes needed |
-| Grid sync race condition causing flickering | MEDIUM | Add `sageResults: Expert[]` to `pilotSlice`; remove any `setResults` calls from `useSage`; redeploy — requires frontend refactor |
-| Proactive nudge fires repeatedly in production | LOW | Add `nudgeSent` boolean to `pilotSlice` with correct guards; redeploy |
-| FAB animation conflict freezing hover | LOW | Move glow to wrapper `div`; CSS or Framer Motion property separation; redeploy |
-| SQLite missing column crash on Railway | HIGH | Service is down until redeploy completes (~2–3 min on Railway); add `ALTER TABLE` to `main.py` lifespan; push to `main`; no data loss |
-| Tracking noise polluting Gaps analysis | MEDIUM | Add debounce to tracking hooks; back-fill requires running a DELETE on noisy `user_events` rows via Railway shell or a one-off admin endpoint |
-| Sage loops clarifying questions | LOW | Tighten system prompt with explicit depth limit; push to `main` — Railway auto-deploys `pilot_service.py`; one-line change |
-| Cold-start admin confusion on day 1 | LOW | Add empty state copy to `GapsPage.tsx`; backfill exposure chart from `conversations.response_experts`; no schema changes needed |
-| Event tracking endpoint too slow | MEDIUM | Switch to `sendBeacon` on frontend; add `run_in_executor` to tracking endpoint on backend; both are small isolated changes |
-
----
-
-## Pitfall-to-Phase Mapping
-
-| Pitfall | Prevention Phase | Verification |
-|---------|------------------|--------------|
-| Gemini wrong function routing | Phase: Sage dual function implementation | QA: 20 queries from `conversations` table; assert `fn_call.name` in logs for each |
-| Grid sync race condition | Phase: Sage dual function implementation | DevTools: single `/api/explore` request per Sage message |
-| Proactive nudge fires at wrong time | Phase: Sage personality upgrade | QA: page load, rapid typing, returning to empty state twice — nudge fires max once per session |
-| FAB animation + gesture conflict | Phase: Sage personality / FAB reactions | QA: hover while pulse active on Chrome and Safari mobile; scale still responds |
-| Fire-and-forget tracking blocks click | Phase: Event tracking implementation | Performance: card click → modal open < 16ms in DevTools |
-| SQLite migration crash | Phase: Event tracking backend | Post-deploy: Railway log scan for `OperationalError` in first 60s; smoke test new table with INSERT |
-| Sage personality loops questions | Phase: Sage personality upgrade | QA: 10 ambiguous queries; max 1 clarifying question before function call |
-| Tracking noise in Gaps analysis | Phase: Event tracking implementation | Rate slider test: drag generates 1 event per settled position confirmed in Network tab |
-| Cold-start empty Gaps tab | Phase: Admin Gaps tab implementation | Manual: open Gaps tab with zero `user_events`; helpful empty state shown, not empty table |
-| `getState()` misused for reactive nudge | Phase: Sage personality upgrade | Code review: nudge trigger uses reactive `useExplorerStore(s => s.experts)` selector in `useEffect`, not `getState()` inside `handleSend` |
+| `resetPilot()` destroys cross-page conversation | LOW | Add `navigatedFromBrowse` flag to pilotSlice; one-file frontend change; redeploy (auto on push) |
+| Photo CORS block in production | MEDIUM | Switch from `StaticFiles` mount to `GET /api/photos/{username}` `FileResponse` endpoint; one new backend route; redeploy |
+| Photo HTTP/HTTPS mixed content | LOW | Verify `VITE_API_URL` starts with `https://` in Vercel env vars; rebuild frontend |
+| Railway missing `/data/photos` crash | HIGH | App is down until fix deploys (~2 min); add `os.makedirs` to lifespan; push immediately; no data loss |
+| `/marketplace` route broken after rename | LOW | Add `<Navigate to="/explore" replace />` to router config; push; auto-deploy |
+| Horizontal scroll jank in production | MEDIUM | Add `will-change: transform` to container; disable card animations during scroll; frontend-only change; redeploy |
+| Aurora transition too slow | LOW | Reduce transition duration from config; frontend CSS change; redeploy |
+| Sage navigation stale fetch race | MEDIUM | Verify `setSageMode(true)` is called before `navigate()`; check `useExplore` sageMode guard is present |
+| N+1 Browse API calls | MEDIUM | Consolidate 4 row fetches into one `/api/browse` endpoint; one new backend route + frontend refactor of Browse data loading |
 
 ---
 
 ## Sources
 
-- Direct codebase analysis: `/Users/sebastianhamers/Documents/TCS/frontend/src/hooks/useSage.ts` — existing two-turn Gemini pattern, `getState()` snapshot decision, `validateAndApplyFilters` function
-- Direct codebase analysis: `/Users/sebastianhamers/Documents/TCS/frontend/src/hooks/useExplore.ts` — reactive deps array, AbortController pattern, `setResults`/`setLoading`/`appendResults` call sites
-- Direct codebase analysis: `/Users/sebastianhamers/Documents/TCS/frontend/src/store/index.ts` + `pilotSlice.ts` + `resultsSlice.ts` — store ownership, persist boundary, `partialize` config
-- Direct codebase analysis: `/Users/sebastianhamers/Documents/TCS/frontend/src/components/pilot/SageFAB.tsx` — existing `whileHover={{ scale: 1.05 }}` and `whileTap={{ scale: 0.95 }}` on `motion.button`
-- Direct codebase analysis: `/Users/sebastianhamers/Documents/TCS/app/services/pilot_service.py` — current single-function `apply_filters` Gemini two-turn pattern, `APPLY_FILTERS_DECLARATION`
-- Direct codebase analysis: `/Users/sebastianhamers/Documents/TCS/app/models.py` — existing table schema, `create_all` pattern, no Alembic migration framework
-- Direct codebase analysis: `/Users/sebastianhamers/Documents/TCS/app/routers/explore.py` — `run_in_executor` pattern for synchronous SQLAlchemy calls in async FastAPI
-- Direct codebase analysis: `/Users/sebastianhamers/Documents/TCS/app/routers/admin.py` — `GAP_THRESHOLD`, existing gaps endpoint, gap flag logic, `_is_gap` helper
-- Direct codebase analysis: `/Users/sebastianhamers/Documents/TCS/frontend/src/components/marketplace/ExpertCard.tsx` — `onViewProfile` call site, CSS-only hover pattern
-- Project decisions: `.planning/PROJECT.md` — locked decisions: CSS hover for ExpertCard (no Framer Motion on cards), `filterSlice.setTags` (not `toggleTag`) for Sage, `useExplorerStore.getState()` snapshot in useSage for async handlers, `motion from 'motion/react'` for modals/FAB only
-- Framer Motion documented behavior: gesture props (`whileHover`, `whileTap`) and `animate` prop compete when targeting the same CSS property (documented in Motion API reference)
+- Direct codebase analysis: `frontend/src/pages/MarketplacePage.tsx` — `resetPilot()` on mount, `useUrlSync()` call, pilot state management
+- Direct codebase analysis: `frontend/src/hooks/useExplore.ts` — `sageMode` guard, AbortController, reactive deps array, `setResults` ownership
+- Direct codebase analysis: `frontend/src/hooks/useSage.ts` — `setSageMode(true)` + `setResults` pattern for in-page Sage injection, `getState()` snapshot pattern
+- Direct codebase analysis: `frontend/src/hooks/useUrlSync.ts` — `skipFirst` ref behavior, URL → Store vs Store → URL direction, `initialized` ref on mount
+- Direct codebase analysis: `frontend/src/components/pilot/SageFAB.tsx` — `prevFilterKey = useRef<string | null>(null)` initialization, filter glow trigger logic
+- Direct codebase analysis: `frontend/src/store/index.ts` + `pilotSlice.ts` + `resultsSlice.ts` — persist boundary (`partialize`), `sageMode` in resultsSlice, store ownership rules
+- Direct codebase analysis: `frontend/src/main.tsx` — current router config with `/` → `/marketplace` redirect, existing `<Navigate replace />` pattern for admin routes
+- Direct codebase analysis: `app/main.py` — lifespan sequence, `os.makedirs` opportunity, `StaticFiles` mounting location
+- Zustand docs / GitHub discussions: reset state before navigate, persist boundary, cross-page state management patterns
+- React Router v6 docs / GitHub discussions: `<Navigate replace>` for redirects, programmatic navigation with `useNavigate`, search params in navigation
+- FastAPI GitHub discussions: `StaticFiles` CORS bypass of middleware (issue #6670), HTTPS scheme detection on Railway, mixed content production pitfalls
+- MDN Web Docs: CLS, image `aspect-ratio` property, `loading="lazy"` vs `loading="eager"`, `will-change: transform` guidance
+- Framer Motion + React Router GitHub discussions: `AnimatePresence` with `useLocation().key` pattern, exit animation timing, context freezing during transitions
 
 ---
 
-*Pitfalls research for: v2.3 Sage Evolution & Marketplace Intelligence — dual-function Gemini, proactive personality, event tracking, Admin Gaps tab*
-*Researched: 2026-02-22*
+*Pitfalls research for: v3.0 Netflix Browse & Agentic Navigation — Browse page, cross-page Sage navigation, photo serving, route reorganization*
+*Researched: 2026-02-24*

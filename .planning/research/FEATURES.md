@@ -1,9 +1,9 @@
-# Feature Research
+# Feature Landscape
 
-**Domain:** AI Expert Marketplace — v2.3 Sage Evolution & Marketplace Intelligence
-**Milestone:** v2.3 (adding to existing v2.2 codebase)
-**Researched:** 2026-02-22
-**Confidence:** MEDIUM — Sage dual-function UX and clarifying question patterns are MEDIUM (cross-verified with multiple 2025 sources); event tracking schema is HIGH (well-established GA4/analytics industry standards); gap dashboard UX is MEDIUM (Algolia analytics patterns + marketplace analytics literature verified); FAB animation reactions are MEDIUM (Material Design docs + animation UX literature).
+**Domain:** AI Expert Marketplace — v3.0 Netflix Browse & Agentic Navigation
+**Milestone:** v3.0 (adding to existing v2.3 codebase)
+**Researched:** 2026-02-24
+**Overall confidence:** MEDIUM — Netflix browse UX patterns MEDIUM (well-documented in UX literature but adapted from entertainment to professional marketplace); AI cross-page navigation LOW-MEDIUM (emerging pattern, limited authoritative sources); photo serving HIGH (standard CDN/URL pattern, grounded in existing Tinrate data audit); page transitions HIGH (React Router v7 View Transitions API confirmed stable)
 
 ---
 
@@ -11,16 +11,18 @@
 
 | Existing Feature | Status | Notes |
 |-----------------|--------|-------|
-| Sage FAB + slide-in panel (380px, Framer Motion AnimatePresence) | Live | FAB hides when panel is open |
-| Gemini two-turn function calling (`apply_filters`) | Live | Calls `filterSlice.setTags/setRate` — no search API call |
-| Hybrid search `/api/explore` (FAISS + BM25) | Live | Three-stage pipeline, accepts `query`, `tags`, `rate_min`, `rate_max`, `page`, `limit` |
-| Zustand `useExplorerStore` (filter + results + pilot slices) | Live | `filterSlice`, `resultsSlice`, `pilotSlice` |
-| No-results empty state (6 tag suggestions + Sage CTA) | Live | Visible when `results.length === 0` |
-| Admin analytics (searches, leads, expert management, intelligence, t-SNE) | Live | In `/admin` |
-| `conversations` table in SQLite | Live | Stores query text, timestamp, result count, OTR@K |
-| Aurora aesthetic, glassmorphism, bento cards | Live | Shipped v2.2 |
+| `/marketplace` route — aurora background, glassmorphic header, bento cards, VirtuosoGrid | Live | Single page: sidebar + expert grid |
+| Sage FAB + slide-in panel (380px) with `search_experts` + `apply_filters` | Live | Persists on `/marketplace` only today |
+| `sageMode` state machine in `resultsSlice` | Live | `setSageMode(true)` on direct FAISS injection |
+| Zustand `useExplorerStore` (filter + results + pilot slices) | Live | In-memory; no route persistence built in |
+| `resultsSlice.setResults()` for direct FAISS injection | Live | Powers Sage grid injection |
+| Behavior tracking (card clicks, Sage queries, filter changes) | Live | `/api/events` endpoint, fire-and-forget |
+| Admin Marketplace page (demand + exposure + daily Sage trend) | Live | `/admin/data` consolidated |
+| `/chat` route (legacy v1.0 chat interface) | Live | Separate page; rarely visited |
+| Newsletter gate on "View Full Profile" | Live | `nltrStore.ts` |
+| `SkeletonGrid` component (animate-pulse, 9 cards) | Live | Used on initial load |
 
-All v2.3 features extend this foundation without replacing any of the above.
+All v3.0 features extend this foundation without replacing any of the above. The existing `/marketplace` page becomes the Browse page with enhanced layout.
 
 ---
 
@@ -28,430 +30,460 @@ All v2.3 features extend this foundation without replacing any of the above.
 
 ### Table Stakes (Users Expect These)
 
-For an AI co-pilot that claims to help users "find experts," these behaviors are the minimum that makes the experience feel functional and trustworthy. Missing any of these makes Sage feel broken or misleading.
+Features that make the Browse experience feel like a real product. Missing these makes v3.0 feel like a grid with a new name.
 
 | Feature | Why Expected | Complexity | Notes |
 |---------|--------------|------------|-------|
-| Sage search results visible in panel (not just filter adjustments) | Users who ask "show me experts in X" expect to see expert results in the conversation — not just a filter sidebar that silently changes. Confirmed by 2025 UX research: chat-dominated experiences without visible state feedback cause users to miss critical context. | MEDIUM | Render expert result cards (compact, 2-3 fields: name, title, rate) inside the Sage panel chat bubble. Do NOT try to render full bento cards — the panel is 380px wide. Use a condensed list format. |
-| Grid syncs when Sage searches | If Sage searches and the main grid doesn't update, users lose trust in which source is "correct." The grid and panel must show the same results after a Sage search. | MEDIUM | After `search_experts` returns, dispatch results to `resultsSlice` (same slice that `/api/explore` normally populates). This is the same as `apply_filters` already does — just also fire the search. |
-| Sage confirms what it did in natural language | Users need text confirmation after every function call ("I found 8 experts in fintech under $200/hr"). Returning raw data without a summary creates a "dead" AI feeling. | LOW | Already done for `apply_filters` in the two-turn pattern. Extend to `search_experts`: Turn 2 prompt instructs Gemini to summarize results found (count, domain, notable names). |
-| Sage handles zero results gracefully | When search returns nothing, Sage must acknowledge it and suggest a next action — not silently show an empty panel. | LOW | Detect `results.length === 0` in the function result, pass this context to Turn 2 so Gemini responds with a redirect (e.g., "No exact matches — try broadening the domain or adjusting the rate"). Existing no-results empty state on the grid can remain. |
-| Event tracking fires without blocking UX | Behavior tracking must be invisible — no latency on clicks, no UI freezes, no error surfaces if tracking POST fails. | LOW | Fire-and-forget pattern: POST to tracking endpoint and ignore response. Never `await` tracking calls in the critical path. Use `navigator.sendBeacon()` or background `fetch()` with no error handling surfaced to user. |
-| Admin can view zero-result queries | This is table stakes for any search analytics dashboard. Algolia, Elastic, and every search analytics product exposes this as the first data point. Without it, admins cannot identify unmet demand. | MEDIUM | Query the `events` table: `SELECT query_text, COUNT(*) as occurrences FROM search_events WHERE result_count = 0 GROUP BY query_text ORDER BY occurrences DESC`. Present as a sortable table in the Admin Gaps tab. |
+| **Billboard hero section** with featured expert | Browse pages in every discovery product (Netflix, Spotify, Product Hunt, Airbnb Experiences) have a full-width hero that anchors the page. Without it, the page looks like a filter sidebar was prepended to an existing grid — no editorial presence. | MEDIUM | Full-width panel above the main grid. Displays 1 featured expert: name, job title, short bio snippet (2–3 lines), rate badge, primary tag. One CTA: "Learn More" that triggers the NewsletterGateModal. Static editorial selection (admin-curated or highest findability_score expert as fallback). Do NOT auto-rotate — Netflix's billboard is static until user acts. |
+| **Horizontal category rows** with scroll | Netflix's row pattern is now the industry-standard for discovery UX. Any "browse" label without horizontal rows signals the feature is half-built. Users expect to be able to scan categories without vertical scrolling through a single undifferentiated grid. | HIGH | 4–6 rows, each named by domain category (e.g., "Strategy & Consulting", "Tech & Engineering", "Marketing & Growth"). Each row shows 4–5 visible cards, scrollable horizontally. "See All →" link filters the main grid to that category. Row card count: show 4 on desktop (peek at 5th signals scrollability), 2 on mobile (peek at 3rd). |
+| **Expert photo cards in browse context** | The existing ExpertCard has no photo. In a browse context (not filtered search), photo-first cards are expected — Upwork, Clarity.fm, and every expert marketplace uses headshots as the primary visual. In a browse-mode grid, text-first cards with no photo look like a data table, not a marketplace. | HIGH | Requires: (1) photo URL availability (see PITFALLS.md — photos may not be in the data source), (2) photo-first card layout with name/title overlay on hover. Default state: square or 4:5 aspect ratio photo with name + rate badge below. Hover state: overlay with job title + primary tag. Fallback: monogram initials avatar with brand-purple background. |
+| **"See All" filter integration** | Clicking "See All →" on a category row must actually filter the grid to that category and show the user where they are. If "See All" opens a broken filter state or does nothing, users immediately lose trust in the navigation. | LOW | Dispatch `store.setTags([category_tag])` and scroll to the main grid. Matches the existing `toggleTag` mechanism in `filterSlice`. The URL should update via `useUrlSync` so the filtered view is shareable. |
+| **Page transition that doesn't break Sage panel** | If Sage is open during a route change (e.g., between `/browse` and future detail pages), users expect the conversation to persist — not reset. Abrupt hard-transition destroys the "co-pilot" mental model. | MEDIUM | Sage panel component must live outside the route outlet so it persists across route changes. In React Router v7, this means mounting SageFAB/SagePanel at the root layout level (above `<Outlet />`), not inside `MarketplacePage`. The Zustand pilot state already persists; only the component mounting point needs to move. |
+| **Skeleton loading on row data fetch** | Category rows fetching asynchronously must show skeleton placeholders, not a blank row area. Blank-then-populate is the most noticeable jank in browse-style UIs. | LOW | Extend existing `SkeletonGrid` logic: per-row skeleton of 5 card-sized horizontal skeletons. Same `animate-pulse` CSS pattern already in `SkeletonGrid.tsx`. |
+| **Redirects from old routes preserved** | Users with bookmarked `/marketplace` must still land correctly after route reorganization. Breaking existing routes for a new layout is a p0 regression. | LOW | `main.tsx` already has `{ path: '/', element: <Navigate to="/marketplace" replace /> }`. Any renamed routes must keep redirect chains. The `/chat` legacy route must redirect cleanly. |
 
 ---
 
 ### Differentiators (Competitive Advantage)
 
-These are the features that make v2.3 more than "adding tracking." None of these are standard behavior for marketplace co-pilots as of early 2026.
+These features make v3.0 more than a layout change. None of these are standard behavior in professional marketplace platforms as of early 2026.
 
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| Sage dual-function calling (`apply_filters` + `search_experts`) | Sage can either adjust filters (when user wants to browse) OR perform a full search (when user wants direct results). No competitor marketplace AI co-pilot resolves this split — they either filter or search, not both. | HIGH | Add `search_experts` as a second function in the Gemini function schema alongside `apply_filters`. Gemini decides which to call based on intent signals in the query. Clear intent heuristic: "show me" / "find me" → `search_experts`; "filter by" / "only show" → `apply_filters`. Both functions must sync the grid as a side effect. See dependency notes. |
-| Sage clarifying questions for ambiguous queries | When query is ambiguous, inserting one clarifying question reduces error rates by 27% and ambiguity-induced retries from 4.1 to 1.3 per session (2025 research finding, haptik.ai). No other marketplace co-pilot does this. | MEDIUM | Implement as a third Gemini function `ask_clarification(question: string)` or as a Turn 2 instruction: if Gemini's Turn 2 text includes a question, render it as a question bubble with optional quick-reply chips (e.g., "Product strategy" / "Technical architecture"). Trigger: system prompt instructs Sage to ask one question when budget, domain, or experience level is missing from the query. |
-| Sage proactive empty-state nudge | When the grid shows zero results (detected via Zustand store), Sage FAB pulses and Sage proactively surfaces a suggestion — unprompted. This closes the "dead end" gap where users stare at an empty grid without knowing what to do. | MEDIUM | Subscribe to `resultsSlice.results.length` in the Sage component. When it drops to 0 and Sage panel is closed, trigger FAB pulse animation + inject a system-generated message into the pilot history: "No experts matched those filters — want me to broaden the search?" This is a proactive AI nudge pattern (confirmed via ShapeOfAI.com patterns). |
-| FAB animated reactions (pulse/glow on user activity) | Sage FAB draws attention at moments when Sage can add value (empty state, first load, user inactivity). Animated FABs with contextual motion signals are proven to increase engagement with the underlying feature (Material Design research). | LOW | Two states: (1) `pulse` — soft radial keyframe animation when grid hits zero results or user has been idle 30s; (2) `glow` — aurora-colored box-shadow intensification when Sage receives a message response. Framer Motion `animate` prop on the FAB div. Do NOT animate continuously — only on the specific trigger events. |
-| Expert exposure distribution in admin | Shows which experts appear in search results most vs least — identifies "invisible" experts who are almost never surfaced. No public competitor marketplace dashboard exposes this. This is borrowed from Elastic's search analytics patterns (impression tracking per document ID). | HIGH | Requires the event tracking layer to log which expert IDs appeared in each search result set (not just clicks). Exposure = appearance in results. Click-through = user clicked the card. Display as a ranked table: Expert Name, Appearances, Clicks, CTR. Sortable by "least exposed" to surface invisible experts. |
-| Admin Gaps tab: unmet demand + exposure in one view | Combining zero-result queries (demand) with low-exposure experts (supply) in one screen gives admins an actionable market intelligence view. Comparable to Algolia's Analytics dashboard for enterprise customers, but here it's native to the marketplace with domain-specific context. | HIGH | Two sections on the tab: (1) Unmet Demand — top zero-result queries grouped by likely domain; (2) Expert Exposure — ranked list of experts by appearance count. Secondary metric: queries that returned results but had low engagement (high impressions, zero clicks = low relevance indicator). |
-| Warmer/wittier Sage personality | System prompt rewrite: Sage shifts from functional assistant to personality-driven guide. 2025 conversational AI UX research (TELUS Digital, Haptik) shows users form stronger product attachment to assistants with distinct voice. Current Sage is competent but neutral. | LOW | System prompt rewrite is a low-risk, high-impact change with no infrastructure changes required. Key principles: use contractions, occasional light humor, acknowledge the user's goal before diving into results, avoid corporate hedging phrases. Example: "I found 6 fintech experts who know their stuff — let me show you the standouts." vs current: "Here are the experts matching your query:" |
+| **Sage cross-page navigation intent** | Sage can interpret "take me to browse" / "go back to search" / "show me the Strategy row" as navigation commands — not just filter adjustments. No professional marketplace AI co-pilot today both searches experts AND navigates the app. This collapses the distinction between "talking" and "navigating." | HIGH | Requires a new `navigate_to` Gemini function: `{ page: 'browse' | 'chat' | 'filtered_grid', params?: { tags?: string[] } }`. `useSage` calls `useNavigate()` from React Router on function call. The Gemini function description must be mutually exclusive from `apply_filters` and `search_experts`. Intent signals: "browse", "go back", "show me the X section", "home", "explore". |
+| **Billboard expert rotation (admin-curated)** | Admin manually selects the featured expert for the billboard via a new admin control — not algorithmic. This gives Tinrate editorial control over which expert is promoted, which is valuable for: new expert onboarding, commercial agreements, category balancing. No small professional marketplace currently offers this. | MEDIUM | Backend: new `GET /api/browse/featured` endpoint returning one expert ID. Admin: toggle in Admin Experts page to mark an expert as `is_featured: bool`. Fallback: highest `findability_score` expert if no expert is marked featured. No rotation needed — editorial manual control is the v3.0 feature; algorithmic rotation is v4.0. |
+| **Netflix-style card hover expand with photo** | Existing ExpertCard has a lift+glow CSS hover. The Netflix pattern extends this: on hover, the card scales to 115%, the photo zooms, and an info overlay appears (rate, tags, "Ask Sage about them" CTA). This is the most visually distinctive browse interaction. | HIGH | Implementation: `scale(1.15)` via Framer Motion on the card wrapper, `z-index: 50` to prevent clipping from siblings. Info overlay fades in on `whileHover`. The "Ask Sage about them" CTA populates the Sage panel with the expert's name pre-filled ("Tell me about [Name]"). This connects the browse and AI surfaces in one gesture. |
+| **Sage "tell me about this expert" shortcut** | From any expert card (billboard or browse row), users can ask Sage about that specific expert without typing. The Sage panel opens pre-populated with a query. This is a "one-click AI insight" pattern — users who don't know what to ask get a starting point. | MEDIUM | On card click (not profile gate): set a `pendingQuery` in `pilotSlice`, open the Sage panel (`setOpen(true)`), and auto-submit the query via `handleSend`. The query format: "Tell me about [First Name] [Last Name] — [Job Title]". No new backend endpoint needed; uses existing `/api/pilot` function calling. |
+| **"Continue Browsing" breadcrumb on filtered views** | When a user clicks "See All →" from a category row and lands on a filtered grid, a breadcrumb appears: "← Browse all experts". This is a light navigation affordance that surfaces when the user is in a sub-context (filtered category view) and wants to return to the full browse experience. | LOW | Render a breadcrumb row above the ExpertGrid when `tags.length > 0` and the tags match a known category. Text: "← Browse all [Category]" or "← Back to Browse". On click: `store.resetFilters()` and smooth scroll to top. This is not a traditional breadcrumb (no hierarchy path) — it's a single-level context reset affordance. |
+| **Aurora-consistent browse row section headers** | Category row headers styled with the existing aurora aesthetic (gradient text, glassmorphic background, or subtle aurora glow on the row label). Matching the visual language of the existing marketplace signals these rows are native to the product, not bolted-on. | LOW | CSS-only. Use `bg-gradient-to-r from-brand-purple to-blue-500 bg-clip-text text-transparent` for row headers. The existing aurora gradient color palette is defined in Tailwind config. No new dependencies. |
 
 ---
 
-### Anti-Features (Commonly Requested, Often Problematic)
+### Anti-Features (Explicitly Avoid)
 
-| Feature | Why Requested | Why Problematic | Alternative |
-|---------|---------------|-----------------|-------------|
-| Sage auto-searches on every user message | "Sage should always search, not just sometimes" | Creates confusion when user is asking a clarifying follow-up or saying "thanks" — firing a search on "Thanks, what else?" produces nonsensical results and wastes Gemini API calls. Also breaks the `apply_filters` use case which is intentionally filter-only. | Keep dual-function model: Gemini decides when to call `search_experts` vs `apply_filters` vs respond in plain text. Trust the LLM's intent classification — it's reliable for these two clear function signatures. |
-| Rendering full bento cards inside Sage panel | "Show the same cards in Sage as in the grid" | The Sage panel is 380px wide. Full bento cards are designed for a grid at 2-3 column widths. Rendering them in the panel produces a broken, over-constrained layout that looks unpolished. | Compact expert result format inside Sage panel: name, job title, rate badge — 3 fields max. Clicking an item in the panel highlights/scrolls to the card in the main grid (a "select" action, not a new view). |
-| Storing full search result payloads in the events table | "Track everything for replay later" | 530 experts × JSON payloads per query = rapid DB bloat on SQLite (Railway volume). Full result storage is not needed for the Gap dashboard — only result count and expert IDs that appeared. | Store: `query_text`, `result_count`, `result_expert_ids` (array of IDs, stored as JSON string), `filters_applied` (JSON), `timestamp`. Expert ID list allows exposure calculation without storing names/titles. |
-| Real-time gap dashboard (WebSocket / polling) | "Show live activity in the Gaps tab" | The gap analysis is inherently retrospective — it shows patterns over time, not live queries. Real-time updates would require WebSocket infrastructure not in the stack and add complexity with no UX benefit. Admin checks the Gaps tab periodically, not continuously. | Simple HTTP GET endpoint that aggregates the events table on request. Cache the aggregation for 60 seconds. No streaming. |
-| Tracking individual anonymous user sessions | "We want to know what each user does across their whole session" | Anonymous session stitching requires either cookies (consent friction) or fingerprinting (privacy risk, inaccurate). The platform already gates profiles via newsletter — that email is the natural user identifier. Cross-session tracking of anonymous users adds complexity with low analytical value given the existing newsletter gate. | Track events with `session_id` (random UUID generated on page load, stored in sessionStorage). This gives per-session context without cross-session stitching. Session ID is reset on each new tab/visit, which is appropriate for anonymous analytics. |
-| Third-party analytics SDK (Segment, Mixpanel, Heap) | "Use a proper analytics platform instead of rolling our own" | Adds an external dependency with its own pricing, data residency concerns, and integration complexity. The four v2.3 event types (card clicks, Sage queries, filter usage, exposure) are well-defined and can be stored in the existing SQLite DB with three new tables. A third-party SDK is justified at scale (>10K daily events); at 530 experts and current traffic, it's overengineering. | Custom event tables in SQLite. Design the schema to mirror GA4's `event_name + event_params` pattern so migration to a proper analytics platform later is straightforward (no schema redesign needed). |
-| Sage sending expert results AND updating filters simultaneously | "Do both — search and also apply filters so the grid reflects it" | If `search_experts` also calls `apply_filters`, the filter sidebar state diverges from the Sage search state — the sidebar might show filters that weren't user-set, confusing users who then try to adjust them. | Keep the operations separate. `search_experts` dispatches results directly to `resultsSlice` bypassing the filter pipeline. `apply_filters` updates `filterSlice` and re-fetches. User-visible filter chips only reflect user-initiated or `apply_filters`-initiated filter changes, not Sage search results. |
+| Anti-Feature | Why Requested | Why Problematic | Alternative |
+|--------------|---------------|-----------------|-------------|
+| **Auto-playing video preview on card hover** | "Netflix does it" | Netflix can reliably stream video to subscribers. TCS has no video assets for any of the 530 experts, no video CDN, and no video upload flow. Adding video is a 3-sprint feature on its own. | Photo with hover overlay reveal. The visual surprise of the info overlay appearing is 80% of the engagement value at 5% of the implementation cost. |
+| **Algorithmic featured expert selection** | "Netflix personalizes the billboard per user" | Netflix has behavioral data on millions of users. TCS has no per-user identity before the newsletter gate. Pre-gate, there is no user model. Post-gate, there is an email but no click history that would be meaningful for a billboard selection algorithm. Algorithmic selection without data creates the illusion of personalization while actually being random — worse than editorial curation. | Admin-curated featured expert with `is_featured` flag. Fallback to highest `findability_score`. This is honest editorial curation with a clear fallback. |
+| **Infinite horizontal scroll in category rows** | "Show all experts in the row, user can keep scrolling" | Rows with 100+ experts scrolled horizontally are not browsable — they become a horizontal version of the same overwhelming grid problem the Browse page is supposed to solve. "See All" is the correct escape valve. | Show 5–8 cards per row (4 visible + 1–2 peek). "See All →" links to the filtered grid view. This creates a deliberate content budget per row that forces good curation. |
+| **Deep-linking to a specific card from URL** | "Users should be able to share a direct link to an expert card" | The expert profile already lives on `tinrate.com/u/[username]`. Deep-linking to a card in the TCS browse grid is a secondary experience — the canonical expert URL is on the Tinrate platform. Building a TCS-native deep link duplicates the Tinrate profile URL, creates two canonical pages for the same expert, and complicates the newsletter gate flow. | The existing "View Full Profile →" button in each card already links to the Tinrate profile URL. That IS the shareable deep link. |
+| **Fully separate `/browse` route from `/marketplace`** | "Browse and marketplace should be separate pages" | The existing `/marketplace` page already has a filter sidebar, expert grid, Sage panel, and URL sync. Creating a fully separate `/browse` route requires duplicating all of these features or abstracting shared state into a higher-level provider — a large refactor for no user-facing benefit. The browse layout change (adding hero + rows) can happen within the existing `/marketplace` route as a new "browse mode" that sits above the filtered grid. | `/marketplace` route gains a "Browse" section at the top (hero + rows), with the existing filter sidebar + VirtuosoGrid below it as the "All Experts" section. Route stays the same; DOM layout gains new sections. |
+| **Category row cards as a new card component** | "Browse cards should be a completely different component from ExpertCards" | Building a separate card component doubles the maintenance surface. The existing `ExpertCard` already handles name, title, rate, tags. The browse-mode difference is: (1) photo at top, (2) hover expand behavior. | Add `variant="browse"` prop to `ExpertCard`. Browse variant shows the photo zone at top, hides match_reason, adds the hover overlay behavior. Same component, same props contract, new rendering branch. This is how React component APIs should be extended. |
+| **Sage reads from photo CDN / manages photos** | "Sage should be able to mention the expert's photo in its response" | Sage already responds with natural language about experts. Mentioning photos in chat adds no actionable value and conflates the visual browse surface with the conversational AI surface. | Sage responds about skills, rate, and fit. Photos exist in the browse card. These are separate interaction surfaces — keep them separate. |
 
 ---
 
 ## Feature Dependencies
 
 ```
-[Sage `search_experts` function]
-    └──requires──> [Gemini function schema updated with new function definition]
-    └──requires──> [Backend `/api/explore` already live — no new endpoint needed]
-    └──requires──> [resultsSlice.setResults dispatcher (already in Zustand store)]
-    └──side-effect──> [Grid sync (same dispatch mechanism as normal explore flow)]
-    └──enables──> [Sage proactive empty-state nudge]
-    └──enables──> [Sage result exposure tracking]
+[Billboard Hero Section]
+    └──requires──> [Featured expert API endpoint GET /api/browse/featured OR findability_score sort]
+    └──requires──> [Expert photo display (or graceful monogram fallback)]
+    └──requires──> [Admin is_featured flag on Expert model (or use findability_score fallback only)]
+    └──enables──> [Sage "tell me about this expert" CTA on the billboard]
+    └──independent of──> [Horizontal category rows]
 
-[Sage proactive empty-state nudge]
-    └──requires──> [Sage `search_experts` OR `apply_filters` can produce zero results]
-    └──requires──> [FAB pulse animation (FAB animated reactions)]
-    └──requires──> [Sage panel can inject system-generated messages into pilot history]
-    └──independent of──> [Event tracking tables]
+[Horizontal Category Rows]
+    └──requires──> [Backend category endpoint: GET /api/browse/categories returning {category, experts[]}]
+    └──requires──> [Expert model has category field (already in metadata.json: "category" key)]
+    └──requires──> [Per-row skeleton loading (SkeletonGrid variant)]
+    └──enables──> ["See All" filter integration (toggleTag dispatch)]
+    └──enables──> ["Continue Browsing" breadcrumb (knows current category context)]
+    └──note: Category data already exists in metadata.json but category field is null for most experts]
 
-[FAB animated reactions (pulse/glow)]
-    └──requires──> [Framer Motion `animate` prop on FAB (already installed)]
-    └──triggers from──> [Sage proactive nudge OR new message received]
-    └──independent of──> [Event tracking, admin Gaps tab]
+[Expert Photo Cards]
+    └──requires──> [Photo URL per expert — THIS IS THE CRITICAL UNKNOWN. Tinrate profile pages]
+    └──            [are SPA-loaded, photo URLs are not in current metadata.json or experts.csv]
+    └──fallback──> [Monogram initials avatar (CSS only, zero data dependency)]
+    └──enables──> [Netflix-style card hover expand with photo]
+    └──blocks if photo unavailable──> [photo-first browse variant — fall back to info-first with enhanced styling]
 
-[Sage warmer personality + clarifying questions]
-    └──requires──> [System prompt change only — no infra changes]
-    └──independent of──> [All other v2.3 features]
-    └──note: ship first — lowest risk, establishes personality baseline before search function changes]
+[Sage Cross-Page Navigation Intent]
+    └──requires──> [navigate_to Gemini function declaration added to pilot_service.py]
+    └──requires──> [useSage hook calls useNavigate() on navigate_to function call]
+    └──requires──> [Sage panel mounted at root layout level (not inside MarketplacePage)]
+    └──requires──> [Zustand pilot state already persists — only mounting point needs to move]
+    └──enables──> [Sage "tell me about this expert" shortcut (opens panel + pre-fills query)]
+    └──note: MEDIUM complexity — the navigate_to function must be mutually exclusive from]
+    └──      [apply_filters and search_experts in Gemini descriptions]
 
-[User behavior event tracking — 3 event types]
-    └──requires──> [New SQLite table: `user_events` (event_name, event_params JSON, session_id, timestamp)]
-    └──event: expert_card_click requires──> [Expert card onClick handler updated]
-    └──event: sage_query requires──> [useSage hook logs after function call resolves]
-    └──event: filter_applied requires──> [filterSlice actions log on dispatch]
-    └──enables──> [Admin Gaps tab (both unmet demand + exposure analysis)]
+[Page Transition Animations]
+    └──requires──> [Sage panel mounted at root layout level (shared dependency with cross-page nav)]
+    └──uses──> [React Router v7 viewTransition prop on Link/useNavigate (confirmed stable in v7)]
+    └──uses──> [AnimatePresence with location.key on route outlet (existing pattern)]
+    └──note: View Transition API now Baseline (Chrome 111+, Firefox 144+, Safari 18+)]
+    └──      [Framer Motion AnimatePresence is the safe fallback for all browsers]
 
-[Expert exposure tracking (which experts appear in results)]
-    └──requires──> [Event tracking layer live]
-    └──requires──> [Search handler logs result expert IDs as part of sage_query event]
-    └──requires──> [Explore API handler logs result expert IDs as part of filter_applied event]
-    └──enables──> [Admin Gaps tab exposure distribution table]
+[Route Reorganization]
+    └──requires──> [Reading main.tsx (already done — route config confirmed)]
+    └──requires──> [Preserve existing redirect: / → /marketplace]
+    └──requires──> [Chat page: / → /marketplace, /chat redirect to /marketplace]
+    └──note: /chat is the legacy v1.0 chatbot. It should redirect to /marketplace.]
+    └──      [The aurora marketplace IS the product now — chat is vestigial]
 
-[Admin Gaps & Exposure tab]
-    └──requires──> [user_events table populated with sage_query + filter_applied events]
-    └──requires──> [result_expert_ids stored per event for exposure calculation]
-    └──independent of──> [Sage personality, FAB animations]
-    └──note: build last — depends on tracking layer being live and populated]
+["Continue Browsing" Breadcrumb]
+    └──requires──> [Horizontal category rows exist (to know which category triggered "See All")]
+    └──requires──> [filterSlice.tags to detect filtered state]
+    └──independent of──> [Photo display, billboard hero]
+    └──note: LOW complexity — conditional render above ExpertGrid when tags.length > 0]
+
+[Admin Billboard Control]
+    └──requires──> [Expert model: is_featured bool column (new)]
+    └──requires──> [GET /api/browse/featured endpoint]
+    └──requires──> [Admin Experts page: toggle to mark/unmark featured expert]
+    └──note: If admin control is deferred, use findability_score fallback only — zero new backend needed]
 ```
-
-### Dependency Notes
-
-- **Sage personality rewrite is independent and lowest-risk:** Ship it first in v2.3 — a system prompt change with zero infrastructure dependencies. Establishes the new tone before any of the function calling or tracking changes land.
-- **`search_experts` requires no new backend endpoint:** The existing `/api/explore` already accepts `query`, `tags`, `rate_min`, `rate_max`. The function just needs to call it with the right params and dispatch results to `resultsSlice`. This is a frontend-only change for the core feature.
-- **Event tracking must precede the Gaps tab:** The Admin Gaps tab aggregates data from the `user_events` table. If tracking ships in Phase X, the Gaps tab can ship in Phase X+1 after events have had time to accumulate. Do not ship the Gaps tab before tracking — an empty dashboard creates a confusing admin experience.
-- **Exposure tracking requires search events to include result IDs:** This is a slightly heavier event payload than simple click tracking. The `sage_query` and `filter_applied` events must include `result_expert_ids: string[]` in their params JSON. Design the event schema to include this from the start, not as a later addition.
-- **Zustand `resultsSlice` is the sync mechanism:** Both `search_experts` and `apply_filters` must write to the same `resultsSlice.setResults` to keep the grid and panel in sync. This is already how `apply_filters` works — `search_experts` follows the exact same dispatch pattern.
-
----
-
-## v2.3 Phase Definition
-
-### Phase A — Sage Personality & Clarifying Questions (lowest risk, ship first)
-
-- [ ] System prompt rewrite: warmer voice, contractions, result summary format
-- [ ] Clarifying question behavior: instruct Gemini to ask one question when intent is ambiguous (missing domain, budget, or experience level)
-- [ ] Quick-reply chip rendering for clarifying questions in Sage panel (optional: plain text fallback acceptable for MVP)
-
-### Phase B — Sage Active Search (`search_experts` function)
-
-- [ ] Add `search_experts` function to Gemini function schema (params: `query`, `tags`, `rate_min`, `rate_max`)
-- [ ] Handle `search_experts` function call in `useSage` hook: call `/api/explore`, dispatch results to `resultsSlice`
-- [ ] Render compact expert result list inside Sage panel chat bubble (name, title, rate — 3 fields, no full bento card)
-- [ ] Turn 2 prompt instructs Gemini to summarize results found (count, domain, notable characteristics)
-- [ ] Handle zero-result case in Turn 2 context
-
-### Phase C — Sage FAB Animated Reactions + Proactive Nudge
-
-- [ ] FAB `pulse` animation: Framer Motion keyframe on zero-results state (subscribe to `resultsSlice.results.length === 0`)
-- [ ] FAB `glow` animation: aurora box-shadow intensification when Sage receives a response
-- [ ] Proactive nudge: inject system message into pilot history when grid hits zero results and panel is closed
-
-### Phase D — User Behavior Event Tracking
-
-- [ ] SQLite `user_events` table: `id`, `event_name`, `event_params` (TEXT/JSON), `session_id`, `created_at`
-- [ ] `POST /api/events` endpoint: accepts `{event_name, event_params}` — no auth required, no response body needed
-- [ ] Session ID generation: random UUID in sessionStorage on page load, attached to all events
-- [ ] Track `expert_card_click`: `{expert_id, expert_name, context: 'grid'|'sage_panel', session_id}`
-- [ ] Track `sage_query`: `{query_text, function_called: 'search_experts'|'apply_filters'|'none', result_count, result_expert_ids: string[]}`
-- [ ] Track `filter_applied`: `{filters: {tags, rate_min, rate_max, text_query}, result_count, result_expert_ids: string[]}`
-- [ ] All tracking calls fire-and-forget (no await, no error surfacing)
-
-### Phase E — Admin Gaps & Exposure Tab
-
-- [ ] Admin Gaps tab route and nav item in existing admin panel
-- [ ] Unmet Demand section: top zero-result queries (`result_count = 0`), grouped and sorted by frequency
-- [ ] Low Engagement section: queries with results but zero clicks (impressions without interaction)
-- [ ] Expert Exposure section: ranked table of experts by appearance count + click count + CTR
-- [ ] "Least visible" experts: sorted ascending by appearance count — identifies experts who need findability review
-- [ ] Date range filter on Gaps tab (last 7d / 30d / all time)
-
----
-
-## Feature Prioritization Matrix
-
-| Feature | User Value | Implementation Cost | Phase | Priority |
-|---------|------------|---------------------|-------|----------|
-| Sage warmer personality + clarifying questions | HIGH (trust + engagement) | LOW (system prompt only) | A | P1 |
-| Sage `search_experts` function + grid sync | HIGH (core Sage capability) | MEDIUM (frontend function call + dispatch) | B | P1 |
-| Compact expert results in Sage panel | HIGH (makes search results visible) | MEDIUM (new panel component) | B | P1 |
-| Sage zero-result graceful handling | HIGH (avoids dead-end UX) | LOW (Turn 2 prompt + condition) | B | P1 |
-| `user_events` table + POST endpoint | HIGH (enables all analytics) | LOW (2 new DB columns, 1 endpoint) | D | P1 |
-| Track `expert_card_click` event | HIGH (core marketplace intelligence) | LOW (onClick handler) | D | P1 |
-| Track `sage_query` event (with result IDs) | HIGH (enables gap analysis + exposure) | LOW (hook instrumentation) | D | P1 |
-| Track `filter_applied` event (with result IDs) | MEDIUM (filter usage patterns) | LOW (store dispatch instrumentation) | D | P2 |
-| Admin Gaps tab — unmet demand section | HIGH (admin intelligence) | MEDIUM (SQL aggregation + table UI) | E | P1 |
-| Admin Gaps tab — expert exposure section | HIGH (supply-side intelligence) | MEDIUM (SQL aggregation + ranked table) | E | P1 |
-| FAB pulse on zero results | MEDIUM (engagement, nudge) | LOW (Framer Motion animate) | C | P2 |
-| Sage proactive empty-state nudge | MEDIUM (reduces dead-end abandonment) | MEDIUM (store subscription + message injection) | C | P2 |
-| FAB glow on message received | LOW (delight) | LOW (CSS animation) | C | P3 |
-| Date range filter on Gaps tab | MEDIUM (admin usability) | LOW (SQL WHERE clause + date picker) | E | P2 |
-| Quick-reply chips for clarifying questions | LOW (polish) | MEDIUM (new component) | A | P3 |
-
-**Priority key:**
-- P1: Ships in v2.3 core — milestone incomplete without these
-- P2: Ships in v2.3 — adds significant value, low regression risk
-- P3: Ship if P1/P2 complete, or defer to v2.4
 
 ---
 
 ## Detailed Pattern Notes by Feature Area
 
-### 1. Sage Dual-Function UX (Filter vs Search)
+### 1. Billboard Hero Section
 
-**The core UX distinction (MEDIUM confidence — 2025 AI UX research, Microsoft Copilot patterns):**
+**Layout (MEDIUM confidence — derived from Netflix, Airbnb Experiences, and Spotify editorial patterns):**
 
-The fundamental question Sage must resolve per turn: does the user want to *constrain browsing* (apply_filters) or *get direct results* (search_experts)?
+The billboard is a full-width panel at the top of the `/marketplace` page, above the category rows and the existing filter sidebar+grid. It is NOT a modal, NOT a carousel, and NOT an auto-rotating slider. Static editorial selection is the correct pattern for a small professional marketplace where the admin controls the featured expert.
 
-| Signal | Intent | Function |
-|--------|--------|----------|
-| "Only show me..." / "Filter to..." / "Hide..." | Constrain browsing | `apply_filters` |
-| "Show me experts in X" / "Find me someone who..." / "Who can help with..." | Direct retrieval | `search_experts` |
-| "What's your rate?" / "Can you do X?" (clarification) | Ambiguous | Ask clarifying question first |
-| "Thanks" / "That's helpful" / non-action statement | No function | Plain text response |
-
-The LLM resolves this disambiguation natively given clear function descriptions. Write the function schema descriptions to encode this intent distinction explicitly:
-
-```python
-search_experts_schema = {
-    "name": "search_experts",
-    "description": "Perform a semantic search to find and display matching experts. Use this when the user wants to SEE results — when they ask 'show me', 'find me', or describe a problem to solve. This will update both the Sage panel results AND the main expert grid.",
-    "parameters": { ... }
-}
-
-apply_filters_schema = {
-    "name": "apply_filters",
-    "description": "Adjust the browse filters without performing a new search. Use this when the user wants to CONSTRAIN what's visible — 'only show', 'filter to', 'hide results above'. This adjusts the sidebar filters and refreshes the grid.",
-    "parameters": { ... }
-}
+**Recommended layout:**
+```
+[Full width — min-height: 280px, max-height: 360px]
+┌─────────────────────────────────────────────────────┐
+│  [Expert Photo — left 30%]  │  [Expert Info — right 70%]  │
+│  Square / 1:1 aspect ratio  │  Name (large, bold)          │
+│  or monogram fallback       │  Job Title (medium, muted)   │
+│                             │  Bio snippet (2-3 lines)     │
+│                             │  Rate badge                  │
+│                             │  Primary tag pill(s)         │
+│                             │  [Learn More →] [Ask Sage ↗] │
+└─────────────────────────────────────────────────────┘
 ```
 
-**Grid sync mechanism:** Both functions must ultimately write to `resultsSlice` via the same dispatch. For `search_experts`, call `useExplorerStore.getState().setResults(results)` directly after receiving the API response. For `apply_filters`, the existing flow already triggers a grid refresh via `filterSlice` → `useExplore` hook refetch. Do not merge these code paths — keep them separate with the same end state.
+**CTAs — 2 maximum:**
+- "Learn More →" — triggers `NewsletterGateModal` (existing gate flow, same as "View Full Profile")
+- "Ask Sage ↗" — opens Sage panel pre-populated with "Tell me about [First Name] [Last Name]"
 
-**Compact result cards in Sage panel (MEDIUM confidence — derived from Microsoft Copilot chat result pattern):**
+**Featured expert selection (fallback-first approach):**
+1. Admin has set `is_featured: true` on exactly one expert → use that expert
+2. No expert is flagged → use the expert with the highest `findability_score` (already in `Expert` model)
+3. `findability_score` is null for all → use expert at index 0 (alphabetical fallback)
 
-Inside the Sage panel chat bubble, render a compact list — not full bento cards. Maximum 5 results displayed. Each item:
-```
-[Name] — [Job Title]
-[Rate badge] [Primary tag]
-```
-Clicking an item in the panel should: (1) close the Sage panel, (2) scroll the main grid to that expert's card, (3) highlight it briefly (pulse animation). This "show me in the grid" action is more useful than trying to open the profile gate from within the panel.
+This three-tier fallback means the billboard works immediately with zero new backend work (fallback 2 uses existing data). Admin control (fallback 1) can be built later.
+
+**What NOT to do:**
+- Do not use a carousel/slider with autoplay — Netflix's billboard is intentionally static until user action
+- Do not show multiple experts in the billboard simultaneously
+- Do not animate the billboard on page load — the aurora mesh background already provides motion; adding billboard animation creates visual noise
 
 ---
 
-### 2. Sage Clarifying Questions
+### 2. Horizontal Category Rows
 
-**When to ask vs when to act (MEDIUM confidence — Haptik research, 2026 Medium article on agentic AI):**
+**Row count and card count (MEDIUM confidence — derived from Netflix, App Store, Google Play patterns):**
 
-Research finding: inserting ONE clarifying question reduces error rates by 27% and retries from 4.1 to 1.3 per session. The key word is ONE. Sage should never ask two questions in a row.
+- **4–6 rows** on the browse section. Fewer than 4 feels sparse; more than 6 overwhelms before the user reaches the full grid section.
+- **4 fully visible cards + 1 peeking** on desktop (signals horizontal scrollability without a visible scrollbar)
+- **2 fully visible cards + half peeking** on mobile
+- Each row has a category label and a "See All →" link that filters the main grid
 
-**Trigger condition for clarifying question:**
-- Domain is completely unspecified ("I need some help" / "looking for experts")
-- Budget is not mentioned AND rate range covers the full spectrum (no implicit signal)
-- "Level of expertise" is ambiguous when it materially affects the result set
+**Row naming for TCS expert categories (derived from existing metadata.json `tags` distribution):**
 
-**Do NOT ask when:**
-- The user has already given one of the three signals (domain, budget, seniority)
-- The user's previous message already answered a prior clarifying question
-- The query is clear enough to search with reasonable confidence
+The `category` field in metadata.json is `null` for all current experts. Categories must come from the existing `tags` arrays. Recommended approach: group common tags into 5–6 high-level buckets for row display. Example rows:
+- "Strategy & Consulting" — tags matching: strategy, business development, management consulting
+- "Tech & Engineering" — tags matching: software, engineering, AI, data
+- "Marketing & Growth" — tags matching: marketing, SEO, growth, social media
+- "Finance & Legal" — tags matching: finance, accounting, legal, compliance
+- "Featured New Experts" — experts sorted by `created_at` DESC (recency row)
+- "Top Rated" — experts sorted by `findability_score` DESC
 
-**Implementation in system prompt (LOW complexity):**
-
-Add to Sage system prompt:
-> "If a user's request is ambiguous and lacks domain, budget, or experience level, ask ONE focused question before searching. Keep the question short and offer 2-3 concrete options where possible. Example: 'Are you looking for a technical expert, a business strategist, or something else?' Never ask more than one clarifying question per turn."
-
----
-
-### 3. Event Tracking Schema
-
-**Schema design (HIGH confidence — mirrors GA4 event schema industry standard):**
-
-```sql
-CREATE TABLE user_events (
-    id          INTEGER PRIMARY KEY AUTOINCREMENT,
-    event_name  TEXT NOT NULL,          -- 'expert_card_click' | 'sage_query' | 'filter_applied'
-    event_params TEXT NOT NULL,         -- JSON string
-    session_id  TEXT NOT NULL,          -- UUID from sessionStorage
-    created_at  DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX idx_user_events_name ON user_events(event_name);
-CREATE INDEX idx_user_events_created ON user_events(created_at);
-```
-
-**Event schemas (HIGH confidence — standard product analytics event design):**
-
+**Backend endpoint recommendation:**
+`GET /api/browse/rows` returns:
 ```json
-// expert_card_click
-{
-  "expert_id": "usr_abc123",
-  "expert_name": "Jane Smith",
-  "context": "grid"  // or "sage_panel"
-}
-
-// sage_query
-{
-  "query_text": "fintech compliance expert under $150/hr",
-  "function_called": "search_experts",  // or "apply_filters" or "none"
-  "result_count": 8,
-  "result_expert_ids": ["usr_abc", "usr_def", "usr_ghi"]
-}
-
-// filter_applied
-{
-  "filters": {
-    "tags": ["fintech", "compliance"],
-    "rate_min": 0,
-    "rate_max": 150,
-    "text_query": ""
-  },
-  "result_count": 12,
-  "result_expert_ids": ["usr_abc", "usr_def", "usr_ghi", ...]
-}
+[
+  { "id": "strategy", "label": "Strategy & Consulting", "tags": ["strategy", "management"], "experts": [...5 experts...] },
+  { "id": "tech", "label": "Tech & Engineering", "tags": ["software", "engineering"], "experts": [...5 experts...] }
+]
 ```
 
-**Frontend tracking utility (fire-and-forget pattern):**
+Each `experts` array: 8 items max (4 visible + 4 scroll). Row uses existing `/api/explore` query with `tags` param — no new retrieval logic needed.
 
-```typescript
-// src/lib/track.ts
-const SESSION_ID = (() => {
-  let id = sessionStorage.getItem('tcs_session_id');
-  if (!id) {
-    id = crypto.randomUUID();
-    sessionStorage.setItem('tcs_session_id', id);
-  }
-  return id;
-})();
-
-export function track(eventName: string, params: Record<string, unknown>): void {
-  // Fire-and-forget — never await this
-  fetch('/api/events', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ event_name: eventName, event_params: params, session_id: SESSION_ID }),
-  }).catch(() => {}); // Swallow errors silently
-}
-```
-
-**No auth on the events endpoint:** The `/api/events` endpoint should NOT require `X-Admin-Key`. It's a write-only append endpoint that accepts any payload. Abuse is low-risk (worst case: junk rows in SQLite). Adding auth would require passing the session key through the frontend tracking call, which creates complexity and fragility.
+**"See All →" behavior:**
+- Dispatches `store.setTags(row.tags)` to filterSlice
+- Smooth scroll to the existing `FilterSidebar + ExpertGrid` section below the browse rows
+- URL updates via `useUrlSync` (existing hook) — the filtered view becomes shareable
 
 ---
 
-### 4. Admin Gaps & Exposure Dashboard
+### 3. Expert Photo Cards in Browse Context
 
-**What the dashboard answers (MEDIUM confidence — Algolia analytics patterns, marketplace intelligence literature):**
+**The critical unknown — photo availability (LOW-MEDIUM confidence):**
 
-Two distinct questions answered by one tab:
+The current data source (`metadata.json`, `experts.csv`) contains NO photo URLs. The `Expert` SQLAlchemy model has no photo field. The Tinrate platform profile pages load as a JavaScript SPA (confirmed by fetch attempt — returns a loading screen), so photo URLs cannot be extracted by simple scraping.
 
-**Demand side (Unmet Demand):**
-> "What are users looking for that we don't have well-covered?"
+**Three realistic scenarios, in probability order:**
 
-- Zero-result queries: search terms + filter combos that returned 0 experts
-- Low-engagement queries: returned results but zero clicks (results shown were irrelevant)
-- These are the highest-signal marketplace gaps — they represent real user intent that the supply side fails to meet
+**Scenario A (Most likely): Tinrate has photo URLs at a predictable path**
+Many platforms store profile photos at a predictable CDN URL: `https://cdn.tinrate.com/photos/[username].jpg` or `https://app.tinrate.com/storage/[username]/avatar.jpg`. If Tinrate follows this pattern, the URL can be constructed from `username` (already in the data) without any scraping. This should be the first thing verified during implementation.
 
-**Supply side (Expert Exposure):**
-> "Which of our 530 experts are effectively invisible?"
+**Scenario B (Likely fallback): Monogram avatar**
+If photo URLs are not predictable or not publicly accessible, each expert card shows a monogram avatar: first letter of first name, first letter of last name, on a brand-purple circle background. This is the correct production-ready fallback. Examples: "J S" for "Jane Smith". CSS-only, zero data dependency.
 
-- Appearance frequency: how often each expert's ID appears in search result sets
-- Click rate: appearances vs actual card clicks
-- Low-CTR experts: appear in results but are never clicked (findability score or card content issue)
-- Near-zero appearance experts: essentially invisible regardless of query (embedding quality issue)
+**Scenario C (Avoid): Scraping Tinrate profile pages**
+Do not scrape Tinrate's frontend to extract photo URLs. This creates a fragile, unmaintainable dependency on Tinrate's JS bundle structure. It's also legally ambiguous.
 
-**SQL queries for the Gaps tab backend:**
+**Photo card layout in browse rows (MEDIUM confidence — derived from Baymard hover research and Netflix card pattern):**
 
-```sql
--- Unmet Demand: zero-result queries, ranked by frequency
-SELECT
-    json_extract(event_params, '$.query_text') as query_text,
-    COUNT(*) as occurrences,
-    MAX(created_at) as last_seen
-FROM user_events
-WHERE event_name = 'sage_query'
-  AND json_extract(event_params, '$.result_count') = 0
-GROUP BY query_text
-ORDER BY occurrences DESC
-LIMIT 50;
+Default (unhovered) state:
+- Photo fills the card top section (square or 4:5 aspect ratio, `object-fit: cover`)
+- Name + rate badge below the photo
+- Minimal text — scannable, visual-first
 
--- Expert Exposure: appearances in result sets (requires JSON array expansion)
--- Note: SQLite JSON functions available since 3.38 (Railway should have this)
-SELECT
-    expert_id,
-    COUNT(*) as appearances,
-    SUM(CASE WHEN event_name = 'expert_card_click' THEN 1 ELSE 0 END) as clicks
-FROM (
-    SELECT json_each.value as expert_id, event_name
-    FROM user_events, json_each(json_extract(event_params, '$.result_expert_ids'))
-    WHERE event_name IN ('sage_query', 'filter_applied')
-    UNION ALL
-    SELECT json_extract(event_params, '$.expert_id'), event_name
-    FROM user_events
-    WHERE event_name = 'expert_card_click'
-)
-GROUP BY expert_id
-ORDER BY appearances ASC; -- ASC = least visible first
+Hover state (desktop only):
+- Card scales to ~110–115% (`transform: scale(1.1)`, `z-index: 50`)
+- Photo dims slightly (overlay `bg-black/30`)
+- Overlay shows: job title, primary tag pill(s), "View Profile" and "Ask Sage" CTAs
+- Transition: 200ms ease-out (matches existing `.expert-card` transition timing)
+
+Mobile (no hover state):
+- Photo-first card, tap goes directly to `NewsletterGateModal`
+- No hover overlay on mobile — touch targets are the whole card
+
+**Aspect ratio recommendation:**
+- `1:1` (square) for row cards — simpler to implement, more consistent layout when photo dimensions vary
+- `4:5` for the billboard hero (portrait orientation suits headshots better for the large format)
+
+**`object-fit: cover` and `object-position: top`:**
+For headshots, `object-position: top` ensures the face is never cropped. This is the standard approach for professional headshots in marketplace UIs.
+
+---
+
+### 4. Sage Cross-Page Navigation Intent
+
+**The pattern (LOW-MEDIUM confidence — emerging, no established authoritative source):**
+
+Adding a third Gemini function `navigate_to` that allows Sage to trigger programmatic navigation via React Router's `useNavigate`. This closes the interaction gap between "I'm browsing in the grid" and "I want Sage to take me somewhere."
+
+**Intent signals for `navigate_to` (derived from chatbot intent classification research):**
+
+| User Says | Intent | Navigation |
+|-----------|--------|------------|
+| "Take me to Strategy experts" | Browse category | `navigate_to({ page: 'filtered_grid', params: { tags: ['strategy'] } })` |
+| "Browse all experts" / "Show me everything" | Browse browse | `navigate_to({ page: 'browse' })` → resets filters |
+| "Go back to chat" | Legacy chat | `navigate_to({ page: 'chat' })` — deprecated, redirect to /marketplace |
+| "Home" / "Start over" | Browse root | `store.resetFilters()` + scroll to top — may not need navigate_to |
+
+**Implementation approach:**
+
+`navigate_to` is NOT a React Router `useNavigate` call inside `useSage` (hooks can't call other hooks in callbacks). The correct pattern:
+1. Backend returns `{ navigate_to: { page: string, params?: object } }` in `PilotResponse`
+2. `useSage` detects this field and returns it to the calling component
+3. `SagePanel` (or root component) calls `useNavigate()` reactively when `navigate_to` is set
+
+This keeps the hook boundary clean. `useNavigate` is called in the component, not in the async callback.
+
+**Key constraint: Gemini function descriptions must be mutually exclusive:**
+- `apply_filters`: "Adjust what's visible in the current expert grid. Use for 'only show X', 'filter to Y', 'hide above $Z'."
+- `search_experts`: "Search for specific experts by skills or description. Use for 'find me someone who', 'show me experts in X'."
+- `navigate_to`: "Navigate to a different section or page. Use for 'take me to', 'go back to', 'browse', 'home', 'start over'."
+
+The three-function schema must be tested against at least 15 real queries from the `conversations` table before shipping, same as the two-function schema required testing in v2.3.
+
+**Conversation continuity on navigation (MEDIUM confidence):**
+
+When Sage triggers navigation, the conversation must NOT reset. Zustand `pilotSlice` state already persists across route changes because Zustand state is in-memory (not tied to component lifecycle). The only requirement is that `SageFAB` and `SagePanel` are mounted OUTSIDE the route outlet — above `<Outlet />` in the root layout — so they don't unmount on route change.
+
+Current architecture: `SageFAB` and `SagePanel` are mounted inside `MarketplacePage`. This means they unmount when the user navigates away. For cross-page navigation, move these to the root layout component that wraps all user-facing routes.
+
+---
+
+### 5. Page Transition Animations
+
+**Recommended approach (HIGH confidence — React Router v7 View Transitions API confirmed stable):**
+
+React Router v7's `viewTransition: true` option wraps navigation in `document.startViewTransition()`, providing native cross-fade between route renders. This is now Baseline (Chrome 111+, Firefox 144+, Safari 18+, Edge 111+). Firefox added support in version 144 (October 2025).
+
+**Implementation:**
+```tsx
+// On Link components
+<Link to="/marketplace" viewTransition>Browse</Link>
+
+// On programmatic navigation
+navigate('/marketplace', { viewTransition: true })
 ```
 
-**Dashboard UI layout (MEDIUM confidence — derived from Algolia Analytics dashboard pattern):**
+For aurora-consistent transitions, use `view-transition-name` on the AuroraBackground:
+```css
+.aurora-background {
+  view-transition-name: aurora;
+}
+```
+This causes the aurora to cross-fade between routes rather than hard-cut, preserving the visual continuity of the aesthetic.
+
+**Framer Motion AnimatePresence (fallback and supplement):**
+For browsers that don't support View Transitions, use `AnimatePresence` with `location.key` as the key prop on the route wrapper. This is the existing v2.x approach and remains valid as a fallback.
+
+**Loading states — skeleton-first approach:**
+- Route change: AuroraBackground persists (mounted at root level), route content fades in with `initial={{ opacity: 0 }} animate={{ opacity: 1 }}` (150ms)
+- Data loading within a route: existing `SkeletonGrid` for the main expert grid
+- Category row loading: per-row horizontal skeleton (new — 5 card-sized pulse placeholders in a horizontal scroll container)
+
+**What NOT to animate:**
+- The Sage FAB: never animate it during route transitions — it must appear stationary (it's the persistent co-pilot anchor)
+- The glassmorphic header: already has backdrop-blur; adding transition animation on route change adds visual noise
+
+---
+
+### 6. Route Reorganization UX
+
+**Current routes (from `main.tsx` audit):**
+
+| Route | Current Behavior | v3.0 Action |
+|-------|-----------------|-------------|
+| `/` | Redirect → `/marketplace` | Keep as-is |
+| `/marketplace` | MarketplacePage (aurora grid) | Enhanced: gains Browse Hero + Category Rows at top |
+| `/chat` | App.tsx (legacy v1.0 chatbot) | Redirect → `/marketplace` (the marketplace IS the chat via Sage now) |
+| `/admin/login` | Admin login | Unchanged |
+| `/admin/*` | Admin app | Unchanged |
+
+**The `/chat` route decision:**
+The legacy `/chat` route (`App.tsx`) is the original v1.0 SSE chatbot. It is now functionally superseded by the Sage co-pilot on `/marketplace`. Keeping two chat interfaces is confusing. Recommendation: redirect `/chat` to `/marketplace`. The component (`App.tsx`) can stay in the codebase but should not be user-accessible.
+
+**Back button behavior (MEDIUM confidence — React Router SPA standard):**
+
+React Router's `createBrowserRouter` uses the History API. The browser back button works correctly within the SPA without any special handling. The one exception is the "See All →" category row click: this dispatches a `setTags` filter action but does NOT push a new route — it just updates URL params via `useUrlSync`. The back button will restore the previous URL params (the pre-filter URL), which is correct behavior.
+
+**Scroll restoration:**
+React Router v7 handles scroll restoration automatically. When "See All →" scrolls the user to the filter grid, the back button should restore scroll position. For the filter dispatch case (no route change), manual scroll restoration is not needed — the DOM position is preserved.
+
+---
+
+### 7. "Continue Browsing" Breadcrumb
+
+**The pattern (MEDIUM confidence — e-commerce breadcrumb research, Pencilandpaper.io, Smart Interface Design Patterns):**
+
+The "Continue Browsing" breadcrumb is NOT a traditional hierarchical breadcrumb (Home > Category > Subcategory). It is a single-level context reset affordance that appears when the user is in a sub-state (filtered by category) and surfaces the path back to the unfiltered browse view.
+
+**Trigger condition:**
+- `filterSlice.tags.length > 0` AND the active tags match a known category row (not user-typed tags)
+- OR: a `fromBrowseCategory: string | null` field in the filter state that is set when "See All →" is clicked and cleared when the user manually changes filters
+
+**Placement and text:**
+```
+[← Browse all experts] or [← Back to Browse]
+```
+Position: above the FilterChips row, below the Command Center header. This positions it as a secondary navigation hint rather than a primary nav element.
+
+**Behavior:**
+- Click: `store.resetFilters()` + smooth scroll to the top browse hero section
+- The breadcrumb disappears immediately on filter reset (reactive to `filterSlice.tags.length`)
+- On mobile: same position, slightly smaller text. Still one line.
+
+**What to avoid:**
+- Do not make it a full-width banner — it should feel like a quiet navigation hint, not a primary navigation element
+- Do not show it when users manually select tags in the sidebar (only when tags come from "See All →")
+- Do not animate it on appearance/disappearance with anything more than a simple `opacity` fade
+
+---
+
+## MVP Prioritization for v3.0
+
+**P1 — Ship in v3.0 core (milestone incomplete without these):**
+1. Billboard hero section (featured expert, monogram fallback, 2 CTAs)
+2. Horizontal category rows (4–6 rows, "See All →" integration, skeleton loading)
+3. Route reorganization: `/chat` → redirect `/marketplace`; Sage panel mounted at root layout level
+4. Page transition with View Transitions API + AnimatePresence fallback
+
+**P2 — Ship in v3.0 (high value, contained scope):**
+5. Expert photo cards in browse rows (with monogram fallback — do NOT block on photo URL discovery)
+6. "Continue Browsing" breadcrumb (low complexity, high UX value)
+7. "Ask Sage about this expert" CTA on cards and billboard
+
+**P3 — Ship if P1/P2 complete, otherwise defer to v3.1:**
+8. Sage cross-page navigation intent (`navigate_to` function) — HIGH complexity, needs testing
+9. Netflix-style card hover expand (scale + overlay) — MEDIUM complexity, polish
+10. Admin billboard control (is_featured flag) — needs backend + admin UI work
+
+**Defer to v3.1+:**
+- Algorithmic billboard personalization (no user data model before newsletter gate)
+- Video preview on card hover (no video assets exist)
+- Infinite horizontal scroll in rows (anti-feature, see above)
+- TCS-native deep link to expert cards (canonical URL is on Tinrate platform)
+
+---
+
+## Dependency Summary for Roadmap
 
 ```
-Admin → Gaps & Exposure tab
-├── Date Range Selector (Last 7d | 30d | All time)
-│
-├── Section: Unmet Demand
-│   ├── Stat card: "X zero-result queries in period"
-│   ├── Stat card: "Y low-engagement queries in period"
-│   └── Table: Query Text | Occurrences | Last Seen | Action (→ test in search)
-│
-└── Section: Expert Exposure
-    ├── Stat card: "N experts with 0 appearances"
-    ├── Stat card: "Average appearances per expert: X"
-    └── Table: Expert Name | Appearances | Clicks | CTR% | Findability Score
-        (sortable; default sort: least exposed first)
+Phase A: Route Reorganization + Sage Root Mount
+    → /chat redirect, Sage panel moves to root layout
+    → Enables: all cross-page features, page transitions
+
+Phase B: Billboard Hero
+    → Featured expert API (or findability_score fallback)
+    → Photo display with monogram fallback
+    → "Ask Sage" CTA (requires Phase A — Sage at root level)
+
+Phase C: Category Rows + "See All"
+    → /api/browse/rows endpoint (tags-based grouping)
+    → Horizontal scroll row component
+    → "Continue Browsing" breadcrumb (low dependency, bundle with Phase C)
+
+Phase D: Photo Cards + Hover States (if photo URLs are available)
+    → ExpertCard variant="browse" prop
+    → Hover expand animation (Framer Motion)
+    → Requires photo URL investigation as Phase 0 prerequisite
+
+Phase E: Sage Navigation Intent (defer if complexity blocks earlier phases)
+    → navigate_to Gemini function
+    → 15-query validation test (same protocol as v2.3 dual-function test)
 ```
 
-**Recommendation: no charts for MVP.** Tables are more actionable than bar charts for this data. An admin looking at the Gaps tab wants to take action on specific queries or specific experts — a table with copy-able query text and clickable expert names is more useful than a distribution chart. Add charts in v2.4 if needed.
+**Critical prerequisite (Phase 0 — before any implementation):**
+Investigate whether Tinrate profile photos are accessible at a predictable URL from `username`. This single question determines whether photo cards are possible in v3.0 or degrade to monogram-only. Check: `https://api.tinrate.com/users/[username]/avatar`, `https://cdn.tinrate.com/[username].jpg`, or inspect the Tinrate app's network requests when a profile page loads. If no photo URL pattern is found within 30 minutes of investigation, commit to monogram fallback and move on.
 
 ---
 
 ## Sources
 
-**AI assistant dual-function / active search UX:**
-- [5 UX Patterns for Better Generative AI Search — Medium/Bootcamp](https://medium.com/design-bootcamp/5-ux-patterns-for-better-generative-ai-search-6fecb37142a1) — MEDIUM confidence
-- [Generative UI — CopilotKit](https://www.copilotkit.ai/generative-ui) — MEDIUM confidence
-- [Creating a dynamic UX for generative AI applications — Microsoft Learn](https://learn.microsoft.com/en-us/microsoft-cloud/dev/copilot/isv/ux-guidance) — MEDIUM confidence
-- [UX for AI Chatbots — parallelhq.com](https://www.parallelhq.com/blog/ux-ai-chatbots) — LOW confidence (single source)
+**Netflix browse UX patterns:**
+- [Netflix Design: A Deep Dive into UX Strategy — CreateBytes](https://createbytes.com/insights/netflix-design-analysis-ui-ux-review) — MEDIUM confidence
+- [How Netflix's Personalize Recommendation Algorithm Works — Attract Group](https://attractgroup.com/blog/how-netflixs-personalize-recommendation-algorithm-works/) — MEDIUM confidence
+- [Breaking down the new Netflix TV UI — Matthijs Langendijk / Medium](https://mlangendijk.medium.com/breaking-down-the-new-netflix-tv-ui-d651aff8bbee) — MEDIUM confidence
+- [Netflix UX Case Study — Pixel Plasma / Medium](https://medium.com/@pixelplasmadesigns/netflix-ux-case-study-the-psychology-design-and-experience-afecb135470f) — MEDIUM confidence
 
-**Clarifying questions in conversational AI:**
-- [Probing For Clarification — Haptik AI](https://www.haptik.ai/tech/probing-clarification-skill-ai-assistant) — MEDIUM confidence (specific data: 27% error reduction, 4.1→1.3 retries)
-- [When agents learn to ask: Active questioning in agentic AI — Medium](https://medium.com/@milesk_33/when-agents-learn-to-ask-active-questioning-in-agentic-ai-f9088e249cf7) — MEDIUM confidence
-- [Conversational AI Assistant Design — TELUS Digital / WillowTree](https://www.willowtreeapps.com/insights/willowtrees-7-ux-ui-rules-for-designing-a-conversational-ai-assistant) — MEDIUM confidence
+**Billboard and editorial vs algorithmic curation:**
+- [A Brief History of Netflix Personalization — Gibson Biddle / Medium](https://gibsonbiddle.medium.com/a-brief-history-of-netflix-personalization-1f2debf010a1) — MEDIUM confidence
+- [Curated Marketplaces — AVC](https://avc.com/2013/10/curated-marketplaces/) — MEDIUM confidence (older but foundational)
 
-**AI nudges + empty states:**
-- [AI UX Patterns — Nudges — ShapeOfAI.com](https://www.shapeof.ai/patterns/nudges) — MEDIUM confidence
-- [Empty State UI Pattern — Mobbin](https://mobbin.com/glossary/empty-state) — MEDIUM confidence
+**Horizontal scroll row UX patterns:**
+- [Horizontal Scrolling Lists in Mobile — Suleiman Shakir / UX Collective](https://uxdesign.cc/best-practices-for-horizontal-lists-in-mobile-21480b9b73e5) — MEDIUM confidence
+- [Beware Horizontal Scrolling and Mimicking Swipe on Desktop — Nielsen Norman Group](https://www.nngroup.com/articles/horizontal-scrolling/) — HIGH confidence (NN/G authoritative)
 
-**Event tracking in SPAs:**
-- [Best practices for tracking user interactions in SPAs — Zigpoll](https://www.zigpoll.com/content/what-are-the-best-practices-for-tracking-user-interaction-data-on-singlepage-applications-to-optimize-frontend-performance-and-enhance-user-experience) — MEDIUM confidence
-- [Measure single-page applications — Google Analytics for Developers](https://developers.google.com/analytics/devguides/collection/ga4/single-page-applications) — HIGH confidence (official Google docs)
-- [Event Analytics: Ultimate Guide — UXcam](https://uxcam.com/blog/event-analytics/) — MEDIUM confidence
-- [The Complete Guide to Events Tracking — Countly](https://countly.com/blog/event-tracking-digital-analytics) — MEDIUM confidence
+**Card hover states and photo-first marketplace UX:**
+- [Product Lists & Search Results Thumbnail Best Practices — Baymard Institute](https://baymard.com/blog/secondary-hover-information) — HIGH confidence (authoritative UX research)
+- [How to Re-Create a Nifty Netflix Animation in CSS — CSS-Tricks](https://css-tricks.com/how-to-re-create-a-nifty-netflix-animation-in-css/) — MEDIUM confidence
 
-**Zero-result analytics:**
-- [Track Zero Search Results In Google Analytics — Cludo](https://www.cludo.com/blog/track-zero-search-results-in-google-analytics) — MEDIUM confidence
-- [Zero-Result Searches — Lucidworks (Never Null)](https://lucidworks.com/blog/learn-from-zero-results-searches-with-never-null/) — MEDIUM confidence
-- [Where can I see searches without results? — Algolia](https://support.algolia.com/hc/en-us/articles/13079831222033-Where-can-I-see-searches-without-results) — HIGH confidence (official Algolia docs)
-- [Null Results Optimization — Algolia Ecommerce Playbook](https://www.algolia.com/ecommerce-merchandising-playbook/null-results-optimization) — HIGH confidence
+**Page transitions and View Transitions API:**
+- [View Transitions | React Router Official Docs](https://reactrouter.com/how-to/view-transitions) — HIGH confidence (official docs)
+- [What's new in view transitions (2025 update) — Chrome for Developers](https://developer.chrome.com/blog/view-transitions-in-2025) — HIGH confidence (official Chrome docs)
+- [Framer Motion + React Router: The Page Transition Strategy — Medium](https://medium.com/@genildocs/framer-motion-react-router-the-page-transition-strategy-that-made-my-spa-feel-native-6813aefcef7f) — MEDIUM confidence
 
-**FAB animation patterns:**
-- [FAB: UX Design Win — Google Design](https://design.google/library/absolutely-fab-button) — HIGH confidence (Google Design, authoritative)
-- [The Usability of the Animated FAB — Cinnamon Agency](https://www.cinnamon.agency/blog/post/the_usability_of_the_animated_fab_part_1_2) — MEDIUM confidence
-- [Floating Action Button in UX Design — Icons8](https://blog.icons8.com/articles/floating-action-button-ux-design/) — LOW confidence
+**Breadcrumb and back navigation patterns:**
+- [Designing Better Breadcrumbs UX — Smart Interface Design Patterns](https://smart-interface-design-patterns.com/articles/breadcrumbs-ux/) — MEDIUM confidence
+- [Breadcrumbs UX Navigation — Pencil & Paper](https://www.pencilandpaper.io/articles/breadcrumbs-ux) — MEDIUM confidence
+
+**AI navigation intent and chatbot routing:**
+- [AI Agent-Driven UIs: Revolutionizing App Navigation & Design — AppInventiv](https://appinventiv.com/blog/ai-ui-replacing-apps-and-buttons/) — LOW confidence (emerging pattern, single source)
+- [Automated intent recognition in 2025 — eesel AI](https://www.eesel.ai/blog/automated-intent-recognition) — LOW confidence (non-authoritative)
+
+**Direct codebase inspection (HIGH confidence):**
+- `frontend/src/main.tsx` — current route config confirmed
+- `frontend/src/hooks/useSage.ts` — current Sage function architecture confirmed
+- `frontend/src/components/marketplace/ExpertCard.tsx` — card structure and hover behavior confirmed
+- `frontend/src/store/resultsSlice.ts` — sageMode, setResults, setSageMode confirmed
+- `frontend/src/components/marketplace/SkeletonGrid.tsx` — existing skeleton pattern confirmed
+- `data/metadata.json` — field names confirmed; NO photo URL field present
 
 ---
 
-*Feature research for: TCS v2.3 Sage Evolution & Marketplace Intelligence*
-*Researched: 2026-02-22*
+*Feature research for: TCS v3.0 Netflix Browse & Agentic Navigation*
+*Researched: 2026-02-24*
