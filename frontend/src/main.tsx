@@ -1,9 +1,9 @@
 import "./instrument";
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom'
+import { createBrowserRouter, RouterProvider, Navigate, useSearchParams } from 'react-router-dom'
 import './index.css'
-import App from './App.tsx'
+import BrowsePage from './pages/BrowsePage.tsx'
 import MarketplacePage from './pages/MarketplacePage.tsx'
 import AdminApp from './admin/AdminApp.tsx'
 import LoginPage from './admin/LoginPage.tsx'
@@ -17,18 +17,34 @@ import IntelligenceDashboardPage from './admin/pages/IntelligenceDashboardPage.t
 import ToolsPage from './admin/pages/ToolsPage.tsx'
 import DataPage from './admin/pages/DataPage.tsx'
 
+/**
+ * Redirects /marketplace to /explore preserving query params.
+ * Must be a component (not inline Navigate) because useSearchParams
+ * requires a RouterProvider context.
+ */
+function MarketplaceRedirect() {
+  const [searchParams] = useSearchParams()
+  const queryString = searchParams.toString()
+  const destination = queryString ? `/explore?${queryString}` : '/explore'
+  return <Navigate to={destination} replace />
+}
+
 const router = createBrowserRouter([
   {
     path: '/',
-    element: <Navigate to="/marketplace" replace />,
+    element: <BrowsePage />,
   },
   {
-    path: '/marketplace',
+    path: '/explore',
     element: <MarketplacePage />,
   },
   {
+    path: '/marketplace',
+    element: <MarketplaceRedirect />,
+  },
+  {
     path: '/chat',
-    element: <App />,
+    element: <Navigate to="/explore" replace />,
   },
   {
     path: '/admin/login',
