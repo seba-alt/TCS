@@ -7,7 +7,7 @@
 - [x] **v1.2 Intelligence Activation & Steering Panel** - Phases 11-13 (shipped 2026-02-21)
 - [x] **v2.0 Extreme Semantic Explorer** - Phases 14-21 (shipped 2026-02-22)
 - [x] **v2.2 Evolved Discovery Engine** - Phases 22-27 (shipped 2026-02-22)
-- [ ] **v2.3 Sage Evolution & Marketplace Intelligence** - Phases 28-32 (in progress)
+- [ ] **v2.3 Sage Evolution & Marketplace Intelligence** - Phases 28-35 (in progress)
 
 ## Phases
 
@@ -70,6 +70,8 @@ See `.planning/milestones/v2.2-ROADMAP.md`
 - [x] **Phase 29: Sage Personality + FAB Reactions** - Rewrite system prompt for warmer/wittier tone; animated FAB boxShadow pulse on activity (completed 2026-02-22)
 - [x] **Phase 30: Behavior Tracking** - `UserEvent` DB model + `POST /api/events` backend + frontend `trackEvent()` instrumentation for card clicks, Sage queries, and filter changes (2 plans ready) (completed 2026-02-22)
 - [x] **Phase 31: Admin Marketplace Intelligence** - New `/admin/marketplace` page showing unmet demand, expert exposure, daily Sage trend, and cold-start empty state (completed 2026-02-22)
+
+- [ ] **Phase 35: Close v2.3 Documentation Gaps** - Write missing VERIFICATION.md and SUMMARY docs, update specs and traceability (gap closure)
 
 ## Phase Details
 
@@ -236,8 +238,8 @@ Plans:
 - `AdminApp.tsx` routes: add `/admin/tools` → `ToolsPage`, update `/admin/index` and `/admin/score-explainer` and `/admin/search-lab` to redirect to `/admin/tools`
 
 Plans:
-- [ ] 34-01-PLAN.md — Sidebar restructure + ToolsPage (Search Lab / Score Explainer / Index tabs) + re-index into Settings
-- [ ] 34-02-PLAN.md — OverviewPage dashboard uplift: top zero-result queries card, layout improvements, strong first impression
+- [x] 34-01-PLAN.md — Sidebar restructure + ToolsPage (Search Lab / Score Explainer / Index tabs) + re-index into Settings
+- [x] 34-02-PLAN.md — OverviewPage dashboard uplift: top zero-result queries card, layout improvements, strong first impression
 
 ## Progress
 
@@ -254,8 +256,26 @@ Plans:
 | 31. Admin Marketplace Intelligence | 2/2 | Complete   | 2026-02-22 | - |
 | 32. Sage Direct Search Integration | 3/3 | Complete    | 2026-02-22 | - |
 | 33. Command Center Header | 2/2 | Complete | 2026-02-23 | - |
-| 34. Admin Platform Restructure | 0/2 | Planned | - | - |
-| 34.1. Fix zero-result searches + Dutch Sage | 2/2 | Complete | 2026-02-23 | - |
+| 34. Admin Platform Restructure | 2/2 | Complete | 2026-02-23 | - |
+| 34.1. Fix zero-result searches + Dutch Sage | 2/2 | Complete   | 2026-02-23 | - |
+| 35. Close v2.3 Documentation Gaps | 0/0 | Planned | - | - |
+
+### Phase 35: Close v2.3 Documentation Gaps
+**Goal**: Write all missing VERIFICATION.md and SUMMARY.md files, resolve ADM-R-01 spec discrepancy, and fix REQUIREMENTS.md traceability table so the v2.3 milestone audit passes clean
+**Depends on**: Phase 34.1 (all features built)
+**Requirements**: HDR-01, HDR-02, HDR-03, ADM-R-01, ADM-R-02, ADM-R-03
+**Gap Closure:** Closes all process gaps from v2.3 milestone audit
+**Success Criteria** (what must be TRUE):
+  1. Phase 33 VERIFICATION.md exists with evidence from 33-02-SUMMARY human verification
+  2. Phase 34 VERIFICATION.md exists verifying ADM-R-01/02/03 against built code
+  3. 34-02-SUMMARY.md exists documenting the OverviewPage uplift
+  4. ADM-R-01 updated to reflect 8 sidebar items (Intelligence page is intentional)
+  5. REQUIREMENTS.md traceability table includes SAGE-DX-01/02/03 and count is 16
+  6. HDR-01/02/03 moved from v2 deferred to v1 scope and checked off
+**Plans**: TBD
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 35 to break down)
 
 ### Phase 34.1: Fix zero-result searches missing from admin gap and enable the sage in dutch (COMPLETE)
 

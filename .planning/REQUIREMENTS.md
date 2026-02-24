@@ -42,6 +42,18 @@ Requirements for v2.3 release. Each maps to roadmap phases.
 - [x] **SAGE-DX-02**: Header expert count reflects Sage's actual FAISS result count; zero-result queries render empty-state UI
 - [x] **SAGE-DX-03**: Any manual sidebar interaction (search, rate, tags, reset) exits Sage mode and restores normal filter-driven results
 
+### Header (Phase 33)
+
+- [x] **HDR-01**: Glassmorphic header — `backdrop-blur-md bg-white/70` with aurora radial gradient backdrop; sticky top-0, grid scrolls visibly underneath
+- [x] **HDR-02**: Animated search bar — rotating playful placeholders, scale-1.02 focus via Framer Motion, Sage-in-flight pulse glow, controlled input reads from `store.query`
+- [x] **HDR-03**: Expert count spring animation + easter egg — count reads `store.total` with spring transition; typing trigger phrase causes 3-degree header tilt
+
+### Admin Restructure (Phase 34)
+
+- [x] **ADM-R-01**: Sidebar consolidation — 8 nav items across 3 sections (Analytics, Tools, Admin); re-index moves to Settings
+- [x] **ADM-R-02**: ToolsPage with tab navigation — Search Lab, Score Explainer, Index on one page; existing routes redirect
+- [x] **ADM-R-03**: Dashboard first impression — OverviewPage shows top zero-result queries card, Sage volume sparkline, API health all above the fold
+
 ## v2 Requirements
 
 Deferred to future release. Tracked but not in current roadmap.
@@ -56,18 +68,6 @@ Deferred to future release. Tracked but not in current roadmap.
 
 - **INTEL-05**: Real-time Gaps dashboard (WebSocket/SSE polling) — retrospective analysis sufficient for v2.3
 - **INTEL-06**: UMAP visualization for embedding space — heavy Railway build dependency, deferred
-
-### Header (Phase 33)
-
-- **HDR-01**: Glassmorphic header — `backdrop-blur-md bg-white/70` with aurora radial gradient backdrop; sticky top-0, grid scrolls visibly underneath
-- **HDR-02**: Animated search bar — rotating playful placeholders, scale-1.02 focus via Framer Motion, Sage-in-flight pulse glow, controlled input reads from `store.query`
-- **HDR-03**: Expert count spring animation + easter egg — count reads `store.total` with spring transition; typing trigger phrase causes 3-degree header tilt
-
-### Admin Restructure (Phase 34)
-
-- **ADM-R-01**: Sidebar consolidation — max 7 nav items across 3 sections (Analytics, Tools, Admin); re-index moves to Settings
-- **ADM-R-02**: ToolsPage with tab navigation — Search Lab, Score Explainer, Index on one page; existing routes redirect
-- **ADM-R-03**: Dashboard first impression — OverviewPage shows top zero-result queries card, Sage volume sparkline, API health all above the fold
 
 ## Out of Scope
 
@@ -98,12 +98,21 @@ Which phases cover which requirements. Updated during roadmap creation.
 | INTEL-02 | Phase 31 | Complete |
 | INTEL-03 | Phase 31 | Complete |
 | INTEL-04 | Phase 31 | Complete |
+| SAGE-DX-01 | Phase 32 | Complete |
+| SAGE-DX-02 | Phase 32 | Complete |
+| SAGE-DX-03 | Phase 32 | Complete |
+| HDR-01 | Phase 33 | Complete |
+| HDR-02 | Phase 33 | Complete |
+| HDR-03 | Phase 33 | Complete |
+| ADM-R-01 | Phase 34 | Complete |
+| ADM-R-02 | Phase 34 | Complete |
+| ADM-R-03 | Phase 34 | Complete |
 
 **Coverage:**
-- v1 requirements: 13 total
-- Mapped to phases: 13
+- v1 requirements: 22 total
+- Mapped to phases: 22
 - Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-02-22*
-*Last updated: 2026-02-22 — traceability finalized after roadmap creation (Phases 28-31)*
+*Last updated: 2026-02-24 — traceability expanded to 22 requirements (added SAGE-DX, HDR, ADM-R); HDR/ADM-R promoted from v2 to v1*
