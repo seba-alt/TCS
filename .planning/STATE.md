@@ -10,16 +10,16 @@ See: .planning/PROJECT.md (updated 2026-02-24)
 ## Current Position
 
 Phase: 38 of 39 (Browse UI)
-Plan: 1 of 2 complete
-Status: In progress
-Last activity: 2026-02-24 — Phase 38 Plan 01 complete (browse components: useBrowse, BrowseCard, BrowseRow, skeletons)
+Plan: 2 of 2 complete
+Status: Phase 38 complete — ready for Phase 39
+Last activity: 2026-02-24 — Phase 38 Plan 02 complete (HeroBanner carousel, SkeletonHeroBanner, full BrowsePage assembly)
 
-Progress: [██████░░░░] 62% (5 plans complete)
+Progress: [███████░░░] 75% (6 plans complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed (v3.0): 4
+- Total plans completed (v3.0): 6
 - Prior milestone (v2.3): 17 plans across 9 phases
 
 **By Phase (v3.0):**
@@ -28,7 +28,7 @@ Progress: [██████░░░░] 62% (5 plans complete)
 |-------|-------|-------|----------|
 | 36. Foundation | 2/2 | 3min | ~1.5min |
 | 37. Backend Endpoints | 2/2 | 5min | ~2.5min |
-| 38. Browse UI | 1/2 | 2min | ~2min |
+| 38. Browse UI | 2/2 | 4min | ~2min |
 | 39. Sage Cross-Page Navigation | TBD | - | - |
 
 *Updated after each plan completion*
@@ -51,6 +51,9 @@ Recent decisions affecting current work:
 - Phase 38 Plan 01: Dark gradient overlay (not .glass-surface) for BrowseCard — backdrop-filter breaks inside overflow:hidden
 - Phase 38 Plan 01: Deterministic monogram gradient via charCodeAt(0) % 6 palette for consistent per-expert color
 - Phase 38 Plan 01: Mobile second-tap on expanded card opens profile_url in new tab
+- Phase 38 Plan 02: HeroBanner rotation uses setInterval cleared on paused=true — simple and sufficient for 5s cadence
+- Phase 38 Plan 02: recently-added slug mapped to 'Recently Joined' display label inline in BrowsePage (UI concern, not hook/backend)
+- Phase 38 Plan 02: setNavigationSource('browse') called BEFORE navigate() — maintains Phase 36 pattern for browse navigation
 
 ### Pending Todos
 
@@ -64,5 +67,5 @@ None — photo backend is ready for Browse UI consumption
 ## Session Continuity
 
 Last session: 2026-02-24
-Stopped at: Phase 38 Plan 01 complete — ready for Phase 38 Plan 02 (BrowsePage assembly)
-Resume signal: Run /gsd:execute-phase 38-browse-ui (plan 02)
+Stopped at: Phase 38 Plan 02 complete — Phase 38 Browse UI DONE. Ready for Phase 39 (Sage Cross-Page Navigation)
+Resume signal: Run /gsd:execute-phase 39-sage-navigation (plan 01)

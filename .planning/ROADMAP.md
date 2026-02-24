@@ -70,7 +70,7 @@ See `.planning/milestones/v2.3-ROADMAP.md`
 
 - [x] **Phase 36: Foundation** - Route restructure, Zustand navigationSlice, Expert.photo_url column (2 plans) (completed 2026-02-24)
 - [x] **Phase 37: Backend Endpoints** - GET /api/browse + GET /api/photos/{username} + bulk photo CSV ingest (completed 2026-02-24)
-- [ ] **Phase 38: Browse UI** - BrowsePage, CategoryRow, BrowseExpertCard with photo/monogram, "See All" and "Explore All" navigation (2 plans)
+- [x] **Phase 38: Browse UI** - BrowsePage, CategoryRow, BrowseExpertCard with photo/monogram, "See All" and "Explore All" navigation (2 plans) (completed 2026-02-24)
 - [ ] **Phase 39: Sage Cross-Page Navigation** - Sage FAB on Browse, cross-page handoff, conversation history preserved
 
 ## Phase Details
@@ -140,5 +140,5 @@ Plans:
 | 28-35. Sage Evolution | v2.3 | 17/17 | Complete | 2026-02-24 |
 | 36. Foundation | 2/2 | Complete    | 2026-02-24 | - |
 | 37. Backend Endpoints | 2/2 | Complete    | 2026-02-24 | - |
-| 38. Browse UI | 1/2 | In Progress|  | - |
+| 38. Browse UI | 2/2 | Complete   | 2026-02-24 | - |
 | 39. Sage Cross-Page Navigation | v3.0 | 0/TBD | Not started | - |
