@@ -126,7 +126,10 @@ Plans:
   2. User asks Sage a discovery question on Browse, Sage navigates them to Explorer, and the search results are visible in the expert grid on arrival without a competing 530-expert fetch flash
   3. User asks Sage a question on Browse, navigates to Explorer, and can see and continue the same conversation thread in the Sage panel — no messages lost
   4. Navigating from Browse to Explorer does not reset the Sage pilot state — direct `/explore` URL visits still start with a clean Sage panel
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+  - [ ] 39-01-PLAN.md — RootLayout + SagePopover + FAB lift (SAGE-01, SAGE-02)
+  - [ ] 39-02-PLAN.md — Discovery auto-navigation + pending results (SAGE-03)
 
 ## Progress
 
@@ -141,4 +144,4 @@ Plans:
 | 36. Foundation | 2/2 | Complete    | 2026-02-24 | - |
 | 37. Backend Endpoints | 2/2 | Complete    | 2026-02-24 | - |
 | 38. Browse UI | 2/2 | Complete    | 2026-02-24 | - |
-| 39. Sage Cross-Page Navigation | v3.0 | 0/TBD | Not started | - |
+| 39. Sage Cross-Page Navigation | v3.0 | 0/2 | Not started | - |
