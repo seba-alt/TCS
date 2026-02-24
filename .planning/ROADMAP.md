@@ -70,7 +70,7 @@ See `.planning/milestones/v2.3-ROADMAP.md`
 
 - [x] **Phase 36: Foundation** - Route restructure, Zustand navigationSlice, Expert.photo_url column (2 plans) (completed 2026-02-24)
 - [x] **Phase 37: Backend Endpoints** - GET /api/browse + GET /api/photos/{username} + bulk photo CSV ingest (completed 2026-02-24)
-- [ ] **Phase 38: Browse UI** - BrowsePage, CategoryRow, BrowseExpertCard with photo/monogram, "See All" and "Explore All" navigation
+- [ ] **Phase 38: Browse UI** - BrowsePage, CategoryRow, BrowseExpertCard with photo/monogram, "See All" and "Explore All" navigation (2 plans)
 - [ ] **Phase 39: Sage Cross-Page Navigation** - Sage FAB on Browse, cross-page handoff, conversation history preserved
 
 ## Phase Details
@@ -112,7 +112,10 @@ Plans:
   3. User clicks "See All" on any category row and arrives at Explorer with that row's filter pre-applied and the expert grid populated accordingly
   4. User clicks "Explore All Experts" in the Browse page header and arrives at Explorer showing all 530 experts with no filters applied
   5. Rows show per-card skeleton placeholders while data is loading — no blank rows appear at any point during initial fetch
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+  - [ ] 38-01-PLAN.md — Data hook + BrowseCard + BrowseRow + skeleton components
+  - [ ] 38-02-PLAN.md — HeroBanner carousel + BrowsePage assembly + navigation wiring
 
 ### Phase 39: Sage Cross-Page Navigation
 **Goal**: Sage operates as a persistent co-pilot across both Browse and Explorer — conversation history survives navigation and discovery searches land the user directly in Explorer with results already loaded
@@ -137,5 +140,5 @@ Plans:
 | 28-35. Sage Evolution | v2.3 | 17/17 | Complete | 2026-02-24 |
 | 36. Foundation | 2/2 | Complete    | 2026-02-24 | - |
 | 37. Backend Endpoints | 2/2 | Complete    | 2026-02-24 | - |
-| 38. Browse UI | v3.0 | 0/TBD | Not started | - |
+| 38. Browse UI | v3.0 | 0/2 | Planned | - |
 | 39. Sage Cross-Page Navigation | v3.0 | 0/TBD | Not started | - |
