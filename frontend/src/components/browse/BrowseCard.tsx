@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { motion } from 'motion/react'
 import type { BrowseCard as BrowseCardType } from '../../hooks/useBrowse'
 
+const API_BASE = import.meta.env.VITE_API_URL ?? ''
+
 // Deterministic gradient selection based on first initial
 // Uses brand-aligned purple/violet/indigo palette
 const GRADIENTS = [
@@ -69,7 +71,7 @@ export function BrowseCard({ expert }: BrowseCardProps) {
       {/* Photo layer */}
       {showPhoto ? (
         <img
-          src={expert.photo_url!}
+          src={`${API_BASE}${expert.photo_url!}`}
           alt={name}
           className="absolute inset-0 w-full h-full object-cover"
           onError={() => setImgError(true)}
