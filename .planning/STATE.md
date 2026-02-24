@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-24)
 
 **Core value:** A user describes any problem and instantly gets expertly matched professionals they can browse, filter, and contact — no searching, no guesswork.
-**Current focus:** v3.0 Netflix Browse & Agentic Navigation — Phase 39: Sage Cross-Page Navigation
+**Current focus:** v3.0 Netflix Browse & Agentic Navigation — Phase 40: Close v3.0 Audit Gaps
 
 ## Current Position
 
-Phase: 39 of 39 (Sage Cross-Page Navigation)
-Plan: 2 of 2 complete
-Status: Phase 39 complete — v3.0 milestone complete
-Last activity: 2026-02-24 — Phase 39 Plan 02 complete (discovery auto-navigation, pending results consumption)
+Phase: 40 of 40 (Close v3.0 Audit Gaps)
+Plan: 1 of 1 complete
+Status: Phase 40 complete — v3.0 audit gaps closed
+Last activity: 2026-02-24 — Phase 40 Plan 01 complete (39-VERIFICATION.md, dead code removed, navigationSource sticky-state fixed)
 
-Progress: [██████████] 100% (8 plans complete)
+Progress: [██████████] 100% (9 plans complete)
 
 ## Performance Metrics
 
@@ -60,6 +60,8 @@ Recent decisions affecting current work:
 - Phase 39 Plan 02: 2s setTimeout before auto-navigation — user reads "Found X experts..." first
 - Phase 39 Plan 02: sageMode + pendingSageResults set BEFORE navigate() — critical race condition prevention
 - Phase 39 Plan 02: Non-discovery questions on Browse just show message (no filter application)
+- Phase 40 Plan 01: useNavigationSlice hook deleted (zero callers) — createNavigationSlice and NavigationSlice type retained
+- Phase 40 Plan 01: setNavigationSource('direct') unconditional after pilot gate — idempotent on primitives, prevents sticky-state across same-session Explorer visits
 
 ### Pending Todos
 
@@ -73,5 +75,5 @@ None — photo backend is ready for Browse UI consumption
 ## Session Continuity
 
 Last session: 2026-02-24
-Stopped at: Phase 39 complete — v3.0 Netflix Browse & Agentic Navigation milestone complete
+Stopped at: Phase 40 Plan 01 complete — v3.0 audit gaps closed (VERIFICATION.md, dead code removed, sticky-state fixed)
 Resume signal: Push to main to deploy, then verify in production

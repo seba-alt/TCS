@@ -72,7 +72,7 @@ See `.planning/milestones/v2.3-ROADMAP.md`
 - [x] **Phase 37: Backend Endpoints** - GET /api/browse + GET /api/photos/{username} + bulk photo CSV ingest (completed 2026-02-24)
 - [x] **Phase 38: Browse UI** - BrowsePage, CategoryRow, BrowseExpertCard with photo/monogram, "See All" and "Explore All" navigation (2 plans) (completed 2026-02-24)
 - [x] **Phase 39: Sage Cross-Page Navigation** - Sage FAB on Browse, cross-page handoff, conversation history preserved (completed 2026-02-24)
-- [ ] **Phase 40: Close v3.0 Audit Gaps** - Phase 39 verification, orphaned hook removal, navigationSource sticky-state fix
+- [x] **Phase 40: Close v3.0 Audit Gaps** - Phase 39 verification, orphaned hook removal, navigationSource sticky-state fix (completed 2026-02-24)
 
 ## Phase Details
 
@@ -159,4 +159,4 @@ Plans:
 | 37. Backend Endpoints | 2/2 | Complete    | 2026-02-24 | - |
 | 38. Browse UI | 2/2 | Complete    | 2026-02-24 | - |
 | 39. Sage Cross-Page Navigation | 2/2 | Complete    | 2026-02-24 | - |
-| 40. Close v3.0 Audit Gaps | 0/1 | Pending | - | - |
+| 40. Close v3.0 Audit Gaps | 1/1 | Complete   | 2026-02-24 | - |
