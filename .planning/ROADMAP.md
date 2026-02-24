@@ -68,7 +68,7 @@ See `.planning/milestones/v2.3-ROADMAP.md`
 
 **Milestone Goal:** Reimagine expert discovery as a high-end streaming service — Netflix-style Browse page hooks users with curated categories, Sage conducts them to the Explorer for deep discovery.
 
-- [ ] **Phase 36: Foundation** - Route restructure, Zustand navigationSlice, Expert.photo_url column
+- [ ] **Phase 36: Foundation** - Route restructure, Zustand navigationSlice, Expert.photo_url column (2 plans)
 - [ ] **Phase 37: Backend Endpoints** - GET /api/browse + GET /api/photos/{username} + bulk photo CSV ingest
 - [ ] **Phase 38: Browse UI** - BrowsePage, CategoryRow, BrowseExpertCard with photo/monogram, "See All" and "Explore All" navigation
 - [ ] **Phase 39: Sage Cross-Page Navigation** - Sage FAB on Browse, cross-page handoff, conversation history preserved
@@ -84,7 +84,9 @@ See `.planning/milestones/v2.3-ROADMAP.md`
   2. Visiting `/marketplace` in the browser redirects permanently to `/explore` with query params preserved
   3. Zustand store has a `navigationSlice` with `pendingSageResults` field that is not persisted to localStorage
   4. Expert SQLAlchemy model has a nullable `photo_url` column added via idempotent ALTER TABLE that does not crash on Railway restart
-**Plans**: TBD
+**Plans**: 2 plans
+  - [ ] 36-01-PLAN.md — Route restructure + BrowsePage stub
+  - [ ] 36-02-PLAN.md — Zustand navigationSlice + Expert.photo_url
 
 ### Phase 37: Backend Endpoints
 **Goal**: Backend serves curated Browse data and proxies expert photos so the Browse UI can be built against real data from day one
@@ -130,7 +132,7 @@ See `.planning/milestones/v2.3-ROADMAP.md`
 | 14-21. Marketplace Phases | v2.0 | 23/23 | Complete | 2026-02-22 |
 | 22-27. Evolved Discovery Engine | v2.2 | 14/14 | Complete | 2026-02-22 |
 | 28-35. Sage Evolution | v2.3 | 17/17 | Complete | 2026-02-24 |
-| 36. Foundation | v3.0 | 0/TBD | Not started | - |
+| 36. Foundation | v3.0 | 0/2 | Planned | - |
 | 37. Backend Endpoints | v3.0 | 0/TBD | Not started | - |
 | 38. Browse UI | v3.0 | 0/TBD | Not started | - |
 | 39. Sage Cross-Page Navigation | v3.0 | 0/TBD | Not started | - |
