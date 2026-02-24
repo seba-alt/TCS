@@ -258,7 +258,7 @@ Plans:
 | 33. Command Center Header | 2/2 | Complete | 2026-02-23 | - |
 | 34. Admin Platform Restructure | 2/2 | Complete | 2026-02-23 | - |
 | 34.1. Fix zero-result searches + Dutch Sage | 2/2 | Complete   | 2026-02-23 | - |
-| 35. Close v2.3 Documentation Gaps | 0/0 | Planned | - | - |
+| 35. Close v2.3 Documentation Gaps | 0/1 | In Progress | - | - |
 
 ### Phase 35: Close v2.3 Documentation Gaps
 **Goal**: Write all missing VERIFICATION.md and SUMMARY.md files, resolve ADM-R-01 spec discrepancy, and fix REQUIREMENTS.md traceability table so the v2.3 milestone audit passes clean
@@ -272,10 +272,10 @@ Plans:
   4. ADM-R-01 updated to reflect 8 sidebar items (Intelligence page is intentional)
   5. REQUIREMENTS.md traceability table includes SAGE-DX-01/02/03 and count is 16
   6. HDR-01/02/03 moved from v2 deferred to v1 scope and checked off
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 35 to break down)
+- [ ] 35-01-PLAN.md — Write 33-VERIFICATION.md, 34-02-SUMMARY.md, 34-VERIFICATION.md; verify REQUIREMENTS.md; update milestone audit to passed
 
 ### Phase 34.1: Fix zero-result searches missing from admin gap and enable the sage in dutch (COMPLETE)
 
