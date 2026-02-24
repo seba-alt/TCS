@@ -10,16 +10,16 @@ See: .planning/PROJECT.md (updated 2026-02-24)
 ## Current Position
 
 Phase: 39 of 39 (Sage Cross-Page Navigation)
-Plan: 1 of 2 complete
-Status: Plan 39-01 complete — executing Plan 39-02
-Last activity: 2026-02-24 — Phase 39 Plan 01 complete (RootLayout, SagePopover, FAB lift)
+Plan: 2 of 2 complete
+Status: Phase 39 complete — v3.0 milestone complete
+Last activity: 2026-02-24 — Phase 39 Plan 02 complete (discovery auto-navigation, pending results consumption)
 
-Progress: [████████░░] 87% (7 plans complete)
+Progress: [██████████] 100% (8 plans complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed (v3.0): 7
+- Total plans completed (v3.0): 8
 - Prior milestone (v2.3): 17 plans across 9 phases
 
 **By Phase (v3.0):**
@@ -29,7 +29,7 @@ Progress: [████████░░] 87% (7 plans complete)
 | 36. Foundation | 2/2 | 3min | ~1.5min |
 | 37. Backend Endpoints | 2/2 | 5min | ~2.5min |
 | 38. Browse UI | 2/2 | 4min | ~2min |
-| 39. Sage Cross-Page Navigation | 1/2 | 3min | ~3min |
+| 39. Sage Cross-Page Navigation | 2/2 | 6min | ~3min |
 
 *Updated after each plan completion*
 
@@ -57,6 +57,9 @@ Recent decisions affecting current work:
 - Phase 39 Plan 01: SagePopover 340x420px (smaller than SagePanel) for lightweight Browse chat bubble
 - Phase 39 Plan 01: RootLayout wraps / and /explore — single source for Sage FAB/panel/popover rendering
 - Phase 39 Plan 01: Filter glow on SageFAB suppressed when not on /explore
+- Phase 39 Plan 02: 2s setTimeout before auto-navigation — user reads "Found X experts..." first
+- Phase 39 Plan 02: sageMode + pendingSageResults set BEFORE navigate() — critical race condition prevention
+- Phase 39 Plan 02: Non-discovery questions on Browse just show message (no filter application)
 
 ### Pending Todos
 
@@ -70,5 +73,5 @@ None — photo backend is ready for Browse UI consumption
 ## Session Continuity
 
 Last session: 2026-02-24
-Stopped at: Phase 39 Plan 01 complete — RootLayout + SagePopover + FAB lift done. Executing Plan 02 (discovery auto-navigation)
-Resume signal: Continue executing Plan 39-02
+Stopped at: Phase 39 complete — v3.0 Netflix Browse & Agentic Navigation milestone complete
+Resume signal: Push to main to deploy, then verify in production

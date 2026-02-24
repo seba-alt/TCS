@@ -27,9 +27,9 @@ Requirements for v3.0 Netflix Browse & Agentic Navigation. Each maps to roadmap 
 
 ### Sage Cross-Page
 
-- [ ] **SAGE-01**: Sage floating action button is visible on Browse page (mounted at root layout level above route outlet)
-- [ ] **SAGE-02**: Sage conversation history is preserved when navigating from Browse to Explorer
-- [ ] **SAGE-03**: Sage discovery search on Browse auto-navigates to Explorer and displays search results in the grid
+- [x] **SAGE-01**: Sage floating action button is visible on Browse page (mounted at root layout level above route outlet)
+- [x] **SAGE-02**: Sage conversation history is preserved when navigating from Browse to Explorer
+- [x] **SAGE-03**: Sage discovery search on Browse auto-navigates to Explorer and displays search results in the grid
 - [x] **SAGE-04**: Single Zustand store with navigationSlice powers both Browse and Explorer pages for cross-page state handoff
 
 ## v2 Requirements
@@ -76,9 +76,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PHOTO-03 | Phase 38 | Complete |
 | NAV-01 | Phase 36 | Complete |
 | NAV-02 | Phase 38 | Complete |
-| SAGE-01 | Phase 39 | Pending |
-| SAGE-02 | Phase 39 | Pending |
-| SAGE-03 | Phase 39 | Pending |
+| SAGE-01 | Phase 39 | Complete |
+| SAGE-02 | Phase 39 | Complete |
+| SAGE-03 | Phase 39 | Complete |
 | SAGE-04 | Phase 36 | Complete |
 
 **Coverage:**
@@ -88,4 +88,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-02-24*
-*Last updated: 2026-02-24 after roadmap creation — all 13 requirements mapped*
+*Last updated: 2026-02-24 — all 13 v1 requirements complete*
