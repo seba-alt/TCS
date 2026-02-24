@@ -68,7 +68,21 @@ A user describes any problem and instantly gets expertly matched professionals t
 
 ### Active
 
-(None — planning next milestone)
+#### v3.0 Netflix Browse & Agentic Navigation
+
+- [ ] Netflix-style Browse page as new landing experience at `/`
+- [ ] Billboard Hero with algorithmically featured expert, photo, holographic badge, "Start Discovery" CTA
+- [ ] Horizontal scrolling category rows (trending tags, recently joined, most clicked, highest findability)
+- [ ] Glassmorphic expert cards with large photos, name + rate overlay, hover reveals tags
+- [ ] "Explore All Experts" header button deep-linking to Explorer
+- [ ] Expert profile photos ingested from new CSV and served to frontend
+- [ ] Sage floating FAB visible on Browse page
+- [ ] Sage discovery intent triggers auto-navigation from Browse to Explorer with results
+- [ ] Sage conversation history preserved across page transition
+- [ ] Single Zustand store powers both Browse and Explorer pages
+- [ ] Aurora "Loading Mesh" transition effect between pages
+- [ ] "Continue Browsing" breadcrumb on Explorer page
+- [ ] Route reorganization: `/` → Browse, `/explore` → Explorer (was `/marketplace`)
 
 ### Out of Scope
 
@@ -142,7 +156,7 @@ A user describes any problem and instantly gets expertly matched professionals t
 **Sage AI:** Active search engine — discovers experts via FAISS, injects results directly into grid, "smart funny friend" personality, Dutch auto-detection
 **Marketplace:** Immersive aurora-aesthetic marketplace with glassmorphic Command Center header, bento cards, animated tag cloud, Sage AI co-pilot; behavior tracking (card clicks, queries, filter changes); newsletter gate on profile clicks
 **Admin panel:** 3-section sidebar (Analytics/Tools/Admin); OverviewPage dashboard with zero-result queries + Sage sparkline; Marketplace Intelligence (demand/exposure/trends); ToolsPage (Search Lab/Score Explainer/Index); Intelligence tab with OTR@K, Index Drift, t-SNE
-**Next milestone:** Planning next milestone
+**Next milestone:** v3.0 Netflix Browse & Agentic Navigation
 
 ## Context
 
@@ -224,4 +238,16 @@ A user describes any problem and instantly gets expertly matched professionals t
 | Cold-start guard per-section (not page-level) | Each section (demand, exposure, trend) independently checks its own data_since === null — prevents one endpoint's empty state from hiding another section's data | ✓ Good — sections degrade independently |
 
 ---
-*Last updated: 2026-02-24 after v2.3 milestone*
+## Current Milestone: v3.0 Netflix Browse & Agentic Navigation
+
+**Goal:** Reimagine expert discovery as a high-end streaming service — Netflix-style Browse page hooks users with curated categories, Sage conducts them to the Explorer for deep discovery.
+
+**Target features:**
+- Netflix-style Browse page with horizontal scrolling expert categories
+- Billboard Hero with algorithmically featured expert and photos
+- Sage as cross-page navigator (Browse → Explorer)
+- Shared Zustand state and aurora transition between pages
+- Expert profile photo support from new CSV
+
+---
+*Last updated: 2026-02-24 after v3.0 milestone start*

@@ -5,13 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-24)
 
 **Core value:** A user describes any problem and instantly gets expertly matched professionals they can browse, filter, and contact — no searching, no guesswork.
-**Current focus:** Planning next milestone
+**Current focus:** v3.0 Netflix Browse & Agentic Navigation
 
 ## Current Position
 
-Phase: v2.3 milestone complete
-Status: All 9 phases (28–35 + 34.1), 17 plans shipped
-Last activity: 2026-02-24 — v2.3 milestone archived
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-02-24 — Milestone v3.0 started
 
 ## Live URLs
 
@@ -38,5 +39,5 @@ None active.
 ## Session Continuity
 
 Last session: 2026-02-24
-Stopped at: v2.3 milestone complete — archived to .planning/milestones/
-Resume signal: Run /gsd:new-milestone to start next milestone.
+Stopped at: v3.0 milestone initialized — defining requirements
+Resume signal: Continue requirements definition and roadmap creation.
