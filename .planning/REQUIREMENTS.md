@@ -22,7 +22,7 @@ Requirements for v3.0 Netflix Browse & Agentic Navigation. Each maps to roadmap 
 
 ### Navigation
 
-- [ ] **NAV-01**: Routes reorganized: `/` → BrowsePage, `/explore` → Explorer, `/marketplace` redirects to `/explore`, `/chat` redirects appropriately
+- [x] **NAV-01**: Routes reorganized: `/` → BrowsePage, `/explore` → Explorer, `/marketplace` redirects to `/explore`, `/chat` redirects appropriately
 - [ ] **NAV-02**: User can click "Explore All Experts" button on Browse page to navigate to Explorer with all experts visible
 
 ### Sage Cross-Page
@@ -30,7 +30,7 @@ Requirements for v3.0 Netflix Browse & Agentic Navigation. Each maps to roadmap 
 - [ ] **SAGE-01**: Sage floating action button is visible on Browse page (mounted at root layout level above route outlet)
 - [ ] **SAGE-02**: Sage conversation history is preserved when navigating from Browse to Explorer
 - [ ] **SAGE-03**: Sage discovery search on Browse auto-navigates to Explorer and displays search results in the grid
-- [ ] **SAGE-04**: Single Zustand store with navigationSlice powers both Browse and Explorer pages for cross-page state handoff
+- [x] **SAGE-04**: Single Zustand store with navigationSlice powers both Browse and Explorer pages for cross-page state handoff
 
 ## v2 Requirements
 
@@ -74,12 +74,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PHOTO-01 | Phase 37 | Pending |
 | PHOTO-02 | Phase 37 | Pending |
 | PHOTO-03 | Phase 38 | Pending |
-| NAV-01 | Phase 36 | Pending |
+| NAV-01 | Phase 36 | Complete |
 | NAV-02 | Phase 38 | Pending |
 | SAGE-01 | Phase 39 | Pending |
 | SAGE-02 | Phase 39 | Pending |
 | SAGE-03 | Phase 39 | Pending |
-| SAGE-04 | Phase 36 | Pending |
+| SAGE-04 | Phase 36 | Complete |
 
 **Coverage:**
 - v1 requirements: 13 total
