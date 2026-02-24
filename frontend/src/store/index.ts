@@ -103,14 +103,3 @@ export const usePilotSlice = () =>
     }))
   )
 
-export const useNavigationSlice = () =>
-  useExplorerStore(
-    useShallow((state) => ({
-      navigationSource:        state.navigationSource,
-      pendingSageResults:      state.pendingSageResults,
-      pendingSearchQuery:      state.pendingSearchQuery,
-      setNavigationSource:     state.setNavigationSource,
-      setPendingSageResults:   state.setPendingSageResults,
-      clearPendingSageResults: state.clearPendingSageResults,
-    }))
-  )

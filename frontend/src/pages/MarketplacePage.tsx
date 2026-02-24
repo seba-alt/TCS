@@ -26,11 +26,14 @@ export default function MarketplacePage() {
   // Direct URL visits reset pilot (clean panel). Browse→Explorer transitions preserve Sage state.
   const resetPilot = useExplorerStore((s) => s.resetPilot)
   const navigationSource = useExplorerStore((s) => s.navigationSource)
+  const setNavigationSource = useExplorerStore((s) => s.setNavigationSource)
   useEffect(() => {
     if (navigationSource === 'direct') {
       resetPilot()
     }
-  }, [resetPilot, navigationSource])
+    // Reset after consume — next Explorer mount starts clean regardless of how user arrived
+    setNavigationSource('direct')
+  }, [resetPilot, navigationSource, setNavigationSource])
 
   // Results state for conditional rendering
   const loading = useExplorerStore((s) => s.loading)
