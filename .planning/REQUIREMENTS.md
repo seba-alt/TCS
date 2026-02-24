@@ -67,25 +67,25 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| BROWSE-01 | — | Pending |
-| BROWSE-02 | — | Pending |
-| BROWSE-03 | — | Pending |
-| BROWSE-04 | — | Pending |
-| PHOTO-01 | — | Pending |
-| PHOTO-02 | — | Pending |
-| PHOTO-03 | — | Pending |
-| NAV-01 | — | Pending |
-| NAV-02 | — | Pending |
-| SAGE-01 | — | Pending |
-| SAGE-02 | — | Pending |
-| SAGE-03 | — | Pending |
-| SAGE-04 | — | Pending |
+| BROWSE-01 | Phase 38 | Pending |
+| BROWSE-02 | Phase 38 | Pending |
+| BROWSE-03 | Phase 38 | Pending |
+| BROWSE-04 | Phase 38 | Pending |
+| PHOTO-01 | Phase 37 | Pending |
+| PHOTO-02 | Phase 37 | Pending |
+| PHOTO-03 | Phase 38 | Pending |
+| NAV-01 | Phase 36 | Pending |
+| NAV-02 | Phase 38 | Pending |
+| SAGE-01 | Phase 39 | Pending |
+| SAGE-02 | Phase 39 | Pending |
+| SAGE-03 | Phase 39 | Pending |
+| SAGE-04 | Phase 36 | Pending |
 
 **Coverage:**
 - v1 requirements: 13 total
-- Mapped to phases: 0
-- Unmapped: 13 ⚠️
+- Mapped to phases: 13
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-02-24*
-*Last updated: 2026-02-24 after initial definition*
+*Last updated: 2026-02-24 after roadmap creation — all 13 requirements mapped*
