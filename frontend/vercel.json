@@ -1,4 +1,7 @@
 {
+  "redirects": [
+    { "source": "/marketplace", "destination": "/explore", "permanent": true }
+  ],
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
   ]

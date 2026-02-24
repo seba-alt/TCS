@@ -29,11 +29,15 @@ export default function MarketplacePage() {
   const isOpen = useExplorerStore((s) => s.isOpen)
   const setOpen = useExplorerStore((s) => s.setOpen)
 
-  // Preserve Phase 15 pilot reset behavior
+  // Pilot reset — gated by navigationSource (Phase 36)
+  // Direct URL visits reset pilot (clean panel). Browse→Explorer transitions preserve Sage state.
   const resetPilot = useExplorerStore((s) => s.resetPilot)
+  const navigationSource = useExplorerStore((s) => s.navigationSource)
   useEffect(() => {
-    resetPilot()
-  }, [resetPilot])
+    if (navigationSource === 'direct') {
+      resetPilot()
+    }
+  }, [resetPilot, navigationSource])
 
   // Results state for conditional rendering
   const loading = useExplorerStore((s) => s.loading)
