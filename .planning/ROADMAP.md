@@ -144,4 +144,4 @@ Plans:
 | 36. Foundation | 2/2 | Complete    | 2026-02-24 | - |
 | 37. Backend Endpoints | 2/2 | Complete    | 2026-02-24 | - |
 | 38. Browse UI | 2/2 | Complete    | 2026-02-24 | - |
-| 39. Sage Cross-Page Navigation | v3.0 | 0/2 | Not started | - |
+| 39. Sage Cross-Page Navigation | 1/2 | In Progress|  | - |

@@ -5,21 +5,21 @@
 See: .planning/PROJECT.md (updated 2026-02-24)
 
 **Core value:** A user describes any problem and instantly gets expertly matched professionals they can browse, filter, and contact — no searching, no guesswork.
-**Current focus:** v3.0 Netflix Browse & Agentic Navigation — Phase 38: Browse UI
+**Current focus:** v3.0 Netflix Browse & Agentic Navigation — Phase 39: Sage Cross-Page Navigation
 
 ## Current Position
 
-Phase: 38 of 39 (Browse UI)
-Plan: 2 of 2 complete
-Status: Phase 38 complete — ready for Phase 39
-Last activity: 2026-02-24 — Phase 38 Plan 02 complete (HeroBanner carousel, SkeletonHeroBanner, full BrowsePage assembly)
+Phase: 39 of 39 (Sage Cross-Page Navigation)
+Plan: 1 of 2 complete
+Status: Plan 39-01 complete — executing Plan 39-02
+Last activity: 2026-02-24 — Phase 39 Plan 01 complete (RootLayout, SagePopover, FAB lift)
 
-Progress: [███████░░░] 75% (6 plans complete)
+Progress: [████████░░] 87% (7 plans complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed (v3.0): 6
+- Total plans completed (v3.0): 7
 - Prior milestone (v2.3): 17 plans across 9 phases
 
 **By Phase (v3.0):**
@@ -29,7 +29,7 @@ Progress: [███████░░░] 75% (6 plans complete)
 | 36. Foundation | 2/2 | 3min | ~1.5min |
 | 37. Backend Endpoints | 2/2 | 5min | ~2.5min |
 | 38. Browse UI | 2/2 | 4min | ~2min |
-| 39. Sage Cross-Page Navigation | TBD | - | - |
+| 39. Sage Cross-Page Navigation | 1/2 | 3min | ~3min |
 
 *Updated after each plan completion*
 
@@ -54,6 +54,9 @@ Recent decisions affecting current work:
 - Phase 38 Plan 02: HeroBanner rotation uses setInterval cleared on paused=true — simple and sufficient for 5s cadence
 - Phase 38 Plan 02: recently-added slug mapped to 'Recently Joined' display label inline in BrowsePage (UI concern, not hook/backend)
 - Phase 38 Plan 02: setNavigationSource('browse') called BEFORE navigate() — maintains Phase 36 pattern for browse navigation
+- Phase 39 Plan 01: SagePopover 340x420px (smaller than SagePanel) for lightweight Browse chat bubble
+- Phase 39 Plan 01: RootLayout wraps / and /explore — single source for Sage FAB/panel/popover rendering
+- Phase 39 Plan 01: Filter glow on SageFAB suppressed when not on /explore
 
 ### Pending Todos
 
@@ -67,5 +70,5 @@ None — photo backend is ready for Browse UI consumption
 ## Session Continuity
 
 Last session: 2026-02-24
-Stopped at: Phase 38 Plan 02 complete — Phase 38 Browse UI DONE. Ready for Phase 39 (Sage Cross-Page Navigation)
-Resume signal: Run /gsd:execute-phase 39-sage-navigation (plan 01)
+Stopped at: Phase 39 Plan 01 complete — RootLayout + SagePopover + FAB lift done. Executing Plan 02 (discovery auto-navigation)
+Resume signal: Continue executing Plan 39-02
