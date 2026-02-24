@@ -20,7 +20,7 @@ export default function BrowsePage() {
 
   // Navigate to /explore with the row title pre-applied as a query filter
   const handleSeeAll = useCallback(
-    (slug: string, title: string) => {
+    (_slug: string, title: string) => {
       setNavigationSource('browse')
       navigate(`/explore?q=${encodeURIComponent(title)}`)
     },
