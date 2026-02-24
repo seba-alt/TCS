@@ -1,4 +1,5 @@
 import { useCallback } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useExplorerStore } from '../store'
 import type { Expert } from '../store/resultsSlice'
 import { useNltrStore } from '../store/nltrStore'
@@ -48,6 +49,11 @@ export function useSage() {
   const addMessage = useExplorerStore((s) => s.addMessage)
   const setStreaming = useExplorerStore((s) => s.setStreaming)
   const { triggerSpin } = useNltrStore()
+
+  // Route detection for Browse vs Explorer behavior (Phase 39)
+  const location = useLocation()
+  const navigate = useNavigate()
+  const isExplorer = location.pathname === '/explore'
 
   const handleSend = useCallback(async (text: string) => {
     if (!text.trim() || isStreaming) return
@@ -129,12 +135,42 @@ export function useSage() {
         const store = useExplorerStore.getState()
         const experts = data.experts ?? []
         const total = data.total ?? 0
-        store.setLoading(false)        // ensure loading=false before setResults (avoids skeleton flash if prior fetch was mid-flight)
-        store.setResults(experts, total, null)
-        store.setSageMode(true)
+
+        if (isExplorer) {
+          // On Explorer: existing behavior — inject results directly into store
+          store.setLoading(false)        // ensure loading=false before setResults (avoids skeleton flash if prior fetch was mid-flight)
+          store.setResults(experts, total, null)
+          store.setSageMode(true)
+        } else {
+          // On Browse: store results as pending, then auto-navigate after delay
+          // CRITICAL ordering: pendingSageResults + sageMode BEFORE navigate
+          store.setPendingSageResults(experts, text.trim())
+          store.setSageMode(true)  // Prevents useExplore competing fetch on Explorer mount
+
+          // Add assistant message to popover (user sees "Found X experts...")
+          addMessage({
+            id: `${Date.now()}-assistant`,
+            role: 'assistant',
+            content: data.message ?? "I've found some experts for you!",
+            timestamp: Date.now(),
+          })
+
+          // Auto-navigate after ~2 seconds so user can read the response
+          setTimeout(() => {
+            store.setNavigationSource('sage')  // Prevents resetPilot on Explorer mount
+            navigate('/explore')
+          }, 2000)
+
+          // Early return — skip the addMessage and setStreaming below (handled above)
+          setStreaming(false)
+          return
+        }
       } else if (data.filters && typeof data.filters === 'object') {
-        // apply_filters refinement path — unchanged behavior
-        validateAndApplyFilters(data.filters as Record<string, unknown>)
+        if (isExplorer) {
+          // On Explorer: existing behavior — apply filter changes
+          validateAndApplyFilters(data.filters as Record<string, unknown>)
+        }
+        // On Browse: no grid to filter — just show the message (falls through to addMessage below)
       }
 
       // Add Sage's confirmation/narration message
@@ -154,7 +190,7 @@ export function useSage() {
     } finally {
       setStreaming(false)
     }
-  }, [isStreaming, addMessage, setStreaming, triggerSpin])
+  }, [isStreaming, addMessage, setStreaming, triggerSpin, isExplorer, navigate])
 
   return { messages, isStreaming, handleSend }
 }

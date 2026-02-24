@@ -29,6 +29,16 @@ export function useExplore() {
   const controllerRef = useRef<AbortController | null>(null)
 
   useEffect(() => {
+    // Consume pending Sage results from Browse → Explorer navigation (Phase 39)
+    // Reads directly from store (not selector) to avoid dependency array — one-time consumption
+    const pending = useExplorerStore.getState().pendingSageResults
+    if (pending && pending.length > 0) {
+      setResults(pending, pending.length, null)
+      setLoading(false)
+      useExplorerStore.getState().clearPendingSageResults()
+      // sageMode is already true (set by useSage before navigate) — fall through to guard below
+    }
+
     // Sage mode guard — abort any in-flight explore request and yield control to useSage.
     // Must come FIRST (before setLoading) to avoid loading flash.
     // Aborting here ensures a mid-flight /api/explore response cannot overwrite sage results.
