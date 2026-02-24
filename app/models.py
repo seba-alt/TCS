@@ -103,6 +103,7 @@ class Expert(Base):
     category: Mapped[str | None] = mapped_column(String(100), nullable=True)
     tags: Mapped[str | None] = mapped_column(Text, nullable=True)
     findability_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    photo_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     created_at: Mapped[datetime.datetime] = mapped_column(
         DateTime, default=datetime.datetime.utcnow, nullable=False
     )

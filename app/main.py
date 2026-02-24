@@ -218,6 +218,18 @@ async def lifespan(app: FastAPI):
                 pass  # Column already exists — idempotent
     log.info("startup: expert enrichment columns migrated/verified")
 
+    # Phase 36: expert photo URL column
+    with engine.connect() as _conn:
+        for _col_ddl in [
+            "ALTER TABLE experts ADD COLUMN photo_url TEXT",
+        ]:
+            try:
+                _conn.execute(_text(_col_ddl))
+                _conn.commit()
+            except Exception:
+                pass  # Column already exists — idempotent
+    log.info("startup: expert photo_url column migrated/verified")
+
     # Phase 14: FTS5 virtual table for BM25 keyword search
     with engine.connect() as _conn:
         _conn.execute(_text("""
