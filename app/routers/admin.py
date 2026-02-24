@@ -903,6 +903,7 @@ class AddExpertBody(BaseModel):
     bio: str
     hourly_rate: float
     profile_url: Optional[str] = None
+    photo_url: Optional[str] = None
 
 
 @router.post("/experts")
@@ -967,7 +968,7 @@ def add_expert(body: AddExpertBody, background_tasks: BackgroundTasks, db: Sessi
         fieldnames = [
             "Email", "Username", "First Name", "Last Name", "Job Title",
             "Company", "Bio", "Hourly Rate", "Currency", "Profile URL",
-            "Profile URL with UTM", "Created At",
+            "Profile URL with UTM", "Profile Image Url", "Created At",
         ]
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         if not csv_exists:
@@ -984,6 +985,7 @@ def add_expert(body: AddExpertBody, background_tasks: BackgroundTasks, db: Sessi
             "Currency": "EUR",
             "Profile URL": profile_url,
             "Profile URL with UTM": profile_url_utm,
+            "Profile Image Url": body.photo_url or "",
             "Created At": datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S"),
         })
 
@@ -1040,6 +1042,7 @@ async def import_experts_csv(file: UploadFile = File(...), db: Session = Depends
             existing.currency = (row.get("Currency") or "EUR").strip()
             existing.profile_url = (row.get("Profile URL") or "").strip()
             existing.profile_url_utm = (row.get("Profile URL with UTM") or "").strip()
+            existing.photo_url = (row.get("Profile Image Url") or "").strip() or None
             # Intentionally preserve existing.tags and existing.findability_score
             updated += 1
         else:
@@ -1057,6 +1060,7 @@ async def import_experts_csv(file: UploadFile = File(...), db: Session = Depends
                 currency=(row.get("Currency") or "EUR").strip(),
                 profile_url=profile_url,
                 profile_url_utm=profile_url_utm,
+                photo_url=(row.get("Profile Image Url") or "").strip() or None,
                 category=_auto_categorize((row.get("Job Title") or "").strip()),
             ))
             inserted += 1

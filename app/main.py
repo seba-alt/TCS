@@ -92,6 +92,7 @@ def _seed_experts_from_csv() -> int:
                     currency=(row.get("Currency") or "EUR").strip(),
                     profile_url=(row.get("Profile URL") or "").strip(),
                     profile_url_utm=(row.get("Profile URL with UTM") or "").strip(),
+                    photo_url=(row.get("Profile Image Url") or "").strip() or None,
                     category=None,
                 ))
 

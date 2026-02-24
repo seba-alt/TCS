@@ -75,6 +75,7 @@ def load_tagged_experts() -> list[dict]:
                 "Profile URL with UTM": e.profile_url_utm,
                 "tags": json.loads(e.tags or "[]"),
                 "findability_score": e.findability_score,
+                "photo_url": e.photo_url,
                 "category": e.category,
             }
             for e in experts
