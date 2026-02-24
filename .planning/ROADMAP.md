@@ -132,7 +132,7 @@ See `.planning/milestones/v2.3-ROADMAP.md`
 | 14-21. Marketplace Phases | v2.0 | 23/23 | Complete | 2026-02-22 |
 | 22-27. Evolved Discovery Engine | v2.2 | 14/14 | Complete | 2026-02-22 |
 | 28-35. Sage Evolution | v2.3 | 17/17 | Complete | 2026-02-24 |
-| 36. Foundation | 2/2 | Complete   | 2026-02-24 | - |
+| 36. Foundation | 2/2 | Complete    | 2026-02-24 | - |
 | 37. Backend Endpoints | v3.0 | 0/TBD | Not started | - |
 | 38. Browse UI | v3.0 | 0/TBD | Not started | - |
 | 39. Sage Cross-Page Navigation | v3.0 | 0/TBD | Not started | - |
