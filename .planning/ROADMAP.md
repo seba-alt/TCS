@@ -97,7 +97,10 @@ See `.planning/milestones/v2.3-ROADMAP.md`
   2. GET /api/photos/{username} proxies the photo URL stored on the Expert record, returns a 404 when no photo is stored, includes 24h Cache-Control headers, and goes through CORSMiddleware
   3. Admin can POST to /api/admin/experts/photos with a CSV to bulk-import photo URLs into the Expert table, with a dry-run count returned before any writes
   4. Photo endpoint returns an HTTPS URL in production (no mixed-content from Railway to Vercel)
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+  - [ ] 37-01-PLAN.md — Browse API + photo proxy endpoints
+  - [ ] 37-02-PLAN.md — Admin bulk photo import + serializer update
 
 ### Phase 38: Browse UI
 **Goal**: Users experience a Netflix-style landing page with horizontal category rows, glassmorphic photo cards, monogram fallbacks, and direct navigation into the Explorer
@@ -133,6 +136,6 @@ See `.planning/milestones/v2.3-ROADMAP.md`
 | 22-27. Evolved Discovery Engine | v2.2 | 14/14 | Complete | 2026-02-22 |
 | 28-35. Sage Evolution | v2.3 | 17/17 | Complete | 2026-02-24 |
 | 36. Foundation | 2/2 | Complete    | 2026-02-24 | - |
-| 37. Backend Endpoints | v3.0 | 0/TBD | Not started | - |
+| 37. Backend Endpoints | v3.0 | 0/2 | Not started | - |
 | 38. Browse UI | v3.0 | 0/TBD | Not started | - |
 | 39. Sage Cross-Page Navigation | v3.0 | 0/TBD | Not started | - |
