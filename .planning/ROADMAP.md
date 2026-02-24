@@ -72,6 +72,7 @@ See `.planning/milestones/v2.3-ROADMAP.md`
 - [x] **Phase 37: Backend Endpoints** - GET /api/browse + GET /api/photos/{username} + bulk photo CSV ingest (completed 2026-02-24)
 - [x] **Phase 38: Browse UI** - BrowsePage, CategoryRow, BrowseExpertCard with photo/monogram, "See All" and "Explore All" navigation (2 plans) (completed 2026-02-24)
 - [x] **Phase 39: Sage Cross-Page Navigation** - Sage FAB on Browse, cross-page handoff, conversation history preserved (completed 2026-02-24)
+- [ ] **Phase 40: Close v3.0 Audit Gaps** - Phase 39 verification, orphaned hook removal, navigationSource sticky-state fix
 
 ## Phase Details
 
@@ -131,6 +132,19 @@ Plans:
   - [ ] 39-01-PLAN.md — RootLayout + SagePopover + FAB lift (SAGE-01, SAGE-02)
   - [ ] 39-02-PLAN.md — Discovery auto-navigation + pending results (SAGE-03)
 
+### Phase 40: Close v3.0 Audit Gaps
+**Goal**: Close all gaps identified by the v3.0 milestone audit — create missing Phase 39 verification, remove orphaned dead code, and fix navigationSource sticky-state edge case
+**Depends on**: Phase 39
+**Requirements**: SAGE-01, SAGE-02, SAGE-03
+**Gap Closure:** Closes gaps from audit
+**Success Criteria** (what must be TRUE):
+  1. Phase 39 has a VERIFICATION.md that validates SAGE-01, SAGE-02, SAGE-03 against their success criteria with pass/fail evidence
+  2. `useNavigationSlice` convenience hook no longer exists in `store/index.ts`
+  3. `navigationSource` is reset to `'direct'` after Explorer consumes it, so subsequent Explorer mounts start clean
+**Plans**: 1 plan
+Plans:
+  - [ ] 40-01-PLAN.md — Verification + cleanup + sticky-state fix
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -145,3 +159,4 @@ Plans:
 | 37. Backend Endpoints | 2/2 | Complete    | 2026-02-24 | - |
 | 38. Browse UI | 2/2 | Complete    | 2026-02-24 | - |
 | 39. Sage Cross-Page Navigation | 2/2 | Complete    | 2026-02-24 | - |
+| 40. Close v3.0 Audit Gaps | 0/1 | Pending | - | - |
