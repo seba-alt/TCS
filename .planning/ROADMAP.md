@@ -159,4 +159,4 @@ Plans:
 | 37. Backend Endpoints | 2/2 | Complete    | 2026-02-24 | - |
 | 38. Browse UI | 2/2 | Complete    | 2026-02-24 | - |
 | 39. Sage Cross-Page Navigation | 2/2 | Complete    | 2026-02-24 | - |
-| 40. Close v3.0 Audit Gaps | 1/1 | Complete   | 2026-02-24 | - |
+| 40. Close v3.0 Audit Gaps | 1/1 | Complete    | 2026-02-24 | - |
