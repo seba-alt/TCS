@@ -7,7 +7,7 @@
 - [x] **v1.2 Intelligence Activation & Steering Panel** - Phases 11-13 (shipped 2026-02-21)
 - [x] **v2.0 Extreme Semantic Explorer** - Phases 14-21 (shipped 2026-02-22)
 - [x] **v2.2 Evolved Discovery Engine** - Phases 22-27 (shipped 2026-02-22)
-- [ ] **v2.3 Sage Evolution & Marketplace Intelligence** - Phases 28-35 (in progress)
+- [x] **v2.3 Sage Evolution & Marketplace Intelligence** - Phases 28-35 (shipped 2026-02-24)
 
 ## Phases
 
@@ -37,15 +37,6 @@ See `.planning/milestones/v1.2-ROADMAP.md`
 
 See `.planning/milestones/v2.0-ROADMAP.md`
 
-- [x] Phase 14: Hybrid Search Backend (3/3 plans) — completed 2026-02-21
-- [x] Phase 15: Zustand State & Routing (1/1 plan) — completed 2026-02-21
-- [x] Phase 16: Marketplace Page & Sidebar (3/3 plans) — completed 2026-02-21
-- [x] Phase 17: Expert Grid & Cards (3/3 plans) — completed 2026-02-21
-- [x] Phase 18: Floating AI Co-Pilot (4/4 plans) — completed 2026-02-21
-- [x] Phase 19: Extended Features (6/6 plans) — completed 2026-02-21
-- [x] Phase 20: Bug Fixes — Pagination & Rate Filter (1/1 plan) — completed 2026-02-22
-- [x] Phase 21: Documentation & Cleanup (2/2 plans) — completed 2026-02-22
-
 </details>
 
 <details>
@@ -53,193 +44,24 @@ See `.planning/milestones/v2.0-ROADMAP.md`
 
 See `.planning/milestones/v2.2-ROADMAP.md`
 
-- [x] Phase 22: Visual Infrastructure (2/2 plans) — completed 2026-02-22
-- [x] Phase 23: Discovery Engine (3/3 plans) — completed 2026-02-22
-- [x] Phase 24: Atomic Index Swap UI (2/2 plans) — completed 2026-02-22
-- [x] Phase 25: Admin Intelligence Metrics (2/2 plans) — completed 2026-02-22
-- [x] Phase 26: Embedding Heatmap (2/2 plans) — completed 2026-02-22
-- [x] Phase 27: Newsletter Gate + Easter Egg (3/3 plans) — completed 2026-02-22
-
 </details>
 
-### v2.3 Sage Evolution & Marketplace Intelligence (In Progress)
+<details>
+<summary>v2.3 Sage Evolution & Marketplace Intelligence (Phases 28-35) — SHIPPED 2026-02-24</summary>
 
-**Milestone Goal:** Evolve Sage from a filter adjuster into an active search engine with full personality, instrument user behavior across the marketplace, and surface demand and exposure signals in a new admin intelligence page.
+See `.planning/milestones/v2.3-ROADMAP.md`
 
-- [x] **Phase 28: Sage Search Engine** - Add `search_experts` Gemini function; Sage finds experts, narrates results, syncs main grid (completed 2026-02-22)
-- [x] **Phase 29: Sage Personality + FAB Reactions** - Rewrite system prompt for warmer/wittier tone; animated FAB boxShadow pulse on activity (completed 2026-02-22)
-- [x] **Phase 30: Behavior Tracking** - `UserEvent` DB model + `POST /api/events` backend + frontend `trackEvent()` instrumentation for card clicks, Sage queries, and filter changes (2 plans ready) (completed 2026-02-22)
-- [x] **Phase 31: Admin Marketplace Intelligence** - New `/admin/marketplace` page showing unmet demand, expert exposure, daily Sage trend, and cold-start empty state (completed 2026-02-22)
+- [x] Phase 28: Sage Search Engine (2/2 plans) — completed 2026-02-22
+- [x] Phase 29: Sage Personality + FAB Reactions (1/1 plan) — completed 2026-02-22
+- [x] Phase 30: Behavior Tracking (2/2 plans) — completed 2026-02-22
+- [x] Phase 31: Admin Marketplace Intelligence (2/2 plans) — completed 2026-02-22
+- [x] Phase 32: Sage Direct Search Integration (3/3 plans) — completed 2026-02-22
+- [x] Phase 33: Command Center Header (2/2 plans) — completed 2026-02-23
+- [x] Phase 34: Admin Platform Restructure (2/2 plans) — completed 2026-02-23
+- [x] Phase 34.1: Fix zero-result searches + Dutch Sage (2/2 plans) — completed 2026-02-23
+- [x] Phase 35: Close v2.3 Documentation Gaps (1/1 plan) — completed 2026-02-24
 
-- [x] **Phase 35: Close v2.3 Documentation Gaps** - Write missing VERIFICATION.md and SUMMARY docs, update specs and traceability (gap closure) (completed 2026-02-24)
-
-## Phase Details
-
-### Phase 28: Sage Search Engine
-**Goal**: Sage can actively find experts by calling `/api/explore` in-process, narrate results in the panel, and sync the main expert grid
-**Depends on**: Phase 27 (v2.2 shipped system)
-**Requirements**: SAGE-01, SAGE-02, SAGE-03, SAGE-04
-**Success Criteria** (what must be TRUE):
-  1. User asks Sage "find me fintech experts" and sees matching experts appear in the main grid without touching any filter
-  2. Sage responds with a natural-language summary ("I found 8 fintech experts who...") after every search — the grid never updates silently
-  3. When a Sage search returns zero results, Sage acknowledges it explicitly and either suggests an alternative or asks a clarifying question
-  4. Gemini correctly routes browsing-refinement queries to `apply_filters` and discovery queries to `search_experts` across 20 real test queries (verified in Railway logs before ship)
-**Plans**: 2 plans
-
-**Architecture notes (encode in plan):**
-- `search_experts` calls `run_explore()` via direct Python import in `pilot_service.py` — NOT an HTTP self-call to `/api/explore`
-- `pilot.py` router injects `db: Session = Depends(get_db)` and `app_state = request.app.state` into `run_pilot()`
-- Grid sync: `useSage` calls `validateAndApplyFilters(data.filters)` which updates `filterSlice` and triggers `useExplore` reactive re-fetch — NEVER calls `setResults` directly
-- `pilotSlice.PilotMessage` gains `experts?: Expert[]` for panel display; `resultsSlice` is NEVER written by `useSage`
-- Function descriptions must be mutually exclusive: `apply_filters` = "narrow or refine current results"; `search_experts` = "discover experts, find me X, who can help with Y"
-- `fn_call.args` is a protobuf Struct — wrap in `dict()` before use
-- Test 20 real queries from `conversations` table; assert `fn_call.name` in logs before shipping
-
-Plans:
-- [ ] 28-01-PLAN.md — Backend: `search_experts` FunctionDeclaration + `run_explore()` in-process call + db/app_state injection in `pilot_service.py` + `pilot.py`
-- [ ] 28-02-PLAN.md — Frontend: `useSage` dual-function dispatch, grid sync via `validateAndApplyFilters`, zero-result handling, 20-query routing test
-
-### Phase 29: Sage Personality + FAB Reactions
-**Goal**: Sage speaks with a warmer, wittier voice and the FAB pulses/glows on user activity
-**Depends on**: Phase 27 (independent of Phase 28 — can ship in either order)
-**Requirements**: SAGE-05, FAB-01
-**Success Criteria** (what must be TRUE):
-  1. Sage responses use contractions, warm language, and concise result summaries — no clinical filter-confirm tone
-  2. Sage asks at most one clarifying question per conversation; after the user replies to any question, Sage always calls a function (never asks a second question)
-  3. The Sage FAB displays a visible boxShadow pulse/glow animation in response to user activity
-  4. FAB hover (scale up) and tap (scale down) gestures continue to work without conflict alongside the glow animation
-**Plans**: 1 plan
-
-**Architecture notes (encode in plan):**
-- System prompt rewrite lives entirely in `pilot_service.py` — one-file change, instant rollback via `git push`
-- Hard-limit in system prompt: "You may ask at most ONE clarifying question per conversation. After the user responds to any question, always call a function."
-- FAB animation: outer `motion.div` animates `boxShadow` ONLY; inner `motion.button` retains `whileHover={{ scale: 1.05 }}` and `whileTap={{ scale: 0.95 }}` — NEVER animate `scale` on the wrapper div
-
-Plans:
-- [ ] 29-01-PLAN.md — System prompt rewrite (Sage personality) + SageFAB motion.div glow wrapper (purple on Sage reply, blue on filter change)
-
-### Phase 30: Behavior Tracking
-**Goal**: Expert card clicks, Sage query interactions, and filter changes are durably recorded in the database without blocking any user interaction
-**Depends on**: Phase 28 (Sage must exist to emit `sage_query` events; card tracking is independent but grouped here)
-**Requirements**: TRACK-01, TRACK-02, TRACK-03
-**Success Criteria** (what must be TRUE):
-  1. Clicking an expert card in the grid or Sage panel records a `card_click` event in the DB with expert ID, timestamp, and context (grid vs sage_panel) — the profile gate opens without any perceptible delay
-  2. Each Sage interaction records a `sage_query` event with query text, which function was called, and result count — emitted after the pilot response, never before
-  3. Settling a filter (rate slider released, tag selected) records a `filter_change` event — exactly one event per settled change, not per slider tick
-  4. The `POST /api/events` endpoint returns 202, requires no authentication, and rejects unknown `event_type` values with 422
-**Plans**: TBD
-
-**Architecture notes (encode in plan):**
-- `UserEvent` SQLAlchemy model is a NEW table — `Base.metadata.create_all()` handles creation safely; no `ALTER TABLE` needed
-- Event types allowlist: `card_click`, `sage_query`, `filter_change` — Pydantic validation rejects arbitrary strings with 422
-- Frontend: `tracking.ts` exports `trackEvent()` as a module function (not a hook); uses `fetch` with `keepalive: true`; ALWAYS `void fetch(...)` — NEVER `await` in click path
-- Filter tracking: debounced 1000ms after settled state; rate slider tracks on `onMouseUp`/`onTouchEnd` only — not per pixel of movement
-- `useSage` emits `sage_query` with explicit `function_called` field from `PilotResponse` (not inferred from `data.filters` presence)
-- Composite index on `(event_type, created_at)` in `UserEvent` model
-- Verify `user_events` table creation in Railway logs within 60 seconds of first deploy
-
-Plans:
-- [x] 30-01-PLAN.md — Backend: `UserEvent` model + `events.py` router (`POST /api/events`, 202, no auth, Pydantic allowlist)
-- [x] 30-02-PLAN.md — Frontend: `tracking.ts` module + instrumentation in `ExpertCard.tsx`, `useSage.ts`, `SearchInput.tsx`, `RateSlider.tsx`, `TagMultiSelect.tsx`
-
-### Phase 31: Admin Marketplace Intelligence
-**Goal**: Admins can see which searches go unmet, which experts are invisible, and how Sage usage trends over time
-**Depends on**: Phase 30 (events must be accumulating in the DB)
-**Requirements**: INTEL-01, INTEL-02, INTEL-03, INTEL-04
-**Success Criteria** (what must be TRUE):
-  1. Admin navigates to `/admin/marketplace` and sees a table of zero-result Sage queries sorted by frequency, plus underserved filter combinations
-  2. Admin sees an expert exposure table showing appears and click counts per expert, broken down by grid vs Sage panel context
-  3. Admin sees a Recharts BarChart of daily Sage query volume
-  4. When the `user_events` table is empty (cold start), the page shows an explicit message with the tracking start timestamp and guidance that insights appear after approximately 50 page views — no blank or broken state
-**Plans**: 2 plans
-
-**Architecture notes (encode in plan):**
-- New admin page `MarketplacePage.tsx` at `/admin/marketplace` — does NOT modify existing `GapsPage.tsx` or any other admin page
-- Two new backend endpoints under `_require_admin` dep: `GET /api/admin/events/demand` and `GET /api/admin/events/exposure`
-- Both endpoints return `data_since` field (timestamp of earliest event or null) for cold-start display
-- Build empty state UI BEFORE data-loading logic (cold-start Pitfall 9 — prevents confusing blank tab during cold start)
-- `AdminSidebar.tsx` gains Marketplace nav entry
-- SQL aggregations use standard `GROUP BY` + `ORDER BY COUNT DESC` with existing SQLAlchemy `text()` pattern
-
-Plans:
-- [x] 31-01-PLAN.md — Backend: demand, exposure, trend aggregation endpoints + CSV exports in admin.py
-- [x] 31-02-PLAN.md — Frontend: AdminMarketplacePage with DemandTable, ExposureTable, BarChart, cold-start state + sidebar nav
-
-### Phase 32: Sage Direct Search Integration
-**Goal**: Sage search results appear directly in the grid using the FAISS hybrid search — no search bar pollution, correct result counts, working zero-result state
-**Depends on**: Phase 28 (Sage search engine), Phase 31 (behavior tracking events)
-**Requirements**: SAGE-DX-01, SAGE-DX-02, SAGE-DX-03
-**Success Criteria** (what must be TRUE):
-  1. When Sage runs a discovery query, results appear in the expert grid without any text appearing in the search bar
-  2. The expert count shown in the header updates to reflect Sage's actual FAISS search result count (not the full 530-expert total)
-  3. Zero-result Sage queries trigger the empty-state UI (no results found) rather than showing all experts
-  4. Manual sidebar filter usage (search bar, rate slider, tags) always re-activates normal filter-driven results, overriding any Sage-injected results
-  5. `apply_filters` refinement path (rate/tag narrowing) still works correctly and does not break
-**Plans**: 3 plans
-
-**Architecture notes (encode in plan):**
-- Backend: `_handle_search_experts` in `pilot_service.py` returns full expert list (up to 20) as `experts` field — `PilotResponse.experts` is already reserved but never populated
-- Store: add `sageMode: boolean` + `setSageMode` to `resultsSlice` or a new sage slice — when `true`, `useExplore` skips its automatic re-fetch
-- `useSage.ts`: when `search_performed=true`, call `store.setResults(data.experts, data.total, null)` + `store.setSageMode(true)` directly — skip `validateAndApplyFilters` entirely for this path
-- `useExplore.ts`: add `sageMode` to dependency array and early-return if `sageMode=true`
-- Filter actions (`setQuery`, `setTags`, `setRateRange`, `resetFilters`): each calls `setSageMode(false)` so user sidebar input always exits Sage mode
-- Zero results: call `store.setResults([], 0, null)` + `store.setSageMode(true)` so empty-state renders
-
-Plans:
-- [x] 32-01-PLAN.md — Backend: populate `experts` array in pilot response from `run_explore` results
-- [x] 32-02-PLAN.md — Frontend: `sageMode` store flag + `useExplore` guard + `useSage` direct injection
-- [x] 32-03-PLAN.md — Frontend UX: Sage icon in FilterChips, Sage empty state message, inline confirmation tooltips for search/rate
-
-### Phase 33: Command Center Header
-**Goal**: Transform the marketplace header into a premium "Command Center" — glassmorphic frosted-glass panel, aurora radial gradient, rotating animated placeholders, Sage-in-flight pulse indicator, spring-animated expert count, and a "tinrate" tilt + particle easter egg. Header search replaces sidebar SearchInput.
-**Depends on**: Phase 22 (aurora visual infrastructure), Phase 32 (sageMode store + store.total for expert count)
-**Requirements**: HDR-01, HDR-02, HDR-03
-**Success Criteria** (what must be TRUE):
-  1. Header background is `backdrop-blur-md bg-white/70 border-b border-white/20` over a `radial-gradient` aurora backdrop — no flat `bg-white`
-  2. Search bar uses `bg-white/50 border-slate-200/50 shadow-sm focus-within:ring-2 focus-within:ring-purple/20` and scales to 1.02 on focus via Framer Motion
-  3. Placeholder text rotates through 8 playful phrases on a 4.5s interval, paused when input has text
-  4. A purple pulse dot appears left of the search icon while `isStreaming` is true (Sage query in-flight)
-  5. Expert count reads from `store.total` and animates with a spring transition when the number changes
-  6. Typing "tinrate" triggers a 3-degree header tilt + emoji particle burst from logo corner, then clears input
-  7. Header remains `sticky top-0 z-50` — grid scrolls visibly underneath through the glass
-**Plans**: 2 plans
-
-**Architecture notes (encode in plan):**
-- `Header.tsx` rewritten as Command Center; all logic in `useHeaderSearch.ts` hook
-- `MarketplacePage.tsx` replaces inline `<header>` block with `<Header />`; `SearchInput.tsx` deleted
-- Zustand: read `store.query`, `store.setQuery`, `store.total`, `store.isStreaming` (pulse — NOT sageMode), `store.sageMode`
-- `AuroraBackground.tsx` untouched — header gets its own scoped radial gradient via inline style
-- `motion/react` v12: `AnimatePresence mode="wait"` for placeholder crossfade; `useMotionValue` + `useSpring` for count and tilt
-- Sage pulse uses `isStreaming` (transient in-flight signal), NOT `sageMode` (persistent results-mode flag)
-- Easter egg: detect "tinrate" exactly in `handleChange`; clear input + call `store.setQuery('')`; fire tilt + particles; no one-shot guard (fires every time)
-
-Plans:
-- [x] 33-01-PLAN.md — Build `useHeaderSearch.ts` hook + full `Header.tsx` component (glassmorphism, animated search, spring count, Sage pulse, tilt + particles easter egg)
-- [x] 33-02-PLAN.md — Wire Header into MarketplacePage, delete SearchInput.tsx, deploy, human verify
-
-### Phase 34: Admin Platform Restructure
-**Goal**: Clean up the admin IA — dashboard gives a strong first impression, gap tracking and intelligence data are front and centre, and operational tools (Search Lab, Score Explainer, Index) are consolidated into a single "Tools" tab so the sidebar no longer feels like a junk drawer
-**Depends on**: Phase 31 (admin marketplace intelligence), Phase 25 (admin intelligence metrics)
-**Requirements**: ADM-R-01, ADM-R-02, ADM-R-03
-**Success Criteria** (what must be TRUE):
-  1. The Overview dashboard is the first page seen and immediately communicates key health signals: API status, total experts, zero-result query count (top 5), and Sage usage trend sparkline — all above the fold
-  2. The sidebar has at most 7 nav items, grouped clearly: **Analytics** (Overview, Searches, Marketplace, Gaps) | **Tools** (Search Lab, Score Explainer, Index consolidated into tabs on one page) | **Admin** (Experts, Leads, Settings)
-  3. `Re-index` functionality moves from its own nav entry into the Settings page under an "Index Management" section — no standalone Index page in the sidebar
-  4. The "Tools" page hosts Search Lab, Score Explainer, and Index tabs — switching tabs updates the URL hash, no full navigation
-  5. OverviewPage shows a "Top Zero-Result Queries" mini-table (top 5 from existing `/api/admin/events/demand` endpoint) directly on the dashboard so the gap signal is visible without navigating away
-**Plans**: 2 plans
-
-**Architecture notes (encode in plan):**
-- New `ToolsPage.tsx` with tab state (`searchlab` | `scorer` | `index`) driven by URL hash — renders existing page content inline, does NOT rewrite Search Lab / Score Explainer logic
-- `IndexPage.tsx` re-index trigger moves into `SettingsPage.tsx` under a new "Index Management" card — `IndexPage.tsx` can be deleted after migration
-- `AdminSidebar.tsx` NAV_ITEMS restructured: 3 sections ("Analytics", "Tools", "Admin") — max 7 visible links
-- `OverviewPage.tsx` gains a `TopZeroResultsCard` component that calls the existing `GET /api/admin/events/demand` endpoint already built in Phase 31 — read-only, no new backend work
-- Preserve all existing page functionality — this is a navigation/IA refactor, not a feature rewrite
-- `AdminApp.tsx` routes: add `/admin/tools` → `ToolsPage`, update `/admin/index` and `/admin/score-explainer` and `/admin/search-lab` to redirect to `/admin/tools`
-
-Plans:
-- [x] 34-01-PLAN.md — Sidebar restructure + ToolsPage (Search Lab / Score Explainer / Index tabs) + re-index into Settings
-- [x] 34-02-PLAN.md — OverviewPage dashboard uplift: top zero-result queries card, layout improvements, strong first impression
+</details>
 
 ## Progress
 
@@ -250,40 +72,4 @@ Plans:
 | 11-13. Steering Panel Phases | v1.2 | Complete | Complete | 2026-02-21 |
 | 14-21. Marketplace Phases | v2.0 | 23/23 | Complete | 2026-02-22 |
 | 22-27. Evolved Discovery Engine | v2.2 | 14/14 | Complete | 2026-02-22 |
-| 28. Sage Search Engine | v2.3 | Complete    | 2026-02-22 | - |
-| 29. Sage Personality + FAB Reactions | v2.3 | Complete    | 2026-02-22 | - |
-| 30. Behavior Tracking | 2/2 | Complete    | 2026-02-22 | - |
-| 31. Admin Marketplace Intelligence | 2/2 | Complete   | 2026-02-22 | - |
-| 32. Sage Direct Search Integration | 3/3 | Complete    | 2026-02-22 | - |
-| 33. Command Center Header | 2/2 | Complete | 2026-02-23 | - |
-| 34. Admin Platform Restructure | 2/2 | Complete | 2026-02-23 | - |
-| 34.1. Fix zero-result searches + Dutch Sage | 2/2 | Complete   | 2026-02-23 | - |
-| 35. Close v2.3 Documentation Gaps | 1/1 | Complete   | 2026-02-24 | - |
-
-### Phase 35: Close v2.3 Documentation Gaps
-**Goal**: Write all missing VERIFICATION.md and SUMMARY.md files, resolve ADM-R-01 spec discrepancy, and fix REQUIREMENTS.md traceability table so the v2.3 milestone audit passes clean
-**Depends on**: Phase 34.1 (all features built)
-**Requirements**: HDR-01, HDR-02, HDR-03, ADM-R-01, ADM-R-02, ADM-R-03
-**Gap Closure:** Closes all process gaps from v2.3 milestone audit
-**Success Criteria** (what must be TRUE):
-  1. Phase 33 VERIFICATION.md exists with evidence from 33-02-SUMMARY human verification
-  2. Phase 34 VERIFICATION.md exists verifying ADM-R-01/02/03 against built code
-  3. 34-02-SUMMARY.md exists documenting the OverviewPage uplift
-  4. ADM-R-01 updated to reflect 8 sidebar items (Intelligence page is intentional)
-  5. REQUIREMENTS.md traceability table includes SAGE-DX-01/02/03 and count is 16
-  6. HDR-01/02/03 moved from v2 deferred to v1 scope and checked off
-**Plans**: 1 plan
-
-Plans:
-- [ ] 35-01-PLAN.md — Write 33-VERIFICATION.md, 34-02-SUMMARY.md, 34-VERIFICATION.md; verify REQUIREMENTS.md; update milestone audit to passed
-
-### Phase 34.1: Fix zero-result searches missing from admin gap and enable the sage in dutch (COMPLETE)
-
-**Goal:** Fix NULL gap detection bug across all admin query sites so zero-candidate searches appear in gap analytics, and enable Dutch language auto-detection in the Sage co-pilot with server-side translation for FAISS search
-**Depends on:** Phase 34
-**Requirements:** GAP-NULL-FIX, DUTCH-SAGE
-**Plans:** 1/1 plans complete
-
-Plans:
-- [x] 34.1-01-PLAN.md — Backend: Patch all 8 NULL gap conditions + _is_gap helper in admin.py
-- [x] 34.1-02-PLAN.md — Backend: Dutch language detection + translation in pilot_service.py (Gemini flash-lite)
+| 28-35. Sage Evolution | v2.3 | 17/17 | Complete | 2026-02-24 |

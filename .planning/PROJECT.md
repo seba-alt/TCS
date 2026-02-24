@@ -2,7 +2,7 @@
 
 ## What This Is
 
-A professional Expert Marketplace for the Tinrate platform. Users browse a pool of 530 vetted experts via an immersive aurora-aesthetic marketplace — animated aurora mesh background, glassmorphism surfaces, bento-style expert cards, animated claymorphic tag cloud with proximity-based scaling, and a floating Sage AI co-pilot. An newsletter gate captures leads when users click "View Full Profile". The platform includes URL-synced filter state, fuzzy search suggestions, and a full admin analytics dashboard with index management, intelligence metrics (OTR@K, Index Drift), and a t-SNE embedding scatter plot. Playful users can trigger a barrel roll easter egg.
+A professional Expert Marketplace for the Tinrate platform. Users browse a pool of 530 vetted experts via an immersive aurora-aesthetic marketplace — glassmorphic Command Center header with animated search, spring expert count, and Sage-in-flight pulse; animated aurora mesh background; bento-style expert cards; animated claymorphic tag cloud with proximity-based scaling; and a floating Sage AI co-pilot that actively searches experts via FAISS and injects results directly into the grid. User behavior (card clicks, Sage queries, filter changes) is tracked for marketplace intelligence. A newsletter gate captures leads on "View Full Profile". The admin dashboard includes restructured 3-section navigation, marketplace intelligence (unmet demand, expert exposure, Sage trends), index management, and intelligence metrics. Playful users can trigger barrel rolls and a "tinrate" header tilt easter egg.
 
 ## Core Value
 
@@ -44,21 +44,31 @@ A user describes any problem and instantly gets expertly matched professionals t
 
 ### Validated
 
-- ✓ Sage calls `run_explore()` in-process via `search_experts` FunctionDeclaration; results narrated + grid synced via `validateAndApplyFilters()` — Phase 28
-- ✓ Sage panel and grid kept in sync — `search_performed: true` triggers filter slate clear + search param apply + useExplore re-fetch — Phase 28
-- ✓ Zero-result handling: Sage narrates fallback alternatives (grid stays); double-zero resets grid to all experts — Phase 28
-- ✓ Sage system prompt rewritten for "smart funny friend" voice — contractions, no filler affirmations, one-question hard cap with concrete options — Phase 29
-- ✓ Sage FAB animated boxShadow glow: purple on Sage reply, blue on filter change, inner button scale gestures unchanged — Phase 29
-- ✓ Expert card clicks tracked as events (expert_id, context, rank, active_filters snapshot) — Phase 30
-- ✓ Sage query interactions tracked (query_text, function_called, result_count, zero_results) — Phase 30
-- ✓ Filter usage events tracked for all three surfaces (debounced query, drag-end rate, add-only tags) — Phase 30
-- ✓ Admin Marketplace page shows unmet demand (zero-result queries by frequency) + expert click exposure — Phase 31
-- ✓ Admin Marketplace stacked BarChart shows daily Sage query volume with KPI pills — Phase 31
-- ✓ Cold-start empty state: no blank page when user_events table is empty — Phase 31
+- ✓ Sage calls `run_explore()` in-process via `search_experts` FunctionDeclaration; results narrated + grid synced via `validateAndApplyFilters()` — v2.3
+- ✓ Sage panel and grid kept in sync — `search_performed: true` triggers filter slate clear + search param apply + useExplore re-fetch — v2.3
+- ✓ Zero-result handling: Sage narrates fallback alternatives (grid stays); double-zero resets grid to all experts — v2.3
+- ✓ Sage system prompt rewritten for "smart funny friend" voice — contractions, no filler affirmations, one-question hard cap with concrete options — v2.3
+- ✓ Sage FAB animated boxShadow glow: purple on Sage reply, blue on filter change, inner button scale gestures unchanged — v2.3
+- ✓ Expert card clicks tracked as events (expert_id, context, rank, active_filters snapshot) — v2.3
+- ✓ Sage query interactions tracked (query_text, function_called, result_count, zero_results) — v2.3
+- ✓ Filter usage events tracked for all three surfaces (debounced query, drag-end rate, add-only tags) — v2.3
+- ✓ Admin Marketplace page shows unmet demand (zero-result queries by frequency) + expert click exposure — v2.3
+- ✓ Admin Marketplace stacked BarChart shows daily Sage query volume with KPI pills — v2.3
+- ✓ Cold-start empty state: no blank page when user_events table is empty — v2.3
+- ✓ Sage discovery queries inject results directly into grid via `store.setResults()` — search bar stays empty, filters unchanged — v2.3
+- ✓ Header expert count reflects Sage's actual FAISS result count; zero-result queries render empty-state UI — v2.3
+- ✓ Any manual sidebar interaction exits Sage mode and restores normal filter-driven results — v2.3
+- ✓ Glassmorphic Command Center header with aurora gradient, animated search placeholders, Sage-in-flight pulse, spring expert count — v2.3
+- ✓ "tinrate" easter egg: 3-degree header tilt + emoji particle burst — v2.3
+- ✓ Admin sidebar consolidation — 8 nav items across 3 sections (Analytics, Tools, Admin) — v2.3
+- ✓ ToolsPage with hash-driven tab navigation (Search Lab, Score Explainer, Index) — v2.3
+- ✓ OverviewPage dashboard — top zero-result queries card, Sage volume sparkline, API health above the fold — v2.3
+- ✓ NULL gap detection fix — all 8 admin query sites correctly count zero-candidate searches — v2.3
+- ✓ Dutch language auto-detection and server-side translation for Sage FAISS search — v2.3
 
 ### Active
 
-<!-- No active requirements for current milestone — v2.3 complete -->
+(None — planning next milestone)
 
 ### Out of Scope
 
@@ -66,11 +76,23 @@ A user describes any problem and instantly gets expertly matched professionals t
 - Booking/payment flow — cards link to Tinrate profiles where booking happens
 - Mobile native app — web-first
 - Real-time availability or calendar integration — not in CSV data
-- Multi-language support — English only for v1
+- Full multi-language support — Dutch auto-detection added in v2.3, other languages deferred
 - Offline mode — real-time retrieval is core value
 - In-app match report download (LEAD-03) — deferred to v2.1 backlog
 
 ## Shipped Versions
+
+### v2.3 Sage Evolution & Marketplace Intelligence — Shipped 2026-02-24
+- Sage active search engine: `search_experts` Gemini function calls `/api/explore` in-process; results narrated in panel + synced to grid; zero-result fallback handling
+- Sage personality upgrade: "smart funny friend" system prompt, one-question hard cap, contractions, FAB animated boxShadow glow
+- Sage direct grid injection: `sageMode` state machine, results appear without search bar pollution, any filter interaction exits Sage mode
+- Command Center Header: glassmorphic frosted-glass panel, animated search placeholders, spring expert count, Sage-in-flight pulse, "tinrate" easter egg
+- Behavior tracking: `UserEvent` model + `POST /api/events` (202, no auth) + `trackEvent()` fire-and-forget module function; tracks card clicks, Sage queries, filter changes
+- Admin Marketplace Intelligence: unmet demand table, expert exposure distribution, daily Sage usage BarChart, cold-start empty state, CSV export
+- Admin platform restructure: 3-section sidebar (8 items), ToolsPage with hash-driven tabs, DataPage with marketplace/intelligence tabs, OverviewPage dashboard uplift
+- Dutch Sage: auto-detect Dutch queries via Gemini flash-lite, server-side translation for FAISS search
+- NULL gap fix: all 8 admin query sites correctly count zero-candidate searches
+- Archive: `.planning/milestones/v2.3-ROADMAP.md`
 
 ### v2.2 Evolved Discovery Engine — Shipped 2026-02-22
 - Aurora mesh gradient background (OKLCH tokens, CSS keyframe animation) + glassmorphism on sidebar, search, Sage panel
@@ -112,33 +134,25 @@ A user describes any problem and instantly gets expertly matched professionals t
 - Core AI chat with 3-expert recommendations, email gate, feedback, admin dashboard
 - Archive: `.planning/milestones/v1.0-ROADMAP.md`
 
-## Current Milestone: v2.3 Sage Evolution & Marketplace Intelligence
-
-**Goal:** Evolve Sage from a filter adjuster into an active search engine with full personality, and add rich user behavior tracking with an admin Gaps dashboard for marketplace intelligence.
-
-**Target features:**
-- Sage active search — `search_experts` function calling `/api/explore`, results in panel + grid sync
-- Sage personality upgrade — warmer/wittier system prompt, follow-up questions, proactive empty-state nudge, FAB animated reactions
-- User behavior tracking — expert card clicks, Sage queries, filter events stored in DB
-- Admin Gaps & Exposure tab — unmet demand signals + expert visibility distribution
-
 ## Current State
 
-**Deployed version:** v2.2 (Railway + Vercel, auto-deploys on push to main)
+**Deployed version:** v2.3 (Railway + Vercel, auto-deploys on push to main)
 **Expert pool:** 530 experts (data/metadata.json), all AI-tagged; FAISS index at 530 vectors
 **Search intelligence:** Three-stage hybrid pipeline live; HyDE + feedback re-ranking toggled via admin steering panel
-**Marketplace:** Immersive aurora-aesthetic marketplace with bento cards, animated tag cloud, Sage AI co-pilot; newsletter gate on profile clicks
-**Admin panel:** Index rebuild trigger + status; Intelligence tab with OTR@K, Index Drift, t-SNE scatter plot; Leads with newsletter subscriber list
-**Next milestone:** v2.3 — Sage Evolution & Marketplace Intelligence (in progress)
+**Sage AI:** Active search engine — discovers experts via FAISS, injects results directly into grid, "smart funny friend" personality, Dutch auto-detection
+**Marketplace:** Immersive aurora-aesthetic marketplace with glassmorphic Command Center header, bento cards, animated tag cloud, Sage AI co-pilot; behavior tracking (card clicks, queries, filter changes); newsletter gate on profile clicks
+**Admin panel:** 3-section sidebar (Analytics/Tools/Admin); OverviewPage dashboard with zero-result queries + Sage sparkline; Marketplace Intelligence (demand/exposure/trends); ToolsPage (Search Lab/Score Explainer/Index); Intelligence tab with OTR@K, Index Drift, t-SNE
+**Next milestone:** Planning next milestone
 
 ## Context
 
 - **Expert data:** SQLite table with 530 profiles; FAISS index at 530 tag-enriched vectors; all experts AI-tagged with 3–8 domain tags + findability scores
-- **AI stack:** Google GenAI (gemini-embedding-001) for embeddings, Gemini 2.5 Flash for generation, expert tagging, and Sage co-pilot function calling
-- **Codebase:** ~6,356 LOC TypeScript/TSX · ~3,767 LOC Python
+- **AI stack:** Google GenAI (gemini-embedding-001) for embeddings, Gemini 2.5 Flash for generation + Sage function calling, Gemini flash-lite for Dutch detection
+- **Codebase:** ~8,315 LOC TypeScript/TSX · ~4,766 LOC Python (13,081 total)
 - **Deployed:** Railway (FastAPI + SQLite + FAISS) + Vercel (React/Vite/Tailwind v3)
 - **Live since:** 2026-02-20
-- **Admin dashboard:** Available at /admin — search analytics, lead tracking, expert management, score explainer, intelligence steering panel, Search Lab A/B comparison
+- **Behavior tracking:** `user_events` table with card_click, sage_query, filter_change events; fire-and-forget frontend instrumentation
+- **Admin dashboard:** Available at /admin — OverviewPage dashboard, Marketplace Intelligence, search analytics, lead tracking, expert management, ToolsPage (Search Lab, Score Explainer, Index), intelligence steering panel
 
 ## Constraints
 
@@ -185,6 +199,11 @@ A user describes any problem and instantly gets expertly matched professionals t
 | recharts requires react-is explicit install | recharts@3.7.0 declares react-is as peer dep but Vite/Rollup fails if not in node_modules — must npm install react-is alongside recharts | ✓ Good — documented in SUMMARY; blocked CI otherwise |
 
 ---
+| search_experts in-process Python import | Direct `run_explore()` call in pilot_service.py — no HTTP self-call to /api/explore | ✓ Good — fast, no network overhead |
+| sageMode ephemeral (not persisted) | sageMode resets on page refresh — Sage results are session-contextual | ✓ Good — clean UX on reload |
+| trackEvent() as module function | Fire-and-forget `void fetch()` with `keepalive: true` — no React hook constraints | ✓ Good — works across all 5 call sites |
+| 3-section admin sidebar | Analytics/Tools/Admin grouping — 8 items total, Intelligence page intentional | ✓ Good — clear information architecture |
+| Dutch detection via Gemini flash-lite | Lightweight structured JSON extraction for language detection — only search_experts path translates | ✓ Good — fast, minimal cost |
 | Standalone useNltrStore (not in useExplorerStore) | Newsletter state must not contaminate marketplace filter persistence — separate store with its own persist key avoids partialize conflicts | ✓ Good — no explorer state regression |
 | Zustand write before fire-and-forget POST | User unlock must be immediate and not depend on API success — write to store first, then POST in background | ✓ Good — UX feels instant even on slow connections |
 | Barrel roll intercepts before API in Sage | Sending "barrel roll" to Gemini would produce nonsensical results — short-circuit with canned message preserves quality UX | ✓ Good — playful without confusing AI |
@@ -205,4 +224,4 @@ A user describes any problem and instantly gets expertly matched professionals t
 | Cold-start guard per-section (not page-level) | Each section (demand, exposure, trend) independently checks its own data_since === null — prevents one endpoint's empty state from hiding another section's data | ✓ Good — sections degrade independently |
 
 ---
-*Last updated: 2026-02-22 after Phase 31 (Admin Marketplace Intelligence) — v2.3 complete*
+*Last updated: 2026-02-24 after v2.3 milestone*

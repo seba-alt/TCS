@@ -80,3 +80,27 @@
 
 ---
 
+
+## v2.3 Sage Evolution & Marketplace Intelligence (Shipped: 2026-02-24)
+
+**Phases completed:** 9 phases (28–35 + 34.1), 17 plans
+**Timeline:** 3 days (2026-02-22 → 2026-02-24)
+**Codebase:** ~8,315 LOC TypeScript/TSX · ~4,766 LOC Python (13,081 total)
+**Commits:** 89 (29 feat, 5 fix, 52 docs)
+**Git range:** a861df6 → 6b5591a
+
+**Key accomplishments:**
+1. Sage evolved from filter adjuster to active search engine — `search_experts` Gemini function discovers experts directly via FAISS hybrid search, results narrated + grid synced
+2. User behavior tracking system — card clicks, Sage queries, and filter changes durably recorded in SQLite via fire-and-forget `trackEvent()` module function
+3. Admin Marketplace Intelligence page — unmet demand signals (zero-result queries by frequency), expert exposure distribution, daily Sage usage trend BarChart, cold-start empty state
+4. Sage direct grid injection — results appear in expert grid without polluting search bar; `sageMode` state machine with graceful filter-exit and zero-result handling
+5. Command Center Header — glassmorphic frosted-glass panel with animated search placeholders, spring expert count, Sage-in-flight pulse, "tinrate" tilt + particle easter egg
+6. Admin platform restructure — 3-section sidebar (Analytics/Tools/Admin), ToolsPage with hash-driven tabs, OverviewPage dashboard with zero-result queries card and Sage sparkline
+
+**Archive:**
+- Roadmap: `.planning/milestones/v2.3-ROADMAP.md`
+- Requirements: `.planning/milestones/v2.3-REQUIREMENTS.md`
+- Audit: `.planning/milestones/v2.3-MILESTONE-AUDIT.md`
+
+---
+
