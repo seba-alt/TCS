@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { SlidersHorizontal } from 'lucide-react'
-import { AnimatePresence } from 'motion/react'
 import { useExplorerStore, useFilterSlice } from '../store'
 import { useExplore } from '../hooks/useExplore'
 import { useUrlSync } from '../hooks/useUrlSync'
@@ -11,8 +10,6 @@ import { FilterSidebar } from '../components/sidebar/FilterSidebar'
 import { FilterChips } from '../components/marketplace/FilterChips'
 import { ExpertGrid } from '../components/marketplace/ExpertGrid'
 import { MobileFilterSheet } from '../components/sidebar/MobileFilterSheet'
-import { SageFAB } from '../components/pilot/SageFAB'
-import { SagePanel } from '../components/pilot/SagePanel'
 import { NewsletterGateModal } from '../components/marketplace/NewsletterGateModal'
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
@@ -24,10 +21,6 @@ export default function MarketplacePage() {
   // Fetch hook — reads filter state from store, calls /api/explore, writes results back
   // Returns loadNextPage for VirtuosoGrid endReached (infinite scroll)
   const { loadNextPage } = useExplore()
-
-  // Pilot panel state
-  const isOpen = useExplorerStore((s) => s.isOpen)
-  const setOpen = useExplorerStore((s) => s.setOpen)
 
   // Pilot reset — gated by navigationSource (Phase 36)
   // Direct URL visits reset pilot (clean panel). Browse→Explorer transitions preserve Sage state.
@@ -147,24 +140,7 @@ export default function MarketplacePage() {
       {/* Mobile filter bottom-sheet */}
       <MobileFilterSheet open={sheetOpen} onClose={() => setSheetOpen(false)} />
 
-      {/* Sage Co-Pilot — FAB hides when panel is open */}
-      <AnimatePresence>
-        {!isOpen && <SageFAB key="sage-fab" />}
-      </AnimatePresence>
-
-      {/* Sage Panel popup + full-screen backdrop */}
-      <AnimatePresence>
-        {isOpen && (
-          <>
-            <div
-              key="sage-backdrop"
-              className="fixed inset-0 z-30 bg-black/30"
-              onClick={() => setOpen(false)}
-            />
-            <SagePanel key="sage-panel" />
-          </>
-        )}
-      </AnimatePresence>
+      {/* Sage FAB + Panel now rendered by RootLayout (Phase 39) */}
 
       {/* Newsletter gate modal */}
       <NewsletterGateModal

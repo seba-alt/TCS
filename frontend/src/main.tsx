@@ -3,6 +3,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { createBrowserRouter, RouterProvider, Navigate, useSearchParams } from 'react-router-dom'
 import './index.css'
+import RootLayout from './layouts/RootLayout.tsx'
 import BrowsePage from './pages/BrowsePage.tsx'
 import MarketplacePage from './pages/MarketplacePage.tsx'
 import AdminApp from './admin/AdminApp.tsx'
@@ -31,12 +32,17 @@ function MarketplaceRedirect() {
 
 const router = createBrowserRouter([
   {
-    path: '/',
-    element: <BrowsePage />,
-  },
-  {
-    path: '/explore',
-    element: <MarketplacePage />,
+    element: <RootLayout />,
+    children: [
+      {
+        path: '/',
+        element: <BrowsePage />,
+      },
+      {
+        path: '/explore',
+        element: <MarketplacePage />,
+      },
+    ],
   },
   {
     path: '/marketplace',

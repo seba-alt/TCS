@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { motion } from 'motion/react'
+import { useLocation } from 'react-router-dom'
 import { useExplorerStore } from '../../store'
 
 const TOOLTIP_KEY = 'sage-tooltip-shown'
@@ -19,6 +20,10 @@ export function SageFAB() {
   const tags = useExplorerStore((s) => s.tags)
   const rateMin = useExplorerStore((s) => s.rateMin)
   const rateMax = useExplorerStore((s) => s.rateMax)
+
+  // Route detection — filter glow only relevant on Explorer
+  const location = useLocation()
+  const isExplorer = location.pathname === '/explore'
 
   const [showTooltip, setShowTooltip] = useState(false)
   const [glowType, setGlowType] = useState<GlowType>('none')
@@ -48,10 +53,11 @@ export function SageFAB() {
     prevStreamingRef.current = isStreaming
   }, [isStreaming])
 
-  // Filter change glow — skip first render to avoid spurious glow on page load
+  // Filter change glow — only on Explorer, skip first render to avoid spurious glow on page load
   const filterKey = `${query}|${rateMin}|${rateMax}|${tags.join(',')}`
   const prevFilterKey = useRef<string | null>(null)
   useEffect(() => {
+    if (!isExplorer) return  // Skip filter glow on non-Explorer pages (Browse has no grid)
     if (prevFilterKey.current === null) {
       // Initialize on first render without glowing
       prevFilterKey.current = filterKey
@@ -63,7 +69,7 @@ export function SageFAB() {
       const t = setTimeout(() => setGlowType('none'), 1500)
       return () => clearTimeout(t)
     }
-  }, [filterKey])
+  }, [filterKey, isExplorer])
 
   const handleClick = () => {
     setShowTooltip(false)
