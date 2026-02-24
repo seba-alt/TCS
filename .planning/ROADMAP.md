@@ -71,7 +71,7 @@ See `.planning/milestones/v2.2-ROADMAP.md`
 - [x] **Phase 30: Behavior Tracking** - `UserEvent` DB model + `POST /api/events` backend + frontend `trackEvent()` instrumentation for card clicks, Sage queries, and filter changes (2 plans ready) (completed 2026-02-22)
 - [x] **Phase 31: Admin Marketplace Intelligence** - New `/admin/marketplace` page showing unmet demand, expert exposure, daily Sage trend, and cold-start empty state (completed 2026-02-22)
 
-- [ ] **Phase 35: Close v2.3 Documentation Gaps** - Write missing VERIFICATION.md and SUMMARY docs, update specs and traceability (gap closure)
+- [x] **Phase 35: Close v2.3 Documentation Gaps** - Write missing VERIFICATION.md and SUMMARY docs, update specs and traceability (gap closure) (completed 2026-02-24)
 
 ## Phase Details
 
@@ -258,7 +258,7 @@ Plans:
 | 33. Command Center Header | 2/2 | Complete | 2026-02-23 | - |
 | 34. Admin Platform Restructure | 2/2 | Complete | 2026-02-23 | - |
 | 34.1. Fix zero-result searches + Dutch Sage | 2/2 | Complete   | 2026-02-23 | - |
-| 35. Close v2.3 Documentation Gaps | 0/1 | In Progress | - | - |
+| 35. Close v2.3 Documentation Gaps | 0/1 | Complete    | 2026-02-24 | - |
 
 ### Phase 35: Close v2.3 Documentation Gaps
 **Goal**: Write all missing VERIFICATION.md and SUMMARY.md files, resolve ADM-R-01 spec discrepancy, and fix REQUIREMENTS.md traceability table so the v2.3 milestone audit passes clean
@@ -282,7 +282,7 @@ Plans:
 **Goal:** Fix NULL gap detection bug across all admin query sites so zero-candidate searches appear in gap analytics, and enable Dutch language auto-detection in the Sage co-pilot with server-side translation for FAISS search
 **Depends on:** Phase 34
 **Requirements:** GAP-NULL-FIX, DUTCH-SAGE
-**Plans:** 2/2 plans complete
+**Plans:** 1/1 plans complete
 
 Plans:
 - [x] 34.1-01-PLAN.md — Backend: Patch all 8 NULL gap conditions + _is_gap helper in admin.py
