@@ -140,5 +140,5 @@ Plans:
 | 28-35. Sage Evolution | v2.3 | 17/17 | Complete | 2026-02-24 |
 | 36. Foundation | 2/2 | Complete    | 2026-02-24 | - |
 | 37. Backend Endpoints | 2/2 | Complete    | 2026-02-24 | - |
-| 38. Browse UI | v3.0 | 0/2 | Planned | - |
+| 38. Browse UI | 1/2 | In Progress|  | - |
 | 39. Sage Cross-Page Navigation | v3.0 | 0/TBD | Not started | - |

@@ -10,15 +10,15 @@ Requirements for v3.0 Netflix Browse & Agentic Navigation. Each maps to roadmap 
 ### Browse Page
 
 - [ ] **BROWSE-01**: User sees a Netflix-style Browse page as the landing experience at `/` with horizontal category rows
-- [ ] **BROWSE-02**: User can horizontally scroll through 4-6 category rows (trending tags, recently joined, most clicked, highest findability) with snap scroll and skeleton loading
-- [ ] **BROWSE-03**: User sees glassmorphic expert cards with large photos or monogram fallback, name + rate overlay, and hover reveals tags
+- [x] **BROWSE-02**: User can horizontally scroll through 4-6 category rows (trending tags, recently joined, most clicked, highest findability) with snap scroll and skeleton loading
+- [x] **BROWSE-03**: User sees glassmorphic expert cards with large photos or monogram fallback, name + rate overlay, and hover reveals tags
 - [ ] **BROWSE-04**: User can click "See All" on any category row to navigate to Explorer filtered by that category
 
 ### Photos
 
 - [x] **PHOTO-01**: Admin can bulk import expert photo URLs from a new CSV into the Expert model
 - [x] **PHOTO-02**: Backend serves expert photos via GET /api/photos/{username} proxy endpoint with CORS-safe headers and 24h cache
-- [ ] **PHOTO-03**: Frontend displays monogram initials fallback when no photo is available for an expert
+- [x] **PHOTO-03**: Frontend displays monogram initials fallback when no photo is available for an expert
 
 ### Navigation
 
@@ -68,12 +68,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | BROWSE-01 | Phase 38 | Pending |
-| BROWSE-02 | Phase 38 | Pending |
-| BROWSE-03 | Phase 38 | Pending |
+| BROWSE-02 | Phase 38 | Complete |
+| BROWSE-03 | Phase 38 | Complete |
 | BROWSE-04 | Phase 38 | Pending |
 | PHOTO-01 | Phase 37 | Complete |
 | PHOTO-02 | Phase 37 | Complete |
-| PHOTO-03 | Phase 38 | Pending |
+| PHOTO-03 | Phase 38 | Complete |
 | NAV-01 | Phase 36 | Complete |
 | NAV-02 | Phase 38 | Pending |
 | SAGE-01 | Phase 39 | Pending |

@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-24)
 ## Current Position
 
 Phase: 38 of 39 (Browse UI)
-Plan: — (not yet planned)
-Status: Ready to plan
-Last activity: 2026-02-24 — Phase 37 Backend Endpoints completed (2/2 plans)
+Plan: 1 of 2 complete
+Status: In progress
+Last activity: 2026-02-24 — Phase 38 Plan 01 complete (browse components: useBrowse, BrowseCard, BrowseRow, skeletons)
 
-Progress: [█████░░░░░] 50% (4 plans complete)
+Progress: [██████░░░░] 62% (5 plans complete)
 
 ## Performance Metrics
 
@@ -28,7 +28,7 @@ Progress: [█████░░░░░] 50% (4 plans complete)
 |-------|-------|-------|----------|
 | 36. Foundation | 2/2 | 3min | ~1.5min |
 | 37. Backend Endpoints | 2/2 | 5min | ~2.5min |
-| 38. Browse UI | TBD | - | - |
+| 38. Browse UI | 1/2 | 2min | ~2min |
 | 39. Sage Cross-Page Navigation | TBD | - | - |
 
 *Updated after each plan completion*
@@ -48,6 +48,9 @@ Recent decisions affecting current work:
 - Phase 37: Photo proxy uses StreamingResponse (not redirect) — preserves HTTPS enforcement and cache control
 - Phase 37: Browse card photo_url points to /api/photos/{username} proxy (not raw stored URL)
 - Phase 37: Case-insensitive name matching for bulk photo CSV import
+- Phase 38 Plan 01: Dark gradient overlay (not .glass-surface) for BrowseCard — backdrop-filter breaks inside overflow:hidden
+- Phase 38 Plan 01: Deterministic monogram gradient via charCodeAt(0) % 6 palette for consistent per-expert color
+- Phase 38 Plan 01: Mobile second-tap on expanded card opens profile_url in new tab
 
 ### Pending Todos
 
@@ -61,5 +64,5 @@ None — photo backend is ready for Browse UI consumption
 ## Session Continuity
 
 Last session: 2026-02-24
-Stopped at: Phase 37 Backend Endpoints complete — ready for Phase 38 planning
-Resume signal: Run /gsd:discuss-phase 38 or /gsd:plan-phase 38
+Stopped at: Phase 38 Plan 01 complete — ready for Phase 38 Plan 02 (BrowsePage assembly)
+Resume signal: Run /gsd:execute-phase 38-browse-ui (plan 02)
