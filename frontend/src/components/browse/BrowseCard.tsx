@@ -90,17 +90,18 @@ export const BrowseCard = memo(function BrowseCard({ expert, onViewProfile }: Br
 
       {/* Frosted overlay at bottom — dark gradient (not .glass-surface; card root has overflow:hidden) */}
       {/* Pitfall 1: backdrop-filter breaks inside overflow:hidden, use dark gradient instead */}
-      {/* flex-col justify-end ensures name/rate/tags pin to bottom consistently across all cards */}
-      <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/85 via-black/55 to-transparent flex flex-col justify-end">
+      {/* flex-col-reverse pins name/rate to bottom regardless of tag count — DOM order: [tags, rate, name], visual: [name, rate, tags] */}
+      <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/85 via-black/55 to-transparent flex flex-col-reverse">
+        {/* DOM order reversed — name renders first (visually bottom) */}
         <p className="text-sm font-semibold text-white truncate leading-tight">{name}</p>
-        <p className="text-xs text-purple-200 font-medium mb-0.5">
+        <p className="text-xs text-purple-200 font-medium mt-0.5">
           ${expert.hourly_rate}/hr
         </p>
 
-        {/* Tags row — visible on hover (group-hover) or when mobile-expanded */}
+        {/* Tags row — visible on hover (group-hover) or when mobile-expanded; grows upward above rate */}
         {visibleTags.length > 0 && (
           <div
-            className={`mt-1 flex flex-wrap gap-1 transition-opacity duration-200 ${
+            className={`mb-1 flex flex-wrap gap-1 transition-opacity duration-200 ${
               expanded ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
             }`}
           >
