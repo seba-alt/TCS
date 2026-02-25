@@ -62,7 +62,8 @@ export function BrowseCard({ expert }: BrowseCardProps) {
   return (
     <motion.div
       className="relative rounded-xl overflow-hidden cursor-pointer group"
-      style={{ width: 160, minHeight: 220 }}
+      style={{ width: 160 }}
+      initial={{ height: 220 }}
       whileHover={{ scale: 1.04 }}
       animate={{ height: expanded ? 260 : 220 }}
       transition={{ type: 'spring', stiffness: 300, damping: 25 }}
@@ -74,6 +75,8 @@ export function BrowseCard({ expert }: BrowseCardProps) {
           src={`${API_BASE}${expert.photo_url!}`}
           alt={name}
           className="absolute inset-0 w-full h-full object-cover"
+          loading="lazy"
+          decoding="async"
           onError={() => setImgError(true)}
         />
       ) : (
@@ -82,9 +85,9 @@ export function BrowseCard({ expert }: BrowseCardProps) {
 
       {/* Frosted overlay at bottom — dark gradient (not .glass-surface; card root has overflow:hidden) */}
       {/* Pitfall 1: backdrop-filter breaks inside overflow:hidden, use dark gradient instead */}
-      <div className="absolute bottom-0 left-0 right-0 p-2.5 bg-gradient-to-t from-black/70 via-black/40 to-transparent">
+      <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/85 via-black/55 to-transparent">
         <p className="text-sm font-semibold text-white truncate">{name}</p>
-        <p className="text-xs text-purple-300 font-medium">
+        <p className="text-xs text-purple-200 font-medium">
           ${expert.hourly_rate}/hr
         </p>
 
@@ -98,7 +101,7 @@ export function BrowseCard({ expert }: BrowseCardProps) {
             {visibleTags.map((tag) => (
               <span
                 key={tag}
-                className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/20 text-white/90"
+                className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/30 text-white"
               >
                 {tag}
               </span>
