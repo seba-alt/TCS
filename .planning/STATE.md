@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-24)
 
 **Core value:** A user describes any problem and instantly gets expertly matched professionals they can browse, filter, and contact — no searching, no guesswork.
-**Current focus:** v3.0 Netflix Browse & Agentic Navigation — Phase 40.2 complete (UAT fixes and Browse Explorer enhancements)
+**Current focus:** v3.0 → Phase 40.3 complete (revert to Explorer-only, remove Browse page)
 
 ## Current Position
 
-Phase: 40.2 of 40.2 (UAT Fixes and Browse Explorer Enhancements)
-Plan: 4 of 4 complete (plan 04 added post-phase for UAT gap 4 closure)
-Status: Phase 40.2 complete — all UAT gaps closed (1, 2, 4, 7). Reactive bookmark state, dedicated Saved button, BrowseCard alignment, row padding, Clear All pill, hero taglines, email gate, Sage search, Explorer photos.
-Last activity: 2026-02-25 — Plan 04: reactive Zustand savedExperts, dedicated Saved button mobile+desktop (UAT gap 4)
+Phase: 40.3 of 40.3 (Revert to Explorer-only)
+Plan: 2 of 2 complete
+Status: Phase 40.3 complete — Browse page removed, Explorer at /, navigationSlice deleted, Sage simplified, mobile Header visible
+Last activity: 2026-02-25 — Plan 02: Sage/layout simplification + mobile Header
 
-Progress: [██████████] 100% (13 plans complete)
+Progress: [██████████] 100% (15 plans complete)
 
 ## Performance Metrics
 
@@ -88,6 +88,16 @@ Recent decisions affecting current work:
 - Phase 40.2 Plan 04: savedExperts NOT in partialize — managed under tcs_saved_experts key manually (same key as Plan 02, avoids nesting in explorer-filters envelope)
 - Phase 40.2 Plan 04: resetFilters does NOT clear savedExperts — filter reset should not un-bookmark experts
 - Phase 40.2 Plan 04: Saved pill removed from FilterChips — dedicated toolbar button is single entry point (mobile icon+count, desktop pill with text)
+- Phase 40.3 Plan 01: All Browse components deleted (BrowsePage, BrowseCard, BrowseRow, HeroBanner, skeletons, useBrowse, SagePopover)
+- Phase 40.3 Plan 01: Route `/` serves MarketplacePage (Explorer) directly — no Browse page
+- Phase 40.3 Plan 01: Generic RedirectWithParams component replaces MarketplaceRedirect — reused for /explore and /marketplace redirects
+- Phase 40.3 Plan 01: navigationSlice deleted entirely — store type is FilterSlice & ResultsSlice & PilotSlice
+- Phase 40.3 Plan 01: MarketplacePage pilot reset logic removed — no more navigationSource guard
+- Phase 40.3 Plan 02: useSage has no Browse branching — always injects results directly, always sends real filter state
+- Phase 40.3 Plan 02: useExplore has no pendingSageResults consumption — Sage results always injected by useSage directly
+- Phase 40.3 Plan 02: RootLayout always renders SagePanel (SagePopover deleted, no isExplorer check)
+- Phase 40.3 Plan 02: SageFAB filter glow always active (no isExplorer guard)
+- Phase 40.3 Plan 02: Header changed from hidden md:flex to flex — visible on mobile with compact logo (h-6) and hidden expert count
 
 ### Pending Todos
 
@@ -98,6 +108,7 @@ Recent decisions affecting current work:
 
 - Phase 40.1 inserted after Phase 40: optimization and debugging of v3 (URGENT)
 - Phase 40.2 inserted after Phase 40: UAT fixes and Browse Explorer enhancements (URGENT)
+- Phase 40.3 inserted after Phase 40: Revert to Explorer-only — remove Browse page, keep Explorer with adjustments (URGENT)
 
 ### Blockers/Concerns
 
@@ -106,6 +117,6 @@ None — photo backend is ready for Browse UI consumption
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: Completed 40.2-04-PLAN.md — UAT gap 4 closed (reactive Zustand bookmark state, dedicated Saved button mobile+desktop)
-Resume signal: All v3.0 phases + UAT fixes complete. All 4 UAT gaps closed. Ready for next milestone or deployment.
-Resume file: .planning/phases/40.2-uat-fixes-and-browse-explorer-enhancements/40.2-04-SUMMARY.md
+Stopped at: Completed Phase 40.3 — Explorer-only revert complete (Browse removed, Sage simplified, mobile Header)
+Resume signal: Phase 40.3 complete. Explorer is the sole page at /. Ready for deployment or next milestone.
+Resume file: .planning/phases/40.3-revert-to-explorer-only-remove-browse-page-keep-explorer-with-adjustments/40.3-02-SUMMARY.md

@@ -168,8 +168,8 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 40.3-01-PLAN.md — Delete Browse components, restructure routes, remove navigationSlice
-- [ ] 40.3-02-PLAN.md — Simplify Sage/layout for single page, make Header mobile-visible
+- [x] 40.3-01-PLAN.md — Delete Browse components, restructure routes, remove navigationSlice
+- [x] 40.3-02-PLAN.md — Simplify Sage/layout for single page, make Header mobile-visible
 
 ### Phase 40.2: UAT fixes and Browse Explorer enhancements (INSERTED)
 
