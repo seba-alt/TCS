@@ -68,12 +68,17 @@ Recent decisions affecting current work:
 - Set `ALLOWED_ORIGINS=https://tcs-three-sigma.vercel.app` in Railway environment variables (carried over from v1.1)
 - Verify FTS5 availability on Railway SQLite at startup
 
+### Roadmap Evolution
+
+- Phase 40.1 inserted after Phase 40: optimization and debugging of v3 (URGENT)
+
 ### Blockers/Concerns
 
 None — photo backend is ready for Browse UI consumption
 
 ## Session Continuity
 
-Last session: 2026-02-24
-Stopped at: Phase 40 Plan 01 complete — v3.0 audit gaps closed (VERIFICATION.md, dead code removed, sticky-state fixed)
-Resume signal: Push to main to deploy, then verify in production
+Last session: 2026-02-25
+Stopped at: Phase 40.1 context gathered
+Resume signal: Run /gsd:plan-phase 40.1 to create plans
+Resume file: .planning/phases/40.1-optimization-and-debugging-of-v3/40.1-CONTEXT.md
