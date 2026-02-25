@@ -4,7 +4,6 @@ import { createRoot } from 'react-dom/client'
 import { createBrowserRouter, RouterProvider, Navigate, useSearchParams } from 'react-router-dom'
 import './index.css'
 import RootLayout from './layouts/RootLayout.tsx'
-import BrowsePage from './pages/BrowsePage.tsx'
 import MarketplacePage from './pages/MarketplacePage.tsx'
 import AdminApp from './admin/AdminApp.tsx'
 import LoginPage from './admin/LoginPage.tsx'
@@ -19,15 +18,14 @@ import ToolsPage from './admin/pages/ToolsPage.tsx'
 import DataPage from './admin/pages/DataPage.tsx'
 
 /**
- * Redirects /marketplace to /explore preserving query params.
+ * Generic redirect component preserving query params.
  * Must be a component (not inline Navigate) because useSearchParams
  * requires a RouterProvider context.
  */
-function MarketplaceRedirect() {
+function RedirectWithParams({ to }: { to: string }) {
   const [searchParams] = useSearchParams()
-  const queryString = searchParams.toString()
-  const destination = queryString ? `/explore?${queryString}` : '/explore'
-  return <Navigate to={destination} replace />
+  const qs = searchParams.toString()
+  return <Navigate to={qs ? `${to}?${qs}` : to} replace />
 }
 
 const router = createBrowserRouter([
@@ -36,21 +34,26 @@ const router = createBrowserRouter([
     children: [
       {
         path: '/',
-        element: <BrowsePage />,
-      },
-      {
-        path: '/explore',
         element: <MarketplacePage />,
       },
     ],
   },
+  // Legacy redirects — all paths lead to /
+  {
+    path: '/explore',
+    element: <RedirectWithParams to="/" />,
+  },
+  {
+    path: '/browse',
+    element: <Navigate to="/" replace />,
+  },
   {
     path: '/marketplace',
-    element: <MarketplaceRedirect />,
+    element: <RedirectWithParams to="/" />,
   },
   {
     path: '/chat',
-    element: <Navigate to="/explore" replace />,
+    element: <Navigate to="/" replace />,
   },
   {
     path: '/admin/login',
