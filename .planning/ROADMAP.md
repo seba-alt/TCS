@@ -161,6 +161,16 @@ Plans:
 | 39. Sage Cross-Page Navigation | 2/2 | Complete    | 2026-02-24 | - |
 | 40. Close v3.0 Audit Gaps | 1/1 | Complete    | 2026-02-24 | - |
 
+### Phase 40.3: Revert to Explorer-only — remove Browse page, keep Explorer with adjustments (INSERTED)
+
+**Goal:** Remove Browse page and make Explorer the sole discovery surface at `/`, carrying forward photos, bookmarks, Sage, and toolbar features, with mobile-first adjustments (sticky search, bottom-sheet filters, two-column grid)
+**Depends on:** Phase 40
+**Plans:** 2 plans
+
+Plans:
+- [ ] 40.3-01-PLAN.md — Delete Browse components, restructure routes, remove navigationSlice
+- [ ] 40.3-02-PLAN.md — Simplify Sage/layout for single page, make Header mobile-visible
+
 ### Phase 40.2: UAT fixes and Browse Explorer enhancements (INSERTED)
 
 **Goal:** Fix Browse UAT issues (card alignment, hero taglines, email gate, Sage search) and add Explorer enhancements (profile photos, Clear All pill, save/bookmark)
