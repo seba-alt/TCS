@@ -57,7 +57,7 @@ export default function Header() {
         rotate,
         background: 'radial-gradient(circle at top right, rgba(139,92,246,0.09) 0%, transparent 60%)',
       }}
-      className="hidden md:flex items-center gap-6 px-6 py-3 sticky top-0 z-50 backdrop-blur-md bg-white/70 border-b border-white/20"
+      className="flex items-center gap-3 md:gap-6 px-3 md:px-6 py-2 md:py-3 sticky top-0 z-50 backdrop-blur-md bg-white/70 border-b border-white/20"
     >
       {/* Logo section with particle burst */}
       <div className="relative shrink-0">
@@ -65,7 +65,7 @@ export default function Header() {
           ref={logoRef}
           src="/logo.png"
           alt="Tinrate"
-          className="h-8 w-auto"
+          className="h-6 md:h-8 w-auto"
           style={{ filter: 'drop-shadow(0 0 15px rgba(139,92,246,0.30))' }}
           onError={(e) => {
             (e.target as HTMLImageElement).style.display = 'none'
@@ -138,7 +138,7 @@ export default function Header() {
       </motion.div>
 
       {/* Expert count */}
-      <div className="shrink-0 text-sm text-slate-500 tabular-nums">
+      <div className="hidden md:block shrink-0 text-sm text-slate-500 tabular-nums">
         <span className="font-semibold text-slate-700">{displayCount.toLocaleString()}</span>
         {' experts'}
       </div>
