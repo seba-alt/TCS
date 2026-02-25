@@ -92,12 +92,16 @@ export function useSage() {
         .slice(-10) // Last 10 messages for context window
         .map(m => ({ role: toGeminiRole(m.role), content: m.content }))
 
-      const currentFilters = {
-        query: storeState.query,
-        rate_min: storeState.rateMin,
-        rate_max: storeState.rateMax,
-        tags: storeState.tags,
-      }
+      // On Browse, send clean filter state to avoid confusing Gemini with stale Explorer filters.
+      // This ensures Gemini reliably calls search_experts (discovery) rather than apply_filters.
+      const currentFilters = isExplorer
+        ? {
+            query: storeState.query,
+            rate_min: storeState.rateMin,
+            rate_max: storeState.rateMax,
+            tags: storeState.tags,
+          }
+        : { query: '', rate_min: 0, rate_max: 5000, tags: [] as string[] }
 
       const res = await fetch(`${API_BASE}/api/pilot`, {
         method: 'POST',

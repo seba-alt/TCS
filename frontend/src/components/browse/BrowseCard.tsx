@@ -30,9 +30,10 @@ function MonogramFallback({ initials }: { initials: string }) {
 
 interface BrowseCardProps {
   expert: BrowseCardType
+  onViewProfile?: (url: string) => void
 }
 
-export const BrowseCard = memo(function BrowseCard({ expert }: BrowseCardProps) {
+export const BrowseCard = memo(function BrowseCard({ expert, onViewProfile }: BrowseCardProps) {
   const [imgError, setImgError] = useState(false)
   const [expanded, setExpanded] = useState(false)
 
@@ -49,9 +50,13 @@ export const BrowseCard = memo(function BrowseCard({ expert }: BrowseCardProps) 
 
   function handleClick() {
     if (expanded) {
-      // Second tap: open profile in new tab
+      // Second tap: open profile — delegate to parent for email gating, or open directly
       if (expert.profile_url) {
-        window.open(expert.profile_url, '_blank', 'noopener,noreferrer')
+        if (onViewProfile) {
+          onViewProfile(expert.profile_url)
+        } else {
+          window.open(expert.profile_url, '_blank', 'noopener,noreferrer')
+        }
       }
       setExpanded(false)
     } else {
@@ -85,7 +90,8 @@ export const BrowseCard = memo(function BrowseCard({ expert }: BrowseCardProps) 
 
       {/* Frosted overlay at bottom — dark gradient (not .glass-surface; card root has overflow:hidden) */}
       {/* Pitfall 1: backdrop-filter breaks inside overflow:hidden, use dark gradient instead */}
-      <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/85 via-black/55 to-transparent">
+      {/* flex-col justify-end ensures name/rate/tags pin to bottom consistently across all cards */}
+      <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/85 via-black/55 to-transparent flex flex-col justify-end">
         <p className="text-sm font-semibold text-white truncate leading-tight">{name}</p>
         <p className="text-xs text-purple-200 font-medium mb-0.5">
           ${expert.hourly_rate}/hr

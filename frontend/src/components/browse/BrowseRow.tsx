@@ -30,9 +30,10 @@ interface BrowseRowProps {
   experts: BrowseCardType[]
   total: number
   onSeeAll: (slug: string, title: string) => void
+  onViewProfile?: (url: string) => void
 }
 
-export function BrowseRow({ title, slug, experts, total, onSeeAll }: BrowseRowProps) {
+export function BrowseRow({ title, slug, experts, total, onSeeAll, onViewProfile }: BrowseRowProps) {
   return (
     <div>
       {/* Row header */}
@@ -65,11 +66,11 @@ export function BrowseRow({ title, slug, experts, total, onSeeAll }: BrowseRowPr
 
         {/* Horizontal snap-scroll row */}
         <div
-          className="flex gap-3 overflow-x-auto snap-x snap-mandatory px-4 md:px-8 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+          className="flex gap-3 overflow-x-auto snap-x snap-mandatory pl-8 md:pl-16 pr-4 md:pr-8 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
         >
           {experts.map((expert) => (
             <div key={expert.username} className="snap-start shrink-0">
-              <BrowseCard expert={expert} />
+              <BrowseCard expert={expert} onViewProfile={onViewProfile} />
             </div>
           ))}
 

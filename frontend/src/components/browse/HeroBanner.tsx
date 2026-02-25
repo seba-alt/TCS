@@ -2,6 +2,30 @@ import { useState, useEffect, useCallback } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import type { BrowseCard as BrowseCardType } from '../../hooks/useBrowse'
 
+// Category-specific taglines for the hero banner — fills open space in the gradient
+const CATEGORY_TAGLINES: Record<string, string> = {
+  'ai': 'Find your next AI innovator',
+  'artificial intelligence': 'Find your next AI innovator',
+  'blockchain': 'Connect with blockchain pioneers',
+  'cybersecurity': 'Secure your future with top defenders',
+  'data science': 'Unlock insights with data experts',
+  'data-science': 'Unlock insights with data experts',
+  'cloud': 'Scale with cloud architecture leaders',
+  'devops': 'Streamline your pipeline with DevOps pros',
+  'mobile': 'Build brilliant mobile experiences',
+  'design': 'Elevate your product with design talent',
+  'marketing': 'Amplify your brand with marketing minds',
+  'finance': 'Navigate complexity with financial experts',
+  'engineering': 'Build with world-class engineers',
+  'product': 'Ship faster with product experts',
+  'leadership': 'Level up with leadership advisors',
+  'consulting': 'Get strategic guidance from top consultants',
+  'seo': 'Dominate search with SEO specialists',
+  'analytics': 'Turn data into decisions',
+  'strategy': 'Chart your course with strategy pros',
+}
+const DEFAULT_TAGLINE = 'Discover world-class expertise'
+
 // Gradient placeholder palette for experts without photos
 const HERO_GRADIENTS = [
   'from-purple-900 via-indigo-800 to-purple-700',
@@ -42,6 +66,10 @@ export function HeroBanner({ featured, onExploreAll }: HeroBannerProps) {
   // Deterministic placeholder gradient from username first char
   const gradientIdx = (current.username?.charCodeAt(0) ?? 0) % HERO_GRADIENTS.length
 
+  // Derive tagline from expert's category or first tag
+  const taglineKey = current.category?.toLowerCase() ?? current.tags[0]?.toLowerCase() ?? ''
+  const tagline = CATEGORY_TAGLINES[taglineKey] ?? DEFAULT_TAGLINE
+
   return (
     <div
       className="relative overflow-hidden rounded-2xl mx-4 md:mx-8 mb-4 h-[180px] md:h-[300px]"
@@ -67,6 +95,9 @@ export function HeroBanner({ featured, onExploreAll }: HeroBannerProps) {
 
           {/* Expert info — bottom left */}
           <div className="absolute bottom-8 left-8 md:bottom-12 md:left-12 z-10">
+            <p className="text-xs md:text-sm font-medium text-purple-200 uppercase tracking-wider mb-2">
+              {tagline}
+            </p>
             <h2 className="text-2xl md:text-4xl font-bold text-white mb-1">
               {current.first_name} {current.last_name}
             </h2>

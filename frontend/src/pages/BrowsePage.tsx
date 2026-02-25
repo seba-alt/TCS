@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useBrowse } from '../hooks/useBrowse'
 import { HeroBanner } from '../components/browse/HeroBanner'
@@ -6,7 +6,11 @@ import { SkeletonHeroBanner } from '../components/browse/SkeletonHeroBanner'
 import { BrowseRow } from '../components/browse/BrowseRow'
 import { SkeletonBrowseRow } from '../components/browse/SkeletonBrowseRow'
 import { AuroraBackground } from '../components/AuroraBackground'
+import { NewsletterGateModal } from '../components/marketplace/NewsletterGateModal'
 import { useExplorerStore } from '../store'
+import { useNltrStore } from '../store/nltrStore'
+
+const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
 
 export default function BrowsePage() {
   const { data, loading, error } = useBrowse()
@@ -17,6 +21,42 @@ export default function BrowsePage() {
   // and calling resetPilot() when loading from browse navigation.
   const setNavigationSource = useExplorerStore((s) => s.setNavigationSource)
   const resetFilters = useExplorerStore((s) => s.resetFilters)
+
+  // Email gate — same pattern as MarketplacePage (CONTEXT.md: reuse exact same component and trigger logic)
+  const { subscribed, setSubscribed } = useNltrStore()
+  const legacyUnlocked =
+    localStorage.getItem('tcs_gate_email') !== null ||
+    localStorage.getItem('tcs_email_unlocked') !== null
+  const isUnlocked = subscribed || legacyUnlocked
+  const [showGate, setShowGate] = useState(false)
+  const [pendingProfileUrl, setPendingProfileUrl] = useState<string | null>(null)
+
+  const handleViewProfile = useCallback((url: string) => {
+    if (isUnlocked) {
+      window.open(url, '_blank', 'noopener,noreferrer')
+    } else {
+      setPendingProfileUrl(url)
+      setShowGate(true)
+    }
+  }, [isUnlocked])
+
+  async function handleSubscribe(email: string) {
+    setSubscribed(email)
+    setShowGate(false)
+    fetch(`${API_URL}/api/newsletter/subscribe`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    }).catch(() => {})
+    if (pendingProfileUrl) {
+      window.open(pendingProfileUrl, '_blank', 'noopener,noreferrer')
+      setPendingProfileUrl(null)
+    }
+  }
+
+  function handleDismiss() {
+    setShowGate(false)
+  }
 
   // Navigate to /explore with the row title pre-applied as a query filter
   const handleSeeAll = useCallback(
@@ -75,11 +115,19 @@ export default function BrowsePage() {
                 experts={row.experts}
                 total={row.total}
                 onSeeAll={handleSeeAll}
+                onViewProfile={handleViewProfile}
               />
             ))
           ) : null}
         </div>
       </div>
+
+      {/* Email gate modal — same component as Explorer (CONTEXT.md: identical behavior) */}
+      <NewsletterGateModal
+        isOpen={showGate}
+        onSubscribe={handleSubscribe}
+        onDismiss={handleDismiss}
+      />
     </AuroraBackground>
   )
 }
