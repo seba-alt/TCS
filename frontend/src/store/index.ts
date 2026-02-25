@@ -5,20 +5,18 @@ import { useShallow } from 'zustand/react/shallow'
 import { createFilterSlice } from './filterSlice'
 import { createResultsSlice } from './resultsSlice'
 import { createPilotSlice } from './pilotSlice'
-import { createNavigationSlice } from './navigationSlice'
 
 import type { FilterSlice } from './filterSlice'
 import type { ResultsSlice } from './resultsSlice'
 import type { PilotSlice } from './pilotSlice'
-import type { NavigationSlice } from './navigationSlice'
 
 // Re-export types for consumers
-export type { FilterSlice, ResultsSlice, PilotSlice, NavigationSlice }
+export type { FilterSlice, ResultsSlice, PilotSlice }
 export type { Expert } from './resultsSlice'
 export type { PilotMessage } from './pilotSlice'
 
 // Combined store type
-export type ExplorerStore = FilterSlice & ResultsSlice & PilotSlice & NavigationSlice
+export type ExplorerStore = FilterSlice & ResultsSlice & PilotSlice
 
 // Combined store with persist middleware
 // Only filter DATA fields are persisted — never actions, never results, never pilot
@@ -28,7 +26,6 @@ export const useExplorerStore = create<ExplorerStore>()(
       ...createFilterSlice(...a),
       ...createResultsSlice(...a),
       ...createPilotSlice(...a),
-      ...createNavigationSlice(...a),
     }),
     {
       name: 'explorer-filters',
@@ -106,4 +103,3 @@ export const usePilotSlice = () =>
       resetPilot:   state.resetPilot,
     }))
   )
-

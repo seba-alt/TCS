@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Bookmark, SlidersHorizontal } from 'lucide-react'
 import { useExplorerStore, useFilterSlice } from '../store'
 import { useExplore } from '../hooks/useExplore'
@@ -21,19 +21,6 @@ export default function MarketplacePage() {
   // Fetch hook — reads filter state from store, calls /api/explore, writes results back
   // Returns loadNextPage for VirtuosoGrid endReached (infinite scroll)
   const { loadNextPage } = useExplore()
-
-  // Pilot reset — gated by navigationSource (Phase 36)
-  // Direct URL visits reset pilot (clean panel). Browse→Explorer transitions preserve Sage state.
-  const resetPilot = useExplorerStore((s) => s.resetPilot)
-  const navigationSource = useExplorerStore((s) => s.navigationSource)
-  const setNavigationSource = useExplorerStore((s) => s.setNavigationSource)
-  useEffect(() => {
-    if (navigationSource === 'direct') {
-      resetPilot()
-    }
-    // Reset after consume — next Explorer mount starts clean regardless of how user arrived
-    setNavigationSource('direct')
-  }, [resetPilot, navigationSource, setNavigationSource])
 
   // Results state for conditional rendering
   const loading = useExplorerStore((s) => s.loading)
