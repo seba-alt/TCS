@@ -160,3 +160,14 @@ Plans:
 | 38. Browse UI | 2/2 | Complete    | 2026-02-24 | - |
 | 39. Sage Cross-Page Navigation | 2/2 | Complete    | 2026-02-24 | - |
 | 40. Close v3.0 Audit Gaps | 1/1 | Complete    | 2026-02-24 | - |
+
+### Phase 40.1: Optimization and Debugging of v3 (INSERTED)
+
+**Goal:** Fix Browse page bugs (card sizing, hero banner, text contrast), optimize render performance (memoization, lazy loading, data caching), and perform visual consistency pass across Browse and Explorer pages aligned to Tinrate brand guidelines
+**Depends on:** Phase 40
+**Requirements:** BROWSE-01, BROWSE-02, BROWSE-03, BROWSE-04, PHOTO-03, NAV-02
+**Plans:** 2 plans
+
+Plans:
+- [ ] 40.1-01-PLAN.md — Card & banner bug fixes (BrowseCard height, HeroBanner gradient, text contrast, FilterSidebar label, lazy loading)
+- [ ] 40.1-02-PLAN.md — Performance optimization + visual consistency (React.memo, browse data caching, spacing/brand alignment pass)
