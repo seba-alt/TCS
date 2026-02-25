@@ -91,7 +91,7 @@ export function FilterChips() {
         </span>
       ))}
 
-      {chips.length > 0 && (
+      {(chips.length > 0 || sageMode) && (
         <button
           onClick={resetFilters}
           className="inline-flex items-center text-xs bg-red-50 text-red-600 rounded-full px-2.5 py-0.5 hover:bg-red-100 transition-colors"
