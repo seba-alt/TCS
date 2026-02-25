@@ -57,18 +57,10 @@ export function HeroBanner({ featured, onExploreAll }: HeroBannerProps) {
           transition={{ duration: 0.6 }}
           className="absolute inset-0"
         >
-          {/* Background: photo if available, otherwise purple/indigo gradient */}
-          {current.photo_url ? (
-            <img
-              src={current.photo_url}
-              alt={`${current.first_name} ${current.last_name}`}
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div
-              className={`w-full h-full bg-gradient-to-br ${HERO_GRADIENTS[gradientIdx]}`}
-            />
-          )}
+          {/* Background: abstract branded gradient (no profile photos — portrait images don't work as wide banners) */}
+          <div
+            className={`w-full h-full bg-gradient-to-br ${HERO_GRADIENTS[gradientIdx]}`}
+          />
 
           {/* Dark readability overlay — fades from left */}
           <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-transparent" />
