@@ -1,6 +1,10 @@
 import { useState, useEffect } from 'react'
+import { useExplorerStore } from '../store'
 
 const API_BASE = import.meta.env.VITE_API_URL ?? ''
+
+/** 5-minute TTL for browse data cache */
+const CACHE_TTL_MS = 5 * 60 * 1000
 
 export interface BrowseCard {
   username: string
@@ -28,11 +32,19 @@ export interface BrowseData {
 }
 
 export function useBrowse() {
-  const [data, setData] = useState<BrowseData | null>(null)
-  const [loading, setLoading] = useState(true)
+  const cached = useExplorerStore((s) => s.browseData)
+  const setCached = useExplorerStore((s) => s.setBrowseData)
+
+  // Check freshness at render time so useState initializers get the right value
+  const isFresh = cached != null && (Date.now() - cached.cachedAt < CACHE_TTL_MS)
+
+  const [data, setData] = useState<BrowseData | null>(isFresh ? cached.data : null)
+  const [loading, setLoading] = useState(!isFresh)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    if (isFresh) return // use cached data — skip fetch
+
     const controller = new AbortController()
 
     fetch(`${API_BASE}/api/browse?per_row=10`, { signal: controller.signal })
@@ -42,6 +54,7 @@ export function useBrowse() {
       })
       .then((d: BrowseData) => {
         setData(d)
+        setCached(d)
         setLoading(false)
       })
       .catch((err: Error) => {
@@ -51,7 +64,7 @@ export function useBrowse() {
       })
 
     return () => controller.abort()
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   return { data, loading, error }
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, memo } from 'react'
 import { motion } from 'motion/react'
 import type { BrowseCard as BrowseCardType } from '../../hooks/useBrowse'
 
@@ -32,7 +32,7 @@ interface BrowseCardProps {
   expert: BrowseCardType
 }
 
-export function BrowseCard({ expert }: BrowseCardProps) {
+export const BrowseCard = memo(function BrowseCard({ expert }: BrowseCardProps) {
   const [imgError, setImgError] = useState(false)
   const [expanded, setExpanded] = useState(false)
 
@@ -111,4 +111,4 @@ export function BrowseCard({ expert }: BrowseCardProps) {
       </div>
     </motion.div>
   )
-}
+})
