@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { SlidersHorizontal } from 'lucide-react'
+import { Bookmark, SlidersHorizontal } from 'lucide-react'
 import { useExplorerStore, useFilterSlice } from '../store'
 import { useExplore } from '../hooks/useExplore'
 import { useUrlSync } from '../hooks/useUrlSync'
@@ -43,9 +43,10 @@ export default function MarketplacePage() {
   // Mobile filter sheet state
   const [sheetOpen, setSheetOpen] = useState(false)
 
-  // Filter summary for mobile toolbar badge
-  const { tags, query } = useFilterSlice()
+  // Filter summary for mobile toolbar badge + Saved button
+  const { tags, query, savedExperts, savedFilter, setSavedFilter } = useFilterSlice()
   const activeFilterCount = tags.length + (query ? 1 : 0)
+  const savedCount = savedExperts.length
 
   // Newsletter gate state — NLTR-01/03
   const { subscribed, setSubscribed } = useNltrStore()
@@ -110,19 +111,54 @@ export default function MarketplacePage() {
           {/* Mobile toolbar — visible only on mobile */}
           <div className="md:hidden flex items-center justify-between px-4 py-3 border-b border-gray-100 shrink-0">
             <h1 className="text-lg font-semibold text-gray-900">Experts</h1>
-            <button
-              onClick={() => setSheetOpen(true)}
-              className="flex items-center gap-1.5 text-sm border border-gray-300 rounded-md px-3 py-1.5"
-            >
-              <SlidersHorizontal size={16} />
-              Filters
-              {activeFilterCount > 0 && (
-                <span className="bg-brand-purple text-white text-xs rounded-full px-1.5 py-0.5 leading-none">
-                  {activeFilterCount}
-                </span>
+            <div className="flex items-center gap-2">
+              {/* Saved button — compact icon + count, only shown when bookmarks exist */}
+              {savedCount > 0 && (
+                <button
+                  onClick={() => setSavedFilter(!savedFilter)}
+                  className={`flex items-center gap-1 text-sm rounded-md px-2.5 py-1.5 transition-colors ${
+                    savedFilter
+                      ? 'bg-brand-purple text-white'
+                      : 'border border-gray-300 text-gray-700'
+                  }`}
+                  aria-label={savedFilter ? 'Show all experts' : 'Show saved experts'}
+                >
+                  <Bookmark size={16} className={savedFilter ? 'fill-current' : ''} />
+                  {savedCount}
+                </button>
               )}
-            </button>
+              <button
+                onClick={() => setSheetOpen(true)}
+                className="flex items-center gap-1.5 text-sm border border-gray-300 rounded-md px-3 py-1.5"
+              >
+                <SlidersHorizontal size={16} />
+                Filters
+                {activeFilterCount > 0 && (
+                  <span className="bg-brand-purple text-white text-xs rounded-full px-1.5 py-0.5 leading-none">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </button>
+            </div>
           </div>
+
+          {/* Desktop Saved button — above filter chips strip, right-aligned, only on desktop */}
+          {savedCount > 0 && (
+            <div className="hidden md:flex items-center justify-end px-4 py-2">
+              <button
+                onClick={() => setSavedFilter(!savedFilter)}
+                className={`flex items-center gap-1.5 text-sm rounded-full px-3 py-1.5 transition-colors ${
+                  savedFilter
+                    ? 'bg-brand-purple text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+                aria-label={savedFilter ? 'Show all experts' : 'Show saved experts'}
+              >
+                <Bookmark size={16} className={savedFilter ? 'fill-current' : ''} />
+                Saved ({savedCount})
+              </button>
+            </div>
+          )}
 
           {/* Active filter chips strip */}
           <FilterChips />

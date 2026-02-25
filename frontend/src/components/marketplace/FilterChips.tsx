@@ -1,5 +1,4 @@
 import { motion } from 'motion/react'
-import { Bookmark } from 'lucide-react'
 import { useFilterSlice, useResultsSlice } from '../../store'
 import { useExplorerStore } from '../../store'
 
@@ -12,7 +11,7 @@ interface Chip {
 }
 
 export function FilterChips() {
-  const { query, rateMin, rateMax, tags, savedExperts, savedFilter, setQuery, setRateRange, toggleTag, setSavedFilter, resetFilters } =
+  const { query, rateMin, rateMax, tags, savedExperts, setQuery, setRateRange, toggleTag, resetFilters } =
     useFilterSlice()
   const { total } = useResultsSlice()
   const sageMode = useExplorerStore((s) => s.sageMode)
@@ -51,21 +50,6 @@ export function FilterChips() {
       />
 
       <span className="text-sm text-gray-500 shrink-0">{total} experts found</span>
-
-      {/* Saved filter toggle — only shows when bookmarks exist */}
-      {savedCount > 0 && (
-        <button
-          onClick={() => setSavedFilter(!savedFilter)}
-          className={`inline-flex items-center gap-1 text-xs rounded-full px-2.5 py-0.5 transition-colors ${
-            savedFilter
-              ? 'bg-brand-purple text-white'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-          }`}
-        >
-          <Bookmark size={12} className={savedFilter ? 'fill-current' : ''} />
-          Saved ({savedCount})
-        </button>
-      )}
 
       {chips.map((chip) => (
         <span
