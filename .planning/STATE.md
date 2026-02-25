@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-24)
 
 **Core value:** A user describes any problem and instantly gets expertly matched professionals they can browse, filter, and contact — no searching, no guesswork.
-**Current focus:** v3.0 Netflix Browse & Agentic Navigation — Phase 40: Close v3.0 Audit Gaps
+**Current focus:** v3.0 Netflix Browse & Agentic Navigation — Phase 40.1 complete (optimization and debugging of v3)
 
 ## Current Position
 
-Phase: 40 of 40 (Close v3.0 Audit Gaps)
-Plan: 1 of 1 complete
-Status: Phase 40 complete — v3.0 audit gaps closed
-Last activity: 2026-02-24 — Phase 40 Plan 01 complete (39-VERIFICATION.md, dead code removed, navigationSource sticky-state fixed)
+Phase: 40.1 of 40.1 (Optimization and Debugging of v3)
+Plan: 2 of 2 complete
+Status: Phase 40.1 complete — Browse bugs fixed, performance optimized, visual consistency achieved
+Last activity: 2026-02-25 — Phase 40.1 complete (BrowseCard height/contrast, HeroBanner gradient-only, React.memo, Zustand browse cache, brand color alignment)
 
-Progress: [██████████] 100% (9 plans complete)
+Progress: [██████████] 100% (11 plans complete)
 
 ## Performance Metrics
 
@@ -62,6 +62,12 @@ Recent decisions affecting current work:
 - Phase 39 Plan 02: Non-discovery questions on Browse just show message (no filter application)
 - Phase 40 Plan 01: useNavigationSlice hook deleted (zero callers) — createNavigationSlice and NavigationSlice type retained
 - Phase 40 Plan 01: setNavigationSource('direct') unconditional after pilot gate — idempotent on primitives, prevents sticky-state across same-session Explorer visits
+- Phase 40.1 Plan 01: initial={{ height: 220 }} instead of minHeight for motion.div containing block — minHeight does NOT work for absolute-inset children
+- Phase 40.1 Plan 01: HeroBanner photo branch deleted entirely — portrait photos don't work as wide banners, gradient-only is correct design
+- Phase 40.1 Plan 01: Overlay gradient darkened to from-black/85 via-black/55 for text readability over bright photos
+- Phase 40.1 Plan 02: CachedBrowseData interface re-declared in navigationSlice to avoid circular dependency with useBrowse
+- Phase 40.1 Plan 02: 5-min TTL browse cache in Zustand — balances freshness with session navigation speed
+- Phase 40.1 Plan 02: SeeAllEndCard changed from dark glass (bg-white/5) to light glass (bg-white/60) for aurora theme
 
 ### Pending Todos
 
@@ -79,6 +85,6 @@ None — photo backend is ready for Browse UI consumption
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: Phase 40.1 context gathered
-Resume signal: Run /gsd:plan-phase 40.1 to create plans
-Resume file: .planning/phases/40.1-optimization-and-debugging-of-v3/40.1-CONTEXT.md
+Stopped at: Phase 40.1 complete — v3.0 optimization and debugging done
+Resume signal: All v3.0 phases complete. Ready for next milestone or deployment.
+Resume file: .planning/phases/40.1-optimization-and-debugging-of-v3/40.1-VERIFICATION.md
