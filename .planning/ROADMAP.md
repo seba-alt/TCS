@@ -165,11 +165,14 @@ Plans:
 
 **Goal:** Fix Browse UAT issues (card alignment, hero taglines, email gate, Sage search) and add Explorer enhancements (profile photos, Clear All pill, save/bookmark)
 **Depends on:** Phase 40
-**Plans:** 2/2 plans complete
+**Plans:** 4 plans (2 complete + 2 gap closure)
+**Gap Closure:** Closes 4 gaps from UAT testing
 
 Plans:
 - [x] 40.2-01-PLAN.md — Browse fixes (BrowseCard alignment, hero taglines, email gate, Sage search reliability)
 - [x] 40.2-02-PLAN.md — Explorer enhancements (profile photos, Clear All pill styling, save/bookmark feature)
+- [ ] 40.2-03-PLAN.md — Gap closure: BrowseCard alignment fix, BrowseRow padding fix, Clear All sage mode fix
+- [ ] 40.2-04-PLAN.md — Gap closure: Saved experts Zustand reactivity + dedicated toolbar button
 
 ### Phase 40.1: Optimization and Debugging of v3 (INSERTED)
 
