@@ -66,7 +66,7 @@ export function BrowseRow({ title, slug, experts, total, onSeeAll, onViewProfile
 
         {/* Horizontal snap-scroll row */}
         <div
-          className="flex gap-3 overflow-x-auto snap-x snap-mandatory pl-20 pr-4 md:pr-8 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+          className="flex gap-3 overflow-x-auto snap-x snap-mandatory pl-20 scroll-pl-20 pr-4 md:pr-8 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
         >
           {experts.map((expert) => (
             <div key={expert.username} className="snap-start shrink-0">
