@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-24)
 ## Current Position
 
 Phase: 40.2 of 40.2 (UAT Fixes and Browse Explorer Enhancements)
-Plan: 3 of 3 complete (plan 03 added post-phase for UAT gap closure)
-Status: Phase 40.2 complete — Browse card alignment (flex-col-reverse), row padding (pl-20), Clear All pill (sageMode), hero taglines, email gate, Sage search, Explorer photos, save/bookmark
-Last activity: 2026-02-25 — Plan 03: BrowseCard flex-col-reverse fix, BrowseRow pl-20 padding, FilterChips sageMode Clear All (UAT gaps 1, 2, 7)
+Plan: 4 of 4 complete (plan 04 added post-phase for UAT gap 4 closure)
+Status: Phase 40.2 complete — all UAT gaps closed (1, 2, 4, 7). Reactive bookmark state, dedicated Saved button, BrowseCard alignment, row padding, Clear All pill, hero taglines, email gate, Sage search, Explorer photos.
+Last activity: 2026-02-25 — Plan 04: reactive Zustand savedExperts, dedicated Saved button mobile+desktop (UAT gap 4)
 
 Progress: [██████████] 100% (13 plans complete)
 
@@ -33,6 +33,7 @@ Progress: [██████████] 100% (13 plans complete)
 
 *Updated after each plan completion*
 | Phase 40.2 P03 | 2 | 2 tasks | 3 files |
+| Phase 40.2 P04 | 2 | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -83,6 +84,10 @@ Recent decisions affecting current work:
 - [Phase 40.2]: BrowseCard overlay uses flex-col-reverse (not justify-end) — justify-end is inert on shrink-wrap containers; col-reverse anchors name/rate at flex-end bottom
 - [Phase 40.2]: BrowseRow left padding unified to pl-20 (80px) on all breakpoints — clears 64px fade with 16px margin, simpler than responsive pl-8 md:pl-16
 - [Phase 40.2]: FilterChips Clear All condition extended to (chips.length > 0 || sageMode) — Sage search bypasses filter chips entirely, so sageMode must be checked separately
+- Phase 40.2 Plan 04: savedExperts is string[] (not Set) in Zustand — serializable; Set created at point of use in ExpertGrid useMemo
+- Phase 40.2 Plan 04: savedExperts NOT in partialize — managed under tcs_saved_experts key manually (same key as Plan 02, avoids nesting in explorer-filters envelope)
+- Phase 40.2 Plan 04: resetFilters does NOT clear savedExperts — filter reset should not un-bookmark experts
+- Phase 40.2 Plan 04: Saved pill removed from FilterChips — dedicated toolbar button is single entry point (mobile icon+count, desktop pill with text)
 
 ### Pending Todos
 
@@ -101,6 +106,6 @@ None — photo backend is ready for Browse UI consumption
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: Completed 40.2-03-PLAN.md — UAT gaps 1, 2, 7 closed (BrowseCard alignment, row padding, Clear All sageMode)
-Resume signal: All v3.0 phases + UAT fixes complete. Ready for next milestone or deployment.
-Resume file: .planning/phases/40.2-uat-fixes-and-browse-explorer-enhancements/40.2-03-SUMMARY.md
+Stopped at: Completed 40.2-04-PLAN.md — UAT gap 4 closed (reactive Zustand bookmark state, dedicated Saved button mobile+desktop)
+Resume signal: All v3.0 phases + UAT fixes complete. All 4 UAT gaps closed. Ready for next milestone or deployment.
+Resume file: .planning/phases/40.2-uat-fixes-and-browse-explorer-enhancements/40.2-04-SUMMARY.md
