@@ -8,14 +8,6 @@ import { EmptyState } from './EmptyState'
 import { SkeletonGrid } from './SkeletonGrid'
 import { useNltrStore } from '../../store/nltrStore'
 
-const SAVED_KEY = 'tcs_saved_experts'
-
-function getSavedSet(): Set<string> {
-  try {
-    const raw = localStorage.getItem(SAVED_KEY)
-    return raw ? new Set(JSON.parse(raw)) : new Set()
-  } catch { return new Set() }
-}
 
 interface ExpertGridProps {
   experts: Expert[]
@@ -39,14 +31,14 @@ function SkeletonFooter() {
 export function ExpertGrid({ experts, loading, isFetchingMore, onEndReached, onViewProfile }: ExpertGridProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const { spinTrigger, resetSpin } = useNltrStore()
-  const { savedFilter } = useFilterSlice()
+  const { savedFilter, savedExperts } = useFilterSlice()
 
   // When "Saved" filter is active, show only bookmarked experts from loaded list
   const displayExperts = useMemo(() => {
     if (!savedFilter) return experts
-    const saved = getSavedSet()
+    const saved = new Set(savedExperts)
     return experts.filter(e => saved.has(e.username))
-  }, [experts, savedFilter])
+  }, [experts, savedFilter, savedExperts])
 
   useEffect(() => {
     if (!spinTrigger || !containerRef.current) return

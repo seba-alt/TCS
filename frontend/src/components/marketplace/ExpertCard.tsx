@@ -1,27 +1,10 @@
 import { useState } from 'react'
 import { Bookmark } from 'lucide-react'
 import type { Expert } from '../../store/resultsSlice'
-import { useExplorerStore } from '../../store'
+import { useExplorerStore, useFilterSlice } from '../../store'
 import { trackEvent } from '../../tracking'
 
 const API_BASE = import.meta.env.VITE_API_URL ?? ''
-const SAVED_KEY = 'tcs_saved_experts'
-
-function getSavedSet(): Set<string> {
-  try {
-    const raw = localStorage.getItem(SAVED_KEY)
-    return raw ? new Set(JSON.parse(raw)) : new Set()
-  } catch { return new Set() }
-}
-
-function toggleSavedExpert(username: string): boolean {
-  const saved = getSavedSet()
-  const nowSaved = !saved.has(username)
-  if (nowSaved) saved.add(username)
-  else saved.delete(username)
-  localStorage.setItem(SAVED_KEY, JSON.stringify([...saved]))
-  return nowSaved
-}
 
 interface ExpertCardProps {
   expert: Expert
@@ -48,13 +31,13 @@ export function ExpertCard({ expert, onViewProfile, context = 'grid', rank }: Ex
   const [imgError, setImgError] = useState(false)
   const showPhoto = Boolean(expert.photo_url) && !imgError
 
-  // Bookmark state — lazy init from localStorage
-  const [isSaved, setIsSaved] = useState(() => getSavedSet().has(expert.username))
+  // Bookmark state — reactive via Zustand (no local state needed)
+  const { savedExperts, toggleSavedExpert } = useFilterSlice()
+  const isSaved = savedExperts.includes(expert.username)
 
   function handleBookmark(e: React.MouseEvent) {
     e.stopPropagation()
-    const nowSaved = toggleSavedExpert(expert.username)
-    setIsSaved(nowSaved)
+    toggleSavedExpert(expert.username)
   }
 
   // Match reason only makes sense when a semantic filter is active (query or tags).

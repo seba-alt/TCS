@@ -53,20 +53,22 @@ export const useExplorerStore = create<ExplorerStore>()(
 export const useFilterSlice = () =>
   useExplorerStore(
     useShallow((state) => ({
-      query:          state.query,
-      rateMin:        state.rateMin,
-      rateMax:        state.rateMax,
-      tags:           state.tags,
-      sortBy:         state.sortBy,
-      sortOrder:      state.sortOrder,
-      savedFilter:    state.savedFilter,
-      setQuery:       state.setQuery,
-      setRateRange:   state.setRateRange,
-      toggleTag:      state.toggleTag,
-      setTags:        state.setTags,
-      setSortBy:      state.setSortBy,
-      setSavedFilter: state.setSavedFilter,
-      resetFilters:   state.resetFilters,
+      query:               state.query,
+      rateMin:             state.rateMin,
+      rateMax:             state.rateMax,
+      tags:                state.tags,
+      sortBy:              state.sortBy,
+      sortOrder:           state.sortOrder,
+      savedExperts:        state.savedExperts,
+      savedFilter:         state.savedFilter,
+      setQuery:            state.setQuery,
+      setRateRange:        state.setRateRange,
+      toggleTag:           state.toggleTag,
+      setTags:             state.setTags,
+      setSortBy:           state.setSortBy,
+      setSavedFilter:      state.setSavedFilter,
+      toggleSavedExpert:   state.toggleSavedExpert,
+      resetFilters:        state.resetFilters,
     }))
   )
 

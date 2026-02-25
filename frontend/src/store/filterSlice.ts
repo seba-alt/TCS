@@ -10,6 +10,9 @@ export interface FilterSlice {
   sortBy: 'relevance' | 'rate_asc' | 'rate_desc'
   sortOrder: 'asc' | 'desc'
 
+  // Saved experts — managed via manual localStorage under tcs_saved_experts key (NOT in persist envelope)
+  savedExperts: string[]
+
   // Saved experts filter — NOT persisted (ephemeral toggle)
   savedFilter: boolean
 
@@ -20,6 +23,7 @@ export interface FilterSlice {
   setTags: (tags: string[]) => void
   setSortBy: (sortBy: FilterSlice['sortBy']) => void
   setSavedFilter: (v: boolean) => void
+  toggleSavedExpert: (username: string) => void
   resetFilters: () => void
 }
 
@@ -33,6 +37,13 @@ const filterDefaults = {
   savedFilter: false,
 }
 
+function hydratesavedExperts(): string[] {
+  try {
+    const raw = localStorage.getItem('tcs_saved_experts')
+    return raw ? (JSON.parse(raw) as string[]) : []
+  } catch { return [] }
+}
+
 // Use unknown for the persist type parameter to avoid circular reference
 // The combined store in index.ts carries the full type
 export const createFilterSlice: StateCreator<
@@ -42,6 +53,9 @@ export const createFilterSlice: StateCreator<
   FilterSlice
 > = (set, get) => ({
   ...filterDefaults,
+  // Hydrate savedExperts from localStorage at store creation time
+  // NOT inside partialize — we manage this key (tcs_saved_experts) manually
+  savedExperts: hydratesavedExperts(),
 
   setQuery: (q) => {
     get().setSageMode(false)
@@ -71,8 +85,17 @@ export const createFilterSlice: StateCreator<
 
   setSavedFilter: (v) => set({ savedFilter: v }),
 
+  toggleSavedExpert: (username) => set((state) => {
+    const next = state.savedExperts.includes(username)
+      ? state.savedExperts.filter(u => u !== username)
+      : [...state.savedExperts, username]
+    localStorage.setItem('tcs_saved_experts', JSON.stringify(next))
+    return { savedExperts: next }
+  }),
+
   resetFilters: () => {
     get().setSageMode(false)
+    // Reset filter state but preserve savedExperts — resetting filters should not un-bookmark experts
     set({ ...filterDefaults })
   },
 })

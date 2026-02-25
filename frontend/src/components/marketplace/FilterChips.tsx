@@ -5,14 +5,6 @@ import { useExplorerStore } from '../../store'
 
 const DEFAULT_RATE_MIN = 0
 const DEFAULT_RATE_MAX = 5000
-const SAVED_KEY = 'tcs_saved_experts'
-
-function getSavedCount(): number {
-  try {
-    const raw = localStorage.getItem(SAVED_KEY)
-    return raw ? (JSON.parse(raw) as string[]).length : 0
-  } catch { return 0 }
-}
 
 interface Chip {
   label: string
@@ -20,11 +12,11 @@ interface Chip {
 }
 
 export function FilterChips() {
-  const { query, rateMin, rateMax, tags, savedFilter, setQuery, setRateRange, toggleTag, setSavedFilter, resetFilters } =
+  const { query, rateMin, rateMax, tags, savedExperts, savedFilter, setQuery, setRateRange, toggleTag, setSavedFilter, resetFilters } =
     useFilterSlice()
   const { total } = useResultsSlice()
   const sageMode = useExplorerStore((s) => s.sageMode)
-  const savedCount = getSavedCount()
+  const savedCount = savedExperts.length
 
   const chips: Chip[] = []
 
@@ -43,8 +35,8 @@ export function FilterChips() {
     chips.push({ label: tag, onDismiss: () => toggleTag(tag) })
   }
 
-  // No chips and no results to display — render nothing
-  if (chips.length === 0 && total === 0) return null
+  // No chips, no results, and no saved experts — render nothing
+  if (chips.length === 0 && total === 0 && savedCount === 0) return null
 
   return (
     <div className="flex items-center gap-2 flex-wrap px-4 py-2 border-b border-gray-100">
