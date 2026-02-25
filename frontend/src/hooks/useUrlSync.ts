@@ -22,6 +22,12 @@ const DEFAULT_RATE_MAX = 5000
 export function useUrlSync() {
   const [searchParams, setSearchParams] = useSearchParams()
 
+  // Stable ref for setSearchParams — React Router v7 returns a new function reference
+  // on every render (depends on searchParams), which would cause infinite effect loops
+  // if used directly in a dependency array.
+  const setSearchParamsRef = useRef(setSearchParams)
+  setSearchParamsRef.current = setSearchParams
+
   // Read filter state for Store → URL direction
   const query = useExplorerStore((s) => s.query)
   const rateMin = useExplorerStore((s) => s.rateMin)
@@ -54,7 +60,8 @@ export function useUrlSync() {
 
   // Step 2: Store → URL (reactive, fires on every filter change)
   // Skip the first render cycle to avoid overwriting URL with localStorage state before
-  // the URL → Store effect runs
+  // the URL → Store effect runs.
+  // Uses setSearchParamsRef to avoid infinite loop (setSearchParams is unstable in RR v7).
   const skipFirst = useRef(true)
   useEffect(() => {
     if (skipFirst.current) {
@@ -69,6 +76,6 @@ export function useUrlSync() {
     tags.forEach((t) => params.append('tags', t))
 
     // replace:true — no history push on every keystroke/filter change
-    setSearchParams(params, { replace: true })
-  }, [query, rateMin, rateMax, tags, setSearchParams])
+    setSearchParamsRef.current(params, { replace: true })
+  }, [query, rateMin, rateMax, tags])
 }
