@@ -36,7 +36,7 @@ function FilterControls() {
         <RateSlider />
       </div>
       <div className="flex flex-col gap-1.5 px-4">
-        <span className="text-xs font-medium text-white/60 uppercase">Domain Tags</span>
+        <span className="text-xs font-medium text-gray-500 uppercase">Domain Tags</span>
         <TagCloud />
         <EverythingIsPossible />
       </div>
