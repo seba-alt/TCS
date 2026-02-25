@@ -161,6 +161,16 @@ Plans:
 | 39. Sage Cross-Page Navigation | 2/2 | Complete    | 2026-02-24 | - |
 | 40. Close v3.0 Audit Gaps | 1/1 | Complete    | 2026-02-24 | - |
 
+### Phase 40.2: UAT fixes and Browse Explorer enhancements (INSERTED)
+
+**Goal:** Fix Browse UAT issues (card alignment, hero taglines, email gate, Sage search) and add Explorer enhancements (profile photos, Clear All pill, save/bookmark)
+**Depends on:** Phase 40
+**Plans:** 2 plans
+
+Plans:
+- [ ] 40.2-01-PLAN.md — Browse fixes (BrowseCard alignment, hero taglines, email gate, Sage search reliability)
+- [ ] 40.2-02-PLAN.md — Explorer enhancements (profile photos, Clear All pill styling, save/bookmark feature)
+
 ### Phase 40.1: Optimization and Debugging of v3 (INSERTED)
 
 **Goal:** Fix Browse page bugs (card sizing, hero banner, text contrast), optimize render performance (memoization, lazy loading, data caching), and perform visual consistency pass across Browse and Explorer pages aligned to Tinrate brand guidelines
