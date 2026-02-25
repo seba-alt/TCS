@@ -36,7 +36,7 @@ export default function BrowsePage() {
 
   return (
     <AuroraBackground>
-      <div className="min-h-screen pt-8 md:pt-12">
+      <div className="min-h-screen pt-10 md:pt-14">
         {/* Hero Banner */}
         {loading ? (
           <SkeletonHeroBanner />

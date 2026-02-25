@@ -86,8 +86,8 @@ export const BrowseCard = memo(function BrowseCard({ expert }: BrowseCardProps) 
       {/* Frosted overlay at bottom — dark gradient (not .glass-surface; card root has overflow:hidden) */}
       {/* Pitfall 1: backdrop-filter breaks inside overflow:hidden, use dark gradient instead */}
       <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/85 via-black/55 to-transparent">
-        <p className="text-sm font-semibold text-white truncate">{name}</p>
-        <p className="text-xs text-purple-200 font-medium">
+        <p className="text-sm font-semibold text-white truncate leading-tight">{name}</p>
+        <p className="text-xs text-purple-200 font-medium mb-0.5">
           ${expert.hourly_rate}/hr
         </p>
 

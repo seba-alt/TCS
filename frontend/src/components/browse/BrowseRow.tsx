@@ -13,12 +13,12 @@ interface SeeAllEndCardProps {
 function SeeAllEndCard({ total, onClick }: SeeAllEndCardProps) {
   return (
     <div
-      className="rounded-xl bg-white/5 border border-white/10 flex flex-col items-center justify-center cursor-pointer hover:bg-white/10 transition-colors shrink-0"
+      className="rounded-xl bg-white/60 border border-gray-200/60 flex flex-col items-center justify-center cursor-pointer hover:bg-white/80 transition-colors shrink-0"
       style={{ width: 160, height: 220 }}
       onClick={onClick}
     >
-      <ChevronRight className="w-8 h-8 text-purple-300 mb-2" />
-      <span className="text-sm text-white font-medium">See All</span>
+      <ChevronRight className="w-8 h-8 text-brand-purple mb-2" />
+      <span className="text-sm text-gray-800 font-medium">See All</span>
       <span className="text-xs text-gray-400">{total} experts</span>
     </div>
   )
@@ -37,10 +37,10 @@ export function BrowseRow({ title, slug, experts, total, onSeeAll }: BrowseRowPr
     <div>
       {/* Row header */}
       <div className="flex items-center justify-between mb-3 px-4 md:px-8">
-        <h2 className="text-xl font-bold text-white">{title}</h2>
+        <h2 className="text-xl font-bold text-gray-900">{title}</h2>
         <button
           onClick={() => onSeeAll(slug, title)}
-          className="text-sm text-purple-300 hover:text-white transition-colors flex items-center gap-1"
+          className="text-sm text-brand-purple hover:text-brand-purple/70 transition-colors flex items-center gap-1"
         >
           See All <ChevronRight className="w-4 h-4" />
         </button>
