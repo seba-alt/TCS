@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-24)
 
 **Core value:** A user describes any problem and instantly gets expertly matched professionals they can browse, filter, and contact — no searching, no guesswork.
-**Current focus:** v3.0 Netflix Browse & Agentic Navigation — Phase 40.1 complete (optimization and debugging of v3)
+**Current focus:** v3.0 Netflix Browse & Agentic Navigation — Phase 40.2 complete (UAT fixes and Browse Explorer enhancements)
 
 ## Current Position
 
-Phase: 40.1 of 40.1 (Optimization and Debugging of v3)
+Phase: 40.2 of 40.2 (UAT Fixes and Browse Explorer Enhancements)
 Plan: 2 of 2 complete
-Status: Phase 40.1 complete — Browse bugs fixed, performance optimized, visual consistency achieved
-Last activity: 2026-02-25 — Phase 40.1 complete (BrowseCard height/contrast, HeroBanner gradient-only, React.memo, Zustand browse cache, brand color alignment)
+Status: Phase 40.2 complete — Browse card alignment, hero taglines, email gate, Sage search, Explorer photos, Clear All pill, save/bookmark
+Last activity: 2026-02-25 — Phase 40.2 complete (BrowseCard alignment, HeroBanner taglines, email gate on Browse, Sage clean filters, ExpertCard photos + bookmark, FilterChips pill styling)
 
-Progress: [██████████] 100% (11 plans complete)
+Progress: [██████████] 100% (13 plans complete)
 
 ## Performance Metrics
 
@@ -68,6 +68,17 @@ Recent decisions affecting current work:
 - Phase 40.1 Plan 02: CachedBrowseData interface re-declared in navigationSlice to avoid circular dependency with useBrowse
 - Phase 40.1 Plan 02: 5-min TTL browse cache in Zustand — balances freshness with session navigation speed
 - Phase 40.1 Plan 02: SeeAllEndCard changed from dark glass (bg-white/5) to light glass (bg-white/60) for aurora theme
+- Phase 40.2 Plan 01: BrowseCard overlay uses flex-col justify-end for consistent bottom alignment of name/rate/tags
+- Phase 40.2 Plan 01: BrowseRow scroll container left padding increased to pl-8 md:pl-16 for first-card visibility past fade overlay
+- Phase 40.2 Plan 01: HeroBanner taglines mapped from expert category field via CATEGORY_TAGLINES record (fallback to default tagline)
+- Phase 40.2 Plan 01: Email gate on Browse reuses NewsletterGateModal + useNltrStore (identical to Explorer pattern)
+- Phase 40.2 Plan 01: useSage sends clean empty filter state when on Browse (not Explorer) for reliable search_experts triggering
+- Phase 40.2 Plan 02: Backend ExpertCard model includes photo_url (built as /api/photos/{username} proxy URL)
+- Phase 40.2 Plan 02: ExpertCard renders 32px circle avatar (w-8 h-8) — hidden entirely when no photo (no placeholder)
+- Phase 40.2 Plan 02: Bookmark icon (lucide Bookmark) at right edge of ExpertCard Zone A — fill-current text-brand-purple when saved
+- Phase 40.2 Plan 02: tcs_saved_experts localStorage key stores array of saved usernames
+- Phase 40.2 Plan 02: savedFilter added to Zustand filterSlice (ephemeral, not persisted) — ExpertGrid filters displayExperts via useMemo
+- Phase 40.2 Plan 02: Clear All styled as pill (bg-red-50 text-red-600 rounded-full) matching existing chip pattern
 
 ### Pending Todos
 
@@ -77,6 +88,7 @@ Recent decisions affecting current work:
 ### Roadmap Evolution
 
 - Phase 40.1 inserted after Phase 40: optimization and debugging of v3 (URGENT)
+- Phase 40.2 inserted after Phase 40: UAT fixes and Browse Explorer enhancements (URGENT)
 
 ### Blockers/Concerns
 
@@ -85,6 +97,6 @@ None — photo backend is ready for Browse UI consumption
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: Phase 40.1 complete — v3.0 optimization and debugging done
-Resume signal: All v3.0 phases complete. Ready for next milestone or deployment.
-Resume file: .planning/phases/40.1-optimization-and-debugging-of-v3/40.1-VERIFICATION.md
+Stopped at: Phase 40.2 complete — UAT fixes and Browse Explorer enhancements done
+Resume signal: All v3.0 phases + UAT fixes complete. Ready for next milestone or deployment.
+Resume file: .planning/phases/40.2-uat-fixes-and-browse-explorer-enhancements/40.2-02-SUMMARY.md

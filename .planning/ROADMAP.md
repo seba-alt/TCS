@@ -165,11 +165,11 @@ Plans:
 
 **Goal:** Fix Browse UAT issues (card alignment, hero taglines, email gate, Sage search) and add Explorer enhancements (profile photos, Clear All pill, save/bookmark)
 **Depends on:** Phase 40
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 
 Plans:
-- [ ] 40.2-01-PLAN.md — Browse fixes (BrowseCard alignment, hero taglines, email gate, Sage search reliability)
-- [ ] 40.2-02-PLAN.md — Explorer enhancements (profile photos, Clear All pill styling, save/bookmark feature)
+- [x] 40.2-01-PLAN.md — Browse fixes (BrowseCard alignment, hero taglines, email gate, Sage search reliability)
+- [x] 40.2-02-PLAN.md — Explorer enhancements (profile photos, Clear All pill styling, save/bookmark feature)
 
 ### Phase 40.1: Optimization and Debugging of v3 (INSERTED)
 
