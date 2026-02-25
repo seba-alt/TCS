@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-24)
 ## Current Position
 
 Phase: 40.2 of 40.2 (UAT Fixes and Browse Explorer Enhancements)
-Plan: 2 of 2 complete
-Status: Phase 40.2 complete — Browse card alignment, hero taglines, email gate, Sage search, Explorer photos, Clear All pill, save/bookmark
-Last activity: 2026-02-25 — Phase 40.2 complete (BrowseCard alignment, HeroBanner taglines, email gate on Browse, Sage clean filters, ExpertCard photos + bookmark, FilterChips pill styling)
+Plan: 3 of 3 complete (plan 03 added post-phase for UAT gap closure)
+Status: Phase 40.2 complete — Browse card alignment (flex-col-reverse), row padding (pl-20), Clear All pill (sageMode), hero taglines, email gate, Sage search, Explorer photos, save/bookmark
+Last activity: 2026-02-25 — Plan 03: BrowseCard flex-col-reverse fix, BrowseRow pl-20 padding, FilterChips sageMode Clear All (UAT gaps 1, 2, 7)
 
 Progress: [██████████] 100% (13 plans complete)
 
@@ -32,6 +32,7 @@ Progress: [██████████] 100% (13 plans complete)
 | 39. Sage Cross-Page Navigation | 2/2 | 6min | ~3min |
 
 *Updated after each plan completion*
+| Phase 40.2 P03 | 2 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -68,8 +69,8 @@ Recent decisions affecting current work:
 - Phase 40.1 Plan 02: CachedBrowseData interface re-declared in navigationSlice to avoid circular dependency with useBrowse
 - Phase 40.1 Plan 02: 5-min TTL browse cache in Zustand — balances freshness with session navigation speed
 - Phase 40.1 Plan 02: SeeAllEndCard changed from dark glass (bg-white/5) to light glass (bg-white/60) for aurora theme
-- Phase 40.2 Plan 01: BrowseCard overlay uses flex-col justify-end for consistent bottom alignment of name/rate/tags
-- Phase 40.2 Plan 01: BrowseRow scroll container left padding increased to pl-8 md:pl-16 for first-card visibility past fade overlay
+- Phase 40.2 Plan 01: BrowseCard overlay initially used flex-col justify-end (corrected in Plan 03 to flex-col-reverse)
+- Phase 40.2 Plan 01: BrowseRow scroll container left padding initially set to pl-8 md:pl-16 (corrected in Plan 03 to pl-20)
 - Phase 40.2 Plan 01: HeroBanner taglines mapped from expert category field via CATEGORY_TAGLINES record (fallback to default tagline)
 - Phase 40.2 Plan 01: Email gate on Browse reuses NewsletterGateModal + useNltrStore (identical to Explorer pattern)
 - Phase 40.2 Plan 01: useSage sends clean empty filter state when on Browse (not Explorer) for reliable search_experts triggering
@@ -79,6 +80,9 @@ Recent decisions affecting current work:
 - Phase 40.2 Plan 02: tcs_saved_experts localStorage key stores array of saved usernames
 - Phase 40.2 Plan 02: savedFilter added to Zustand filterSlice (ephemeral, not persisted) — ExpertGrid filters displayExperts via useMemo
 - Phase 40.2 Plan 02: Clear All styled as pill (bg-red-50 text-red-600 rounded-full) matching existing chip pattern
+- [Phase 40.2]: BrowseCard overlay uses flex-col-reverse (not justify-end) — justify-end is inert on shrink-wrap containers; col-reverse anchors name/rate at flex-end bottom
+- [Phase 40.2]: BrowseRow left padding unified to pl-20 (80px) on all breakpoints — clears 64px fade with 16px margin, simpler than responsive pl-8 md:pl-16
+- [Phase 40.2]: FilterChips Clear All condition extended to (chips.length > 0 || sageMode) — Sage search bypasses filter chips entirely, so sageMode must be checked separately
 
 ### Pending Todos
 
@@ -97,6 +101,6 @@ None — photo backend is ready for Browse UI consumption
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: Phase 40.2 complete — UAT fixes and Browse Explorer enhancements done
+Stopped at: Completed 40.2-03-PLAN.md — UAT gaps 1, 2, 7 closed (BrowseCard alignment, row padding, Clear All sageMode)
 Resume signal: All v3.0 phases + UAT fixes complete. Ready for next milestone or deployment.
-Resume file: .planning/phases/40.2-uat-fixes-and-browse-explorer-enhancements/40.2-02-SUMMARY.md
+Resume file: .planning/phases/40.2-uat-fixes-and-browse-explorer-enhancements/40.2-03-SUMMARY.md
