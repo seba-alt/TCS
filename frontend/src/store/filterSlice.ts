@@ -10,12 +10,16 @@ export interface FilterSlice {
   sortBy: 'relevance' | 'rate_asc' | 'rate_desc'
   sortOrder: 'asc' | 'desc'
 
+  // Saved experts filter — NOT persisted (ephemeral toggle)
+  savedFilter: boolean
+
   // Filter actions
   setQuery: (q: string) => void
   setRateRange: (min: number, max: number) => void
   toggleTag: (tag: string) => void
   setTags: (tags: string[]) => void
   setSortBy: (sortBy: FilterSlice['sortBy']) => void
+  setSavedFilter: (v: boolean) => void
   resetFilters: () => void
 }
 
@@ -26,6 +30,7 @@ const filterDefaults = {
   tags: [] as string[],
   sortBy: 'relevance' as const,
   sortOrder: 'desc' as const,
+  savedFilter: false,
 }
 
 // Use unknown for the persist type parameter to avoid circular reference
@@ -63,6 +68,8 @@ export const createFilterSlice: StateCreator<
   },
 
   setSortBy: (sortBy) => set({ sortBy }),  // sort does NOT exit sage mode
+
+  setSavedFilter: (v) => set({ savedFilter: v }),
 
   resetFilters: () => {
     get().setSageMode(false)

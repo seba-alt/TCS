@@ -46,6 +46,7 @@ class ExpertCard(BaseModel):
     hourly_rate: float
     currency: str
     profile_url: str          # profile_url_utm preferred; fallback to profile_url
+    photo_url: str | None     # /api/photos/{username} or None
     tags: list[str]
     findability_score: float | None
     category: str | None
@@ -120,6 +121,9 @@ def _build_card(
     """Build an ExpertCard from an Expert ORM object and computed scores."""
     tags = json.loads(expert.tags or "[]")
     match_reason = _build_match_reason(expert, tags, query) if query.strip() else None
+    # Build photo proxy URL if expert has a photo stored
+    photo_url = f"/api/photos/{expert.username}" if expert.photo_url else None
+
     return ExpertCard(
         username=expert.username,
         first_name=expert.first_name,
@@ -129,6 +133,7 @@ def _build_card(
         hourly_rate=expert.hourly_rate,
         currency=expert.currency,
         profile_url=expert.profile_url_utm or expert.profile_url,
+        photo_url=photo_url,
         tags=tags,
         findability_score=expert.findability_score,
         category=expert.category,

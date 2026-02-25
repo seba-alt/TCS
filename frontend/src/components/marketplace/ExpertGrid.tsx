@@ -1,11 +1,21 @@
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useMemo } from 'react'
 import { VirtuosoGrid } from 'react-virtuoso'
 import { animate } from 'motion/react'
 import type { Expert } from '../../store/resultsSlice'
+import { useFilterSlice } from '../../store'
 import { ExpertCard } from './ExpertCard'
 import { EmptyState } from './EmptyState'
 import { SkeletonGrid } from './SkeletonGrid'
 import { useNltrStore } from '../../store/nltrStore'
+
+const SAVED_KEY = 'tcs_saved_experts'
+
+function getSavedSet(): Set<string> {
+  try {
+    const raw = localStorage.getItem(SAVED_KEY)
+    return raw ? new Set(JSON.parse(raw)) : new Set()
+  } catch { return new Set() }
+}
 
 interface ExpertGridProps {
   experts: Expert[]
@@ -29,6 +39,14 @@ function SkeletonFooter() {
 export function ExpertGrid({ experts, loading, isFetchingMore, onEndReached, onViewProfile }: ExpertGridProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const { spinTrigger, resetSpin } = useNltrStore()
+  const { savedFilter } = useFilterSlice()
+
+  // When "Saved" filter is active, show only bookmarked experts from loaded list
+  const displayExperts = useMemo(() => {
+    if (!savedFilter) return experts
+    const saved = getSavedSet()
+    return experts.filter(e => saved.has(e.username))
+  }, [experts, savedFilter])
 
   useEffect(() => {
     if (!spinTrigger || !containerRef.current) return
@@ -48,15 +66,15 @@ export function ExpertGrid({ experts, loading, isFetchingMore, onEndReached, onV
     return <SkeletonGrid />
   }
 
-  // Zero results after load completes
-  if (!loading && experts.length === 0) {
+  // Zero results after load completes (or saved filter yields nothing)
+  if (!loading && displayExperts.length === 0) {
     return <EmptyState />
   }
 
   return (
     <div ref={containerRef} style={{ height: '100%' }}>
       <VirtuosoGrid
-        data={experts}
+        data={displayExperts}
         endReached={onEndReached}
         overscan={200}
         // listClassName: CSS grid — 2 cols mobile, 3 cols desktop (CONTEXT.md decision)

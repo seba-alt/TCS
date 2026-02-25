@@ -1,6 +1,27 @@
+import { useState } from 'react'
+import { Bookmark } from 'lucide-react'
 import type { Expert } from '../../store/resultsSlice'
 import { useExplorerStore } from '../../store'
 import { trackEvent } from '../../tracking'
+
+const API_BASE = import.meta.env.VITE_API_URL ?? ''
+const SAVED_KEY = 'tcs_saved_experts'
+
+function getSavedSet(): Set<string> {
+  try {
+    const raw = localStorage.getItem(SAVED_KEY)
+    return raw ? new Set(JSON.parse(raw)) : new Set()
+  } catch { return new Set() }
+}
+
+function toggleSavedExpert(username: string): boolean {
+  const saved = getSavedSet()
+  const nowSaved = !saved.has(username)
+  if (nowSaved) saved.add(username)
+  else saved.delete(username)
+  localStorage.setItem(SAVED_KEY, JSON.stringify([...saved]))
+  return nowSaved
+}
 
 interface ExpertCardProps {
   expert: Expert
@@ -23,6 +44,19 @@ export function ExpertCard({ expert, onViewProfile, context = 'grid', rank }: Ex
   const tags = useExplorerStore((s) => s.tags)
   const badgeLabel = findabilityLabel(expert.findability_score)
 
+  // Profile photo state
+  const [imgError, setImgError] = useState(false)
+  const showPhoto = Boolean(expert.photo_url) && !imgError
+
+  // Bookmark state — lazy init from localStorage
+  const [isSaved, setIsSaved] = useState(() => getSavedSet().has(expert.username))
+
+  function handleBookmark(e: React.MouseEvent) {
+    e.stopPropagation()
+    const nowSaved = toggleSavedExpert(expert.username)
+    setIsSaved(nowSaved)
+  }
+
   // Match reason only makes sense when a semantic filter is active (query or tags).
   // Price range is excluded — it provides no semantic context for a "match reason".
   const hasSemanticFilter = query.trim().length > 0 || tags.length > 0
@@ -30,13 +64,33 @@ export function ExpertCard({ expert, onViewProfile, context = 'grid', rank }: Ex
   return (
     <div className="expert-card bg-white/90 rounded-xl border border-gray-100 p-4 flex flex-col gap-1.5 h-[180px] overflow-hidden">
 
-      {/* Zone A: name/role/company — flex-shrink-0, content drives height (~52px) */}
-      <div className="flex-shrink-0 min-w-0">
-        <h3 className="font-semibold text-gray-900 text-sm leading-snug truncate">
-          {expert.first_name} {expert.last_name}
-        </h3>
-        <p className="text-xs text-gray-500 truncate">{expert.job_title}</p>
-        <p className="text-xs text-gray-400 truncate">{expert.company}</p>
+      {/* Zone A: photo + name/role/company + bookmark — flex-shrink-0, content drives height (~52px) */}
+      <div className="flex-shrink-0 min-w-0 flex items-start gap-2">
+        {/* Profile photo — 32px circle, hidden entirely when no photo (no placeholder) */}
+        {showPhoto && (
+          <img
+            src={`${API_BASE}${expert.photo_url!}`}
+            alt=""
+            className="w-8 h-8 rounded-full object-cover shrink-0"
+            loading="lazy"
+            onError={() => setImgError(true)}
+          />
+        )}
+        <div className="min-w-0 flex-1">
+          <h3 className="font-semibold text-gray-900 text-sm leading-snug truncate">
+            {expert.first_name} {expert.last_name}
+          </h3>
+          <p className="text-xs text-gray-500 truncate">{expert.job_title}</p>
+          <p className="text-xs text-gray-400 truncate">{expert.company}</p>
+        </div>
+        {/* Bookmark icon — outline fills when saved (CONTEXT.md: bookmark icon at right edge) */}
+        <button
+          onClick={handleBookmark}
+          className="shrink-0 p-0.5 text-gray-300 hover:text-brand-purple transition-colors"
+          aria-label={isSaved ? 'Remove bookmark' : 'Bookmark expert'}
+        >
+          <Bookmark size={16} className={isSaved ? 'fill-current text-brand-purple' : ''} />
+        </button>
       </div>
 
       {/* Zone B: Rate + Findability badge — flex-shrink-0 */}

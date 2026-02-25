@@ -11,6 +11,7 @@ export interface Expert {
   hourly_rate: number
   currency: string
   profile_url: string
+  photo_url: string | null
   tags: string[]
   findability_score: number | null
   match_reason: string | null
