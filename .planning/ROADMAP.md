@@ -92,7 +92,9 @@ See `.planning/milestones/v3.0-ROADMAP.md`
   2. The data/experts.csv file contains no Email column
   3. Uploading a new CSV with an Email column does not write email values to any Expert row
   4. Conversation.email and Feedback.email columns are untouched and the admin Leads page functions normally
-**Plans**: TBD
+**Plans:** 1 plan
+Plans:
+- [ ] 41-01-PLAN.md — Purge expert email from DB, CSV, and import paths
 
 ### Phase 42: Backend Error Hardening
 **Goal**: All backend Sentry error sources are eliminated and Search Lab results match the live search pipeline
@@ -140,7 +142,7 @@ See `.planning/milestones/v3.0-ROADMAP.md`
 | 22-27. Evolved Discovery Engine | v2.2 | 14/14 | Complete | 2026-02-22 |
 | 28-35. Sage Evolution | v2.3 | 17/17 | Complete | 2026-02-24 |
 | 36-40.3.1. Browse & Navigation | v3.0 | 19/19 | Complete | 2026-02-26 |
-| 41. Expert Email Purge | v3.1 | 0/TBD | Not started | - |
+| 41. Expert Email Purge | v3.1 | 0/1 | Planned | - |
 | 42. Backend Error Hardening | v3.1 | 0/TBD | Not started | - |
 | 43. Frontend Fixes + Analytics + Tag Cloud | v3.1 | 0/TBD | Not started | - |
 | 44. Mobile Filter Redesign | v3.1 | 0/TBD | Not started | - |
