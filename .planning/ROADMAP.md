@@ -142,7 +142,7 @@ Plans:
 | 22-27. Evolved Discovery Engine | v2.2 | 14/14 | Complete | 2026-02-22 |
 | 28-35. Sage Evolution | v2.3 | 17/17 | Complete | 2026-02-24 |
 | 36-40.3.1. Browse & Navigation | v3.0 | 19/19 | Complete | 2026-02-26 |
-| 41. Expert Email Purge | 1/1 | Complete   | 2026-02-26 | - |
+| 41. Expert Email Purge | 1/1 | Complete    | 2026-02-26 | - |
 | 42. Backend Error Hardening | v3.1 | 0/TBD | Not started | - |
 | 43. Frontend Fixes + Analytics + Tag Cloud | v3.1 | 0/TBD | Not started | - |
 | 44. Mobile Filter Redesign | v3.1 | 0/TBD | Not started | - |
