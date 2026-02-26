@@ -76,7 +76,7 @@ See `.planning/milestones/v3.0-ROADMAP.md`
 
 **Milestone Goal:** Harden the platform for public launch — remove sensitive data, fix production errors, align Search Lab with the live pipeline, and improve mobile UX and analytics.
 
-- [ ] **Phase 41: Expert Email Purge** — Remove expert PII before any public traffic reaches the platform
+- [x] **Phase 41: Expert Email Purge** — Remove expert PII before any public traffic reaches the platform (completed 2026-02-26)
 - [ ] **Phase 42: Backend Error Hardening** — Fix all backend Sentry errors and align Search Lab pipeline
 - [ ] **Phase 43: Frontend Fixes + Analytics + Tag Cloud** — Fix redirect loop, add GA4, expand tag cloud
 - [ ] **Phase 44: Mobile Filter Redesign** — Replace Vaul bottom-sheet filters with inline dropdown controls
@@ -92,7 +92,7 @@ See `.planning/milestones/v3.0-ROADMAP.md`
   2. The data/experts.csv file contains no Email column
   3. Uploading a new CSV with an Email column does not write email values to any Expert row
   4. Conversation.email and Feedback.email columns are untouched and the admin Leads page functions normally
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 Plans:
 - [ ] 41-01-PLAN.md — Purge expert email from DB, CSV, and import paths
 
@@ -142,7 +142,7 @@ Plans:
 | 22-27. Evolved Discovery Engine | v2.2 | 14/14 | Complete | 2026-02-22 |
 | 28-35. Sage Evolution | v2.3 | 17/17 | Complete | 2026-02-24 |
 | 36-40.3.1. Browse & Navigation | v3.0 | 19/19 | Complete | 2026-02-26 |
-| 41. Expert Email Purge | v3.1 | 0/1 | Planned | - |
+| 41. Expert Email Purge | 1/1 | Complete   | 2026-02-26 | - |
 | 42. Backend Error Hardening | v3.1 | 0/TBD | Not started | - |
 | 43. Frontend Fixes + Analytics + Tag Cloud | v3.1 | 0/TBD | Not started | - |
 | 44. Mobile Filter Redesign | v3.1 | 0/TBD | Not started | - |

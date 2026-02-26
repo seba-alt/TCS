@@ -9,9 +9,9 @@ Requirements for launch prep. Each maps to roadmap phases.
 
 ### Privacy & Security
 
-- [ ] **PRIV-01**: Expert email data purged from SQLite database (all Expert.email set to empty string)
-- [ ] **PRIV-02**: Email column stripped from data/experts.csv
-- [ ] **PRIV-03**: CSV import endpoint ignores Email field on future uploads (no longer written to DB)
+- [x] **PRIV-01**: Expert email data purged from SQLite database (all Expert.email set to empty string)
+- [x] **PRIV-02**: Email column stripped from data/experts.csv
+- [x] **PRIV-03**: CSV import endpoint ignores Email field on future uploads (no longer written to DB)
 
 ### Error Hardening
 
@@ -69,9 +69,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PRIV-01 | Phase 41 | Pending |
-| PRIV-02 | Phase 41 | Pending |
-| PRIV-03 | Phase 41 | Pending |
+| PRIV-01 | Phase 41 | Complete |
+| PRIV-02 | Phase 41 | Complete |
+| PRIV-03 | Phase 41 | Complete |
 | ERR-01 | Phase 42 | Pending |
 | ERR-02 | Phase 43 | Pending |
 | ERR-03 | Phase 42 | Pending |
