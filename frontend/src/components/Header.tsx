@@ -1,6 +1,6 @@
 import { motion, AnimatePresence, useMotionValue, useSpring } from 'motion/react'
 import { useEffect, useState, useRef } from 'react'
-import { Search } from 'lucide-react'
+import { Search, X } from 'lucide-react'
 import { useHeaderSearch } from '../hooks/useHeaderSearch'
 
 export default function Header() {
@@ -8,12 +8,18 @@ export default function Header() {
     localValue,
     handleChange,
     handleKeyDown,
+    handleSelectSuggestion,
+    handleClear,
+    handleBlur,
     placeholderIndex,
     placeholders,
     total,
     isStreaming,
     tiltActive,
     showParticles,
+    suggestions,
+    showDropdown,
+    selectedIndex,
   } = useHeaderSearch()
 
   // Expert count spring
@@ -90,52 +96,107 @@ export default function Header() {
         </AnimatePresence>
       </div>
 
-      {/* Search bar */}
-      <motion.div
-        animate={{ scale: isFocused ? 1.02 : 1 }}
-        transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-        className="relative flex-1 max-w-2xl"
-      >
-        {/* Sage in-flight pulse dot — left of search icon */}
+      {/* Search bar wrapper — relative for dropdown positioning */}
+      <div className="relative flex-1 max-w-2xl">
         <motion.div
-          animate={{ opacity: isStreaming ? 1 : 0 }}
-          transition={{ duration: 0.3 }}
-          className="absolute left-3 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-brand-purple animate-pulse"
-          aria-hidden="true"
-        />
-        {/* Search icon */}
-        <Search
-          className="absolute left-8 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none"
-          aria-hidden="true"
-        />
-        {/* Animated placeholder overlay — shown only when no input */}
-        <AnimatePresence mode="wait">
-          {!localValue && (
-            <motion.span
-              key={placeholderIndex}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.3 }}
-              className="absolute left-14 top-1/2 -translate-y-1/2 text-sm text-slate-400 pointer-events-none select-none truncate max-w-[calc(100%-4rem)]"
-              aria-hidden="true"
+          animate={{ scale: isFocused ? 1.02 : 1 }}
+          transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+          className="relative"
+        >
+          {/* Sage in-flight pulse dot — left of search icon */}
+          <motion.div
+            animate={{ opacity: isStreaming ? 1 : 0 }}
+            transition={{ duration: 0.3 }}
+            className="absolute left-3 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-brand-purple animate-pulse"
+            aria-hidden="true"
+          />
+          {/* Search icon */}
+          <Search
+            className="absolute left-8 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none"
+            aria-hidden="true"
+          />
+          {/* Animated placeholder overlay — shown only when no input */}
+          <AnimatePresence mode="wait">
+            {!localValue && (
+              <motion.span
+                key={placeholderIndex}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+                className="absolute left-14 top-1/2 -translate-y-1/2 text-sm text-slate-400 pointer-events-none select-none truncate max-w-[calc(100%-4rem)]"
+                aria-hidden="true"
+              >
+                {placeholders[placeholderIndex]}
+              </motion.span>
+            )}
+          </AnimatePresence>
+          {/* Controlled input */}
+          <input
+            type="text"
+            value={localValue}
+            onChange={handleChange}
+            onKeyDown={handleKeyDown}
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => {
+              setIsFocused(false)
+              handleBlur()
+            }}
+            className="w-full pl-14 pr-8 py-2.5 rounded-xl text-sm bg-white/50 border border-slate-200/50 shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-purple/20 focus:border-brand-purple/40 transition-colors"
+            aria-label="Search experts"
+            aria-autocomplete="list"
+            aria-expanded={showDropdown}
+            aria-controls="search-suggestions"
+          />
+          {/* X clear button — shown when input has text */}
+          {localValue && (
+            <button
+              type="button"
+              onClick={handleClear}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+              aria-label="Clear search"
             >
-              {placeholders[placeholderIndex]}
-            </motion.span>
+              <X size={14} />
+            </button>
+          )}
+        </motion.div>
+
+        {/* Autocomplete dropdown */}
+        <AnimatePresence>
+          {showDropdown && suggestions.length > 0 && (
+            <motion.ul
+              id="search-suggestions"
+              role="listbox"
+              aria-label="Search suggestions"
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              className="absolute top-full left-0 right-0 mt-1 z-50 bg-white rounded-xl border border-slate-200 shadow-lg overflow-hidden"
+            >
+              {suggestions.map((suggestion, i) => (
+                <li
+                  key={suggestion}
+                  role="option"
+                  aria-selected={i === selectedIndex}
+                  onMouseDown={(e) => {
+                    // Prevent input blur before click registers
+                    e.preventDefault()
+                    handleSelectSuggestion(suggestion)
+                  }}
+                  className={`px-4 py-2.5 text-sm cursor-pointer transition-colors ${
+                    i === selectedIndex
+                      ? 'bg-purple-50 text-brand-purple'
+                      : 'text-slate-700 hover:bg-slate-50'
+                  }`}
+                >
+                  {suggestion}
+                </li>
+              ))}
+            </motion.ul>
           )}
         </AnimatePresence>
-        {/* Controlled input */}
-        <input
-          type="text"
-          value={localValue}
-          onChange={handleChange}
-          onKeyDown={handleKeyDown}
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
-          className="w-full pl-14 pr-4 py-2.5 rounded-xl text-sm bg-white/50 border border-slate-200/50 shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-purple/20 focus:border-brand-purple/40 transition-colors"
-          aria-label="Search experts"
-        />
-      </motion.div>
+      </div>
 
       {/* Expert count */}
       <div className="hidden md:block shrink-0 text-sm text-slate-500 tabular-nums">

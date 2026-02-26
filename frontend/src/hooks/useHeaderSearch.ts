@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { useExplorerStore } from '../store'
 import { trackEvent } from '../tracking'
+import { TOP_TAGS } from '../constants/tags'
 
-const DEBOUNCE_MS = 350
+const API_BASE = import.meta.env.VITE_API_URL ?? ''
+const SUGGEST_DEBOUNCE_MS = 300
 
 const PLACEHOLDERS = [
   'Find a fintech strategist…',
@@ -29,9 +31,14 @@ export function useHeaderSearch() {
   const [tiltActive, setTiltActive] = useState(false)
   const [showParticles, setShowParticles] = useState(false)
 
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Autocomplete state
+  const [suggestions, setSuggestions] = useState<string[]>([])
+  const [showDropdown, setShowDropdown] = useState(false)
+  const [selectedIndex, setSelectedIndex] = useState(-1)
 
-  // Sync local value when store query changes externally
+  const suggestTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Sync local value when store query changes externally (e.g. Sage sets query)
   useEffect(() => {
     setLocalValue(query)
   }, [query])
@@ -45,12 +52,49 @@ export function useHeaderSearch() {
     return () => clearInterval(interval)
   }, [localValue])
 
-  // Cleanup debounce timer on unmount
+  // Cleanup suggest timer on unmount
   useEffect(() => {
     return () => {
-      if (timerRef.current) clearTimeout(timerRef.current)
+      if (suggestTimerRef.current) clearTimeout(suggestTimerRef.current)
     }
   }, [])
+
+  async function fetchSuggestions(value: string) {
+    if (value.trim().length < 2) {
+      setSuggestions([])
+      setShowDropdown(false)
+      return
+    }
+
+    // Client-side tag matches
+    const tagMatches = TOP_TAGS.filter((t) =>
+      t.includes(value.toLowerCase())
+    ).slice(0, 3)
+
+    let backendResults: string[] = []
+    try {
+      const res = await fetch(`${API_BASE}/api/suggest?q=${encodeURIComponent(value)}`)
+      if (res.ok) {
+        backendResults = await res.json() as string[]
+      }
+    } catch {
+      // Fall back to local tag matches only on fetch error
+    }
+
+    // Merge: backend first, then tag matches, deduplicate, limit to 5
+    const merged: string[] = []
+    const seen = new Set<string>()
+    for (const item of [...backendResults, ...tagMatches]) {
+      if (!seen.has(item)) {
+        seen.add(item)
+        merged.push(item)
+      }
+      if (merged.length >= 5) break
+    }
+
+    setSuggestions(merged)
+    setShowDropdown(merged.length > 0)
+  }
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const value = e.target.value
@@ -59,6 +103,8 @@ export function useHeaderSearch() {
     if (value.toLowerCase().trim() === EASTER_EGG_PHRASE) {
       setLocalValue('')
       setQuery('')
+      setSuggestions([])
+      setShowDropdown(false)
       setTiltActive(true)
       setShowParticles(true)
       setTimeout(() => setTiltActive(false), 800)
@@ -68,26 +114,80 @@ export function useHeaderSearch() {
 
     setLocalValue(value)
 
-    if (timerRef.current) clearTimeout(timerRef.current)
-    timerRef.current = setTimeout(() => {
-      setQuery(value)
-      if (value.trim().length > 0) {
-        void trackEvent('filter_change', { filter: 'query', value: value.trim() })
-      }
-    }, DEBOUNCE_MS)
+    // Debounce suggestions only — grid does NOT update live while typing
+    if (suggestTimerRef.current) clearTimeout(suggestTimerRef.current)
+    suggestTimerRef.current = setTimeout(() => {
+      void fetchSuggestions(value)
+    }, SUGGEST_DEBOUNCE_MS)
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key === 'Enter') {
-      if (timerRef.current) clearTimeout(timerRef.current)
-      setQuery(localValue)
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setSelectedIndex((prev) =>
+        prev < suggestions.length - 1 ? prev + 1 : prev
+      )
+      return
     }
+
+    if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setSelectedIndex((prev) => (prev > -1 ? prev - 1 : -1))
+      return
+    }
+
+    if (e.key === 'Escape') {
+      setShowDropdown(false)
+      setSelectedIndex(-1)
+      return
+    }
+
+    if (e.key === 'Enter') {
+      // If a suggestion is highlighted, select it
+      if (selectedIndex >= 0 && suggestions[selectedIndex]) {
+        handleSelectSuggestion(suggestions[selectedIndex])
+        return
+      }
+      // Otherwise commit the typed value to trigger grid update
+      setSuggestions([])
+      setShowDropdown(false)
+      setSelectedIndex(-1)
+      setQuery(localValue)
+      if (localValue.trim().length > 0) {
+        void trackEvent('filter_change', { filter: 'query', value: localValue.trim() })
+      }
+    }
+  }
+
+  function handleSelectSuggestion(suggestion: string) {
+    setLocalValue(suggestion)
+    setSuggestions([])
+    setShowDropdown(false)
+    setSelectedIndex(-1)
+    setQuery(suggestion)
+    void trackEvent('filter_change', { filter: 'query', value: suggestion })
+  }
+
+  function handleClear() {
+    setLocalValue('')
+    setSuggestions([])
+    setShowDropdown(false)
+    setSelectedIndex(-1)
+    setQuery('')
+  }
+
+  function handleBlur() {
+    // 150ms delay allows onMouseDown on suggestion items to fire before dropdown unmounts
+    setTimeout(() => setShowDropdown(false), 150)
   }
 
   return {
     localValue,
     handleChange,
     handleKeyDown,
+    handleSelectSuggestion,
+    handleClear,
+    handleBlur,
     placeholderIndex,
     placeholders: PLACEHOLDERS,
     total,
@@ -95,5 +195,8 @@ export function useHeaderSearch() {
     sageMode,
     tiltActive,
     showParticles,
+    suggestions,
+    showDropdown,
+    selectedIndex,
   }
 }
