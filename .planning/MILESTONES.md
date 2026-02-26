@@ -130,3 +130,26 @@
 
 ---
 
+
+## v3.1 Launch Prep (Shipped: 2026-02-26)
+
+**Phases completed:** 4 phases (41–44), 5 plans
+**Timeline:** 1 day (2026-02-26), 28 min total execution
+**Codebase:** ~14,562 LOC TypeScript/TSX + Python
+**Files modified:** 39 (+5,407 / -1,969)
+**Git range:** 583e6cc → 312b8a2
+
+**Key accomplishments:**
+1. Expert email PII purged — idempotent startup migration blanks all Expert.email values; CSV Email column stripped; import/add/seed paths permanently closed
+2. Backend Sentry errors eliminated — photo proxy 502→404, FTS5 MATCH safety nets with structlog, gemini-2.0-flash-lite→2.5-flash-lite
+3. Search Lab aligned with live pipeline — run_explore() as default, legacy pipeline preserved for A/B validation, pipeline badges in UI
+4. React redirect loop fixed — imperative useNavigate+useEffect pattern replaces declarative Navigate; GA4 SPA tracking wired (G-0T526W3E1Z)
+5. Mobile filters redesigned as inline controls — MobileInlineFilters with TagPickerSheet, SortSheet, active chip row; Vaul drawer removed (kept for Sage)
+6. Desktop tag cloud expanded from 12 to 18 visible tags; search bar full-width on mobile
+
+**Archive:**
+- Roadmap: `.planning/milestones/v3.1-ROADMAP.md`
+- Requirements: `.planning/milestones/v3.1-REQUIREMENTS.md`
+
+---
+

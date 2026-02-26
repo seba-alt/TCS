@@ -2,7 +2,7 @@
 
 ## What This Is
 
-A professional Expert Marketplace for the Tinrate platform. Users discover 530 vetted experts via an immersive aurora-aesthetic Explorer — glassmorphic Command Center header with autocomplete search (debounced suggestions for job titles, companies, and tags), spring expert count, and Sage-in-flight pulse; animated aurora mesh background; bento-style expert cards with profile photos and monogram fallback; animated claymorphic tag cloud with proximity-based scaling; and a floating Sage AI co-pilot that actively searches experts via FAISS and injects results directly into the grid. Mobile-optimized with tap-expand cards, Sage bottom sheet, and responsive compact header. Expert bookmarking with localStorage persistence. User behavior (card clicks, Sage queries, filter changes) is tracked for marketplace intelligence. A newsletter gate captures leads on "View Full Profile". The admin dashboard includes restructured 3-section navigation, marketplace intelligence (unmet demand, expert exposure, Sage trends), index management, and intelligence metrics. Playful users can trigger barrel rolls and a "tinrate" header tilt easter egg.
+A professional Expert Marketplace for the Tinrate platform. Users discover 530 vetted experts via an immersive aurora-aesthetic Explorer — glassmorphic Command Center header with autocomplete search (debounced suggestions for job titles, companies, and tags), spring expert count, and Sage-in-flight pulse; animated aurora mesh background; bento-style expert cards with profile photos and monogram fallback; animated claymorphic tag cloud with 18 visible tags and proximity-based scaling; and a floating Sage AI co-pilot that actively searches experts via FAISS and injects results directly into the grid. Mobile-optimized with tap-expand cards, inline filter controls (tag picker, sort, active chip row), full-width search bar, and Sage bottom sheet. Expert bookmarking with localStorage persistence. User behavior (card clicks, Sage queries, filter changes) is tracked for marketplace intelligence. GA4 analytics tracks every page view with SPA route change support. Expert email PII has been purged from all data stores. A newsletter gate captures leads on "View Full Profile". The admin dashboard includes restructured 3-section navigation, marketplace intelligence (unmet demand, expert exposure, Sage trends), index management, and intelligence metrics. Playful users can trigger barrel rolls and a "tinrate" header tilt easter egg.
 
 ## Core Value
 
@@ -41,9 +41,6 @@ A user describes any problem and instantly gets expertly matched professionals t
 - ✓ Aurora mesh gradient background + glassmorphism surfaces (VIS-01 – VIS-05) — Phase 22
 - ✓ Bento-style ExpertCard redesign (CARD-01 – CARD-03) — Phase 23
 - ✓ Animated claymorphic tag cloud + "Everything is possible" element (DISC-01 – DISC-04) — Phase 23
-
-### Validated
-
 - ✓ Sage calls `run_explore()` in-process via `search_experts` FunctionDeclaration; results narrated + grid synced via `validateAndApplyFilters()` — v2.3
 - ✓ Sage panel and grid kept in sync — `search_performed: true` triggers filter slate clear + search param apply + useExplore re-fetch — v2.3
 - ✓ Zero-result handling: Sage narrates fallback alternatives (grid stays); double-zero resets grid to all experts — v2.3
@@ -73,18 +70,20 @@ A user describes any problem and instantly gets expertly matched professionals t
 - ✓ Sage bottom sheet (Vaul) for mobile with auto-close after discovery — v3.0
 - ✓ Responsive layout: compact header on mobile, hidden expert count, hidden md:block split for Sage — v3.0
 - ✓ Saved/bookmarked experts with localStorage persistence and toolbar button — v3.0
+- ✓ Expert email PII purged from DB, CSV, and all import/add/seed paths — v3.1
+- ✓ Photo proxy returns 404 (not 502) on upstream failure; frontend monogram fallback handles silently — v3.1
+- ✓ FTS5 MATCH queries wrapped with try/except safety nets in explorer and suggest paths — v3.1
+- ✓ Deprecated gemini-2.0-flash-lite replaced with gemini-2.5-flash-lite — v3.1
+- ✓ React redirect loop eliminated — imperative useNavigate+useEffect replaces declarative Navigate — v3.1
+- ✓ Search Lab aligned with run_explore() pipeline; legacy pipeline preserved for A/B validation — v3.1
+- ✓ Mobile filters redesigned as inline controls (MobileInlineFilters) replacing Vaul drawer — v3.1
+- ✓ Full-width search bar on mobile (logo hidden with hidden md:block) — v3.1
+- ✓ Desktop tag cloud expanded from 12 to 18 visible tags — v3.1
+- ✓ GA4 analytics (G-0T526W3E1Z) with SPA route change tracking via React Analytics component — v3.1
 
 ### Active
 
-- [ ] Remove expert email data from DB, CSV, and model; reject on future uploads
-- [ ] Fix photo proxy Sentry errors (graceful fallback instead of 502)
-- [ ] Fix React stack overflow (redirect loop in RedirectWithParams / URL sync)
-- [ ] Fix FTS5 empty string syntax errors (validate before MATCH)
-- [ ] Update deprecated gemini-2.0-flash-lite model
-- [ ] Redesign mobile filters as dropdown controls (replace Vaul bottom-sheet)
-- [ ] Full-width search bar on mobile
-- [ ] Show 18-20 tags in desktop tag cloud (up from 12)
-- [ ] Add Google Analytics (gtag.js G-0T526W3E1Z)
+(None — all v3.1 requirements shipped. Use `/gsd:new-milestone` to define next milestone requirements.)
 
 ### Out of Scope
 
@@ -95,8 +94,19 @@ A user describes any problem and instantly gets expertly matched professionals t
 - Full multi-language support — Dutch auto-detection added in v2.3, other languages deferred
 - Offline mode — real-time retrieval is core value
 - In-app match report download (LEAD-03) — deferred to v2.1 backlog
+- Full GDPR compliance toolkit — email purge addresses the immediate data issue; full compliance deferred
+- Custom analytics dashboard — GA4 dashboard is sufficient for launch
 
 ## Shipped Versions
+
+### v3.1 Launch Prep — Shipped 2026-02-26
+- Expert email PII purged: idempotent startup migration blanks all Expert.email values; CSV Email column stripped; import/add/seed paths permanently closed
+- Backend error hardening: photo proxy 502→404, FTS5 MATCH safety nets with structlog, gemini-2.0-flash-lite→2.5-flash-lite
+- Search Lab aligned with run_explore() live pipeline; legacy pipeline preserved for A/B validation; pipeline badges in UI
+- React redirect loop fixed (imperative useNavigate+useEffect); GA4 SPA tracking wired (G-0T526W3E1Z); desktop tag cloud expanded to 18 tags
+- Mobile filters redesigned: inline MobileInlineFilters with TagPickerSheet, SortSheet, active chip row; Vaul drawer removed (kept for Sage)
+- Full-width mobile search bar (logo hidden on mobile)
+- Archive: `.planning/milestones/v3.1-ROADMAP.md`
 
 ### v3.0 Netflix Browse & Agentic Navigation — Shipped 2026-02-26
 - Browse page built (Netflix-style horizontal category rows, glassmorphic cards, hero banner, Sage cross-page navigation) then removed in favor of Explorer-only architecture
@@ -159,35 +169,26 @@ A user describes any problem and instantly gets expertly matched professionals t
 - Core AI chat with 3-expert recommendations, email gate, feedback, admin dashboard
 - Archive: `.planning/milestones/v1.0-ROADMAP.md`
 
-## Current Milestone: v3.1 Launch Prep
-
-**Goal:** Harden the platform for public launch — remove sensitive data, fix production errors, improve mobile UX, add analytics.
-
-**Target features:**
-- Expert email purge (privacy/security)
-- Fix all Sentry production errors (photo proxy, stack overflow, FTS5, deprecated model)
-- Mobile filter UX redesign (dropdowns instead of bottom-sheet, full-width search)
-- Desktop tag cloud expansion (18-20 tags)
-- Google Analytics integration
-
 ## Current State
 
-**Deployed version:** v3.0 (Railway + Vercel, auto-deploys on push to main)
-**Expert pool:** 530 experts (data/metadata.json), all AI-tagged; FAISS index at 530 vectors; profile photos via proxy endpoint
-**Search intelligence:** Three-stage hybrid pipeline live; HyDE + feedback re-ranking toggled via admin steering panel; FTS5 autocomplete suggestions
+**Deployed version:** v3.1 (Railway + Vercel, auto-deploys on push to main)
+**Expert pool:** 530 experts (data/metadata.json), all AI-tagged; FAISS index at 530 vectors; profile photos via proxy endpoint; expert email PII purged
+**Search intelligence:** Three-stage hybrid pipeline live; HyDE + feedback re-ranking toggled via admin steering panel; FTS5 autocomplete suggestions; Search Lab aligned with live pipeline
 **Sage AI:** Active search engine — discovers experts via FAISS, injects results directly into grid, "smart funny friend" personality, Dutch auto-detection; mobile Sage bottom sheet (Vaul)
-**Explorer:** Single-page aurora-aesthetic marketplace at `/` with glassmorphic Command Center header, autocomplete search (debounced suggestions), bento cards with photos/monograms, animated tag cloud, tap-expand mobile cards, Sage AI co-pilot; bookmarking; behavior tracking; newsletter gate
-**Admin panel:** 3-section sidebar (Analytics/Tools/Admin); OverviewPage dashboard with zero-result queries + Sage sparkline; Marketplace Intelligence (demand/exposure/trends); ToolsPage (Search Lab/Score Explainer/Index); Intelligence tab with OTR@K, Index Drift, t-SNE
+**Explorer:** Single-page aurora-aesthetic marketplace at `/` with glassmorphic Command Center header, autocomplete search (debounced suggestions), bento cards with photos/monograms, animated tag cloud (18 tags), inline mobile filters (tag picker, sort, active chips), Sage AI co-pilot; bookmarking; behavior tracking; newsletter gate
+**Admin panel:** 3-section sidebar (Analytics/Tools/Admin); OverviewPage dashboard with zero-result queries + Sage sparkline; Marketplace Intelligence (demand/exposure/trends); ToolsPage (Search Lab with pipeline badges/Score Explainer/Index); Intelligence tab with OTR@K, Index Drift, t-SNE
+**Analytics:** GA4 (G-0T526W3E1Z) tracking all page views with SPA route change support
 **Next milestone:** Not yet defined — use `/gsd:new-milestone` to start
 
 ## Context
 
-- **Expert data:** SQLite table with 530 profiles; FAISS index at 530 tag-enriched vectors; all experts AI-tagged with 3–8 domain tags + findability scores
-- **AI stack:** Google GenAI (gemini-embedding-001) for embeddings, Gemini 2.5 Flash for generation + Sage function calling, Gemini flash-lite for Dutch detection
-- **Codebase:** ~14,297 LOC TypeScript/TSX + Python
+- **Expert data:** SQLite table with 530 profiles (email PII purged); FAISS index at 530 tag-enriched vectors; all experts AI-tagged with 3–8 domain tags + findability scores
+- **AI stack:** Google GenAI (gemini-embedding-001) for embeddings, Gemini 2.5 Flash for generation + Sage function calling, Gemini 2.5-flash-lite for Dutch detection
+- **Codebase:** ~14,562 LOC TypeScript/TSX + Python
 - **Deployed:** Railway (FastAPI + SQLite + FAISS) + Vercel (React/Vite/Tailwind v3)
 - **Live since:** 2026-02-20
 - **Behavior tracking:** `user_events` table with card_click, sage_query, filter_change events; fire-and-forget frontend instrumentation
+- **Analytics:** GA4 (G-0T526W3E1Z) with SPA route change tracking, admin routes excluded
 - **Admin dashboard:** Available at /admin — OverviewPage dashboard, Marketplace Intelligence, search analytics, lead tracking, expert management, ToolsPage (Search Lab, Score Explainer, Index), intelligence steering panel
 
 ## Constraints
@@ -216,49 +217,25 @@ A user describes any problem and instantly gets expertly matched professionals t
 | Per-thread SessionLocal in compare | ThreadPoolExecutor workers each create own SessionLocal() — thread-safe DB reads | ✓ Good — fixed race condition from audit |
 | ToggleSwitch as plain button | button[role=switch] + aria-checked, no external library — keeps bundle small | ✓ Good — accessible, dependency-free |
 | Search Lab A/B overrides in-memory | Per-run overrides merged in-memory, never written to DB — global settings unchanged | ✓ Good — matches admin mental model |
-| VirtuosoGrid (not Virtuoso) for expert grid | Cards use fixed h-[180px] height → VirtuosoGrid's uniform-height assumption is correct; listClassName CSS grid handles 2/3-col responsive layout | ✓ Good — correct tool for fixed-height cards |
-| CSS hover animation for ExpertCard (not Framer Motion mount) | Mount stagger removed during Phase 17 — CSS hover (lift + purple glow) is lighter and avoids VirtuosoGrid virtualization conflicts | ✓ Good — MARKET-05 accepted as shipped |
-| motion from 'motion/react' for modals/FAB (not card mounts) | AnimatePresence used for Sage FAB show/hide, Sage panel slide-in, ProfileGateModal enter/exit only | ✓ Good — Framer Motion where it adds real value |
-| Expert interface snake_case | API returns snake_case (first_name, job_title, hourly_rate) — camelCase aliases removed entirely; all components updated to match | ✓ Good — eliminated undefined field bug on cards |
-| Individual Zustand selectors for isFetchingMore/appendResults | Same Phase 16 pattern — individual selectors in useExplore hook prevent stale closure and re-render loops for infinite scroll state | ✓ Good — consistent pattern across hooks |
-| flex-1 min-h-0 container for VirtuosoGrid | VirtuosoGrid requires known-height container; flex-1 min-h-0 within flex column gives measurable height for virtualization | ✓ Good — VirtuosoGrid renders correctly |
-| filterSlice.setTags (not toggleTag) for Sage | Sage needs to replace tags array entirely; toggleTag is designed for human one-at-a-time interaction only | ✓ Good — clean separation of programmatic vs human filter dispatch |
-| useExplorerStore.getState() snapshot in useSage | Async handler captures store state at call time; reactive selectors cause stale closure in async context | ✓ Good — consistent with Phase 14 explore.py async pattern |
-| Gemini role mapping: 'assistant' → 'model' | pilotSlice uses 'user'/'assistant' (React convention); Gemini API requires 'user'/'model' — toGeminiRole() handles mapping in useSage | ✓ Good — prevents Gemini API 400 errors on history |
-| Two-turn Gemini pattern for Sage | Turn 1: extract apply_filters args; Turn 2: send function result back for confirmation text — keeps confirmation contextually accurate | ✓ Good — aligns with Gemini function calling spec |
-| FAB hides when panel is open | AnimatePresence with {!isOpen && <SageFAB>} — cleaner than FAB+panel coexisting; avoids z-index conflicts on mobile | ✓ Good — locked in CONTEXT.md before Phase 18 |
-| loadNextPage pagination: `query` param (not `q`) | useExplore.ts loadNextPage was sending `?q=` while backend expected `?query=`; fixed in Phase 20 gap closure | ✓ Good — pagination with active text query now correct |
-| DEFAULT_RATE_MAX=5000 aligned across all components | FilterChips, RateSlider, and MobileFilterSheet all align to store default of 5000; fixed spurious chip on page load | ✓ Good — rate filter chip only appears when user has actively filtered |
-| LEAD-03 deferred to v2.1 | In-app match report requires significant new backend + UI work; email gate alone is sufficient lead capture for v2.0 | — Deferred — capture as v2.1 requirement |
-| asyncio.create_task post-yield for t-SNE | Background CPU-bound computation MUST fire after lifespan yield — pre-yield blocks Railway healthcheck causing infinite restart loop | ✓ Good — healthcheck passes, t-SNE computes in ~30s post-startup |
-| Raw fetch for 202-aware polling | adminFetch throws on non-2xx; polling endpoint returns 202 (computing) which must be handled without throwing — raw fetch with status code inspection required | ✓ Good — useEmbeddingMap hook correctly handles 202→200 transition |
-| recharts requires react-is explicit install | recharts@3.7.0 declares react-is as peer dep but Vite/Rollup fails if not in node_modules — must npm install react-is alongside recharts | ✓ Good — documented in SUMMARY; blocked CI otherwise |
+| VirtuosoGrid (not Virtuoso) for expert grid | Cards use fixed h-[180px] height → VirtuosoGrid's uniform-height assumption is correct | ✓ Good — correct tool for fixed-height cards |
+| CSS hover animation for ExpertCard | Mount stagger removed — CSS hover (lift + purple glow) is lighter, avoids VirtuosoGrid conflicts | ✓ Good — MARKET-05 accepted as shipped |
+| motion from 'motion/react' for modals/FAB | AnimatePresence for Sage FAB, panel, ProfileGateModal only | ✓ Good — Framer Motion where it adds real value |
+| Expert interface snake_case | API returns snake_case — camelCase aliases removed entirely | ✓ Good — eliminated undefined field bug |
+| Two-turn Gemini pattern for Sage | Turn 1: extract function args; Turn 2: send result for confirmation text | ✓ Good — aligns with Gemini function calling spec |
+| search_experts FunctionDeclaration routing | Mutually exclusive descriptions for apply_filters vs search_experts | ✓ Good — 20/20 routing accuracy |
+| search_experts in-process Python import | Direct `run_explore()` call in pilot_service.py — no HTTP self-call | ✓ Good — fast, no network overhead |
+| trackEvent() as module function | Fire-and-forget void fetch with keepalive:true — no React hook constraints | ✓ Good — works across all 5 call sites |
+| 3-section admin sidebar | Analytics/Tools/Admin grouping — 8 items total | ✓ Good — clear information architecture |
+| Dutch detection via Gemini flash-lite | Lightweight structured JSON for language detection | ✓ Good — fast, minimal cost |
+| Idempotent email purge at startup | UPDATE experts SET email='' runs every startup — re-sanitizes even restored backups | ✓ Good — guarantees PII removal |
+| Photo proxy 404 (not 502) | Frontend onError already handles non-200 — 404 is HTTP-correct and silent | ✓ Good — eliminates Sentry noise |
+| FTS5 belt-and-suspenders guard | _safe_fts_query() sanitizes + try/except around MATCH as safety net | ✓ Good — no more 500s from invalid queries |
+| run_explore() as default Search Lab pipeline | Live pipeline as default; legacy preserved for A/B validation | ✓ Good — Search Lab matches production behavior |
+| Imperative redirect pattern | useNavigate+useEffect([]) for redirects that preserve search params | ✓ Good — eliminated Maximum call stack exceeded |
+| GA4 send_page_view:false | React Analytics component handles ALL page_view events to prevent double-counting | ✓ Good — single source of truth for analytics |
+| Inline mobile filters (no drawer) | MobileInlineFilters with TagPickerSheet — always visible, no drawer interaction needed | ✓ Good — better mobile UX than Vaul drawer |
+| Logo hidden on mobile for search | hidden md:block on logo — search bar fills full viewport width | ✓ Good — cleanest approach per research |
+| Instant-apply tags (no draft buffer) | AbortController in useExplore deduplicates rapid requests — no need for draft buffer | ✓ Good — responsive UX |
 
 ---
-| search_experts in-process Python import | Direct `run_explore()` call in pilot_service.py — no HTTP self-call to /api/explore | ✓ Good — fast, no network overhead |
-| sageMode ephemeral (not persisted) | sageMode resets on page refresh — Sage results are session-contextual | ✓ Good — clean UX on reload |
-| trackEvent() as module function | Fire-and-forget `void fetch()` with `keepalive: true` — no React hook constraints | ✓ Good — works across all 5 call sites |
-| 3-section admin sidebar | Analytics/Tools/Admin grouping — 8 items total, Intelligence page intentional | ✓ Good — clear information architecture |
-| Dutch detection via Gemini flash-lite | Lightweight structured JSON extraction for language detection — only search_experts path translates | ✓ Good — fast, minimal cost |
-| Standalone useNltrStore (not in useExplorerStore) | Newsletter state must not contaminate marketplace filter persistence — separate store with its own persist key avoids partialize conflicts | ✓ Good — no explorer state regression |
-| Zustand write before fire-and-forget POST | User unlock must be immediate and not depend on API success — write to store first, then POST in background | ✓ Good — UX feels instant even on slow connections |
-| Barrel roll intercepts before API in Sage | Sending "barrel roll" to Gemini would produce nonsensical results — short-circuit with canned message preserves quality UX | ✓ Good — playful without confusing AI |
-| VirtuosoGrid container rotation (not card rotation) | Individual ExpertCard rotation causes scroll-triggered re-animations on virtualized unmount/remount — container rotation avoids VirtuosoGrid internals | ✓ Good — smooth 360° with no visual artifacts |
-| rotate reset to 0 with duration:0 after spin | Framer Motion accumulates transform state — must explicitly reset after animate to prevent additive rotation on repeat triggers | ✓ Good — documented in SUMMARY; repeat triggers work cleanly |
-| search_experts FunctionDeclaration with mutually exclusive descriptions | apply_filters explicitly says "do NOT use when discovering experts"; search_experts description covers all discovery intent patterns — 20/20 routing accuracy, no tuning needed | ✓ Good — clean separation eliminates misrouting |
-| args = dict(fn_call.args) before all use | Gemini returns protobuf Struct, not dict — must unwrap before any key access; rate_min/rate_max need float(), tags need list() for nested types | ✓ Good — defensive casting prevents silent type errors |
-| search_performed check before data.filters truthy check | Zero-result search returns filters:null — without search_performed check first, null filters on a search path would silently skip grid update | ✓ Good — correct routing for all four states (search+results, search+zero, search+double-zero, refine) |
-| validateAndApplyFilters({reset:true}) then validateAndApplyFilters(filtersObj) | Two-call pattern for clean slate + Sage params — single call would layer on dirty existing filter state | ✓ Good — grid always reflects exactly Sage's intent |
-| motion.div wrapper for FAB glow (boxShadow only, no scale) | scale on wrapper div conflicts with inner button's whileHover/whileTap scale — outer div animates boxShadow only; inner motion.button owns all scale gestures | ✓ Good — no animation conflict, both glow and gesture work independently |
-| prevFilterKey=null initialization pattern | Initializing to null (not to current filterKey) allows clean "skip first render" detection — if null, set and return; if changed, glow | ✓ Good — no spurious glow on page load from localStorage-rehydrated filter state |
-| trackEvent() as module function (not hook) | Importable anywhere without React rules — async handlers, non-component code, debounce callbacks all need fire-and-forget without hook constraints | ✓ Good — zero rule violations across all 5 call sites |
-| void fetch with keepalive:true for events | Events survive page navigation; no await in any call path — truly fire-and-forget; 202 response ignored by design | ✓ Good — no missed events on profile click navigation |
-| Tag ADD-only tracking in TagMultiSelect | Remove events are noise for demand signal analysis — only add events indicate intent; halves event volume with no intelligence loss | ✓ Good — cleaner signal for Phase 31 aggregation |
-| expert_ids omitted from sage_query payload | Not in PilotResponse yet — Phase 31 uses result_count/zero_results for demand signals; ids can be added when search returns expert list | — Deferred — Phase 31 aggregates on counts, not ids |
-| json_extract boolean comparison uses = 1 not = true | SQLite stores JSON booleans as integers; `= true` never matches — must use `= 1` in all json_extract comparisons on payload fields | ✓ Good — demand/exposure queries work correctly |
-| Custom downloadMarketplaceCsv instead of extending useAdminExport | ExportSection type is 'searches' \| 'gaps' — extending for demand/exposure would couple shared hook to marketplace; inline helper keeps page self-contained | ✓ Good — no regression on existing export flows |
-| Cold-start guard per-section (not page-level) | Each section (demand, exposure, trend) independently checks its own data_since === null — prevents one endpoint's empty state from hiding another section's data | ✓ Good — sections degrade independently |
-
----
----
-*Last updated: 2026-02-26 after v3.1 milestone start*
+*Last updated: 2026-02-26 after v3.1 milestone completion*

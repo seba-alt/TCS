@@ -95,6 +95,16 @@ None - no external service configuration required.
 - Phase 42 (search quality fix) can proceed independently
 - No blockers
 
+## Self-Check: PASSED
+
+- app/main.py: FOUND
+- app/routers/admin.py: FOUND
+- data/experts.csv: FOUND
+- 41-01-SUMMARY.md: FOUND
+- Commit 583e6cc (Task 1): FOUND
+- Commit f56222b (Task 2): FOUND
+- Commit 0813c04 (metadata): FOUND
+
 ---
 *Phase: 41-expert-email-purge*
 *Completed: 2026-02-26*
