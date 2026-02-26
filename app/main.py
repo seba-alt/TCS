@@ -82,7 +82,6 @@ def _seed_experts_from_csv() -> int:
 
                 experts.append(Expert(
                     username=username,
-                    email=(row.get("Email") or "").strip(),
                     first_name=(row.get("First Name") or "").strip(),
                     last_name=(row.get("Last Name") or "").strip(),
                     job_title=(row.get("Job Title") or "").strip(),
@@ -230,6 +229,12 @@ async def lifespan(app: FastAPI):
             except Exception:
                 pass  # Column already exists — idempotent
     log.info("startup: expert photo_url column migrated/verified")
+
+    # Phase 41: Expert email purge — blank all Expert.email values (PII removal)
+    with engine.connect() as _conn:
+        _conn.execute(_text("UPDATE experts SET email = ''"))
+        _conn.commit()
+    log.info("startup: expert email purge applied (Phase 41)")
 
     # Phase 14: FTS5 virtual table for BM25 keyword search
     with engine.connect() as _conn:
