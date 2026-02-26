@@ -140,6 +140,6 @@ None — photo backend is ready for Browse UI consumption
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Completed Phase 40.3.1 Plan 02 — mobile tap-expand ExpertCard + SageMobileSheet Vaul bottom sheet
-Resume signal: Phase 40.3.1 complete. All search and mobile improvements done. Ready for deployment or next milestone.
-Resume file: .planning/phases/40.3.1-search-improvements-on-the-search-and-mobile-improvements/40.3.1-02-SUMMARY.md
+Stopped at: Completed 40.3.1-01-PLAN.md — search autocomplete with debounced dropdown, non-live grid, X clear button
+Resume signal: Phase 40.3.1 Plan 01 complete. Ready for Plan 02 (mobile improvements).
+Resume file: .planning/phases/40.3.1-search-improvements-on-the-search-and-mobile-improvements/40.3.1-01-SUMMARY.md
