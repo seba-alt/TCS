@@ -27,8 +27,8 @@ Requirements for launch prep. Each maps to roadmap phases.
 
 ### Mobile UX
 
-- [ ] **MOB-01**: Mobile filters use inline dropdown-style controls instead of Vaul bottom-sheet
-- [ ] **MOB-02**: Search bar takes full viewport width on mobile
+- [x] **MOB-01**: Mobile filters use inline dropdown-style controls instead of Vaul bottom-sheet
+- [x] **MOB-02**: Search bar takes full viewport width on mobile
 
 ### Discovery
 
@@ -78,8 +78,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ERR-04 | Phase 42 | Complete |
 | SRCH-01 | Phase 42 | Complete |
 | SRCH-02 | Phase 42 | Complete |
-| MOB-01 | Phase 44 | Pending |
-| MOB-02 | Phase 44 | Pending |
+| MOB-01 | Phase 44 | Complete |
+| MOB-02 | Phase 44 | Complete |
 | DISC-01 | Phase 43 | Complete |
 | ANLT-01 | Phase 43 | Complete |
 | ANLT-02 | Phase 43 | Complete |

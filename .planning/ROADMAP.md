@@ -79,7 +79,7 @@ See `.planning/milestones/v3.0-ROADMAP.md`
 - [x] **Phase 41: Expert Email Purge** — Remove expert PII before any public traffic reaches the platform (completed 2026-02-26)
 - [x] **Phase 42: Backend Error Hardening** — Fix all backend Sentry errors and align Search Lab pipeline (completed 2026-02-26)
 - [x] **Phase 43: Frontend Fixes + Analytics + Tag Cloud** — Fix redirect loop, add GA4, expand tag cloud (completed 2026-02-26)
-- [ ] **Phase 44: Mobile Filter Redesign** — Replace Vaul bottom-sheet filters with inline dropdown controls
+- [x] **Phase 44: Mobile Filter Redesign** — Replace Vaul bottom-sheet filters with inline dropdown controls (completed 2026-02-26)
 
 ## Phase Details
 
@@ -134,7 +134,7 @@ Plans:
   3. The search bar spans the full viewport width on mobile
   4. The active filter count badge reflects the current filter state after the Vaul bottom-sheet is removed
   5. The Sage mobile bottom sheet (using Vaul) continues to open and function correctly
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 Plans:
 - [ ] 44-01-PLAN.md — Replace MobileFilterSheet with inline filters, full-width mobile search bar
 
@@ -152,4 +152,4 @@ Plans:
 | 41. Expert Email Purge | 1/1 | Complete    | 2026-02-26 | - |
 | 42. Backend Error Hardening | v3.1 | 2/2 | Complete | 2026-02-26 |
 | 43. Frontend Fixes + Analytics + Tag Cloud | v3.1 | Complete    | 2026-02-26 | 2026-02-26 |
-| 44. Mobile Filter Redesign | v3.1 | 0/1 | Planned | - |
+| 44. Mobile Filter Redesign | 1/1 | Complete   | 2026-02-26 | - |
