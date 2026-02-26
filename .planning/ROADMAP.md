@@ -78,7 +78,7 @@ See `.planning/milestones/v3.0-ROADMAP.md`
 
 - [x] **Phase 41: Expert Email Purge** — Remove expert PII before any public traffic reaches the platform (completed 2026-02-26)
 - [x] **Phase 42: Backend Error Hardening** — Fix all backend Sentry errors and align Search Lab pipeline (completed 2026-02-26)
-- [ ] **Phase 43: Frontend Fixes + Analytics + Tag Cloud** — Fix redirect loop, add GA4, expand tag cloud
+- [x] **Phase 43: Frontend Fixes + Analytics + Tag Cloud** — Fix redirect loop, add GA4, expand tag cloud (completed 2026-02-26)
 - [ ] **Phase 44: Mobile Filter Redesign** — Replace Vaul bottom-sheet filters with inline dropdown controls
 
 ## Phase Details
@@ -120,9 +120,9 @@ Plans:
   2. The GA4 property G-0T526W3E1Z receives a page_view event on initial load
   3. Navigating between routes via React Router fires a new page_view event in GA4 without a full page reload
   4. The desktop tag cloud displays 18-20 tags simultaneously (up from 12)
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 Plans:
-- [ ] 43-01-PLAN.md — Fix redirect loop, add GA4 analytics, expand tag cloud
+- [x] 43-01-PLAN.md — Fix redirect loop, add GA4 analytics, expand tag cloud
 
 ### Phase 44: Mobile Filter Redesign
 **Goal**: Mobile users can filter experts using inline dropdown controls without opening and dismissing a bottom sheet
@@ -149,5 +149,5 @@ Plans:
 | 36-40.3.1. Browse & Navigation | v3.0 | 19/19 | Complete | 2026-02-26 |
 | 41. Expert Email Purge | 1/1 | Complete    | 2026-02-26 | - |
 | 42. Backend Error Hardening | v3.1 | 2/2 | Complete | 2026-02-26 |
-| 43. Frontend Fixes + Analytics + Tag Cloud | v3.1 | 0/1 | Not started | - |
+| 43. Frontend Fixes + Analytics + Tag Cloud | v3.1 | 1/1 | Complete | 2026-02-26 |
 | 44. Mobile Filter Redesign | v3.1 | 0/TBD | Not started | - |

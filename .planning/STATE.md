@@ -6,9 +6,9 @@ status: in_progress
 last_updated: "2026-02-26"
 progress:
   total_phases: 4
-  completed_phases: 2
-  total_plans: 3
-  completed_plans: 3
+  completed_phases: 3
+  total_plans: 4
+  completed_plans: 4
 ---
 
 # Project State
@@ -18,23 +18,23 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** A user describes any problem and instantly gets expertly matched professionals they can browse, filter, and contact — no searching, no guesswork.
-**Current focus:** v3.1 Launch Prep — Phase 42 complete, Phase 43 next
+**Current focus:** v3.1 Launch Prep — Phase 43 complete, Phase 44 next
 
 ## Current Position
 
-Phase: 42 of 44 (Backend Error Hardening)
-Plan: 2 of 2 — COMPLETE
-Status: Phase 42 complete — ready for Phase 43
-Last activity: 2026-02-26 — Backend error hardening and Search Lab alignment executed (42-01 + 42-02 complete)
+Phase: 43 of 44 (Frontend Fixes + Analytics + Tag Cloud)
+Plan: 1 of 1 — COMPLETE
+Status: Phase 43 complete — ready for Phase 44
+Last activity: 2026-02-26 — Frontend fixes, GA4 analytics, and tag cloud expansion executed (43-01 complete)
 
-Progress: [#####░░░░░] 50%
+Progress: [######░░░░] 60%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3 (v3.1)
-- Average duration: 8 min
-- Total execution time: 23 min
+- Total plans completed: 4 (v3.1)
+- Average duration: 7 min
+- Total execution time: 25 min
 
 **By Phase:**
 
@@ -42,6 +42,7 @@ Progress: [#####░░░░░] 50%
 |-------|-------|-------|----------|
 | 41 | 1 | 8 min | 8 min |
 | 42 | 2 | 15 min | 8 min |
+| 43 | 1 | 2 min | 2 min |
 
 ## Accumulated Context
 
@@ -56,6 +57,10 @@ Progress: [#####░░░░░] 50%
 - Phase 42: HyDE/feedback overrides only affect legacy pipeline configs — run_explore never did HyDE
 - Phase 42: Backwards-compatible config aliases (baseline, hyde, feedback, full) map to legacy pipeline
 - Phase 43: ERR-02 (redirect loop) is a frontend concern despite being an error fix — grouped with other frontend changes
+- Phase 43: useNavigate+useEffect (imperative) over declarative <Navigate> for RedirectWithParams to eliminate Maximum call stack exceeded re-render loop
+- Phase 43: send_page_view:false in GA4 config — React Analytics component handles ALL page_view events to prevent double-counting
+- Phase 43: Analytics mounted in RootLayout only — admin routes intentionally excluded from GA4 tracking
+- Phase 43: page_path includes query params (pathname + search) so tag filter interactions are tracked as distinct page views
 - Phase 44: Vaul package must stay in package.json — SageMobileSheet still uses it
 
 ### Pending Todos
@@ -71,5 +76,5 @@ Progress: [#####░░░░░] 50%
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Completed Phase 42 — Backend error hardening + Search Lab alignment done, ready for Phase 43
+Stopped at: Completed Phase 43 — Frontend fixes + GA4 analytics + tag cloud expansion done, ready for Phase 44
 Resume file: None

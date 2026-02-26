@@ -15,15 +15,15 @@ Requirements for launch prep. Each maps to roadmap phases.
 
 ### Error Hardening
 
-- [ ] **ERR-01**: Photo proxy returns 404 instead of 502 when upstream is unavailable (frontend monogram fallback already handles it)
-- [ ] **ERR-02**: React redirect loop fixed — RedirectWithParams no longer causes maximum call stack exceeded
-- [ ] **ERR-03**: FTS5 MATCH queries guarded against empty/invalid strings in explore, pilot, and suggest paths
-- [ ] **ERR-04**: Deprecated gemini-2.0-flash-lite replaced with current Gemini model for Dutch detection
+- [x] **ERR-01**: Photo proxy returns 404 instead of 502 when upstream is unavailable (frontend monogram fallback already handles it)
+- [x] **ERR-02**: React redirect loop fixed — RedirectWithParams no longer causes maximum call stack exceeded
+- [x] **ERR-03**: FTS5 MATCH queries guarded against empty/invalid strings in explore, pilot, and suggest paths
+- [x] **ERR-04**: Deprecated gemini-2.0-flash-lite replaced with current Gemini model for Dutch detection
 
 ### Search Alignment
 
-- [ ] **SRCH-01**: Search Lab uses run_explore() pipeline so results match search bar and Sage
-- [ ] **SRCH-02**: Search Lab A/B comparison preserves ability to toggle HyDE/feedback as overrides on top of the aligned pipeline
+- [x] **SRCH-01**: Search Lab uses run_explore() pipeline so results match search bar and Sage
+- [x] **SRCH-02**: Search Lab A/B comparison preserves ability to toggle HyDE/feedback as overrides on top of the aligned pipeline
 
 ### Mobile UX
 
@@ -32,12 +32,12 @@ Requirements for launch prep. Each maps to roadmap phases.
 
 ### Discovery
 
-- [ ] **DISC-01**: Desktop tag cloud shows 18-20 visible tags (up from 12)
+- [x] **DISC-01**: Desktop tag cloud shows 18-20 visible tags (up from 12)
 
 ### Analytics
 
-- [ ] **ANLT-01**: Google Analytics (gtag.js) with tracking ID G-0T526W3E1Z added to the app
-- [ ] **ANLT-02**: SPA page view tracking fires on route changes (not just initial load)
+- [x] **ANLT-01**: Google Analytics (gtag.js) with tracking ID G-0T526W3E1Z added to the app
+- [x] **ANLT-02**: SPA page view tracking fires on route changes (not just initial load)
 
 ## Future Requirements
 
@@ -72,17 +72,17 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PRIV-01 | Phase 41 | Complete |
 | PRIV-02 | Phase 41 | Complete |
 | PRIV-03 | Phase 41 | Complete |
-| ERR-01 | Phase 42 | Pending |
-| ERR-02 | Phase 43 | Pending |
-| ERR-03 | Phase 42 | Pending |
-| ERR-04 | Phase 42 | Pending |
-| SRCH-01 | Phase 42 | Pending |
-| SRCH-02 | Phase 42 | Pending |
+| ERR-01 | Phase 42 | Complete |
+| ERR-02 | Phase 43 | Complete |
+| ERR-03 | Phase 42 | Complete |
+| ERR-04 | Phase 42 | Complete |
+| SRCH-01 | Phase 42 | Complete |
+| SRCH-02 | Phase 42 | Complete |
 | MOB-01 | Phase 44 | Pending |
 | MOB-02 | Phase 44 | Pending |
-| DISC-01 | Phase 43 | Pending |
-| ANLT-01 | Phase 43 | Pending |
-| ANLT-02 | Phase 43 | Pending |
+| DISC-01 | Phase 43 | Complete |
+| ANLT-01 | Phase 43 | Complete |
+| ANLT-02 | Phase 43 | Complete |
 
 **Coverage:**
 - v3.1 requirements: 14 total
@@ -91,4 +91,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-02-26*
-*Last updated: 2026-02-26 after roadmap creation*
+*Last updated: 2026-02-26 after Phase 43 completion (ERR-02, DISC-01, ANLT-01, ANLT-02 marked complete; ERR-01, ERR-03, ERR-04, SRCH-01, SRCH-02 retroactively marked complete from Phase 42)*
