@@ -966,7 +966,7 @@ def add_expert(body: AddExpertBody, background_tasks: BackgroundTasks, db: Sessi
     csv_exists = EXPERTS_CSV_PATH.exists()
     with open(EXPERTS_CSV_PATH, "a", newline="", encoding="utf-8") as f:
         fieldnames = [
-            "Email", "Username", "First Name", "Last Name", "Job Title",
+            "Username", "First Name", "Last Name", "Job Title",
             "Company", "Bio", "Hourly Rate", "Currency", "Profile URL",
             "Profile URL with UTM", "Profile Image Url", "Created At",
         ]
@@ -974,7 +974,6 @@ def add_expert(body: AddExpertBody, background_tasks: BackgroundTasks, db: Sessi
         if not csv_exists:
             writer.writeheader()
         writer.writerow({
-            "Email": "",
             "Username": body.username,
             "First Name": body.first_name,
             "Last Name": body.last_name,
@@ -1032,7 +1031,6 @@ async def import_experts_csv(file: UploadFile = File(...), db: Session = Depends
         existing = db.scalar(select(Expert).where(Expert.username == username))
 
         if existing:
-            existing.email = (row.get("Email") or "").strip()
             existing.first_name = (row.get("First Name") or "").strip()
             existing.last_name = (row.get("Last Name") or "").strip()
             existing.job_title = (row.get("Job Title") or "").strip()
@@ -1050,7 +1048,6 @@ async def import_experts_csv(file: UploadFile = File(...), db: Session = Depends
             profile_url_utm = (row.get("Profile URL with UTM") or "").strip()
             db.add(Expert(
                 username=username,
-                email=(row.get("Email") or "").strip(),
                 first_name=(row.get("First Name") or "").strip(),
                 last_name=(row.get("Last Name") or "").strip(),
                 job_title=(row.get("Job Title") or "").strip(),
