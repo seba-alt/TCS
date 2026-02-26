@@ -1,7 +1,7 @@
 import "./instrument";
-import { StrictMode } from 'react'
+import { StrictMode, useEffect } from 'react'
 import { createRoot } from 'react-dom/client'
-import { createBrowserRouter, RouterProvider, Navigate, useSearchParams } from 'react-router-dom'
+import { createBrowserRouter, RouterProvider, Navigate, useSearchParams, useNavigate } from 'react-router-dom'
 import './index.css'
 import RootLayout from './layouts/RootLayout.tsx'
 import MarketplacePage from './pages/MarketplacePage.tsx'
@@ -19,13 +19,21 @@ import DataPage from './admin/pages/DataPage.tsx'
 
 /**
  * Generic redirect component preserving query params.
- * Must be a component (not inline Navigate) because useSearchParams
- * requires a RouterProvider context.
+ * Uses imperative navigate() inside useEffect to avoid re-render loop.
+ * Declarative <Navigate> triggers re-renders when searchParams change,
+ * causing "Maximum call stack exceeded" in React StrictMode.
  */
 function RedirectWithParams({ to }: { to: string }) {
+  const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const qs = searchParams.toString()
-  return <Navigate to={qs ? `${to}?${qs}` : to} replace />
+
+  useEffect(() => {
+    const qs = searchParams.toString()
+    navigate(qs ? `${to}?${qs}` : to, { replace: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  return null
 }
 
 const router = createBrowserRouter([

@@ -83,10 +83,10 @@ export function TagCloud() {
     mouseY.set(-999)
   }
 
-  // Selected tags first, then up to 12 total — keeps cloud compact so "Everything is possible" is visible
+  // Selected tags first, then up to 18 total — keeps cloud compact so "Everything is possible" is visible
   const selected = TOP_TAGS.filter((t) => tags.includes(t))
   const unselected = TOP_TAGS.filter((t) => !tags.includes(t))
-  const visibleCount = Math.max(12, selected.length)
+  const visibleCount = Math.max(18, selected.length)
   const sortedTags = [...selected, ...unselected.slice(0, visibleCount - selected.length)]
 
   return (
