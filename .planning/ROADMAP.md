@@ -152,4 +152,4 @@ Plans:
 | 41. Expert Email Purge | 1/1 | Complete    | 2026-02-26 | - |
 | 42. Backend Error Hardening | v3.1 | 2/2 | Complete | 2026-02-26 |
 | 43. Frontend Fixes + Analytics + Tag Cloud | v3.1 | Complete    | 2026-02-26 | 2026-02-26 |
-| 44. Mobile Filter Redesign | 1/1 | Complete   | 2026-02-26 | - |
+| 44. Mobile Filter Redesign | 1/1 | Complete    | 2026-02-26 | - |
