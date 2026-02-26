@@ -69,26 +69,26 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PRIV-01 | — | Pending |
-| PRIV-02 | — | Pending |
-| PRIV-03 | — | Pending |
-| ERR-01 | — | Pending |
-| ERR-02 | — | Pending |
-| ERR-03 | — | Pending |
-| ERR-04 | — | Pending |
-| SRCH-01 | — | Pending |
-| SRCH-02 | — | Pending |
-| MOB-01 | — | Pending |
-| MOB-02 | — | Pending |
-| DISC-01 | — | Pending |
-| ANLT-01 | — | Pending |
-| ANLT-02 | — | Pending |
+| PRIV-01 | Phase 41 | Pending |
+| PRIV-02 | Phase 41 | Pending |
+| PRIV-03 | Phase 41 | Pending |
+| ERR-01 | Phase 42 | Pending |
+| ERR-02 | Phase 43 | Pending |
+| ERR-03 | Phase 42 | Pending |
+| ERR-04 | Phase 42 | Pending |
+| SRCH-01 | Phase 42 | Pending |
+| SRCH-02 | Phase 42 | Pending |
+| MOB-01 | Phase 44 | Pending |
+| MOB-02 | Phase 44 | Pending |
+| DISC-01 | Phase 43 | Pending |
+| ANLT-01 | Phase 43 | Pending |
+| ANLT-02 | Phase 43 | Pending |
 
 **Coverage:**
 - v3.1 requirements: 14 total
-- Mapped to phases: 0
-- Unmapped: 14
+- Mapped to phases: 14
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-26*
-*Last updated: 2026-02-26 after initial definition*
+*Last updated: 2026-02-26 after roadmap creation*

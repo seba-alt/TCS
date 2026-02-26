@@ -9,6 +9,7 @@
 - ✅ **v2.2 Evolved Discovery Engine** — Phases 22-27 (shipped 2026-02-22)
 - ✅ **v2.3 Sage Evolution & Marketplace Intelligence** — Phases 28-35 (shipped 2026-02-24)
 - ✅ **v3.0 Netflix Browse & Agentic Navigation** — Phases 36-40.3.1 (shipped 2026-02-26)
+- 🚧 **v3.1 Launch Prep** — Phases 41-44 (in progress)
 
 ## Phases
 
@@ -71,6 +72,63 @@ See `.planning/milestones/v3.0-ROADMAP.md`
 
 </details>
 
+### 🚧 v3.1 Launch Prep (In Progress)
+
+**Milestone Goal:** Harden the platform for public launch — remove sensitive data, fix production errors, align Search Lab with the live pipeline, and improve mobile UX and analytics.
+
+- [ ] **Phase 41: Expert Email Purge** — Remove expert PII before any public traffic reaches the platform
+- [ ] **Phase 42: Backend Error Hardening** — Fix all backend Sentry errors and align Search Lab pipeline
+- [ ] **Phase 43: Frontend Fixes + Analytics + Tag Cloud** — Fix redirect loop, add GA4, expand tag cloud
+- [ ] **Phase 44: Mobile Filter Redesign** — Replace Vaul bottom-sheet filters with inline dropdown controls
+
+## Phase Details
+
+### Phase 41: Expert Email Purge
+**Goal**: Expert email data is completely removed from the system before public launch
+**Depends on**: Nothing (first phase of v3.1)
+**Requirements**: PRIV-01, PRIV-02, PRIV-03
+**Success Criteria** (what must be TRUE):
+  1. No Expert row in the SQLite database has a non-empty email value
+  2. The data/experts.csv file contains no Email column
+  3. Uploading a new CSV with an Email column does not write email values to any Expert row
+  4. Conversation.email and Feedback.email columns are untouched and the admin Leads page functions normally
+**Plans**: TBD
+
+### Phase 42: Backend Error Hardening
+**Goal**: All backend Sentry error sources are eliminated and Search Lab results match the live search pipeline
+**Depends on**: Phase 41
+**Requirements**: ERR-01, ERR-03, ERR-04, SRCH-01, SRCH-02
+**Success Criteria** (what must be TRUE):
+  1. A broken expert photo URL returns a 404 response (not 502) and the frontend shows the monogram fallback
+  2. Submitting an empty string in the search bar does not produce a 500 error from FTS5
+  3. Dutch text submitted to Sage is correctly detected and translated using the updated Gemini model
+  4. Search Lab query results use the same run_explore() pipeline as the search bar and Sage
+  5. Search Lab A/B comparison still supports toggling HyDE and feedback as per-run overrides on top of the aligned pipeline
+**Plans**: TBD
+
+### Phase 43: Frontend Fixes + Analytics + Tag Cloud
+**Goal**: The React redirect loop is eliminated, GA4 tracks every page view from launch day, and the desktop tag cloud shows 18-20 tags
+**Depends on**: Phase 42
+**Requirements**: ERR-02, DISC-01, ANLT-01, ANLT-02
+**Success Criteria** (what must be TRUE):
+  1. Navigating to /explore, /marketplace, /browse, or /chat does not produce a Maximum call stack exceeded error in the browser console
+  2. The GA4 property G-0T526W3E1Z receives a page_view event on initial load
+  3. Navigating between routes via React Router fires a new page_view event in GA4 without a full page reload
+  4. The desktop tag cloud displays 18-20 tags simultaneously (up from 12)
+**Plans**: TBD
+
+### Phase 44: Mobile Filter Redesign
+**Goal**: Mobile users can filter experts using inline dropdown controls without opening and dismissing a bottom sheet
+**Depends on**: Phase 43
+**Requirements**: MOB-01, MOB-02
+**Success Criteria** (what must be TRUE):
+  1. On mobile, filter controls (rate range, domain tags) are visible inline on the page without any drawer interaction
+  2. Changing a filter on mobile updates the expert grid without hammering the API on every keystroke
+  3. The search bar spans the full viewport width on mobile
+  4. The active filter count badge reflects the current filter state after the Vaul bottom-sheet is removed
+  5. The Sage mobile bottom sheet (using Vaul) continues to open and function correctly
+**Plans**: TBD
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -82,3 +140,7 @@ See `.planning/milestones/v3.0-ROADMAP.md`
 | 22-27. Evolved Discovery Engine | v2.2 | 14/14 | Complete | 2026-02-22 |
 | 28-35. Sage Evolution | v2.3 | 17/17 | Complete | 2026-02-24 |
 | 36-40.3.1. Browse & Navigation | v3.0 | 19/19 | Complete | 2026-02-26 |
+| 41. Expert Email Purge | v3.1 | 0/TBD | Not started | - |
+| 42. Backend Error Hardening | v3.1 | 0/TBD | Not started | - |
+| 43. Frontend Fixes + Analytics + Tag Cloud | v3.1 | 0/TBD | Not started | - |
+| 44. Mobile Filter Redesign | v3.1 | 0/TBD | Not started | - |
