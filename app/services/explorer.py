@@ -17,7 +17,6 @@ import re
 import time
 from typing import Optional
 
-import faiss
 import numpy as np
 import structlog
 from pydantic import BaseModel
@@ -191,28 +190,25 @@ def run_explore(
     is_text_query = bool(query.strip())
 
     if is_text_query:
-        # --- Stage 2: FAISS IDSelectorBatch ---
+        # --- Stage 2: FAISS search + post-filter to pre-filtered experts ---
         username_to_pos: dict[str, int] = app_state.username_to_faiss_pos
         faiss_index = app_state.faiss_index
 
-        allowed_positions = np.array(
-            [username_to_pos[e.username] for e in filtered_experts
-             if e.username in username_to_pos],
-            dtype=np.int64,
-        )
+        allowed_usernames = {
+            e.username for e in filtered_experts
+            if e.username in username_to_pos
+        }
 
         faiss_scores: dict[str, float] = {}
-        if len(allowed_positions) > 0:
+        if allowed_usernames:
             query_vec = np.array(embed_query(query), dtype=np.float32).reshape(1, -1)
-            selector = faiss.IDSelectorBatch(allowed_positions)
-            params = faiss.SearchParameters(sel=selector)
-            k = min(50, len(allowed_positions))
-            scores, indices = faiss_index.search(query_vec, k, params=params)
+            k = min(faiss_index.ntotal, max(50, len(allowed_usernames)))
+            scores, indices = faiss_index.search(query_vec, k)
             for score, pos in zip(scores[0], indices[0]):
                 if pos < 0:
                     continue
                 username = app_state.metadata[pos].get("Username", "")
-                if username:
+                if username and username in allowed_usernames:
                     faiss_scores[username] = float(score)
 
         # --- Stage 3: FTS5 BM25 ---

@@ -8,15 +8,15 @@ declare global {
 }
 
 export function Analytics() {
-  const location = useLocation()
+  const { pathname } = useLocation()
 
   useEffect(() => {
     if (typeof window.gtag !== 'function') return
     window.gtag('event', 'page_view', {
-      page_path: location.pathname + location.search,
+      page_path: pathname,
       page_title: document.title,
     })
-  }, [location])
+  }, [pathname])
 
   return null
 }
