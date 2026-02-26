@@ -180,10 +180,10 @@ async def photo_proxy(
         try:
             upstream_resp = await client.get(upstream_url, timeout=5.0)
         except httpx.RequestError:
-            raise HTTPException(status_code=502, detail="Upstream photo unavailable")
+            raise HTTPException(status_code=404, detail="Photo not found")
 
     if upstream_resp.status_code != 200:
-        raise HTTPException(status_code=502, detail="Upstream photo unavailable")
+        raise HTTPException(status_code=404, detail="Photo not found")
 
     content_type = upstream_resp.headers.get("content-type", "image/jpeg")
 

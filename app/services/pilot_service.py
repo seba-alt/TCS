@@ -103,7 +103,7 @@ def _detect_and_translate(message: str, client: genai.Client) -> tuple[str, str]
       - detected_lang: 'nl', 'en', or 'other'
       - english_message: English translation (or original if already English)
 
-    Uses gemini-2.0-flash-lite for speed -- this is a structured JSON extraction,
+    Uses gemini-2.5-flash-lite for speed -- this is a structured JSON extraction,
     not a complex reasoning task. Falls back to ('en', original) on any error.
     """
     prompt = (
@@ -113,7 +113,7 @@ def _detect_and_translate(message: str, client: genai.Client) -> tuple[str, str]
     )
     try:
         resp = client.models.generate_content(
-            model="gemini-2.0-flash-lite",
+            model="gemini-2.5-flash-lite",
             contents=prompt,
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",

@@ -8,11 +8,14 @@ on each keystroke (2+ chars) to populate the autocomplete dropdown.
 import asyncio
 import re
 
+import structlog
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 
 from app.database import get_db
+
+log = structlog.get_logger()
 
 router = APIRouter()
 
@@ -63,8 +66,8 @@ def _run_suggest_multi(q: str, db: Session) -> list[str]:
             # Filter out None/empty values
             col_results = [row[0] for row in rows if row[0] and row[0].strip()]
             results.extend(col_results)
-        except Exception:
-            # FTS5 MATCH can raise on malformed queries — continue to next column
+        except Exception as exc:
+            log.warning("suggest.fts5_match_failed", column=column, error=str(exc))
             continue
 
     # Deduplicate preserving insertion order, limit to 5 total

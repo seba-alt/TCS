@@ -168,13 +168,15 @@ export interface CompareExpert {
 
 /** One config column result from POST /api/admin/compare. */
 export interface CompareColumn {
-  config: 'baseline' | 'hyde' | 'feedback' | 'full'
-  label: string   // e.g. "Baseline", "HyDE Only", "Feedback Only", "Full Intelligence"
+  config: LabConfigKey
+  label: string   // e.g. "Explore (Baseline)", "Legacy HyDE Only", etc.
+  pipeline?: string  // "run_explore" or "legacy"
   experts: CompareExpert[]
   intelligence: {
     hyde_triggered: boolean
     hyde_bio: string | null
     feedback_applied: boolean
+    pipeline?: string  // "run_explore" or "legacy"
   }
 }
 
@@ -186,7 +188,10 @@ export interface CompareResponse {
 }
 
 /** Which preset configs are selected for a lab run. */
-export type LabConfigKey = 'baseline' | 'hyde' | 'feedback' | 'full'
+export type LabConfigKey =
+  | 'explore_baseline' | 'explore_full'
+  | 'legacy_baseline' | 'legacy_hyde' | 'legacy_feedback' | 'legacy_full'
+  | 'baseline' | 'hyde' | 'feedback' | 'full'
 
 /** Per-run flag overrides (applied on top of each preset, do not change global DB settings). */
 export interface LabOverrides {

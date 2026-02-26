@@ -221,25 +221,29 @@ def run_explore(
 
         bm25_scores: dict[int, float] = {}
         if safe_q:
-            fts_rows = db.execute(
-                text(
-                    "SELECT rowid, rank FROM experts_fts "
-                    "WHERE experts_fts MATCH :q "
-                    "ORDER BY rank "
-                    "LIMIT 200"
-                ),
-                {"q": safe_q},
-            ).fetchall()
+            try:
+                fts_rows = db.execute(
+                    text(
+                        "SELECT rowid, rank FROM experts_fts "
+                        "WHERE experts_fts MATCH :q "
+                        "ORDER BY rank "
+                        "LIMIT 200"
+                    ),
+                    {"q": safe_q},
+                ).fetchall()
 
-            # Filter to pre-filtered experts only
-            relevant_fts = [
-                (row.rowid, abs(row.rank))
-                for row in fts_rows
-                if row.rowid in filtered_ids
-            ]
-            if relevant_fts:
-                max_rank = max(v for _, v in relevant_fts) or 1.0
-                bm25_scores = {rid: v / max_rank for rid, v in relevant_fts}
+                # Filter to pre-filtered experts only
+                relevant_fts = [
+                    (row.rowid, abs(row.rank))
+                    for row in fts_rows
+                    if row.rowid in filtered_ids
+                ]
+                if relevant_fts:
+                    max_rank = max(v for _, v in relevant_fts) or 1.0
+                    bm25_scores = {rid: v / max_rank for rid, v in relevant_fts}
+            except Exception as exc:
+                log.warning("explore.fts5_match_failed", error=str(exc), query=safe_q)
+                # Continue without BM25 scores — FAISS results still valid
 
         # --- Score fusion + findability boost ---
         scored: list[tuple[float, float, float, Expert]] = []  # (final, faiss, bm25, expert)

@@ -1686,32 +1686,49 @@ def export_exposure_csv(days: int = 30, db: Session = Depends(get_db)):
 # ── Search Lab A/B Compare ────────────────────────────────────────────────────
 
 _LAB_CONFIGS = {
-    "baseline": {"QUERY_EXPANSION_ENABLED": False, "FEEDBACK_LEARNING_ENABLED": False},
-    "hyde":     {"QUERY_EXPANSION_ENABLED": True,  "FEEDBACK_LEARNING_ENABLED": False},
-    "feedback": {"QUERY_EXPANSION_ENABLED": False, "FEEDBACK_LEARNING_ENABLED": True},
-    "full":     {"QUERY_EXPANSION_ENABLED": True,  "FEEDBACK_LEARNING_ENABLED": True},
+    # New defaults — use run_explore() pipeline (matches live search)
+    "explore_baseline": {"pipeline": "run_explore"},
+    "explore_full":     {"pipeline": "run_explore"},  # run_explore always has feedback
+    # Legacy — use old retriever pipeline (for alignment validation)
+    "legacy_baseline":  {"pipeline": "legacy", "QUERY_EXPANSION_ENABLED": False, "FEEDBACK_LEARNING_ENABLED": False},
+    "legacy_hyde":      {"pipeline": "legacy", "QUERY_EXPANSION_ENABLED": True,  "FEEDBACK_LEARNING_ENABLED": False},
+    "legacy_feedback":  {"pipeline": "legacy", "QUERY_EXPANSION_ENABLED": False, "FEEDBACK_LEARNING_ENABLED": True},
+    "legacy_full":      {"pipeline": "legacy", "QUERY_EXPANSION_ENABLED": True,  "FEEDBACK_LEARNING_ENABLED": True},
+    # Backwards-compatible aliases (mapped to legacy for existing API consumers)
+    "baseline": {"pipeline": "legacy", "QUERY_EXPANSION_ENABLED": False, "FEEDBACK_LEARNING_ENABLED": False},
+    "hyde":     {"pipeline": "legacy", "QUERY_EXPANSION_ENABLED": True,  "FEEDBACK_LEARNING_ENABLED": False},
+    "feedback": {"pipeline": "legacy", "QUERY_EXPANSION_ENABLED": False, "FEEDBACK_LEARNING_ENABLED": True},
+    "full":     {"pipeline": "legacy", "QUERY_EXPANSION_ENABLED": True,  "FEEDBACK_LEARNING_ENABLED": True},
 }
 
 _LAB_LABELS = {
-    "baseline": "Baseline",
-    "hyde":     "HyDE Only",
-    "feedback": "Feedback Only",
-    "full":     "Full Intelligence",
+    "explore_baseline": "Explore (Baseline)",
+    "explore_full":     "Explore (Full)",
+    "legacy_baseline":  "Legacy Baseline",
+    "legacy_hyde":      "Legacy HyDE Only",
+    "legacy_feedback":  "Legacy Feedback Only",
+    "legacy_full":      "Legacy Full Intelligence",
+    # Backwards-compatible
+    "baseline": "Legacy Baseline",
+    "hyde":     "Legacy HyDE Only",
+    "feedback": "Legacy Feedback Only",
+    "full":     "Legacy Full Intelligence",
 }
 
 
 class CompareRequest(BaseModel):
     query: str = Field(..., min_length=1, max_length=2000)
     configs: list[str] = Field(
-        default=["baseline", "hyde", "feedback", "full"],
-        description="Which preset configs to run. Valid values: baseline, hyde, feedback, full.",
+        default=["explore_baseline", "explore_full", "legacy_baseline", "legacy_full"],
+        description="Which preset configs to run. Explore-prefixed use run_explore(); legacy-prefixed use FAISS retriever.",
     )
     result_count: int = Field(default=20, ge=1, le=50)
     overrides: dict[str, bool] = Field(
         default_factory=dict,
         description=(
             "Per-run flag overrides applied on top of DB settings. "
-            "Keys: QUERY_EXPANSION_ENABLED, FEEDBACK_LEARNING_ENABLED."
+            "Keys: QUERY_EXPANSION_ENABLED, FEEDBACK_LEARNING_ENABLED. "
+            "Only affects legacy pipeline configs."
         ),
     )
 
@@ -1766,6 +1783,49 @@ def _retrieve_for_lab(
     return candidates[:result_count], intelligence
 
 
+def _explore_for_lab(
+    query: str,
+    db: Session,
+    app_state,
+    result_count: int,
+) -> tuple[list, dict]:
+    """Run query through run_explore() pipeline for Search Lab.
+
+    Uses the same 3-stage hybrid search (pre-filter + FAISS IDSelector + FTS5 BM25 fusion
+    + findability boost + feedback boost) as the live /api/explore endpoint.
+    """
+    from app.services.explorer import run_explore as _run_explore
+
+    result = _run_explore(
+        query=query,
+        rate_min=0.0,
+        rate_max=10000.0,
+        tags=[],
+        limit=result_count,
+        cursor=0,
+        db=db,
+        app_state=app_state,
+    )
+
+    experts = [
+        {
+            "rank": i + 1,
+            "name": f"{e.first_name} {e.last_name}",
+            "title": e.job_title,
+            "score": round(e.final_score, 4),
+            "profile_url": getattr(e, 'profile_url', None),
+        }
+        for i, e in enumerate(result.experts)
+    ]
+    intelligence = {
+        "hyde_triggered": False,
+        "hyde_bio": None,
+        "feedback_applied": True,  # run_explore always applies inline feedback boost
+        "pipeline": "run_explore",
+    }
+    return experts, intelligence
+
+
 @router.post("/compare")
 def compare_configs(
     body: CompareRequest,
@@ -1773,20 +1833,24 @@ def compare_configs(
     db: Session = Depends(get_db),
 ):
     """
-    Run a query through up to 4 intelligence configs in parallel and return
+    Run a query through multiple pipeline configs in parallel and return
     ranked expert results for each config without writing to the DB.
+
+    Supports two pipelines:
+    - run_explore: live 3-stage hybrid search (matches what users see)
+    - legacy: FAISS-only retriever with HyDE/feedback toggles
 
     Request body:
         query        — natural language query (1-2000 chars)
-        configs      — list of preset names (default: all 4)
+        configs      — list of preset names (default: explore + legacy comparison)
         result_count — max experts to return per config (1-50, default 20)
-        overrides    — per-run flag overrides (applied on top of each preset)
+        overrides    — per-run flag overrides (legacy configs only)
 
     Response shape:
         {"columns": [...], "query": str, "overrides_applied": {}}
 
     Each column:
-        {"config": str, "label": str, "experts": [...], "intelligence": {...}}
+        {"config": str, "label": str, "pipeline": str, "experts": [...], "intelligence": {...}}
     """
     # Validate config names
     unknown = [c for c in body.configs if c not in _LAB_CONFIGS]
@@ -1798,10 +1862,11 @@ def compare_configs(
 
     faiss_index = request.app.state.faiss_index
     metadata = request.app.state.metadata
+    app_state = request.app.state
 
-    # Build per-config flag dicts: preset merged with per-run overrides
+    # Build per-config flag dicts: preset flags (overrides only applied to legacy configs in _run_one)
     config_flag_pairs = [
-        (name, {**_LAB_CONFIGS[name], **body.overrides})
+        (name, {**_LAB_CONFIGS[name]})
         for name in body.configs
     ]
 
@@ -1809,25 +1874,40 @@ def compare_configs(
     # Each thread gets its own Session — SQLAlchemy Sessions are not thread-safe.
     def _run_one(args):
         name, flags = args
+        pipeline = flags.get("pipeline", "legacy")
         thread_db = SessionLocal()
         try:
-            candidates, intelligence = _retrieve_for_lab(
-                body.query, faiss_index, metadata, thread_db, flags, body.result_count
-            )
+            if pipeline == "run_explore":
+                experts, intelligence = _explore_for_lab(
+                    body.query, thread_db, app_state, body.result_count
+                )
+                # _explore_for_lab returns pre-serialized experts list
+                return name, experts, intelligence
+            else:
+                # Legacy pipeline (original behavior)
+                config_flags = {k: v for k, v in flags.items() if k != "pipeline"}
+                config_flags.update(body.overrides)
+                candidates, intelligence = _retrieve_for_lab(
+                    body.query, faiss_index, metadata, thread_db, config_flags, body.result_count
+                )
+                intelligence["pipeline"] = "legacy"
+                return name, candidates, intelligence
         finally:
             thread_db.close()
-        return name, candidates, intelligence
 
     with ThreadPoolExecutor(max_workers=len(config_flag_pairs)) as executor:
         results = list(executor.map(_run_one, config_flag_pairs))
 
     # Serialize columns
     columns = []
-    for name, candidates, intelligence in results:
-        columns.append({
-            "config": name,
-            "label": _LAB_LABELS[name],
-            "experts": [
+    for name, result_data, intelligence in results:
+        pipeline = intelligence.get("pipeline", "legacy")
+        if pipeline == "run_explore":
+            # Already serialized by _explore_for_lab
+            experts_serialized = result_data
+        else:
+            # Legacy — serialize RetrievedExpert objects
+            experts_serialized = [
                 {
                     "rank": i + 1,
                     "name": c.name,
@@ -1835,8 +1915,13 @@ def compare_configs(
                     "score": round(c.score, 4),
                     "profile_url": c.profile_url,
                 }
-                for i, c in enumerate(candidates)
-            ],
+                for i, c in enumerate(result_data)
+            ]
+        columns.append({
+            "config": name,
+            "label": _LAB_LABELS.get(name, name),
+            "pipeline": pipeline,
+            "experts": experts_serialized,
             "intelligence": intelligence,
         })
 

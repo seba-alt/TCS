@@ -77,7 +77,7 @@ See `.planning/milestones/v3.0-ROADMAP.md`
 **Milestone Goal:** Harden the platform for public launch — remove sensitive data, fix production errors, align Search Lab with the live pipeline, and improve mobile UX and analytics.
 
 - [x] **Phase 41: Expert Email Purge** — Remove expert PII before any public traffic reaches the platform (completed 2026-02-26)
-- [ ] **Phase 42: Backend Error Hardening** — Fix all backend Sentry errors and align Search Lab pipeline
+- [x] **Phase 42: Backend Error Hardening** — Fix all backend Sentry errors and align Search Lab pipeline (completed 2026-02-26)
 - [ ] **Phase 43: Frontend Fixes + Analytics + Tag Cloud** — Fix redirect loop, add GA4, expand tag cloud
 - [ ] **Phase 44: Mobile Filter Redesign** — Replace Vaul bottom-sheet filters with inline dropdown controls
 
@@ -106,10 +106,10 @@ Plans:
   3. Dutch text submitted to Sage is correctly detected and translated using the updated Gemini model
   4. Search Lab query results use the same run_explore() pipeline as the search bar and Sage
   5. Search Lab A/B comparison still supports toggling HyDE and feedback as per-run overrides on top of the aligned pipeline
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 Plans:
-- [ ] 42-01-PLAN.md — Fix photo proxy 502s, harden FTS5 MATCH, replace deprecated Gemini model
-- [ ] 42-02-PLAN.md — Align Search Lab with run_explore() pipeline, add pipeline labels
+- [x] 42-01-PLAN.md — Fix photo proxy 502s, harden FTS5 MATCH, replace deprecated Gemini model
+- [x] 42-02-PLAN.md — Align Search Lab with run_explore() pipeline, add pipeline labels
 
 ### Phase 43: Frontend Fixes + Analytics + Tag Cloud
 **Goal**: The React redirect loop is eliminated, GA4 tracks every page view from launch day, and the desktop tag cloud shows 18-20 tags
@@ -146,6 +146,6 @@ Plans:
 | 28-35. Sage Evolution | v2.3 | 17/17 | Complete | 2026-02-24 |
 | 36-40.3.1. Browse & Navigation | v3.0 | 19/19 | Complete | 2026-02-26 |
 | 41. Expert Email Purge | 1/1 | Complete    | 2026-02-26 | - |
-| 42. Backend Error Hardening | v3.1 | 0/2 | Planned | - |
+| 42. Backend Error Hardening | v3.1 | 2/2 | Complete | 2026-02-26 |
 | 43. Frontend Fixes + Analytics + Tag Cloud | v3.1 | 0/TBD | Not started | - |
 | 44. Mobile Filter Redesign | v3.1 | 0/TBD | Not started | - |

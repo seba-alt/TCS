@@ -5,10 +5,12 @@ import type { CompareResponse, CompareColumn, CompareExpert, LabConfigKey, LabOv
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const CONFIG_OPTIONS: { key: LabConfigKey; label: string; description: string }[] = [
-  { key: 'baseline', label: 'Baseline',           description: 'No intelligence features' },
-  { key: 'hyde',     label: 'HyDE Only',          description: 'Query expansion on weak queries' },
-  { key: 'feedback', label: 'Feedback Only',       description: 'Re-ranking by thumbs feedback' },
-  { key: 'full',     label: 'Full Intelligence',   description: 'Both HyDE + feedback re-ranking' },
+  { key: 'explore_baseline', label: 'Explore (Baseline)',       description: 'Live search pipeline — no intelligence overrides' },
+  { key: 'explore_full',     label: 'Explore (Full)',           description: 'Live search pipeline — matches what users see' },
+  { key: 'legacy_baseline',  label: 'Legacy Baseline',          description: 'FAISS-only retriever, no intelligence' },
+  { key: 'legacy_hyde',      label: 'Legacy HyDE Only',         description: 'FAISS retriever + HyDE query expansion' },
+  { key: 'legacy_feedback',  label: 'Legacy Feedback Only',     description: 'FAISS retriever + feedback re-ranking' },
+  { key: 'legacy_full',      label: 'Legacy Full Intelligence', description: 'FAISS retriever + HyDE + feedback' },
 ]
 
 // ── Sub-components ────────────────────────────────────────────────────────────
@@ -29,6 +31,21 @@ function CompareColumnCard({ column, diffMode, baselineColumn, allColumns }: Com
       <div className="px-4 py-3 border-b border-slate-700/60 bg-slate-900/40">
         <p className="text-sm font-semibold text-white">{column.label}</p>
         <div className="flex flex-wrap gap-1.5 mt-1.5">
+          {/* Pipeline label — shows which pipeline produced results */}
+          <span
+            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${
+              column.pipeline === 'run_explore'
+                ? 'bg-emerald-900/50 text-emerald-300 border-emerald-700/50'
+                : 'bg-slate-700/50 text-slate-400 border-slate-600/50'
+            }`}
+          >
+            <span
+              className={`w-1 h-1 rounded-full ${
+                column.pipeline === 'run_explore' ? 'bg-emerald-400' : 'bg-slate-500'
+              }`}
+            />
+            {column.pipeline === 'run_explore' ? 'run_explore' : 'legacy'}
+          </span>
           <span
             className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${
               column.intelligence.hyde_triggered
@@ -85,7 +102,7 @@ function CompareColumnCard({ column, diffMode, baselineColumn, allColumns }: Com
           let rowClass = ''
           let deltaBadge: React.ReactNode = null
 
-          if (diffMode && baselineColumn && column.config !== 'baseline') {
+          if (diffMode && baselineColumn && column.config !== baselineColumn.config) {
             const baselineRank = baselineColumn.experts.find(e => e.name === expert.name)?.rank ?? null
             isNew = baselineRank === null
             delta = baselineRank !== null ? baselineRank - expert.rank : null
@@ -138,7 +155,7 @@ function CompareColumnCard({ column, diffMode, baselineColumn, allColumns }: Com
 export default function SearchLabPage() {
   const [query, setQuery]                     = useState('')
   const [panelOpen, setPanelOpen]             = useState(true)
-  const [selectedConfigs, setSelectedConfigs] = useState<LabConfigKey[]>(['baseline', 'hyde', 'feedback', 'full'])
+  const [selectedConfigs, setSelectedConfigs] = useState<LabConfigKey[]>(['explore_baseline', 'explore_full', 'legacy_baseline', 'legacy_full'])
   const [resultCount, setResultCount]         = useState(20)
   const [overrides, setOverrides]             = useState<LabOverrides>({})
   const [compareResult, setCompareResult]     = useState<CompareResponse | null>(null)
@@ -298,7 +315,7 @@ export default function SearchLabPage() {
             <div>
               <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
                 Per-run Overrides
-                <span className="ml-2 text-slate-600 normal-case font-normal">(overrides preset configs, does not change global settings)</span>
+                <span className="ml-2 text-slate-600 normal-case font-normal">(affects legacy configs only, does not change global settings)</span>
               </p>
               <div className="space-y-2">
                 <label className="flex items-center gap-3 cursor-pointer select-none group">
@@ -395,7 +412,7 @@ export default function SearchLabPage() {
                   key={col.config}
                   column={col}
                   diffMode={diffMode}
-                  baselineColumn={compareResult.columns.find(c => c.config === 'baseline')}
+                  baselineColumn={compareResult.columns[0]}
                   allColumns={compareResult.columns}
                 />
               ))}
