@@ -134,7 +134,9 @@ Plans:
   3. The search bar spans the full viewport width on mobile
   4. The active filter count badge reflects the current filter state after the Vaul bottom-sheet is removed
   5. The Sage mobile bottom sheet (using Vaul) continues to open and function correctly
-**Plans**: TBD
+**Plans:** 1 plan
+Plans:
+- [ ] 44-01-PLAN.md — Replace MobileFilterSheet with inline filters, full-width mobile search bar
 
 ## Progress
 
@@ -150,4 +152,4 @@ Plans:
 | 41. Expert Email Purge | 1/1 | Complete    | 2026-02-26 | - |
 | 42. Backend Error Hardening | v3.1 | 2/2 | Complete | 2026-02-26 |
 | 43. Frontend Fixes + Analytics + Tag Cloud | v3.1 | Complete    | 2026-02-26 | 2026-02-26 |
-| 44. Mobile Filter Redesign | v3.1 | 0/TBD | Not started | - |
+| 44. Mobile Filter Redesign | v3.1 | 0/1 | Planned | - |
