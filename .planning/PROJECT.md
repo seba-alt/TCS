@@ -2,7 +2,7 @@
 
 ## What This Is
 
-A professional Expert Marketplace for the Tinrate platform. Users browse a pool of 530 vetted experts via an immersive aurora-aesthetic marketplace — glassmorphic Command Center header with animated search, spring expert count, and Sage-in-flight pulse; animated aurora mesh background; bento-style expert cards; animated claymorphic tag cloud with proximity-based scaling; and a floating Sage AI co-pilot that actively searches experts via FAISS and injects results directly into the grid. User behavior (card clicks, Sage queries, filter changes) is tracked for marketplace intelligence. A newsletter gate captures leads on "View Full Profile". The admin dashboard includes restructured 3-section navigation, marketplace intelligence (unmet demand, expert exposure, Sage trends), index management, and intelligence metrics. Playful users can trigger barrel rolls and a "tinrate" header tilt easter egg.
+A professional Expert Marketplace for the Tinrate platform. Users discover 530 vetted experts via an immersive aurora-aesthetic Explorer — glassmorphic Command Center header with autocomplete search (debounced suggestions for job titles, companies, and tags), spring expert count, and Sage-in-flight pulse; animated aurora mesh background; bento-style expert cards with profile photos and monogram fallback; animated claymorphic tag cloud with proximity-based scaling; and a floating Sage AI co-pilot that actively searches experts via FAISS and injects results directly into the grid. Mobile-optimized with tap-expand cards, Sage bottom sheet, and responsive compact header. Expert bookmarking with localStorage persistence. User behavior (card clicks, Sage queries, filter changes) is tracked for marketplace intelligence. A newsletter gate captures leads on "View Full Profile". The admin dashboard includes restructured 3-section navigation, marketplace intelligence (unmet demand, expert exposure, Sage trends), index management, and intelligence metrics. Playful users can trigger barrel rolls and a "tinrate" header tilt easter egg.
 
 ## Core Value
 
@@ -65,24 +65,18 @@ A user describes any problem and instantly gets expertly matched professionals t
 - ✓ OverviewPage dashboard — top zero-result queries card, Sage volume sparkline, API health above the fold — v2.3
 - ✓ NULL gap detection fix — all 8 admin query sites correctly count zero-candidate searches — v2.3
 - ✓ Dutch language auto-detection and server-side translation for Sage FAISS search — v2.3
+- ✓ Expert profile photos: bulk CSV import, photo proxy endpoint with HTTPS/cache, monogram fallback — v3.0
+- ✓ Route reorganization: `/` → Explorer (was `/marketplace`), legacy redirects preserved — v3.0
+- ✓ Search autocomplete with debounced FTS5 suggestion dropdown (job titles, companies, tags) — v3.0
+- ✓ Non-live grid updates: search commits on Enter key or suggestion selection — v3.0
+- ✓ Mobile tap-expand expert cards within fixed VirtuosoGrid height — v3.0
+- ✓ Sage bottom sheet (Vaul) for mobile with auto-close after discovery — v3.0
+- ✓ Responsive layout: compact header on mobile, hidden expert count, hidden md:block split for Sage — v3.0
+- ✓ Saved/bookmarked experts with localStorage persistence and toolbar button — v3.0
 
 ### Active
 
-#### v3.0 Netflix Browse & Agentic Navigation
-
-- [ ] Netflix-style Browse page as new landing experience at `/`
-- [ ] Billboard Hero with algorithmically featured expert, photo, holographic badge, "Start Discovery" CTA
-- [ ] Horizontal scrolling category rows (trending tags, recently joined, most clicked, highest findability)
-- [ ] Glassmorphic expert cards with large photos, name + rate overlay, hover reveals tags
-- [ ] "Explore All Experts" header button deep-linking to Explorer
-- [ ] Expert profile photos ingested from new CSV and served to frontend
-- [ ] Sage floating FAB visible on Browse page
-- [ ] Sage discovery intent triggers auto-navigation from Browse to Explorer with results
-- [ ] Sage conversation history preserved across page transition
-- [ ] Single Zustand store powers both Browse and Explorer pages
-- [ ] Aurora "Loading Mesh" transition effect between pages
-- [ ] "Continue Browsing" breadcrumb on Explorer page
-- [ ] Route reorganization: `/` → Browse, `/explore` → Explorer (was `/marketplace`)
+(No active requirements — next milestone not yet defined. Use `/gsd:new-milestone` to start.)
 
 ### Out of Scope
 
@@ -95,6 +89,15 @@ A user describes any problem and instantly gets expertly matched professionals t
 - In-app match report download (LEAD-03) — deferred to v2.1 backlog
 
 ## Shipped Versions
+
+### v3.0 Netflix Browse & Agentic Navigation — Shipped 2026-02-26
+- Browse page built (Netflix-style horizontal category rows, glassmorphic cards, hero banner, Sage cross-page navigation) then removed in favor of Explorer-only architecture
+- Expert photo system: bulk CSV import, photo proxy endpoint with HTTPS enforcement and 24h cache, monogram initials fallback
+- Search autocomplete: debounced FTS5 suggestion dropdown with job titles, companies, and client-side tag matching; non-live grid (Enter to commit)
+- Mobile optimization: tap-expand expert cards (content swap within fixed 180px VirtuosoGrid height), Sage bottom sheet via Vaul, responsive compact header
+- Expert bookmarking: localStorage-persisted saved experts with toolbar button (mobile icon+count, desktop pill)
+- Route simplification: Explorer at `/`, legacy `/marketplace` and `/explore` redirects, Browse page removed
+- Archive: `.planning/milestones/v3.0-ROADMAP.md`
 
 ### v2.3 Sage Evolution & Marketplace Intelligence — Shipped 2026-02-24
 - Sage active search engine: `search_experts` Gemini function calls `/api/explore` in-process; results narrated in panel + synced to grid; zero-result fallback handling
@@ -150,19 +153,19 @@ A user describes any problem and instantly gets expertly matched professionals t
 
 ## Current State
 
-**Deployed version:** v2.3 (Railway + Vercel, auto-deploys on push to main)
-**Expert pool:** 530 experts (data/metadata.json), all AI-tagged; FAISS index at 530 vectors
-**Search intelligence:** Three-stage hybrid pipeline live; HyDE + feedback re-ranking toggled via admin steering panel
-**Sage AI:** Active search engine — discovers experts via FAISS, injects results directly into grid, "smart funny friend" personality, Dutch auto-detection
-**Marketplace:** Immersive aurora-aesthetic marketplace with glassmorphic Command Center header, bento cards, animated tag cloud, Sage AI co-pilot; behavior tracking (card clicks, queries, filter changes); newsletter gate on profile clicks
+**Deployed version:** v3.0 (Railway + Vercel, auto-deploys on push to main)
+**Expert pool:** 530 experts (data/metadata.json), all AI-tagged; FAISS index at 530 vectors; profile photos via proxy endpoint
+**Search intelligence:** Three-stage hybrid pipeline live; HyDE + feedback re-ranking toggled via admin steering panel; FTS5 autocomplete suggestions
+**Sage AI:** Active search engine — discovers experts via FAISS, injects results directly into grid, "smart funny friend" personality, Dutch auto-detection; mobile Sage bottom sheet (Vaul)
+**Explorer:** Single-page aurora-aesthetic marketplace at `/` with glassmorphic Command Center header, autocomplete search (debounced suggestions), bento cards with photos/monograms, animated tag cloud, tap-expand mobile cards, Sage AI co-pilot; bookmarking; behavior tracking; newsletter gate
 **Admin panel:** 3-section sidebar (Analytics/Tools/Admin); OverviewPage dashboard with zero-result queries + Sage sparkline; Marketplace Intelligence (demand/exposure/trends); ToolsPage (Search Lab/Score Explainer/Index); Intelligence tab with OTR@K, Index Drift, t-SNE
-**Next milestone:** v3.0 Netflix Browse & Agentic Navigation
+**Next milestone:** Not yet defined — use `/gsd:new-milestone` to start
 
 ## Context
 
 - **Expert data:** SQLite table with 530 profiles; FAISS index at 530 tag-enriched vectors; all experts AI-tagged with 3–8 domain tags + findability scores
 - **AI stack:** Google GenAI (gemini-embedding-001) for embeddings, Gemini 2.5 Flash for generation + Sage function calling, Gemini flash-lite for Dutch detection
-- **Codebase:** ~8,315 LOC TypeScript/TSX · ~4,766 LOC Python (13,081 total)
+- **Codebase:** ~14,297 LOC TypeScript/TSX + Python
 - **Deployed:** Railway (FastAPI + SQLite + FAISS) + Vercel (React/Vite/Tailwind v3)
 - **Live since:** 2026-02-20
 - **Behavior tracking:** `user_events` table with card_click, sage_query, filter_change events; fire-and-forget frontend instrumentation
@@ -238,16 +241,5 @@ A user describes any problem and instantly gets expertly matched professionals t
 | Cold-start guard per-section (not page-level) | Each section (demand, exposure, trend) independently checks its own data_since === null — prevents one endpoint's empty state from hiding another section's data | ✓ Good — sections degrade independently |
 
 ---
-## Current Milestone: v3.0 Netflix Browse & Agentic Navigation
-
-**Goal:** Reimagine expert discovery as a high-end streaming service — Netflix-style Browse page hooks users with curated categories, Sage conducts them to the Explorer for deep discovery.
-
-**Target features:**
-- Netflix-style Browse page with horizontal scrolling expert categories
-- Billboard Hero with algorithmically featured expert and photos
-- Sage as cross-page navigator (Browse → Explorer)
-- Shared Zustand state and aurora transition between pages
-- Expert profile photo support from new CSV
-
 ---
-*Last updated: 2026-02-24 after v3.0 milestone start*
+*Last updated: 2026-02-26 after v3.0 milestone*

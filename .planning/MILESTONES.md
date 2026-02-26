@@ -104,3 +104,29 @@
 
 ---
 
+
+## v3.0 Netflix Browse & Agentic Navigation (Shipped: 2026-02-26)
+
+**Phases completed:** 9 phases (36–40.3.1), 19 plans
+**Timeline:** 2 days (2026-02-24 → 2026-02-26)
+**Codebase:** ~14,297 LOC TypeScript/TSX + Python
+**Files modified:** 100 (+13,792 / -1,916)
+**Git range:** 712f77c → 2d5fb3a
+
+**Key accomplishments:**
+1. Netflix-style Browse page with horizontal category rows, glassmorphic cards with photos/monograms, hero banner carousel, and skeleton loading
+2. Expert photo system: bulk CSV import endpoint, photo proxy with HTTPS enforcement and 24h cache, monogram initials fallback
+3. Sage cross-page navigation: FAB at root layout level, conversation history preserved across page transitions, discovery auto-navigation with 2s delay
+4. Reverted to Explorer-only architecture: Browse page removed, Explorer as sole discovery surface at `/`, simplified Zustand store (navigationSlice deleted)
+5. Search autocomplete with debounced suggestion dropdown (job title + company + tags), non-live grid updates (Enter to commit), keyboard navigation
+6. Mobile optimization: tap-expand expert cards within fixed VirtuosoGrid height, Sage bottom sheet via Vaul, responsive layout with compact header
+
+**Note:** Milestone evolved significantly — Browse page was built (Phases 36-40.2), then removed in favor of Explorer-only (Phase 40.3), with search and mobile improvements added (Phase 40.3.1).
+
+**Archive:**
+- Roadmap: `.planning/milestones/v3.0-ROADMAP.md`
+- Requirements: `.planning/milestones/v3.0-REQUIREMENTS.md`
+- Audit: `.planning/milestones/v3.0-MILESTONE-AUDIT.md`
+
+---
+
