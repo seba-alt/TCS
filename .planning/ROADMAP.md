@@ -171,6 +171,17 @@ Plans:
 - [x] 40.3-01-PLAN.md — Delete Browse components, restructure routes, remove navigationSlice
 - [x] 40.3-02-PLAN.md — Simplify Sage/layout for single page, make Header mobile-visible
 
+### Phase 40.3.1: Search Improvements & Mobile Optimization (INSERTED)
+
+**Goal:** Add search autocomplete with debounced suggestion dropdown, change search to commit-on-Enter, and optimize mobile experience with tap-expand cards and Sage bottom sheet
+**Depends on:** Phase 40.3
+**Requirements:** SEARCH-01, MOBILE-01, MOBILE-02, MOBILE-03
+**Plans:** 2 plans
+
+Plans:
+- [ ] 40.3.1-01-PLAN.md — Search autocomplete dropdown + non-live search + X clear button
+- [ ] 40.3.1-02-PLAN.md — Mobile tap-expand cards + Sage bottom sheet + responsive layout
+
 ### Phase 40.2: UAT fixes and Browse Explorer enhancements (INSERTED)
 
 **Goal:** Fix Browse UAT issues (card alignment, hero taglines, email gate, Sage search) and add Explorer enhancements (profile photos, Clear All pill, save/bookmark)
