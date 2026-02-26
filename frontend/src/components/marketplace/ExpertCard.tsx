@@ -31,6 +31,9 @@ export function ExpertCard({ expert, onViewProfile, context = 'grid', rank }: Ex
   const [imgError, setImgError] = useState(false)
   const showPhoto = Boolean(expert.photo_url) && !imgError
 
+  // Tap-expand state — mobile first tap expands card, second tap opens profile
+  const [expanded, setExpanded] = useState(false)
+
   // Bookmark state — reactive via Zustand (no local state needed)
   const { savedExperts, toggleSavedExpert } = useFilterSlice()
   const isSaved = savedExperts.includes(expert.username)
@@ -40,12 +43,42 @@ export function ExpertCard({ expert, onViewProfile, context = 'grid', rank }: Ex
     toggleSavedExpert(expert.username)
   }
 
+  // Card-level click: first tap expands, second tap opens profile
+  function handleCardClick() {
+    if (!expanded) {
+      setExpanded(true)
+    } else {
+      // Track card click — fire-and-forget, never await
+      const storeState = useExplorerStore.getState()
+      void trackEvent('card_click', {
+        expert_id: expert.username,
+        context,
+        rank,
+        active_filters: {
+          query: storeState.query,
+          rate_min: storeState.rateMin,
+          rate_max: storeState.rateMax,
+          tags: storeState.tags,
+        },
+      })
+      onViewProfile(expert.profile_url)
+    }
+  }
+
   // Match reason only makes sense when a semantic filter is active (query or tags).
   // Price range is excluded — it provides no semantic context for a "match reason".
   const hasSemanticFilter = query.trim().length > 0 || tags.length > 0
 
   return (
-    <div className="expert-card bg-white/90 rounded-xl border border-gray-100 p-4 flex flex-col gap-1.5 h-[180px] overflow-hidden">
+    <div
+      className={`expert-card bg-white/90 rounded-xl border border-gray-100 p-3 sm:p-4 flex flex-col gap-1.5 h-[180px] overflow-hidden cursor-pointer transition-all duration-150 ${expanded ? 'ring-2 ring-brand-purple/30' : ''}`}
+      onClick={handleCardClick}
+      tabIndex={0}
+      onBlur={() => setExpanded(false)}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleCardClick() }}
+      role="button"
+      aria-expanded={expanded}
+    >
 
       {/* Zone A: photo + name/role/company + bookmark — flex-shrink-0, content drives height (~52px) */}
       <div className="flex-shrink-0 min-w-0 flex items-start gap-2">
@@ -88,13 +121,13 @@ export function ExpertCard({ expert, onViewProfile, context = 'grid', rank }: Ex
         )}
       </div>
 
-      {/* Zone C: Domain tag pills — flex-shrink-0, hidden on mobile, no-wrap so partial tags
-          are fully hidden (overflow-hidden + flex-nowrap = tags either fit or are invisible) */}
-      <div className="flex-shrink-0 hidden sm:flex flex-nowrap gap-1 overflow-hidden">
+      {/* Zone C: Domain tag pills — hidden on mobile by default, shown when expanded.
+          flex-shrink-0, no-wrap so partial tags are fully hidden (overflow-hidden + flex-nowrap) */}
+      <div className={`flex-shrink-0 ${expanded ? 'flex' : 'hidden sm:flex'} flex-nowrap gap-1 overflow-hidden`}>
         {expert.tags.slice(0, 2).map((tag) => (
           <button
             key={tag}
-            onClick={() => toggleTag(tag)}
+            onClick={(e) => { e.stopPropagation(); toggleTag(tag) }}
             className="flex-shrink-0 cursor-pointer text-xs bg-gray-100/80 text-gray-600 rounded-full px-2 py-0.5 hover:bg-brand-purple hover:text-white transition-colors whitespace-nowrap"
           >
             {tag}
@@ -105,35 +138,17 @@ export function ExpertCard({ expert, onViewProfile, context = 'grid', rank }: Ex
       {/* Zone D: match reason + View Profile — flex-1 min-h-0, bento separator, justify-between
           pins match reason to top and View Profile to bottom */}
       <div className="flex-1 min-h-0 flex flex-col justify-between border-t border-gray-100/60 pt-1.5">
+        {/* Match reason: always show on desktop; show on mobile only when expanded */}
         {hasSemanticFilter && expert.match_reason && (
-          <p className="text-xs text-gray-500 line-clamp-2">
+          <p className={`text-xs text-gray-500 line-clamp-2 ${expanded ? '' : 'hidden sm:block'}`}>
             {expert.match_reason}
           </p>
         )}
 
-        {/* View Full Profile — always rendered, mt-auto self-start pins to bottom */}
-        <button
-          onClick={(e) => {
-            e.stopPropagation()
-            // Track card click — fire-and-forget, never await
-            const storeState = useExplorerStore.getState()
-            void trackEvent('card_click', {
-              expert_id: expert.username,
-              context,
-              rank,
-              active_filters: {
-                query: storeState.query,
-                rate_min: storeState.rateMin,
-                rate_max: storeState.rateMax,
-                tags: storeState.tags,
-              },
-            })
-            onViewProfile(expert.profile_url)
-          }}
-          className="mt-auto cursor-pointer text-xs text-brand-purple font-medium hover:underline self-start"
-        >
-          View Full Profile →
-        </button>
+        {/* View Full Profile — text changes on mobile when expanded to guide second tap */}
+        <p className="mt-auto cursor-pointer text-xs text-brand-purple font-medium hover:underline self-start">
+          {expanded ? 'Tap again to view profile →' : 'View Full Profile →'}
+        </p>
       </div>
     </div>
   )
