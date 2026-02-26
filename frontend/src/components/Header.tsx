@@ -3,6 +3,23 @@ import { useEffect, useState, useRef } from 'react'
 import { Search, X } from 'lucide-react'
 import { useHeaderSearch } from '../hooks/useHeaderSearch'
 
+function useMobileScrollCollapse() {
+  const [collapsed, setCollapsed] = useState(false)
+  useEffect(() => {
+    const grid = document.querySelector('[data-virtuoso-scroller]') ?? window
+    let lastY = 0
+    const onScroll = () => {
+      const y = grid === window ? window.scrollY : (grid as HTMLElement).scrollTop
+      if (y > 48 && y > lastY) setCollapsed(true)
+      if (y < lastY - 4) setCollapsed(false)
+      lastY = y
+    }
+    grid.addEventListener('scroll', onScroll, { passive: true })
+    return () => grid.removeEventListener('scroll', onScroll)
+  }, [])
+  return collapsed
+}
+
 export default function Header() {
   const {
     localValue,
@@ -57,14 +74,35 @@ export default function Header() {
   // Focus state for search bar scale
   const [isFocused, setIsFocused] = useState(false)
 
+  const bannerCollapsed = useMobileScrollCollapse()
+
   return (
     <motion.header
       style={{
         rotate,
         background: 'radial-gradient(circle at top right, rgba(139,92,246,0.09) 0%, transparent 60%)',
       }}
-      className="flex items-center gap-3 md:gap-6 px-3 md:px-6 py-2 md:py-3 sticky top-0 z-50 backdrop-blur-md bg-white/70 border-b border-white/20"
+      className="flex flex-col md:flex-row md:items-center gap-0 md:gap-6 px-3 md:px-6 py-0 md:py-3 sticky top-0 z-50 backdrop-blur-md bg-white/70 border-b border-white/20"
     >
+      {/* Mobile Tinrate banner — collapses on scroll */}
+      <motion.div
+        animate={{ height: bannerCollapsed ? 0 : 'auto', opacity: bannerCollapsed ? 0 : 1 }}
+        transition={{ duration: 0.2, ease: 'easeOut' }}
+        className="overflow-hidden md:hidden"
+      >
+        <div className="flex items-center justify-center py-2">
+          <img
+            src="/logo.png"
+            alt="Tinrate"
+            className="h-5 w-auto"
+            style={{ filter: 'drop-shadow(0 0 10px rgba(139,92,246,0.25))' }}
+          />
+        </div>
+      </motion.div>
+
+      {/* Search row on mobile / main header row on desktop */}
+      <div className="flex items-center gap-3 md:gap-6 py-2 md:py-0 flex-1">
+
       {/* Logo section with particle burst — hidden on mobile to allow full-width search bar */}
       <div className="relative shrink-0 hidden md:block">
         <img
@@ -203,6 +241,8 @@ export default function Header() {
         <span className="font-semibold text-slate-700">{displayCount.toLocaleString()}</span>
         {' experts'}
       </div>
+
+      </div>{/* end search row wrapper */}
     </motion.header>
   )
 }
