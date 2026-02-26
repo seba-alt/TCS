@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Bookmark, SlidersHorizontal } from 'lucide-react'
+import { Bookmark } from 'lucide-react'
 import { useExplorerStore, useFilterSlice } from '../store'
 import { useExplore } from '../hooks/useExplore'
 import { useUrlSync } from '../hooks/useUrlSync'
@@ -9,7 +9,7 @@ import Header from '../components/Header'
 import { FilterSidebar } from '../components/sidebar/FilterSidebar'
 import { FilterChips } from '../components/marketplace/FilterChips'
 import { ExpertGrid } from '../components/marketplace/ExpertGrid'
-import { MobileFilterSheet } from '../components/sidebar/MobileFilterSheet'
+import { MobileInlineFilters } from '../components/marketplace/MobileInlineFilters'
 import { NewsletterGateModal } from '../components/marketplace/NewsletterGateModal'
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
@@ -27,12 +27,8 @@ export default function MarketplacePage() {
   const experts = useExplorerStore((s) => s.experts)
   const isFetchingMore = useExplorerStore((s) => s.isFetchingMore)
 
-  // Mobile filter sheet state
-  const [sheetOpen, setSheetOpen] = useState(false)
-
-  // Filter summary for mobile toolbar badge + Saved button
-  const { tags, query, savedExperts, savedFilter, setSavedFilter } = useFilterSlice()
-  const activeFilterCount = tags.length + (query ? 1 : 0)
+  // Filter summary for Saved button
+  const { savedExperts, savedFilter, setSavedFilter } = useFilterSlice()
   const savedCount = savedExperts.length
 
   // Newsletter gate state — NLTR-01/03
@@ -95,39 +91,8 @@ export default function MarketplacePage() {
 
         {/* Main content area */}
         <main className="flex-1 flex flex-col min-h-0">
-          {/* Mobile toolbar — visible only on mobile */}
-          <div className="md:hidden flex items-center justify-between px-4 py-3 border-b border-gray-100 shrink-0">
-            <h1 className="text-lg font-semibold text-gray-900">Experts</h1>
-            <div className="flex items-center gap-2">
-              {/* Saved button — compact icon + count, only shown when bookmarks exist */}
-              {savedCount > 0 && (
-                <button
-                  onClick={() => setSavedFilter(!savedFilter)}
-                  className={`flex items-center gap-1 text-sm rounded-md px-2.5 py-1.5 transition-colors ${
-                    savedFilter
-                      ? 'bg-brand-purple text-white'
-                      : 'border border-gray-300 text-gray-700'
-                  }`}
-                  aria-label={savedFilter ? 'Show all experts' : 'Show saved experts'}
-                >
-                  <Bookmark size={16} className={savedFilter ? 'fill-current' : ''} />
-                  {savedCount}
-                </button>
-              )}
-              <button
-                onClick={() => setSheetOpen(true)}
-                className="flex items-center gap-1.5 text-sm border border-gray-300 rounded-md px-3 py-1.5"
-              >
-                <SlidersHorizontal size={16} />
-                Filters
-                {activeFilterCount > 0 && (
-                  <span className="bg-brand-purple text-white text-xs rounded-full px-1.5 py-0.5 leading-none">
-                    {activeFilterCount}
-                  </span>
-                )}
-              </button>
-            </div>
-          </div>
+          {/* Mobile inline filters — visible only on mobile, replaces MobileFilterSheet drawer */}
+          <MobileInlineFilters />
 
           {/* Desktop Saved button — above filter chips strip, right-aligned, only on desktop */}
           {savedCount > 0 && (
@@ -162,9 +127,6 @@ export default function MarketplacePage() {
           </div>
         </main>
       </div>
-
-      {/* Mobile filter bottom-sheet */}
-      <MobileFilterSheet open={sheetOpen} onClose={() => setSheetOpen(false)} />
 
       {/* Sage FAB + Panel now rendered by RootLayout (Phase 39) */}
 
