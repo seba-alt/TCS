@@ -65,8 +65,8 @@ export default function Header() {
       }}
       className="flex items-center gap-3 md:gap-6 px-3 md:px-6 py-2 md:py-3 sticky top-0 z-50 backdrop-blur-md bg-white/70 border-b border-white/20"
     >
-      {/* Logo section with particle burst */}
-      <div className="relative shrink-0">
+      {/* Logo section with particle burst — hidden on mobile to allow full-width search bar */}
+      <div className="relative shrink-0 hidden md:block">
         <img
           ref={logoRef}
           src="/logo.png"
@@ -96,8 +96,8 @@ export default function Header() {
         </AnimatePresence>
       </div>
 
-      {/* Search bar wrapper — relative for dropdown positioning */}
-      <div className="relative flex-1 max-w-2xl">
+      {/* Search bar wrapper — relative for dropdown positioning; full-width on mobile */}
+      <div className="relative flex-1 max-w-full md:max-w-2xl">
         <motion.div
           animate={{ scale: isFocused ? 1.02 : 1 }}
           transition={{ type: 'spring', stiffness: 400, damping: 30 }}
