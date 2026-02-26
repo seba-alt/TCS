@@ -76,7 +76,15 @@ A user describes any problem and instantly gets expertly matched professionals t
 
 ### Active
 
-(No active requirements — next milestone not yet defined. Use `/gsd:new-milestone` to start.)
+- [ ] Remove expert email data from DB, CSV, and model; reject on future uploads
+- [ ] Fix photo proxy Sentry errors (graceful fallback instead of 502)
+- [ ] Fix React stack overflow (redirect loop in RedirectWithParams / URL sync)
+- [ ] Fix FTS5 empty string syntax errors (validate before MATCH)
+- [ ] Update deprecated gemini-2.0-flash-lite model
+- [ ] Redesign mobile filters as dropdown controls (replace Vaul bottom-sheet)
+- [ ] Full-width search bar on mobile
+- [ ] Show 18-20 tags in desktop tag cloud (up from 12)
+- [ ] Add Google Analytics (gtag.js G-0T526W3E1Z)
 
 ### Out of Scope
 
@@ -150,6 +158,17 @@ A user describes any problem and instantly gets expertly matched professionals t
 ### v1.0 MVP — Shipped 2026-02-20
 - Core AI chat with 3-expert recommendations, email gate, feedback, admin dashboard
 - Archive: `.planning/milestones/v1.0-ROADMAP.md`
+
+## Current Milestone: v3.1 Launch Prep
+
+**Goal:** Harden the platform for public launch — remove sensitive data, fix production errors, improve mobile UX, add analytics.
+
+**Target features:**
+- Expert email purge (privacy/security)
+- Fix all Sentry production errors (photo proxy, stack overflow, FTS5, deprecated model)
+- Mobile filter UX redesign (dropdowns instead of bottom-sheet, full-width search)
+- Desktop tag cloud expansion (18-20 tags)
+- Google Analytics integration
 
 ## Current State
 
@@ -242,4 +261,4 @@ A user describes any problem and instantly gets expertly matched professionals t
 
 ---
 ---
-*Last updated: 2026-02-26 after v3.0 milestone*
+*Last updated: 2026-02-26 after v3.1 milestone start*
