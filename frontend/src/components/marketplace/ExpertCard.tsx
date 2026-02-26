@@ -71,7 +71,7 @@ export function ExpertCard({ expert, onViewProfile, context = 'grid', rank }: Ex
 
   return (
     <div
-      className={`expert-card bg-white/90 rounded-xl border border-gray-100 p-3 sm:p-4 flex flex-col gap-1.5 h-[210px] sm:h-[180px] overflow-hidden cursor-pointer transition-all duration-150 ${expanded ? 'ring-2 ring-brand-purple/30' : ''}`}
+      className={`expert-card bg-white/90 rounded-xl border border-gray-100 p-3 sm:p-4 flex flex-col gap-1.5 ${expanded ? 'min-h-[180px] ring-2 ring-brand-purple/30' : 'h-[180px] overflow-hidden'} cursor-pointer transition-all duration-150`}
       onClick={handleCardClick}
       tabIndex={0}
       onBlur={() => setExpanded(false)}
@@ -122,9 +122,9 @@ export function ExpertCard({ expert, onViewProfile, context = 'grid', rank }: Ex
       </div>
 
       {/* Zone C: Domain tag pills — hidden on mobile by default, shown when expanded.
-          flex-shrink-0, no-wrap so partial tags are fully hidden (overflow-hidden + flex-nowrap) */}
-      <div className={`flex-shrink-0 ${expanded ? 'flex' : 'hidden sm:flex'} flex-nowrap gap-1 overflow-hidden`}>
-        {expert.tags.slice(0, 2).map((tag) => (
+          On mobile expanded: wrap tags so they don't get cut off; show only first tag to save space */}
+      <div className={`flex-shrink-0 ${expanded ? 'flex flex-wrap' : 'hidden sm:flex flex-nowrap overflow-hidden'} gap-1`}>
+        {expert.tags.slice(0, expanded ? 2 : 2).map((tag) => (
           <button
             key={tag}
             onClick={(e) => { e.stopPropagation(); toggleTag(tag) }}
