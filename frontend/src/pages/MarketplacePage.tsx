@@ -112,8 +112,10 @@ export default function MarketplacePage() {
             </div>
           )}
 
-          {/* Active filter chips strip */}
-          <FilterChips />
+          {/* Active filter chips strip — hidden on mobile (MobileInlineFilters has its own chips) */}
+          <div className="hidden md:block">
+            <FilterChips />
+          </div>
 
           {/* Results area — extra top padding so first row breathes below header */}
           <div className="flex-1 min-h-0 pt-2">

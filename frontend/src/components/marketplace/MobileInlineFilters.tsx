@@ -1,8 +1,25 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Tag, ArrowUpDown, Bookmark, X } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
 import { useExplorerStore, useFilterSlice, useResultsSlice } from '../../store'
 import { TOP_TAGS } from '../../constants/tags'
+
+function useMobileScrollCollapse() {
+  const [collapsed, setCollapsed] = useState(false)
+  useEffect(() => {
+    const grid = document.querySelector('[data-virtuoso-scroller]') ?? window
+    let lastY = 0
+    const onScroll = () => {
+      const y = grid === window ? window.scrollY : (grid as HTMLElement).scrollTop
+      if (y > 48 && y > lastY) setCollapsed(true)
+      if (y < lastY - 4) setCollapsed(false)
+      lastY = y
+    }
+    grid.addEventListener('scroll', onScroll, { passive: true })
+    return () => grid.removeEventListener('scroll', onScroll)
+  }, [])
+  return collapsed
+}
 
 const SORT_OPTIONS: { label: string; value: 'relevance' | 'rate_asc' | 'rate_desc' }[] = [
   { label: 'Relevance', value: 'relevance' },
@@ -38,8 +55,26 @@ export function MobileInlineFilters() {
   const currentSortLabel =
     SORT_OPTIONS.find((o) => o.value === sortBy)?.label ?? 'Relevance'
 
+  const bannerCollapsed = useMobileScrollCollapse()
+
   return (
     <div className="md:hidden flex flex-col shrink-0">
+      {/* Tinrate banner — collapses on scroll */}
+      <motion.div
+        animate={{ height: bannerCollapsed ? 0 : 'auto', opacity: bannerCollapsed ? 0 : 1 }}
+        transition={{ duration: 0.2, ease: 'easeOut' }}
+        className="overflow-hidden border-b border-gray-100"
+      >
+        <div className="flex items-center justify-center py-2">
+          <img
+            src="/logo.png"
+            alt="Tinrate"
+            className="h-5 w-auto"
+            style={{ filter: 'drop-shadow(0 0 10px rgba(139,92,246,0.25))' }}
+          />
+        </div>
+      </motion.div>
+
       {/* Filter row */}
       <div className="flex items-center gap-2 px-4 py-2.5 border-b border-gray-100 overflow-x-auto shrink-0">
         {/* Tags button */}
