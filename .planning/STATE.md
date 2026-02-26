@@ -109,6 +109,7 @@ Recent decisions affecting current work:
 - Phase 40.1 inserted after Phase 40: optimization and debugging of v3 (URGENT)
 - Phase 40.2 inserted after Phase 40: UAT fixes and Browse Explorer enhancements (URGENT)
 - Phase 40.3 inserted after Phase 40: Revert to Explorer-only — remove Browse page, keep Explorer with adjustments (URGENT)
+- Phase 40.3.1 inserted after Phase 40.3: search improvements on the search and mobile improvements (URGENT)
 
 ### Blockers/Concerns
 
