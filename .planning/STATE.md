@@ -1,3 +1,16 @@
+---
+gsd_state_version: 1.0
+milestone: v1.0
+milestone_name: Netflix Browse & Agentic Navigation
+status: unknown
+last_updated: "2026-02-26T08:56:43.952Z"
+progress:
+  total_phases: 25
+  completed_phases: 25
+  total_plans: 65
+  completed_plans: 65
+---
+
 # Project State
 
 ## Project Reference
@@ -5,14 +18,14 @@
 See: .planning/PROJECT.md (updated 2026-02-24)
 
 **Core value:** A user describes any problem and instantly gets expertly matched professionals they can browse, filter, and contact — no searching, no guesswork.
-**Current focus:** v3.0 → Phase 40.3 complete (revert to Explorer-only, remove Browse page)
+**Current focus:** v3.0 → Phase 40.3.1 plan 02 complete (mobile improvements: tap-expand cards, Sage bottom sheet)
 
 ## Current Position
 
-Phase: 40.3 of 40.3 (Revert to Explorer-only)
+Phase: 40.3.1 of 40.3.1 (Search & Mobile Improvements)
 Plan: 2 of 2 complete
-Status: Phase 40.3 complete — Browse page removed, Explorer at /, navigationSlice deleted, Sage simplified, mobile Header visible
-Last activity: 2026-02-25 — Plan 02: Sage/layout simplification + mobile Header
+Status: Phase 40.3.1 complete — search autocomplete (plan 01) + mobile tap-expand cards + Sage bottom sheet (plan 02)
+Last activity: 2026-02-26 — Plan 02: Mobile ExpertCard tap-expand + SageMobileSheet Vaul bottom sheet
 
 Progress: [██████████] 100% (15 plans complete)
 
@@ -34,6 +47,7 @@ Progress: [██████████] 100% (15 plans complete)
 *Updated after each plan completion*
 | Phase 40.2 P03 | 2 | 2 tasks | 3 files |
 | Phase 40.2 P04 | 2 | 2 tasks | 6 files |
+| Phase 40.3.1 P01 | 2 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -94,10 +108,18 @@ Recent decisions affecting current work:
 - Phase 40.3 Plan 01: navigationSlice deleted entirely — store type is FilterSlice & ResultsSlice & PilotSlice
 - Phase 40.3 Plan 01: MarketplacePage pilot reset logic removed — no more navigationSource guard
 - Phase 40.3 Plan 02: useSage has no Browse branching — always injects results directly, always sends real filter state
+- Phase 40.3.1 Plan 02: ExpertCard tap-expand is content swap within fixed 180px height — VirtuosoGrid fixed item sizing prevents height change
+- Phase 40.3.1 Plan 02: SageMobileSheet dismissible=false — swipe-to-dismiss disabled, close button only per CONTEXT.md
+- Phase 40.3.1 Plan 02: Auto-close after discovery uses prevStreamingRef pattern gated on sageMode=true + 2s delay
+- Phase 40.3.1 Plan 02: RootLayout responsive split via hidden md:block / md:hidden — SagePanel desktop, SageMobileSheet mobile
 - Phase 40.3 Plan 02: useExplore has no pendingSageResults consumption — Sage results always injected by useSage directly
 - Phase 40.3 Plan 02: RootLayout always renders SagePanel (SagePopover deleted, no isExplorer check)
 - Phase 40.3 Plan 02: SageFAB filter glow always active (no isExplorer guard)
 - Phase 40.3 Plan 02: Header changed from hidden md:flex to flex — visible on mobile with compact logo (h-6) and hidden expert count
+- [Phase 40.3.1]: suggest endpoint queries job_title and company FTS5 columns — not tags (JSON array blobs)
+- [Phase 40.3.1]: Tag suggestions handled client-side via TOP_TAGS.filter() — avoids FTS5 JSON blob issue
+- [Phase 40.3.1]: Grid does NOT update live — setQuery only called from Enter keydown or suggestion selection
+- [Phase 40.3.1]: handleBlur uses 150ms delay — allows onMouseDown to fire before dropdown unmounts (blur/click ordering fix)
 
 ### Pending Todos
 
@@ -117,7 +139,7 @@ None — photo backend is ready for Browse UI consumption
 
 ## Session Continuity
 
-Last session: 2026-02-25
-Stopped at: Completed Phase 40.3 — Explorer-only revert complete (Browse removed, Sage simplified, mobile Header)
-Resume signal: Phase 40.3 complete. Explorer is the sole page at /. Ready for deployment or next milestone.
-Resume file: .planning/phases/40.3-revert-to-explorer-only-remove-browse-page-keep-explorer-with-adjustments/40.3-02-SUMMARY.md
+Last session: 2026-02-26
+Stopped at: Completed Phase 40.3.1 Plan 02 — mobile tap-expand ExpertCard + SageMobileSheet Vaul bottom sheet
+Resume signal: Phase 40.3.1 complete. All search and mobile improvements done. Ready for deployment or next milestone.
+Resume file: .planning/phases/40.3.1-search-improvements-on-the-search-and-mobile-improvements/40.3.1-02-SUMMARY.md

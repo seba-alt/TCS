@@ -176,7 +176,7 @@ Plans:
 **Goal:** Add search autocomplete with debounced suggestion dropdown, change search to commit-on-Enter, and optimize mobile experience with tap-expand cards and Sage bottom sheet
 **Depends on:** Phase 40.3
 **Requirements:** SEARCH-01, MOBILE-01, MOBILE-02, MOBILE-03
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 40.3.1-01-PLAN.md — Search autocomplete dropdown + non-live search + X clear button
