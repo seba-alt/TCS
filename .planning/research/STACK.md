@@ -1,460 +1,317 @@
 # Stack Research
 
-**Domain:** Expert Marketplace — v3.0 Netflix Browse & Agentic Navigation additions only
-**Researched:** 2026-02-24
+**Domain:** Expert Marketplace — v3.1 Launch Hardening additions only
+**Researched:** 2026-02-26
 **Research Mode:** Ecosystem (Subsequent Milestone — stack additions only)
-**Confidence:** HIGH for all items below — verified against current package.json, requirements.txt, and official documentation
+**Confidence:** HIGH for all items — verified against current package.json, requirements.txt, and official documentation
 
 ---
 
 ## Scope of This Document
 
-Covers ONLY the stack additions and changes needed for v3.0. The existing production stack is fully validated and must not change:
+Covers ONLY what is new or changed for v3.1 Launch Prep. The existing production stack is validated and must not change:
 
-- **Backend:** FastAPI 0.129.* + SQLAlchemy + SQLite + faiss-cpu 1.13.* + google-genai 1.64.* + tenacity 8.4.* + httpx 0.28.* (already in requirements.txt as dev dep)
-- **Frontend:** React 19.2 + Vite 7.3 + Tailwind v3.4 + React Router v7 (react-router-dom 7.13)
-- **Animation:** motion (motion/react) v12.34 — AnimatePresence, motion.div, boxShadow glow already in use
-- **State:** Zustand v5.0.11 with persist middleware (3 slices: filter, results, pilot)
-- **Grid:** react-virtuoso 4.18 for VirtuosoGrid (infinite scroll bento cards — NOT used for Browse rows)
-- **Routing:** createBrowserRouter with RouterProvider, current routes: `/marketplace`, `/chat`, `/admin`
+- **Backend:** FastAPI 0.129.* + SQLAlchemy 2.0.* + SQLite + faiss-cpu 1.13.* + google-genai 1.64.* + tenacity 8.4.* + httpx 0.28.*
+- **Frontend:** React 19.2 + Vite 7.3 + Tailwind v3.4 + React Router v7 + motion/react v12.34 + Zustand v5.0.11 + react-virtuoso 4.18 + vaul 1.1.2 + lucide-react 0.575
 
-Eight specific questions were investigated. Each section below gives a direct answer.
+The four new capability areas for v3.1:
 
----
-
-## 1. Horizontal Scroll Rows — CSS + Tailwind Only
-
-### Recommendation
-
-**No new package.** Use Tailwind v3 built-in scroll-snap utilities + one tiny Tailwind plugin for scrollbar hiding.
-
-Tailwind v3.4 ships all scroll-snap primitives natively: `snap-x`, `snap-mandatory`, `snap-start`, `snap-center`, `scroll-smooth`. The only gap is hiding the scrollbar (Tailwind has no built-in for this). Use `tailwind-scrollbar-hide` — a single-file plugin with 42k weekly downloads, Tailwind v3 compatible, zero runtime JS.
-
-### Installation
-
-```bash
-npm install -D tailwind-scrollbar-hide
-```
-
-```js
-// tailwind.config.js
-import scrollbarHide from 'tailwind-scrollbar-hide'
-export default {
-  plugins: [scrollbarHide],
-}
-```
-
-### Usage Pattern (Browse Row)
-
-```tsx
-// No react-virtuoso here — small fixed-count rows (12-20 cards max), native scroll is fine
-<div className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide scroll-smooth px-6">
-  {experts.map(expert => (
-    <div key={expert.id} className="snap-start flex-shrink-0 w-64">
-      <BrowseExpertCard expert={expert} />
-    </div>
-  ))}
-</div>
-```
-
-**Why not react-virtuoso for rows?** react-virtuoso's VirtuosoGrid is designed for large infinite-scroll grids. For 12-20 card horizontal rows, it adds complexity with no benefit. CSS scroll-snap is GPU-accelerated and zero-JS.
-
-**Why not react-snap-carousel?** Adds 3.5 kB for what Tailwind + CSS already handle. No advantage for this use case.
-
-### Confidence: HIGH
-Source: [Tailwind CSS scroll-snap-type docs](https://v3.tailwindcss.com/docs/scroll-snap-type), [tailwind-scrollbar-hide npm](https://www.npmjs.com/package/tailwind-scrollbar-hide)
+1. Gemini model update (deprecated `gemini-2.0-flash-lite` → `gemini-2.5-flash-lite`)
+2. Expert email column removal from DB, CSV, and ORM model
+3. Mobile filter UX redesign (Vaul bottom-sheet → inline dropdown controls)
+4. Google Analytics GA4 integration (gtag.js, measurement ID `G-0T526W3E1Z`)
 
 ---
 
-## 2. Billboard Hero — No New Package
+## 1. Gemini Model Update — String Constant Change Only
 
-### Recommendation
+### What Is Deprecated
 
-**No new package.** Build with existing Tailwind + motion/react. The Billboard Hero is a full-width `div` with a background image URL (or `<img>` with `object-cover`), gradient overlay, and expert metadata overlaid using absolute positioning.
+`gemini-2.0-flash-lite` is used in one location: `app/services/pilot_service.py` line 116, in the `_detect_and_translate()` function for Dutch language detection.
 
-The "algorithmic featured expert" selection is a backend concern (scoring logic), not a frontend library question. Frontend receives a single expert object and renders it.
+`gemini-2.5-flash` (the main generation model in `llm.py`) is already current and does not need updating.
 
-### Pattern
+### Replacement
 
-```tsx
-// BillboardHero.tsx
-import { motion } from 'motion/react'
+**`gemini-2.5-flash-lite`** — the direct successor, confirmed on the official Gemini deprecations page and models page.
 
-interface BillboardHeroProps {
-  expert: Expert  // highest-scoring expert from /api/browse/featured
-  onExplore: () => void
-}
+| Attribute | Old | New |
+|-----------|-----|-----|
+| Model ID string | `"gemini-2.0-flash-lite"` | `"gemini-2.5-flash-lite"` |
+| SDK | google-genai (unchanged) | google-genai (unchanged) |
+| API | Gemini API (unchanged) | Gemini API (unchanged) |
+| Shutdown date of old model | June 1, 2026 | — |
 
-export function BillboardHero({ expert, onExplore }: BillboardHeroProps) {
-  return (
-    <div className="relative w-full h-[56vh] min-h-[400px] overflow-hidden">
-      {/* Large photo */}
-      <img
-        src={expert.photo_url}
-        alt=""
-        className="absolute inset-0 w-full h-full object-cover object-top"
-        loading="eager"
-      />
-      {/* Gradient overlay — bottom-up, brand purple tint */}
-      <div className="absolute inset-0 bg-gradient-to-t from-[oklch(10%_0.12_279)] via-transparent to-transparent" />
-      {/* Text overlay */}
-      <motion.div
-        className="absolute bottom-8 left-8 max-w-lg"
-        initial={{ opacity: 0, y: 24 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, ease: 'easeOut' }}
-      >
-        <h1 className="text-4xl font-bold text-white">{expert.name}</h1>
-        <p className="text-white/70 mt-2">{expert.title}</p>
-        <button onClick={onExplore} className="mt-4 ...">Explore Experts</button>
-      </motion.div>
-    </div>
-  )
-}
-```
+### Why gemini-2.5-flash-lite (Not gemini-2.5-flash)
 
-**Backend endpoint needed:** `GET /api/browse/featured` — returns 1 expert (highest findability_score or curated pick). Uses existing SQLAlchemy + metadata.json. No new backend library.
+The Dutch detection call is a structured JSON extraction — a tiny `{"lang": ..., "english": ...}` response. `gemini-2.5-flash-lite` is the fastest, cheapest model in the 2.5 family and is explicitly recommended for "low latency and high volume tasks." Using the heavier `gemini-2.5-flash` here would be wasteful and inconsistent with the existing design intent.
 
-### Confidence: HIGH
-All tools already in stack.
+### No Package Change Required
 
----
+`google-genai==1.64.*` supports `gemini-2.5-flash-lite`. The model ID is a string constant — no requirements.txt update needed.
 
-## 3. Expert Photo Serving — httpx Backend Proxy
-
-### Recommendation
-
-**No new package.** Use `httpx` — already in `requirements.txt` (line 23: `httpx==0.28.*`) as a dev/test dependency. Promote it to production use for the photo proxy endpoint.
-
-### Decision: Proxy vs. Direct Serve
-
-**Use proxy, not direct URL pass-through to frontend.** Reasons:
-1. Photo URLs in the new CSV may be from inconsistent or third-party hosts (LinkedIn CDNs, Cloudinary, etc.) — a proxy normalises them behind your domain.
-2. CORS: third-party image hosts may block browser direct requests.
-3. Railway environment can cache proxied images in memory (response-level caching with a simple dict or `functools.lru_cache` on URL hash).
-4. Fallback: if photo fetch fails, proxy returns a generated initials avatar (SVG) — no broken image icons.
-
-### Backend Pattern
+### Change Required
 
 ```python
-# app/routers/photos.py
-import hashlib
-import httpx
-from fastapi import APIRouter, Response
-from fastapi.responses import StreamingResponse
-
-router = APIRouter()
-_cache: dict[str, bytes] = {}  # simple in-process cache, ~1 MB per 100 photos
-
-@router.get("/api/photos/{username}")
-async def get_photo(username: str) -> Response:
-    """
-    Proxies the expert's photo from their CSV photo_url.
-    Falls back to an SVG initials avatar if fetch fails.
-    """
-    photo_url = _get_photo_url_for_username(username)  # lookup in metadata
-    if not photo_url:
-        return _initials_avatar(username)
-
-    cache_key = hashlib.md5(photo_url.encode()).hexdigest()
-    if cache_key in _cache:
-        return Response(content=_cache[cache_key], media_type="image/jpeg")
-
-    async with httpx.AsyncClient(timeout=5.0) as client:
-        try:
-            r = await client.get(photo_url, follow_redirects=True)
-            r.raise_for_status()
-            _cache[cache_key] = r.content
-            return Response(content=r.content, media_type=r.headers.get("content-type", "image/jpeg"))
-        except (httpx.HTTPError, httpx.TimeoutException):
-            return _initials_avatar(username)
+# app/services/pilot_service.py — one line change
+# Before:
+model="gemini-2.0-flash-lite",
+# After:
+model="gemini-2.5-flash-lite",
 ```
 
-**httpx version note:** `httpx==0.28.*` is currently pinned as a dev dep. FastAPI 0.129 depends on httpx internally (for test client). Promoting to production use at 0.28.* is safe — no version change needed.
-
-**Alternative considered (direct URL):** Pass `photo_url` directly from API to frontend, let `<img src={url}>` load it. Rejected because CORS and broken-image risk are real at scale with 530 experts across varied CDNs.
-
 ### Confidence: HIGH
-httpx already in requirements.txt. FastAPI StreamingResponse is well-established.
+
+Source: [Gemini API deprecations](https://ai.google.dev/gemini-api/docs/deprecations) — shutdown June 1, 2026, replacement `gemini-2.5-flash-lite` confirmed. [Gemini models page](https://ai.google.dev/gemini-api/docs/models) — `gemini-2.5-flash-lite` listed as current stable.
 
 ---
 
-## 4. Cross-Page Sage Navigation — Zustand + useNavigate State
+## 2. Expert Email Column Removal — Raw SQL Migration, No Alembic
+
+### Context
+
+The `Expert` SQLAlchemy model has an `email` field (`String(320)`, non-nullable with default `""`). The project has no Alembic setup — all migrations are inline raw SQL executed at startup in `app/main.py` using `engine.connect()` + `text()`. This is the established project pattern.
+
+### Approach: SQLite DROP COLUMN (native, no batch mode needed)
+
+SQLite has supported `ALTER TABLE ... DROP COLUMN` natively since version **3.35.0** (released March 2021). The local environment runs SQLite 3.50.4. Railway uses Python's built-in `sqlite3` module, which ships with modern Python 3.11/3.12/3.13 — all well above 3.35. No compatibility concern.
+
+**Pattern used by this project (raw SQL in startup lifespan):**
+
+```python
+# app/main.py — add to startup lifespan block (same pattern as existing migrations)
+with engine.connect() as _conn:
+    try:
+        _conn.execute(_text("ALTER TABLE experts DROP COLUMN email"))
+        _conn.commit()
+    except Exception:
+        pass  # Column already dropped — idempotent
+log.info("startup: expert email column dropped")
+```
+
+### What Else Must Change
+
+Beyond the DB column, the email purge touches three places:
+
+| Location | Change |
+|----------|--------|
+| `app/models.py` — `Expert` class | Remove `email: Mapped[str]` field |
+| `app/routers/admin.py` — CSV import (line 1035, 1053) | Remove `email` from CSV ingestion |
+| `data/experts.csv` | Delete the `Email` column from the file |
+| `app/routers/admin.py` — `POST /api/admin/experts` (line 928) | Remove `email=""` from Expert object creation |
+| Future CSV upload validation | Reject uploads that include an `email` column |
+
+### No New Packages
+
+This is pure SQLAlchemy + raw SQL. No Alembic, no migration framework — consistent with the rest of the project.
+
+### Why Not Alembic
+
+Alembic adds a versions directory, migration scripts, and a separate alembic.ini. For a SQLite-backed project that already uses inline migrations and has no existing Alembic setup, adding it for a single column drop introduces significant complexity with zero benefit. The inline pattern used throughout `main.py` is battle-tested in this codebase.
+
+### Confidence: HIGH
+
+SQLite 3.35+ DROP COLUMN confirmed at [sqlite.org/lang_altertable.html](https://sqlite.org/lang_altertable.html). Project migration pattern verified in `app/main.py`.
+
+---
+
+## 3. Mobile Filter UX — Native HTML Select, No New Package
+
+### Current State
+
+The Vaul bottom-sheet (`MobileFilterSheet.tsx`) is a full-screen drawer triggered by a filter button in the mobile header. It contains a text search input, two number inputs for rate range, and a scrollable tag multi-select. The requirement is to replace this with inline dropdown controls — filters visible in the mobile layout without a drawer.
+
+### Recommendation: Native `<select>` + Tailwind, Zero New Dependencies
+
+For the mobile filter controls (rate range presets, tag category select), native `<select>` elements styled with Tailwind are the right tool.
+
+**Rationale:**
+
+- Native `<select>` triggers the OS-native picker on iOS/Android — the correct mobile UX, with accessible scrolling and no touch event conflicts.
+- The existing tag filter uses a multi-select chip interface (not a single-select dropdown). This is retained as chips but moved inline below the search bar, not inside a drawer.
+- Rate filter can become a `<select>` with preset brackets (€0-500, €500-1500, etc.) or remain as number inputs but rendered inline. Either avoids the drawer.
+- No Radix UI `Select` or Headless UI needed — the added JS bundle cost (Radix Select alone is ~15 kB) is unjustified when native `<select>` handles simple option lists.
+
+**When a custom select IS needed:** Only if the dropdown must show custom option styling (avatars, colors, multi-line). Not the case here — filter options are plain text labels.
+
+**Tailwind styling pattern for native select:**
+
+```tsx
+// Styled native select — works cross-browser, mobile-optimal
+<select
+  value={ratePreset}
+  onChange={(e) => setRatePreset(e.target.value)}
+  className="w-full appearance-none bg-white border border-gray-300 rounded-lg
+             px-3 py-2 text-sm text-gray-700 focus:outline-none
+             focus:ring-2 focus:ring-brand-purple"
+>
+  <option value="">Any rate</option>
+  <option value="0-500">Under €500/hr</option>
+  <option value="500-1500">€500–1500/hr</option>
+  <option value="1500+">Over €1500/hr</option>
+</select>
+```
+
+**Tag filter stays as chip multi-select** — there is no native HTML control for multi-select that is usable on mobile. The chip-based approach remains but is relocated to render inline (collapsed/expandable row) rather than inside the Vaul drawer.
+
+### What Happens to Vaul
+
+`vaul` (v1.1.2) is already installed and used for the **Sage bottom sheet** (`SagePanel.tsx` mobile mode). Do NOT remove vaul from package.json — it is still needed. Only `MobileFilterSheet.tsx` is removed/replaced.
+
+### No New Packages
+
+```
+# Nothing to install — native HTML + Tailwind only
+```
+
+### Alternatives Considered
+
+| Option | Verdict |
+|--------|---------|
+| Radix UI Select (`@radix-ui/react-select`) | Rejected — ~15 kB for plain text dropdowns; touch events on mobile have documented bug (#2083 in radix-ui/primitives); overkill |
+| Headless UI Select | Rejected — adds a dependency for a thin native select wrapper; Tailwind forms plugin already handles this |
+| `react-select` | Rejected — 26 kB bundle, designed for searchable multi-selects; too heavy |
+| Keep Vaul for filters | Rejected — the explicit requirement is to replace the bottom-sheet UX |
+
+### Confidence: HIGH
+
+Verified against existing `MobileFilterSheet.tsx` and `vaul` usage in the codebase. Native select mobile behavior confirmed via MDN + Tailwind CSS docs. Radix UI touch bug confirmed at [radix-ui/primitives#2083](https://github.com/radix-ui/primitives/issues/2083).
+
+---
+
+## 4. Google Analytics GA4 — Manual gtag.js Script, No Library
 
 ### Recommendation
 
-**No new package.** Use two existing mechanisms in combination:
+**No new npm package.** Add the standard GA4 `gtag.js` script snippet directly to `frontend/index.html`. Track route changes manually with a `useEffect` in `App.tsx` or a dedicated hook.
 
-1. **Zustand pilot slice** (already exists) — holds conversation history, is NOT persisted to localStorage (intentionally, from v2.0 research). For cross-page navigation this is correct: Sage state lives in memory and survives client-side navigation (Zustand store is not reset on route change, only on full page refresh).
+### Why Not react-ga4
 
-2. **React Router v7 `useNavigate` with state** — pass a shallow signal on navigate, not the full conversation (avoid duplicating large state in history API).
+`react-ga4` (latest: v2.1.0) was last published **3 years ago** and is unmaintained. The `react-ga` ecosystem generally wraps an API that Google has superseded. For a Vite SPA with React Router v7, the direct gtag.js integration is simpler, has no runtime dependency, and is what Google officially recommends.
 
-### Pattern
+### Why Not vite-plugin-radar
+
+`vite-plugin-radar` works but is a build-time plugin that adds complexity for what is a two-line `index.html` change. The plugin is also not well-maintained for Vite 7.
+
+### Implementation Pattern
+
+**Step 1: Add script to `frontend/index.html`**
+
+```html
+<!-- Google Analytics — add before </head> -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-0T526W3E1Z"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-0T526W3E1Z', { send_page_view: false });
+</script>
+```
+
+`send_page_view: false` disables the automatic page view (which only fires once on load for SPAs). Route change page views are sent manually.
+
+**Step 2: TypeScript declaration (no @types package needed)**
 
 ```typescript
-// In BrowsePage — when Sage triggers a search and user navigates to Explorer:
-const navigate = useNavigate()
-
-function handleSageNavigateToExplorer() {
-  // Zustand already holds pilot conversation + filter results
-  // Just navigate — store survives the route change
-  navigate('/explore', {
-    state: { fromBrowse: true, sageActive: true }
-  })
-}
+// frontend/src/vite-env.d.ts — add to existing file
+declare function gtag(...args: unknown[]): void;
+declare const dataLayer: unknown[];
 ```
+
+**Step 3: Route-change tracking hook**
 
 ```typescript
-// In MarketplacePage (renamed /explore) — read navigation signal:
-const location = useLocation()
-const fromBrowse = location.state?.fromBrowse === true
+// frontend/src/hooks/useAnalytics.ts
+import { useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 
-// If fromBrowse, show "Continue Browsing" breadcrumb and keep Sage open
-useEffect(() => {
-  if (fromBrowse) setOpen(true)  // open Sage panel from Zustand pilot slice
-}, [fromBrowse, setOpen])
-```
-
-**Why not pass full conversation via `location.state`?** React Router serializes state to the History API (browser sessionStorage). Large conversation objects (with expert arrays) would bloat it. Zustand in-memory is the right source of truth for conversation; `location.state` carries only the navigation signal.
-
-**Why not URL params for Sage state?** URL params are for filter state (already handled by `useUrlSync`). Conversation history is ephemeral UI state — wrong layer for URLs.
-
-### Confidence: HIGH
-Pattern confirmed against React Router v7 official docs and existing Zustand store architecture.
-
----
-
-## 5. Aurora "Loading Mesh" Page Transition — motion/react Already Installed
-
-### Recommendation
-
-**No new package.** `motion` (motion/react) v12.34 is already installed. Use `AnimatePresence` (already imported in MarketplacePage) with `mode="wait"` and a layout wrapper that receives `location.pathname` as its key.
-
-The existing `AuroraBackground` component is a CSS-only animation (`@keyframes aurora-drift` in `index.css`). The page transition effect is a separate, complementary `AnimatePresence` wrapper — the aurora mesh background stays fixed; only the page content fades/slides.
-
-### Integration Pattern with createBrowserRouter
-
-The challenge with `createBrowserRouter` is that `AnimatePresence` must see direct children with changing keys. The cleanest solution with the existing router structure is a shared layout route:
-
-```tsx
-// src/layouts/AnimatedLayout.tsx
-import { useLocation, Outlet } from 'react-router-dom'
-import { AnimatePresence, motion } from 'motion/react'
-
-export function AnimatedLayout() {
+export function usePageTracking() {
   const location = useLocation()
-  return (
-    <AnimatePresence mode="wait">
-      <motion.div
-        key={location.pathname}
-        initial={{ opacity: 0, filter: 'blur(8px)' }}
-        animate={{ opacity: 1, filter: 'blur(0px)' }}
-        exit={{ opacity: 0, filter: 'blur(8px)' }}
-        transition={{ duration: 0.35, ease: 'easeInOut' }}
-        className="min-h-screen"
-      >
-        <Outlet />
-      </motion.div>
-    </AnimatePresence>
-  )
+  useEffect(() => {
+    if (typeof gtag !== 'undefined') {
+      gtag('event', 'page_view', {
+        page_path: location.pathname + location.search,
+      })
+    }
+  }, [location])
 }
 ```
 
-```tsx
-// main.tsx — wrap public routes in AnimatedLayout
-const router = createBrowserRouter([
-  {
-    path: '/',
-    element: <AnimatedLayout />,
-    children: [
-      { index: true, element: <BrowsePage /> },          // was: Navigate to /marketplace
-      { path: 'explore', element: <MarketplacePage /> }, // was: /marketplace
-      { path: 'chat', element: <App /> },
-    ],
-  },
-  // Admin routes unchanged (no transition needed)
-  { path: '/admin/login', element: <LoginPage /> },
-  { path: '/admin', element: <RequireAuth />, children: [...] },
-])
+Mount in `App.tsx` (top-level) so every route change is tracked.
+
+**Critical implementation note:** The `gtag` function MUST use `arguments` (not spread operators). The script tag above uses the correct `function gtag(){dataLayer.push(arguments);}` pattern — do not refactor with arrow functions or spread.
+
+### Custom Event Tracking
+
+The existing `trackEvent()` module in `frontend/src/tracking.ts` is a fire-and-forget internal analytics call to the FastAPI backend. GA4 tracking is a separate parallel concern — they coexist. For GA4 events:
+
+```typescript
+// Fire GA4 custom events alongside existing internal tracking
+gtag('event', 'expert_card_click', { expert_id: id, rank })
+gtag('event', 'sage_query', { result_count: n })
 ```
 
-**Aurora "Loading Mesh" specifics:** The aurora CSS background is `position: fixed` — it stays in place during transitions. The blur filter on `motion.div` creates the "mesh dissolve" effect where content blurs out and the aurora bleeds through momentarily. This is a pure motion/react + CSS effect, no new library needed.
+This is optional for v3.1 — page views alone satisfy the analytics requirement.
 
-**`mode="wait"` is critical** — without it, both pages render simultaneously during transition, causing z-index conflicts with the FAB and Sage panel.
-
-### Confidence: HIGH
-AnimatePresence already imported in MarketplacePage. Pattern verified against motion.dev official docs.
-
----
-
-## 6. Route Reorganization — React Router Config Only
-
-### Recommendation
-
-**No new package.** Pure configuration change in `main.tsx`.
-
-| Current Route | v3.0 Route | Notes |
-|--------------|-----------|-------|
-| `/` | redirect → `/marketplace` | Change to serve `<BrowsePage />` directly |
-| `/marketplace` | `/explore` | Rename, add redirect from old URL |
-| `/chat` | `/chat` | Unchanged |
-| `/admin/*` | `/admin/*` | Unchanged |
-
-### Migration
-
-```tsx
-// main.tsx changes
-{
-  path: '/',
-  element: <AnimatedLayout />,
-  children: [
-    { index: true, element: <BrowsePage /> },          // NEW: Browse is landing
-    { path: 'explore', element: <MarketplacePage /> }, // RENAMED from /marketplace
-    { path: 'marketplace', element: <Navigate to="/explore" replace /> }, // backward compat
-    { path: 'chat', element: <App /> },
-  ],
-},
-```
-
-**SEO / sharing concern:** `/explore` is a public-facing URL. Vercel serves the SPA from `vercel.json` with a catch-all rewrite — no Vercel config change needed for the route rename.
-
-### Confidence: HIGH
-Direct modification of existing `main.tsx` routing config.
-
----
-
-## 7. "Continue Browsing" Breadcrumb — React Router + Zustand Only
-
-### Recommendation
-
-**No new package.** A simple conditional component reading from `location.state` (React Router) and Zustand.
-
-```tsx
-// src/components/marketplace/BrowseBreadcrumb.tsx
-import { useLocation, useNavigate } from 'react-router-dom'
-import { ArrowLeft } from 'lucide-react'
-
-export function BrowseBreadcrumb() {
-  const location = useLocation()
-  const navigate = useNavigate()
-
-  if (!location.state?.fromBrowse) return null
-
-  return (
-    <button
-      onClick={() => navigate('/', { replace: true })}
-      className="flex items-center gap-1.5 text-sm text-white/60 hover:text-white transition-colors mb-4"
-    >
-      <ArrowLeft size={14} />
-      Back to Browse
-    </button>
-  )
-}
-```
-
-Lucide React is already installed (`lucide-react ^0.575.0`). No new dependency.
-
-### Confidence: HIGH
-
----
-
-## 8. Glassmorphic Browse Cards (Large Photo) — Tailwind + motion/react Only
-
-### Recommendation
-
-**No new package.** The Browse page cards are visually distinct from the VirtuosoGrid bento cards in MarketplacePage but use the same underlying Tailwind + motion/react tools.
-
-The VirtuosoGrid bento cards are compact grid tiles. Browse cards are taller portrait cards (like Netflix tiles) with:
-- Large photo (full card height, `object-cover`)
-- Glassmorphism overlay panel at bottom (backdrop-blur, semi-transparent)
-- Hover scale + glow (already established pattern with motion/react)
-
-```tsx
-// src/components/browse/BrowseExpertCard.tsx
-import { motion } from 'motion/react'
-
-export function BrowseExpertCard({ expert }: { expert: Expert }) {
-  return (
-    <motion.div
-      className="relative flex-shrink-0 w-52 h-72 rounded-2xl overflow-hidden cursor-pointer"
-      whileHover={{ scale: 1.04 }}
-      transition={{ duration: 0.2 }}
-    >
-      {/* Full-height photo */}
-      <img
-        src={`/api/photos/${expert.username}`}  // via proxy endpoint
-        alt={expert.name}
-        className="absolute inset-0 w-full h-full object-cover"
-        loading="lazy"
-      />
-      {/* Glassmorphic name panel */}
-      <div className="absolute bottom-0 inset-x-0 p-3 backdrop-blur-md bg-black/30 border-t border-white/10">
-        <p className="text-white text-sm font-semibold truncate">{expert.name}</p>
-        <p className="text-white/60 text-xs truncate">{expert.title}</p>
-        <p className="text-brand-purple text-xs mt-0.5">€{expert.rate}/hr</p>
-      </div>
-    </motion.div>
-  )
-}
-```
-
-**Why separate from ExpertCard (VirtuosoGrid)?** The bento card layout is horizontal-info-panel-beside-avatar. Browse cards are portrait tiles. Different aspect ratios, different photo sizing requirements. Separate component avoids prop-drilling a `variant` prop into the existing card.
-
-### Confidence: HIGH
-
----
-
-## Summary: Net-New Packages
-
-| Package | Location | Version | Purpose | Status |
-|---------|----------|---------|---------|--------|
-| `tailwind-scrollbar-hide` | frontend devDep | `^1.3.1` | Hide scrollbar on snap rows without CSS hack | NEW — install |
-| (none) | backend | — | httpx already in requirements.txt | No change |
-
-**Everything else is already installed.** All 8 features are built with:
-- Tailwind v3.4 scroll-snap utilities (native)
-- motion/react v12.34 AnimatePresence + motion.div (already installed)
-- React Router v7 useNavigate + useLocation (already installed)
-- Zustand v5.0.11 pilot slice (already in store)
-- httpx 0.28.* (already in requirements.txt)
-- lucide-react 0.575 (already installed)
-
----
-
-## Installation
+### No npm Install Required
 
 ```bash
-# Frontend — one new devDep only
-npm install -D tailwind-scrollbar-hide
-
-# Backend — no changes to requirements.txt
+# Nothing to install — script tag in index.html only
 ```
+
+### Alternatives Considered
+
+| Option | Verdict |
+|--------|---------|
+| `react-ga4` (v2.1.0) | Rejected — 3 years unmaintained, unnecessary abstraction layer |
+| `vite-plugin-radar` | Rejected — build complexity overhead for a two-line HTML change |
+| Google Tag Manager (GTM) | Over-engineered for a direct GA4 measurement ID; GTM adds a second script tag and a container layer. Use direct gtag.js. |
+| `@connectaryal/google-analytics` | Rejected — new/small package, not battle-tested; direct gtag.js is simpler |
+
+### Confidence: HIGH
+
+Direct gtag.js integration is the approach documented at [developers.google.com/analytics/devguides/collection/gtagjs](https://developers.google.com/analytics/devguides/collection/gtagjs). SPA page view pattern verified across multiple 2025 implementation guides.
+
+---
+
+## Summary: Net-New Packages for v3.1
+
+**None.** All four v3.1 features require zero new npm packages and zero requirements.txt changes.
+
+| Feature | What Changes | Package Delta |
+|---------|-------------|---------------|
+| Gemini model update | 1 string constant in `pilot_service.py` | None |
+| Expert email purge | ORM model + raw SQL migration + CSV + admin routes | None |
+| Mobile filter UX | Replace `MobileFilterSheet.tsx` with inline Tailwind selects | None (vaul stays for Sage) |
+| Google Analytics | 2-line script in `index.html` + hook | None |
 
 ---
 
 ## What NOT to Add
 
-| Rejected Package | Reason |
-|-----------------|--------|
-| `react-snap-carousel` | Tailwind scroll-snap handles it; 3.5 kB overhead for zero benefit |
-| `swiper` | Heavy (20+ kB), no advantage over CSS scroll-snap for 12-20 cards |
-| `react-slick` | Legacy, jQuery-era patterns, conflicts with motion/react |
-| `@tanstack/react-virtual` (for rows) | Overkill for small fixed-count rows; react-virtuoso already handles large grids |
-| `aiohttp` | httpx already in requirements.txt; adding a second async HTTP client is unnecessary |
-| `pillow` (image processing) | No server-side image resizing needed; proxy passthrough is sufficient |
-| `fastapi-proxy-lib` | Adds a full reverse-proxy framework for what 15 lines of httpx code handles |
-| Any WebGL/canvas library | Aurora effect is already CSS-only in index.css; page transitions are motion/react blur filter; no GPU shader needed |
+| Rejected Package | Reason | Use Instead |
+|-----------------|--------|-------------|
+| `alembic` | No existing setup; inline raw SQL is the project pattern; single column drop doesn't justify migration framework | Raw `ALTER TABLE experts DROP COLUMN email` via `engine.connect()` |
+| `react-ga4` | Unmaintained (last release 3 years ago); adds a layer over an API Google itself documents directly | Manual gtag.js script tag in index.html |
+| `@radix-ui/react-select` | ~15 kB for plain text dropdowns; documented mobile touch event bug; already have `@radix-ui/react-slider` | Native `<select>` with Tailwind |
+| `react-select` | 26 kB, designed for searchable multi-selects; vastly over-engineered for rate preset dropdowns | Native `<select>` with Tailwind |
+| `vite-plugin-radar` | Build-time plugin for what is a two-line index.html change; not well-maintained for Vite 7 | gtag.js script tag |
+| `headlessui` | Full component library for a single select element; already have Radix Slider in stack | Native `<select>` |
 
 ---
 
 ## Sources
 
-- [Tailwind v3 scroll-snap-type](https://v3.tailwindcss.com/docs/scroll-snap-type)
-- [tailwind-scrollbar-hide npm](https://www.npmjs.com/package/tailwind-scrollbar-hide)
-- [motion/react AnimatePresence](https://motion.dev/docs/react-animate-presence)
-- [motion/react useAnimate](https://motion.dev/docs/react-use-animate)
-- [React Router v7 useNavigate](https://reactrouter.com/api/hooks/useNavigate)
-- [React Router v7 State Management explanation](https://reactrouter.com/explanation/state-management)
-- [httpx Async Support](https://www.python-httpx.org/async/)
-- [FastAPI StreamingResponse patterns](https://johal.in/fastapi-streamingresponses-generators-async-iterators-2025/)
+- [Gemini API deprecations — gemini-2.0-flash-lite shutdown June 1, 2026](https://ai.google.dev/gemini-api/docs/deprecations)
+- [Gemini models page — gemini-2.5-flash-lite current stable](https://ai.google.dev/gemini-api/docs/models)
+- [SQLite ALTER TABLE DROP COLUMN — requires 3.35+](https://sqlite.org/lang_altertable.html)
+- [Google gtag.js developer guide](https://developers.google.com/analytics/devguides/collection/gtagjs)
+- [react-ga4 npm — last published 3 years ago, v2.1.0](https://www.npmjs.com/package/react-ga4)
+- [Radix UI Select mobile touch bug #2083](https://github.com/radix-ui/primitives/issues/2083)
+- [Implementing GA4 in React: The Right Way (Nov 2025)](https://www.mykolaaleksandrov.dev/posts/2025/11/react-google-analytics-implementation/)
 - Current `frontend/package.json` and `requirements.txt` verified directly
+- `app/models.py`, `app/services/pilot_service.py`, `app/main.py`, `frontend/src/components/sidebar/MobileFilterSheet.tsx` verified directly
+
+---
+*Stack research for: Expert Marketplace v3.1 Launch Prep*
+*Researched: 2026-02-26*
