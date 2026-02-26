@@ -4,6 +4,7 @@ import { useExplorerStore } from '../store'
 import { SageFAB } from '../components/pilot/SageFAB'
 import { SagePanel } from '../components/pilot/SagePanel'
 import { SageMobileSheet } from '../components/pilot/SageMobileSheet'
+import { Analytics } from '../analytics'
 
 /**
  * Root layout wrapping the Explorer page.
@@ -20,6 +21,7 @@ export default function RootLayout() {
 
   return (
     <>
+      <Analytics />
       <Outlet />
 
       {/* Sage FAB — visible when panel is closed */}
