@@ -101,12 +101,8 @@ const router = createBrowserRouter([
           // New consolidated pages
           { path: 'tools', element: <ToolsPage /> },
           { path: 'data',  element: <DataPage /> },
-          // Redirects from old standalone URLs
-          { path: 'search-lab',      element: <Navigate to="/admin/tools" replace /> },
-          { path: 'score-explainer', element: <Navigate to="/admin/tools" replace /> },
-          { path: 'index',           element: <Navigate to="/admin/tools" replace /> },
-          { path: 'searches',        element: <Navigate to="/admin/data" replace /> },
-          { path: 'marketplace',     element: <Navigate to="/admin/data" replace /> },
+          // Catch-all: redirect unknown admin paths to overview
+          { path: '*', element: <Navigate to="/admin" replace /> },
         ],
       },
     ],
