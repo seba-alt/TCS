@@ -126,12 +126,12 @@ Plans:
   4. On desktop, the Sage panel renders exactly once — no overlapping desktop and mobile instances
   5. On mobile, tapping an expert card expands it inline; on desktop, the same click opens the profile directly
   6. When the API fails, the explorer grid shows a friendly error message with a Retry button instead of a blank grid
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 47-01: Search bar contrast and placeholder copy
-- [ ] 47-02: Grid/list toggle (ExpertList component + filterSlice viewMode + toolbar button)
-- [ ] 47-03: Sage double-render fix, mobile tap behavior, and explorer error state
+- [ ] 47-01-PLAN.md — Search bar white background, flat border, static keyword placeholder
+- [ ] 47-02-PLAN.md — Grid/list view toggle with ExpertList component and Zustand persistence
+- [ ] 47-03-PLAN.md — Sage double-render fix, desktop card click bypass, API error state with retry
 
 ### Phase 48: Admin Features and Industry Tags
 **Goal**: Admin can export actionable lead data, the overview dashboard shows key stats at a glance, expert import is improved, and industry-level tags are browsable in the tag cloud
