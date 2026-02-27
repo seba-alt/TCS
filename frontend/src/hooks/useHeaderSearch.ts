@@ -7,14 +7,7 @@ const API_BASE = import.meta.env.VITE_API_URL ?? ''
 const SUGGEST_DEBOUNCE_MS = 300
 
 const PLACEHOLDERS = [
-  'Find a fintech strategist…',
-  'Who builds Stripe integrations?',
-  'Need a fractional CTO for a week?',
-  'Show me healthcare product experts…',
-  'Which consultant actually ships?',
-  'Find someone who\'s done this before…',
-  'Looking for a Berlin-based advisor…',
-  'Who knows Shopify like their backyard?',
+  'Name, company, keyword...',
 ]
 
 const EASTER_EGG_PHRASE = 'tinrate'
