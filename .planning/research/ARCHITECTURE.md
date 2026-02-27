@@ -1,91 +1,79 @@
-# Architecture Patterns: v3.1 Launch Prep
+# Architecture Research: v4.0 Public Launch
 
-**Domain:** Expert Marketplace SPA — launch hardening integration
-**Researched:** 2026-02-26
-**Confidence:** HIGH — all findings from direct codebase inspection of v3.0 source
-**Scope:** Integration points for v3.1 features only. Existing v3.0 system is ground truth — only deltas documented.
+**Domain:** Expert Marketplace SPA — feature integration for public launch
+**Researched:** 2026-02-27
+**Confidence:** HIGH — all findings from direct codebase inspection of v3.1 source
+**Scope:** v4.0 feature integration only. Existing v3.1 system is ground truth. Only deltas documented.
 
 ---
 
-## Context: v3.0 Ground Truth (verified by file inspection)
+## Context: v3.1 Ground Truth (verified by file inspection)
 
 ```
-ROUTES  (frontend/src/main.tsx)
+ROUTING  (frontend/src/main.tsx)
   /             -> MarketplacePage (inside RootLayout)
-  /explore      -> RedirectWithParams to /
-  /browse       -> Navigate to /
-  /marketplace  -> RedirectWithParams to /
-  /chat         -> Navigate to /
-  /admin/*      -> AdminApp (protected, sessionStorage key)
+  /admin/*      -> AdminApp (protected via RequireAuth — sessionStorage 'admin_key')
+  /admin/login  -> LoginPage (unauthenticated)
+  /admin        -> OverviewPage (index)
+  /admin/gaps, /admin/leads, /admin/experts, /admin/settings  -> standalone pages
+  /admin/tools  -> ToolsPage (hash-driven: #search-lab, #score-explainer, #index)
+  /admin/data   -> DataPage (tab: marketplace|intelligence)
+  /admin/intelligence -> IntelligenceDashboardPage
 
-FRONTEND FILE STRUCTURE (relevant to v3.1)
-  Entry point:          frontend/src/main.tsx
-  HTML shell:           frontend/index.html                 (gtag.js goes here)
-  Sentry init:          frontend/src/instrument.ts          (imported first in main.tsx)
-  Tracking module:      frontend/src/tracking.ts            (fire-and-forget, module fn)
-  Marketplace page:     frontend/src/pages/MarketplacePage.tsx
-  Root layout:          frontend/src/layouts/RootLayout.tsx  (Sage FAB/panel/sheet lives here)
-  Header:               frontend/src/components/Header.tsx   (glassmorphic Command Center)
-  Filter sidebar:       frontend/src/components/sidebar/FilterSidebar.tsx  (desktop only, md:flex)
-  Mobile filter sheet:  frontend/src/components/sidebar/MobileFilterSheet.tsx  (Vaul-based — REPLACE)
-  Filter chips:         frontend/src/components/marketplace/FilterChips.tsx
-  Expert grid:          frontend/src/components/marketplace/ExpertGrid.tsx  (VirtuosoGrid)
-  Tag cloud:            frontend/src/components/sidebar/TagCloud.tsx        (18-20 tags change here)
-
-BACKEND FILE STRUCTURE (relevant to v3.1)
-  ORM models:           app/models.py                  (Expert.email — REMOVE column here)
-  App startup:          app/main.py                    (seed logic — remove email read here)
-  Admin router:         app/routers/admin.py           (import-csv — remove email write here)
-  Explore service:      app/services/explorer.py       (no email — no change needed)
-  Suggest router:       app/routers/suggest.py         (FTS5 — validate empty string here)
-  Explore router:       app/routers/explore.py         (FTS5 — validate empty string here)
-  Photo proxy:          app/routers/browse.py          (502 → graceful fallback needed here)
+AUTH MECHANISM  (current — v3.1)
+  LoginPage:    POST /api/admin/auth { key } → 200 → sessionStorage.setItem('admin_key', key)
+  RequireAuth:  sessionStorage.getItem('admin_key') → null → redirect /admin/login
+  adminFetch:   headers: { 'X-Admin-Key': sessionStorage.getItem('admin_key') }
+  Backend dep:  _require_admin() reads ADMIN_SECRET env var — single secret, no users table
 
 ZUSTAND STORE  (frontend/src/store/)
-  index.ts:          createFilterSlice + createResultsSlice + createPilotSlice + persist
-  filterSlice.ts:    query, rateMin, rateMax, tags, sortBy, savedExperts, savedFilter — persisted
-  resultsSlice.ts:   experts[], total, cursor, loading, sageMode — ephemeral
-  pilotSlice.ts:     messages[], isOpen, isStreaming, sessionId — ephemeral
-  nltrStore.ts:      subscribed, email — separate store (Zustand persist key: 'nltr-store')
+  index.ts:       createFilterSlice + createResultsSlice + createPilotSlice + persist middleware
+  filterSlice.ts: query, rateMin, rateMax, tags[], sortBy, savedExperts[], savedFilter
+                  — persisted to localStorage under 'explorer-filters'
+  resultsSlice.ts: experts[], total, cursor, loading, sageMode — NOT persisted
+  pilotSlice.ts:   messages[], isOpen, isStreaming, sessionId — NOT persisted
+  nltrStore.ts:    subscribed, email — separate Zustand persist key 'nltr-store'
 
-MOBILE FILTER ARCHITECTURE (CURRENT — v3.0)
-  MobileFilterSheet.tsx: Vaul Drawer.Root with snapPoints=[0.5,1]
-  Called from:       MarketplacePage.tsx line 167
-  Trigger:           "Filters" button in mobile toolbar (md:hidden div, lines 99-130)
-  State:             local useState sheetOpen in MarketplacePage.tsx
-  Store write path:  handleApply() → setQuery/setRateRange/toggleTag via useExplorerStore.getState()
+EXPERT DATA SHAPE  (app/services/explorer.py ExpertCard, frontend/src/store/resultsSlice.ts Expert)
+  Backend Pydantic ExpertCard fields: username, first_name, last_name, job_title, company,
+    hourly_rate, currency, profile_url, photo_url, tags[], findability_score, category,
+    faiss_score, bm25_score, final_score, match_reason
+  Frontend Expert interface: subset — username, first_name, last_name, job_title, company,
+    hourly_rate, currency, profile_url, photo_url, tags[], findability_score, match_reason
+  Note: tags[] is a JSON array of AI-assigned domain tags (strings). category is a separate
+    keyword-matched field (Finance, Marketing, Tech, etc.). Industry tags are NEW in v4.0.
 
-REDIRECT ARCHITECTURE (CURRENT — v3.0 bug)
-  RedirectWithParams component: main.tsx lines 25-29
-  Bug: useSearchParams() at component level works fine. The issue is likely
-       a loop caused by /explore → / redirect when URL already has params that
-       get re-parsed, possibly triggering useUrlSync → setSearchParams → re-render
-  useUrlSync hook: frontend/src/hooks/useUrlSync.ts
-       URL → Store: one-time on mount (initialized ref guards re-run)
-       Store → URL: skipFirst ref guards first cycle
-  Known risk: multiple redirects of the same route can stack React renders
+EXPLORE PIPELINE  (app/services/explorer.py run_explore)
+  Stage 1: SQLAlchemy pre-filter by hourly_rate range + AND-logic tag containment (LIKE "%tag%")
+  Stage 2: FAISS IDSelectorBatch semantic search (skipped in pure-filter mode)
+  Stage 3: FTS5 BM25 keyword scoring (skipped in pure-filter mode)
+  Fusion: FAISS*0.7 + BM25*0.3, then findability boost ±20%, then feedback boost
 
-FTS5 EMPTY QUERY BUG (CURRENT — v3.0 bug)
-  Location: app/services/explorer.py
-  _safe_fts_query("") returns ""
-  The safe_q guard on line 223: `if safe_q:` correctly skips FTS5 when empty
-  ACTUAL BUG SITE: app/routers/suggest.py — `_run_suggest_multi` early-exits on
-       len < 2, but `_safe_prefix_query("")` could still produce a query if called
-       with edge cases. More likely: the suggest endpoint is called with q="" before
-       the 2-char guard fires on some debounce flush.
-  Also check: if FTS5 MATCH is called with an empty string anywhere else — the
-       startup `INSERT INTO experts_fts(experts_fts) VALUES('rebuild')` is safe.
+EXPERT GRID  (frontend/src/components/marketplace/ExpertGrid.tsx)
+  Uses VirtuosoGrid — requires uniform item heights (current cards: h-[180px] fixed)
+  Data source: useExplorerStore (s) => s.experts
+  List view would share SAME data source — only rendering differs
 
-PHOTO PROXY ERROR (CURRENT — v3.0 Sentry error)
-  Location: app/routers/browse.py lines 178-186
-  Current behavior: httpx.RequestError → 502, non-200 upstream → 502
-  Problem: 502 is logged by Sentry as an error. Frontend gets 502, browser logs error,
-       ExpertCard falls back to monogram — but the 502 pollutes Sentry.
-  Fix: return 404 (not 502) on upstream failures, or suppress Sentry for photo errors.
+ADMIN AUTH FLOW  (current)
+  LoginPage: single password field, no username
+  Frontend: sessionStorage key expires on tab close
+  Backend: ADMIN_SECRET env var — plain string comparison in _require_admin()
+  No session tokens, no refresh tokens, no expiry TTL
 
-GEMINI MODEL (CURRENT — v3.0 active)
-  Deprecated model: gemini-2.0-flash-lite referenced somewhere in codebase
-  Check: app/routers/pilot.py or app/services/pilot_service.py for flash-lite usage
+SQLite TABLES  (app/models.py)
+  experts:              id, username, email, first_name, last_name, job_title, company, bio,
+                        hourly_rate, currency, profile_url, profile_url_utm, category, tags,
+                        findability_score, photo_url, created_at
+                        ← no industry_tags column yet
+  conversations:        id, email, query, history, response_type, response_narrative,
+                        response_experts, created_at, top_match_score, gap_resolved,
+                        hyde_triggered, feedback_applied, hyde_bio, otr_at_k, source
+  user_events:          id, session_id, event_type, payload (JSON), created_at
+  newsletter_subscribers: id, email, source, created_at
+  email_leads:          id, email, created_at
+  feedback:             id, conversation_id, vote, email, expert_ids, reasons, comment, created_at
+  settings:             key (PK), value, updated_at
+  experts_fts:          FTS5 virtual table (content='experts') — indexes bio, job_title, etc.
 ```
 
 ---
@@ -93,271 +81,405 @@ GEMINI MODEL (CURRENT — v3.0 active)
 ## System Overview
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                          VERCEL — React SPA                                  │
-├─────────────────────────────────────────────────────────────────────────────┤
-│  frontend/index.html                                                         │
-│  ├── gtag.js script tag (NEW — v3.1)                                        │
-│  └── /src/main.tsx  (Sentry init → RouterProvider → RootLayout)             │
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                          VERCEL — React SPA (v4.0 state)                     │
+├──────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
-│  RootLayout.tsx                                                              │
-│  ├── <Outlet /> → MarketplacePage                                            │
-│  ├── SageFAB / SagePanel (desktop)                                           │
-│  └── SageMobileSheet (mobile, Vaul)                                          │
+│  main.tsx (RouterProvider — lazy-loaded admin routes NEW)                    │
+│  ├── /  → RootLayout → MarketplacePage                                       │
+│  │   ├── Header (search bar: white input bg NEW, keyword placeholders NEW)   │
+│  │   ├── FilterSidebar (desktop) — tag cloud: industry tags NEW              │
+│  │   ├── MobileInlineFilters — industry tags in TagPickerSheet NEW           │
+│  │   ├── FilterChips                                                         │
+│  │   ├── ExpertGrid (VirtuosoGrid) ←─┐ same data, toggle between views      │
+│  │   └── ExpertList (NEW)  ←─────────┘ viewMode: 'grid'|'list' in filterSlice│
+│  │                                                                           │
+│  └── /admin/* → RequireAuth → AdminApp (sidebar simplified NEW)             │
+│      ├── /admin/login → LoginPage (username+password fields NEW)            │
+│      ├── /admin → OverviewPage (one-snap simplified NEW)                    │
+│      ├── /admin/leads → LeadsPage + leads export (user_events JOIN NEW)     │
+│      ├── /admin/experts → ExpertsPage + CSV import (improved)               │
+│      └── /admin/tools → ToolsPage (Search Lab, Index — Score Explainer kept │
+│                                    or removed per simplification scope)      │
 │                                                                              │
-│  MarketplacePage.tsx                                                         │
-│  ├── Header (glassmorphic Command Center — full-width search on mobile NEW)  │
-│  ├── FilterSidebar (desktop md:flex — unchanged)                             │
-│  ├── Mobile toolbar (md:hidden — "Filters" button → REPLACED)               │
-│  │   └── [WAS] MobileFilterSheet (Vaul) → [NOW] MobileDropdownFilters       │
-│  ├── FilterChips                                                             │
-│  ├── ExpertGrid (VirtuosoGrid, virtualized)                                  │
-│  └── NewsletterGateModal                                                     │
+│  Zustand Store                                                               │
+│  ├── filterSlice — query, rateMin, rateMax, tags[], industryTags[] NEW,     │
+│  │                 sortBy, savedExperts[], savedFilter, viewMode NEW          │
+│  ├── resultsSlice — experts[], total, cursor, loading, sageMode             │
+│  └── pilotSlice — messages[], isOpen, isStreaming, sessionId                │
 │                                                                              │
-│  Zustand Store (useExplorerStore)                                            │
-│  ├── filterSlice — query, rateMin, rateMax, tags (localStorage persist)      │
-│  ├── resultsSlice — experts[], total, cursor, loading, sageMode              │
-│  └── pilotSlice — messages[], isOpen, isStreaming                            │
+│  Code splitting (NEW): admin routes lazy-loaded via React.lazy + Suspense  │
+└──────────────────────────────────────────────────────────────────────────────┘
+                                    │ HTTPS
+┌───────────────────────────────────▼──────────────────────────────────────────┐
+│                          RAILWAY — FastAPI (v4.0 state)                      │
+├──────────────────────────────────────────────────────────────────────────────┤
+│  main.py (lifespan: DB migration adds industry_tags column NEW)              │
+│  ├── /api/explore   → explorer.py (industry_tags filter stage NEW)          │
+│  ├── /api/admin/auth → POST { username, password } hashed verification NEW  │
+│  ├── /api/admin/*   → all protected by X-Admin-Key (token-based NEW)        │
+│  │   ├── /export/leads.csv     — joins user_events + newsletter NEW         │
+│  │   └── /experts              — industry_tags field NEW                    │
+│  ├── /api/events    → events.py (no auth, unchanged)                        │
+│  └── /api/photos/{u} → browse.py (unchanged)                               │
 │                                                                              │
-│  tracking.ts — void trackEvent(type, payload)  [fire-and-forget]            │
-│  Google Analytics — window.gtag() calls (NEW — v3.1)                        │
-└──────────────────────────────────────────────────┬──────────────────────────┘
-                                                   │ HTTPS
-┌──────────────────────────────────────────────────▼──────────────────────────┐
-│                          RAILWAY — FastAPI                                   │
-├─────────────────────────────────────────────────────────────────────────────┤
-│  main.py (lifespan: DB tables, FTS5, FAISS load, seed from CSV)             │
-│  ├── /api/explore       → explorer.py (FAISS+BM25 hybrid pipeline)          │
-│  ├── /api/suggest       → suggest.py (FTS5 prefix — empty string guard FIX) │
-│  ├── /api/photos/{u}    → browse.py  (photo proxy — 502→404 FIX)           │
-│  ├── /api/admin/*       → admin.py   (email column removal touches here)    │
-│  └── /api/events        → events.py  (behavior tracking, no auth)           │
+│  SQLite (Railway volume) — v4.0 adds:                                       │
+│  ├── experts.industry_tags (TEXT nullable — JSON array, idempotent migration)│
+│  └── admin_users (id, username, hashed_password) OR env var approach        │
 │                                                                              │
-│  SQLite (Railway volume) — tables:                                          │
-│  ├── experts (email column — REMOVE)                                        │
-│  ├── conversations, email_leads, feedback                                   │
-│  ├── newsletter_subscribers, user_events, settings                          │
-│  └── experts_fts (FTS5 virtual table — content='experts')                  │
-│                                                                              │
-│  FAISS (in-memory) — 530 vectors, loaded at startup from data/faiss.index  │
-└─────────────────────────────────────────────────────────────────────────────┘
+│  FAISS (in-memory) — 530 vectors, unchanged for v4.0 (tags are domain-only)│
+└──────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
 ## Integration Points by Feature
 
-### 1. Mobile Filter Dropdown Redesign
+### 1. Admin Auth: Username + Password with Hashed Credentials
 
-**What changes:** Replace the Vaul bottom-sheet (`MobileFilterSheet.tsx`) with inline dropdown controls rendered directly in the mobile toolbar. The bottom-sheet is a full overlay — the replacement should be a lighter, in-place pattern (collapsible inline panel or positioned dropdowns).
+**Current state:** Single-field login (`key` = raw string), stored in `sessionStorage` on success. Backend compares against `ADMIN_SECRET` env var. No username, no hashing, no expiry.
+
+**What v4.0 needs:** Username + password login form, bcrypt-hashed credentials stored securely, session expiry (auto-logout after inactivity or fixed TTL).
+
+**Architecture decision — env var approach (not DB table):**
+
+Introducing a `admin_users` DB table would require a bootstrap problem (how do you create the first user?). The cleaner approach for a single-admin system: store `ADMIN_USERNAME` and `ADMIN_PASSWORD_HASH` as Railway env vars. This keeps credentials out of the DB, avoids schema migration complexity, and requires zero seeding logic.
+
+```python
+# app/routers/admin.py — new AuthBody
+class AuthBody(BaseModel):
+    username: str
+    password: str
+
+@auth_router.post("/auth")
+def authenticate(body: AuthBody):
+    expected_username = os.getenv("ADMIN_USERNAME", "")
+    password_hash = os.getenv("ADMIN_PASSWORD_HASH", "")  # bcrypt hash
+    if not expected_username or not password_hash:
+        raise HTTPException(status_code=503, detail="Auth not configured")
+    if body.username != expected_username:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    if not bcrypt.checkpw(body.password.encode(), password_hash.encode()):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    # Return a session token (short-lived signed value or just OK + client-side TTL)
+    return {"ok": True}
+```
+
+**Session state — where it lives:**
+
+Option A (recommended): Keep sessionStorage but add a client-side expiry timestamp. On login success, write `sessionStorage.setItem('admin_key', key)` AND `sessionStorage.setItem('admin_expires', Date.now() + TTL_MS)`. `RequireAuth` checks both — if expired, clears and redirects to login.
+
+Option B: Server-issued JWT token. More complex, requires token storage and refresh logic. Overkill for single-admin panel.
+
+**Recommended: Option A** — minimal change surface. sessionStorage already provides tab-close logout (secure). Adding a TTL check in `RequireAuth` and `adminFetch` gives session expiry without new infrastructure.
 
 **Touch points:**
 
 | File | Change Type | What Changes |
 |------|-------------|--------------|
-| `frontend/src/components/sidebar/MobileFilterSheet.tsx` | DELETE (or gut and repurpose) | Vaul dependency removed |
-| `frontend/src/pages/MarketplacePage.tsx` | MODIFY | Remove `MobileFilterSheet` import + JSX (line 167); replace mobile toolbar section (lines 99-130); manage new dropdown state |
-| `frontend/src/components/sidebar/MobileFilterBar.tsx` | NEW | Inline filter bar with rate + tag dropdowns; reads/writes useExplorerStore directly (no draft pattern needed — live filter writes) |
-| `frontend/package.json` | OPTIONAL | `vaul` can be removed if SageMobileSheet also migrates — check RootLayout.tsx first |
+| `frontend/src/admin/LoginPage.tsx` | MODIFY | Add `username` field; send `{ username, password }`; store expiry timestamp |
+| `frontend/src/admin/RequireAuth.tsx` | MODIFY | Check `admin_expires` timestamp in addition to key presence |
+| `frontend/src/admin/hooks/useAdminData.ts` | MODIFY | `adminFetch` checks expiry before sending; auto-logout on 401 response |
+| `app/routers/admin.py` | MODIFY | `AuthBody` adds `username`; compare against `ADMIN_USERNAME` env var; add bcrypt check |
+| `app/main.py` requirements | MODIFY | Add `bcrypt` to `requirements.txt` |
+| Railway env vars | NEW | Add `ADMIN_USERNAME`, `ADMIN_PASSWORD_HASH` (bcrypt hash of chosen password) |
 
-**Architecture decision — NO draft state for mobile dropdowns:**
-The existing `MobileFilterSheet` used an explicit draft state (local copy of filters, Apply button to commit). Inline dropdowns should write directly to the Zustand store via `setRateRange` / `toggleTag` / `setQuery` — same as the desktop sidebar. This eliminates the Apply step, matching the desktop UX and the existing store mutation pattern.
+**What does NOT change:**
+- The `X-Admin-Key` header mechanism on all protected endpoints — keep exactly as-is. The "key" value stored in sessionStorage becomes the actual ADMIN_SECRET value (unchanged). The improvement is only in the login form (username + hashed password verification) and session expiry.
+- All `_require_admin` dependency logic — unchanged.
+- `auth_router` / `router` split in admin.py — unchanged.
 
-**Important constraint — Vaul is still used for Sage:**
-`RootLayout.tsx` uses `SageMobileSheet` which is also Vaul-based. Do NOT remove the `vaul` package when gutting `MobileFilterSheet`. The `vaul` import in `MobileFilterSheet.tsx` can be removed but the package must stay.
-
-**Data flow — unchanged:**
-```
-Mobile dropdown interaction
-    ↓
-useExplorerStore.setQuery / setRateRange / toggleTag
-    ↓
-useExplore hook (reactive to store) re-fetches /api/explore
-    ↓
-resultsSlice.setResults → ExpertGrid re-renders
-    ↓
-useUrlSync writes new params to URL (replace: true)
-```
-
-**Full-width search on mobile:**
-The Header search bar is currently `max-w-2xl` with `flex-1`. On mobile, the logo takes `shrink-0` space. Making search full-width on mobile means adjusting Header layout — either hide the logo on mobile or change flex sizing. The Header does not communicate with the mobile filter bar; they write to the same store slice independently.
+**Important constraint:** The existing `ADMIN_SECRET` env var controls what value gets checked by `_require_admin`. This stays. The new `ADMIN_USERNAME` + `ADMIN_PASSWORD_HASH` env vars are only used by the `/api/admin/auth` endpoint to verify the login form submission. On success, the frontend still stores the `ADMIN_SECRET` value (which it already knows from successful auth — or the backend returns it, or the admin enters it in the password field and the backend verifies it's the hash of ADMIN_SECRET). The cleanest model: the password IS the ADMIN_SECRET, and the backend verifies `bcrypt.checkpw(body.password, ADMIN_PASSWORD_HASH)` + `body.username == ADMIN_USERNAME`. The stored session key is still the raw password (ADMIN_SECRET) — `_require_admin` still works unchanged.
 
 ---
 
-### 2. Google Analytics (gtag.js) Integration
+### 2. List View Toggle Alongside VirtuosoGrid
 
-**What changes:** Add `gtag.js` snippet to the HTML shell. Wire custom events via `window.gtag()` at the same call sites as the existing `trackEvent()` instrumentation.
+**Current state:** `ExpertGrid.tsx` renders a `VirtuosoGrid` (CSS grid, 2-col mobile / 3-col desktop). All 530 experts are paginated via cursor-based infinite scroll. `experts[]` lives in `resultsSlice`.
+
+**What v4.0 needs:** A toggle button (grid icon / list icon) that switches between the existing grid card layout and a compact list layout (one expert per row, denser information).
+
+**Architecture decision — shared data, view-mode flag in filterSlice:**
+
+Both views consume `experts[]` from `resultsSlice` — no separate fetch, no data duplication. A `viewMode: 'grid' | 'list'` field in `filterSlice` (persisted to localStorage so user preference is remembered) controls which renderer mounts.
+
+```typescript
+// filterSlice.ts — add to FilterSlice interface
+viewMode: 'grid' | 'list'
+setViewMode: (mode: 'grid' | 'list') => void
+```
+
+**Rendering architecture — conditional mount:**
+
+```tsx
+// ExpertGrid.tsx or MarketplacePage.tsx
+{viewMode === 'grid' ? (
+  <ExpertGrid experts={experts} ... />
+) : (
+  <ExpertList experts={experts} loading={loading} onEndReached={loadNextPage} onViewProfile={onViewProfile} />
+)}
+```
+
+**ExpertList component:** A new `frontend/src/components/marketplace/ExpertList.tsx`. For virtual scrolling in list view, use `Virtuoso` (not `VirtuosoGrid`) — list items are variable height, and `Virtuoso` handles that correctly. The `VirtuosoGrid` assumption of uniform heights does not apply to list rows.
+
+**Critical constraint — VirtuosoGrid uniform height:** Do NOT try to make VirtuosoGrid display list-style rows. `VirtuosoGrid` is specifically designed for uniform-height grid items. List rows would have variable heights (different bio lengths, tag counts), which breaks VirtuosoGrid's internal measurement. Use `Virtuoso` for the list view.
+
+**Toggle button placement:** In the `FilterChips` strip (desktop) and the `MobileInlineFilters` bar (mobile), or in the Header. A dedicated toolbar above the grid is the simplest placement — does not require touching the sidebar or filter logic.
 
 **Touch points:**
 
 | File | Change Type | What Changes |
 |------|-------------|--------------|
-| `frontend/index.html` | MODIFY | Add two `<script>` tags in `<head>` (gtag.js loader + config call) |
-| `frontend/src/tracking.ts` | MODIFY | Add `gtag()` calls alongside existing `fetch` calls, or create a wrapper |
-| `frontend/src/vite-env.d.ts` | MODIFY | Add `interface Window { gtag: (...args: unknown[]) => void }` declaration |
+| `frontend/src/store/filterSlice.ts` | MODIFY | Add `viewMode` field + `setViewMode` action; add to `partialize` persist list |
+| `frontend/src/store/index.ts` | MODIFY | Export `viewMode` + `setViewMode` from `useFilterSlice` hook |
+| `frontend/src/components/marketplace/ExpertList.tsx` | NEW | Virtuoso-based list renderer; `ExpertListRow` sub-component |
+| `frontend/src/components/marketplace/ExpertGrid.tsx` | NONE | Unchanged — purely consumed by parent |
+| `frontend/src/pages/MarketplacePage.tsx` | MODIFY | Read `viewMode`; render `ExpertGrid` OR `ExpertList`; render toggle button |
 
-**Integration pattern — augment, not replace:**
-The existing `trackEvent()` fires behavior events to the internal `/api/events` endpoint (marketplace intelligence). This must continue. `gtag()` is additive — it should be called inside the same `trackEvent()` function body, after the existing fetch. No new hook or component is needed.
+**Data flow — identical for both views:**
+
+```
+useExplore hook (reads filterSlice, calls /api/explore)
+    ↓
+resultsSlice.setResults(experts, total, cursor)
+    ↓
+MarketplacePage reads experts from store
+    ↓
+viewMode === 'grid' → ExpertGrid (VirtuosoGrid)
+viewMode === 'list' → ExpertList (Virtuoso)
+Both call onEndReached → loadNextPage (same infinite scroll)
+```
+
+---
+
+### 3. Industry Tags as a New Data Dimension
+
+**Current state:** `Expert` model has `tags` (TEXT, JSON array of domain tags — AI-assigned, e.g. "fundraising", "digital marketing"). `category` is a separate keyword-matched bucket (Finance, Marketing, etc.). The frontend `filterSlice.tags[]` filters by domain tags.
+
+**What v4.0 needs:** A second tag dimension — "industry tags" representing the vertical/sector (e.g. "FinTech", "HealthTech", "Retail", "B2B SaaS"). These are displayed separately from domain tags in the tag cloud and filterable independently.
+
+**Architecture decision — new column, not reuse existing tags:**
+
+Industry tags are semantically distinct from domain tags (domain = skill/expertise, industry = sector/vertical). Storing them separately makes filtering unambiguous and avoids polluting the existing domain tag search logic.
+
+**Schema change — new column in experts table:**
+
+```python
+# app/models.py — add to Expert class
+industry_tags: Mapped[str | None] = mapped_column(Text, nullable=True)
+# JSON array of industry strings: ["FinTech", "HealthTech"]
+```
+
+Migration in `main.py` lifespan (idempotent):
+
+```python
+with engine.connect() as _conn:
+    try:
+        _conn.execute(_text("ALTER TABLE experts ADD COLUMN industry_tags TEXT"))
+        _conn.commit()
+        log.info("startup: experts.industry_tags column added")
+    except Exception:
+        pass  # Column already exists — idempotent
+```
+
+**How they relate to existing domain tags:**
+
+| Dimension | Column | Example Values | Filter Logic | Used in FAISS? |
+|-----------|--------|----------------|--------------|----------------|
+| Domain tags | `tags` (existing) | "fundraising", "saas" | AND-logic containment filter in explore pipeline | YES — embedded in vectors |
+| Industry tags | `industry_tags` (NEW) | "FinTech", "B2B SaaS" | AND-logic containment filter, additive to domain tag filter | NO — FAISS not rebuilt |
+| Category | `category` (existing) | "Finance", "Tech" | Used by admin classification only, not exposed as filter | NO |
+
+**Industry tags are NOT embedded in FAISS vectors** — adding the column does not require rebuilding the FAISS index. The tagging pipeline (`scripts/tag_experts.py`) would need a new prompt to assign industry tags, but that is a separate data pipeline task from the architecture integration.
+
+**Frontend changes:**
+
+The `filterSlice` needs a second tag array:
 
 ```typescript
-// tracking.ts — augmented pattern
-export function trackEvent(event_type: EventType, payload: TrackPayload = {}): void {
-  const session_id = getSessionId()
-  // Existing: internal event store
-  void fetch(`${API_BASE}/api/events`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    keepalive: true,
-    body: JSON.stringify({ session_id, event_type, payload }),
-  })
-  // NEW: Google Analytics
-  if (typeof window.gtag === 'function') {
-    window.gtag('event', event_type, payload)
-  }
+// filterSlice.ts
+industryTags: string[]      // selected industry tag filters
+toggleIndustryTag: (tag: string) => void
+setIndustryTags: (tags: string[]) => void
+```
+
+The `TagCloud` component in the desktop sidebar needs to show BOTH tag types. Options:
+- Two separate sections in the sidebar: "Skills" + "Industries"
+- A single tag cloud with visual differentiation (color/shape)
+
+The simpler approach: two separate tag cloud sections in the sidebar, each with their own `TOP_INDUSTRY_TAGS` constant (similar to the existing `TOP_TAGS` constant in `constants/tags.ts`).
+
+**Backend filter integration in explorer.py:**
+
+The `run_explore` function adds industry tag filtering in Stage 1 alongside existing tag filtering:
+
+```python
+# Stage 1 addition in run_explore()
+for industry_tag in industry_tags:
+    stmt = stmt.where(Expert.industry_tags.like(f'%"{industry_tag}"%'))
+```
+
+The `/api/explore` endpoint signature gains a new `industry_tags` parameter.
+
+**Touch points:**
+
+| File | Change Type | What Changes |
+|------|-------------|--------------|
+| `app/models.py` | MODIFY | Add `industry_tags: Mapped[str | None]` column |
+| `app/main.py` | MODIFY | Add idempotent `ALTER TABLE experts ADD COLUMN industry_tags` migration |
+| `app/services/explorer.py` | MODIFY | Add `industry_tags: list[str]` parameter to `run_explore()`; add Stage 1 filter loop |
+| `app/routers/explore.py` | MODIFY | Accept `industry_tags` query param; pass to `run_explore()` |
+| `app/routers/admin.py` | MODIFY | Include `industry_tags` in `_serialize_expert()`; accept in `AddExpertBody`; handle in `import-csv` |
+| `frontend/src/store/filterSlice.ts` | MODIFY | Add `industryTags`, `toggleIndustryTag`, `setIndustryTags` |
+| `frontend/src/store/index.ts` | MODIFY | Export new fields from `useFilterSlice` hook |
+| `frontend/src/hooks/useExplore.ts` | MODIFY | Read `industryTags` from store; pass as `industry_tags` param to `/api/explore` |
+| `frontend/src/constants/tags.ts` | MODIFY | Add `TOP_INDUSTRY_TAGS` export (curated list) |
+| `frontend/src/components/sidebar/TagCloud.tsx` | MODIFY | Render industry tag section separately |
+| `frontend/src/components/marketplace/MobileInlineFilters.tsx` | MODIFY | Add industry tags to TagPickerSheet |
+| `frontend/src/store/resultsSlice.ts` | MODIFY | Add `industry_tags: string[] | null` to `Expert` interface |
+
+---
+
+### 4. Lead Export Joining user_events + newsletter_subscribers
+
+**Current state:**
+
+- `/api/admin/leads` returns email-grouped data from `conversations` table (chat search history, gap counts). No click history, no newsletter join.
+- `/api/admin/newsletter-subscribers` returns newsletter subscriber list separately.
+- `/api/admin/export/searches.csv` exports raw `conversations` rows.
+- No single export unifies profile view clicks + newsletter sign-ups + search history.
+
+**What v4.0 needs:** A unified lead export that combines:
+1. Newsletter subscribers (from `newsletter_subscribers` table)
+2. Profile click activity (from `user_events` where `event_type = 'card_click'`)
+3. Search history (from `conversations` table, email-keyed)
+
+**Architecture decision — new endpoint, not modifying existing /leads:**
+
+Existing `/api/admin/leads` is used by `LeadsPage.tsx` and should not be broken. Add a new endpoint `/api/admin/export/leads.csv` that performs the join.
+
+**SQL join pattern:**
+
+```python
+# New endpoint: GET /api/admin/export/leads.csv
+# The three tables are linked only by email (conversations.email, newsletter_subscribers.email)
+# user_events uses session_id — no direct email link unless we correlate via newsletter subscription timing
+
+# Practical approach: export as separate enriched sections
+# Section 1: newsletter subscribers with click count (by session proximity — approximate)
+# Section 2: all unique chat emails with search count, gap count, last search date
+# Join: newsletter_subscribers LEFT JOIN conversations ON email
+```
+
+The key architectural challenge: `user_events` stores `session_id` (not email). There is no direct FK between `user_events` and `newsletter_subscribers`. The export can:
+
+1. Export newsletter subscribers enriched with their conversation history (email join on `conversations`)
+2. Export card click aggregates by expert_id (from `user_events`) as a separate sheet/section
+
+This is the pragmatic approach — no fake join between session-keyed events and email-keyed leads.
+
+**Touch points:**
+
+| File | Change Type | What Changes |
+|------|-------------|--------------|
+| `app/routers/admin.py` | ADD | New `GET /export/leads.csv` endpoint; joins `newsletter_subscribers` LEFT JOIN `conversations` on email |
+| `frontend/src/admin/pages/LeadsPage.tsx` | MODIFY | Add "Export Leads CSV" button that calls new endpoint |
+| `frontend/src/admin/hooks/useAdminExport.ts` | MODIFY | Add `exportLeadsCsv()` function |
+
+---
+
+### 5. Admin Dashboard Simplification
+
+**Current state:** 8 nav items across 3 sections:
+- Analytics: Overview, Gaps, Intelligence, Data
+- Tools: Tools (Search Lab, Score Explainer, Index)
+- Admin: Experts, Leads, Settings
+
+**What v4.0 needs:** Fewer nav items, one-snap overview. The "Score Explainer" and/or other low-use tools pages may be removed or merged.
+
+**Architecture decision — audit before delete:**
+
+The Score Explainer page (`ScoreExplainerPage.tsx`) is a sub-tab of `ToolsPage` (hash-driven navigation). Removing it requires:
+1. Deleting the component file
+2. Removing its hash case from `ToolsPage.tsx`
+3. Removing its `<Navigate>` redirect entry from `main.tsx`
+
+The `GapsPage` and `SearchesPage` (sub-tab of DataPage) are used in the lead tracking flow (LeadsPage has a "Searches →" link navigating to `/admin/data#searches`). Removing these would break that cross-page link.
+
+**Recommended simplification:**
+- Keep: Overview, Leads, Experts, Tools (Search Lab + Index), Settings
+- Merge/remove: Gaps (fold into OverviewPage as a card), Intelligence (fold key OTR@K metric into OverviewPage), Data page (demote searches to Leads page)
+- Remove: Score Explainer standalone tool
+
+**OverviewPage one-snap approach:** The current OverviewPage already has health status, top queries, Sage volume. For "one-snap" — add a "Unmet Demand" section (currently in a separate Gaps page) and a "Quick Stats" for expert count and leads.
+
+**Touch points (minimal — this is largely cosmetic/structural):**
+
+| File | Change Type | What Changes |
+|------|-------------|--------------|
+| `frontend/src/admin/components/AdminSidebar.tsx` | MODIFY | Remove nav items per simplification decision |
+| `frontend/src/admin/pages/OverviewPage.tsx` | MODIFY | Add unmet demand card, simplify or expand layout |
+| `frontend/src/main.tsx` | MODIFY | Remove route entries for deleted pages; adjust redirects |
+| Pages to delete | DELETE | `ScoreExplainerPage.tsx` and/or others per final decision |
+
+---
+
+### 6. Performance Optimization: Code Splitting and Lazy Loading
+
+**Current state:** `main.tsx` imports ALL admin page components at the top level:
+
+```typescript
+import OverviewPage from './admin/pages/OverviewPage.tsx'
+import GapsPage from './admin/pages/GapsPage.tsx'
+import LeadsPage from './admin/pages/LeadsPage.tsx'
+// ... 8 more static imports
+```
+
+This means the initial bundle includes all admin page code — Recharts, admin-specific logic, etc. — even for users who never visit `/admin`.
+
+**What v4.0 needs:** Admin routes lazy-loaded so the main bundle for public users does not include admin code.
+
+**Architecture decision — React.lazy + Suspense on admin routes:**
+
+React Router v7 with `createBrowserRouter` supports lazy loading via `React.lazy()` and route-level `lazy` property. The simplest approach compatible with the existing router structure is `React.lazy` on the component imports.
+
+```typescript
+// main.tsx — lazy-loaded admin imports
+const AdminApp = lazy(() => import('./admin/AdminApp.tsx'))
+const OverviewPage = lazy(() => import('./admin/pages/OverviewPage.tsx'))
+const LeadsPage = lazy(() => import('./admin/pages/LeadsPage.tsx'))
+// ... all admin pages
+
+// Wrap RequireAuth's children in Suspense
+{
+  path: '/admin',
+  element: <RequireAuth />,
+  children: [
+    {
+      element: (
+        <Suspense fallback={<AdminLoadingFallback />}>
+          <AdminApp />
+        </Suspense>
+      ),
+      children: [
+        { index: true, element: <Suspense fallback={null}><OverviewPage /></Suspense> },
+        // ...
+      ]
+    }
+  ]
 }
 ```
 
-**HTML injection pattern (SPA-safe):**
-```html
-<!-- frontend/index.html — inside <head> -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-0T526W3E1Z"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-0T526W3E1Z');
-</script>
-```
+**Vite automatic chunking:** Vite's default Rollup config already splits dynamic imports into separate chunks. Using `React.lazy` with dynamic `import()` syntax is sufficient — no manual `rollupOptions.output.manualChunks` needed.
 
-**SPA page view tracking:**
-React Router v7 with `createBrowserRouter` does not auto-fire pageview events when navigating. Since this SPA has only one real route (`/`), this is not a problem — the initial pageview fires on page load automatically from the `gtag('config', ...)` call. No route-level tracking hook needed.
-
-**Sentry coexistence:**
-`instrument.ts` initializes Sentry before the rest of the app (it is the first import in `main.tsx`). gtag.js loads asynchronously via `<script async>` in the HTML shell — they do not conflict. Both run in parallel.
-
----
-
-### 3. Expert Email Column Removal
-
-**What changes:** Remove `email` from the `Expert` SQLAlchemy model, `data/experts.csv`, and all write paths that store or process this field.
+**What this achieves:** The main bundle (for public users on `/`) no longer includes Recharts, admin page logic, or any admin-specific dependencies. Estimated bundle reduction: 30-50% for public users based on the admin page complexity seen in the codebase.
 
 **Touch points:**
 
 | File | Change Type | What Changes |
 |------|-------------|--------------|
-| `app/models.py` | MODIFY | Remove `email: Mapped[str]` column from `Expert` class |
-| `app/main.py` | MODIFY | Remove `email=(row.get("Email") or "").strip()` from `Expert(...)` constructor in `_seed_experts_from_csv()` (line 85) |
-| `app/routers/admin.py` | MODIFY | 4 sites: (1) import-csv upsert `existing.email =` (line 1035), (2) import-csv insert `email=` (line 1053), (3) CSV write header `"Email"` (line 969), (4) CSV row write `"Email": ""` (line 977) |
-| `data/experts.csv` | MODIFY | Remove the `Email` column header and all email values from all 530 rows |
-
-**Migration strategy — SQLite ALTER TABLE:**
-SQLite does not support `DROP COLUMN` before version 3.35.0 (2021). Railway's SQLite version should support it, but the safest approach is to add an idempotent migration in `main.py`'s lifespan, matching the existing pattern for column additions:
-
-```python
-# In lifespan() — alongside other migration blocks
-with engine.connect() as _conn:
-    try:
-        _conn.execute(_text("ALTER TABLE experts DROP COLUMN email"))
-        _conn.commit()
-        log.info("startup: experts.email column dropped")
-    except Exception:
-        pass  # Column already removed — idempotent
-```
-
-**Upload rejection:**
-Future CSV imports via `POST /api/admin/experts/import-csv` should silently ignore the `Email` column if present (already achieved by not reading it). No 400 validation error needed — graceful ignore is safer and simpler.
-
-**FTS5 impact:** `experts_fts` virtual table does NOT index the `email` column (it indexes `first_name, last_name, job_title, company, bio, tags`). Dropping the column from the physical table does not affect FTS5.
-
-**FAISS impact:** `email` is not embedded into FAISS vectors — no rebuild needed.
-
-**ExpertCard Pydantic schema impact:** `app/services/explorer.py` ExpertCard does not include `email`. No change needed to the API response contract.
-
-**Frontend impact:** Zero. The `Expert` TypeScript interface in `frontend/src/types.ts` does not include `email`. No frontend files reference it.
-
----
-
-### 4. Error Hardening
-
-#### 4a. Photo Proxy 502 → Graceful Fallback
-
-**Location:** `app/routers/browse.py`, `photo_proxy()` function (lines 151-194)
-
-**Current behavior:**
-- `httpx.RequestError` → `raise HTTPException(status_code=502)` → logged to Sentry
-- Non-200 upstream → `raise HTTPException(status_code=502)` → logged to Sentry
-- Frontend `<img src="/api/photos/{username}">` receives 502 → browser logs network error → ExpertCard monogram fallback renders (correct UX, noisy Sentry)
-
-**Fix — return 404 instead of 502:**
-```python
-# browse.py — replace both raise HTTPException(502) lines
-try:
-    upstream_resp = await client.get(upstream_url, timeout=5.0)
-    if upstream_resp.status_code != 200:
-        raise HTTPException(status_code=404, detail="Photo not found")
-except httpx.RequestError:
-    raise HTTPException(status_code=404, detail="Photo not found")
-```
-
-404 is the semantically correct response ("this photo doesn't exist/isn't available") and is NOT treated as a server error by Sentry's default configuration. The monogram fallback in ExpertCard already handles any non-200 by falling through to the `onError` handler — changing 502→404 does not change frontend behavior.
-
-#### 4b. FTS5 Empty String Validation
-
-**Location:** `app/routers/explore.py` and `app/routers/suggest.py`
-
-**Current state:**
-- `explorer.py._safe_fts_query("")` returns `""` and the `if safe_q:` guard on line 223 correctly skips FTS5. This path is **safe**.
-- `suggest.py._run_suggest_multi()` has a `len(q.strip()) < 2` early-return guard on line 43. This path is **safe** for truly empty strings.
-- The Sentry error is likely from edge cases: strings that pass the length check but become empty after `_safe_prefix_query()` sanitization (e.g., a query containing only FTS5 special chars like `"("`). The `_safe_prefix_query` strips these, potentially producing an empty word list — then `words[-1]` on an empty list would raise `IndexError`.
-
-**Fix — add empty check after sanitization in suggest.py:**
-```python
-def _safe_prefix_query(q: str) -> str:
-    cleaned = re.sub(r'[()"\+\-]', ' ', q)
-    cleaned = re.sub(r'\b(AND|OR|NOT)\b', ' ', cleaned, flags=re.IGNORECASE)
-    words = cleaned.split()[:5]
-    if not words:           # guard added — was missing
-        return ""
-    words[-1] = words[-1] + "*"
-    return " ".join(words)
-```
-
-The function already has this guard in the current code (line 33: `if not words: return ""`). The actual Sentry error source may be the FTS5 MATCH call receiving a string that passes the `if prefix_q:` check but is still syntactically invalid for FTS5 (e.g., a single `*` character). Add a try/except around the FTS5 MATCH call in `_run_suggest_multi` — already present (lines 53-66). Review Sentry error details to pinpoint exact path.
-
-**Also validate in explore.py at the router layer:**
-```python
-# explore.py — add before delegating to run_explore
-if query.strip() == "":
-    query = ""   # normalize — prevents FTS5 from receiving whitespace-only strings
-```
-
-#### 4c. React Redirect Loop (Stack Overflow)
-
-**Location:** `frontend/src/main.tsx`, `RedirectWithParams` component
-
-**Root cause:** `RedirectWithParams` uses `useSearchParams` which requires RouterProvider context. When nested inside a route that itself is rendered via the router, this is fine. The stack overflow occurs when the redirect target (`/`) also triggers a re-render that re-evaluates the redirect source — creating an infinite cycle. This most likely happens when a user navigates to `/explore?q=foo` and the redirect to `/?q=foo` triggers `useUrlSync` which writes `?q=foo` back to the URL via `setSearchParams(replace:true)`, which may cause `/explore` to be re-evaluated briefly.
-
-**Fix options (in order of preference):**
-1. Replace `RedirectWithParams` with a simple `<Navigate to="/" replace />` for all legacy routes — discard query params. The URL sync can be removed from the redirects because returning users arriving at `/explore?q=foo` are an edge case. URL params are useful once on the Explorer page, not during redirect.
-2. If preserving query params is required: use `loader` instead of component-based redirect (React Router v7 supports route-level `loader` returning `redirect()`).
-
-**Current `RedirectWithParams` pattern is architecturally fragile** because it creates a component that depends on routing context while itself being part of the routing definition.
-
-#### 4d. Deprecated Gemini Model
-
-**Location:** `app/services/pilot_service.py` or `app/routers/pilot.py` — check for `gemini-2.0-flash-lite` string.
-
-**Fix:** Replace with `gemini-2.0-flash` or the current lite equivalent. This is a single string substitution. No architectural change.
-
----
-
-### 5. Desktop Tag Cloud Expansion (18-20 tags)
-
-**Location:** `frontend/src/components/sidebar/TagCloud.tsx` and/or `frontend/src/constants/tags.ts`
-
-**Current:** Shows 12 tags. The `TOP_TAGS` constant in `tags.ts` contains the full list; `TagCloud` likely slices to 12.
-
-**Fix:** Increase the slice constant from 12 to 18-20. The claymorphic tag cloud uses spring physics and FLIP layout — adding more tags will naturally extend the grid without architectural changes. The sidebar is `w-64` with `overflow-y-auto` so additional tags scroll naturally.
+| `frontend/src/main.tsx` | MODIFY | Convert all admin page imports to `React.lazy()` dynamic imports; wrap routes in `Suspense` |
+| `frontend/vite.config.ts` | NO CHANGE | Vite handles chunking automatically |
 
 ---
 
@@ -365,209 +487,243 @@ if query.strip() == "":
 
 | Component | Status | File | What |
 |-----------|--------|------|------|
-| `MobileFilterBar` | NEW | `frontend/src/components/sidebar/MobileFilterBar.tsx` | Inline dropdown filter controls for mobile |
-| `MobileFilterSheet` | DELETE or gut | `frontend/src/components/sidebar/MobileFilterSheet.tsx` | Vaul bottom-sheet — replaced |
-| `MarketplacePage` | MODIFY | `frontend/src/pages/MarketplacePage.tsx` | Remove sheet state, import new bar, adjust mobile toolbar |
-| `Header` | MODIFY | `frontend/src/components/Header.tsx` | Full-width search adjustment on mobile |
-| `TagCloud` | MODIFY | `frontend/src/components/sidebar/TagCloud.tsx` | Increase tag count 12→18 |
-| `index.html` | MODIFY | `frontend/index.html` | gtag.js script tags |
-| `tracking.ts` | MODIFY | `frontend/src/tracking.ts` | Add `window.gtag()` calls |
-| `vite-env.d.ts` | MODIFY | `frontend/src/vite-env.d.ts` | `Window.gtag` type declaration |
-| `Expert` model | MODIFY | `app/models.py` | Drop `email` column |
-| `main.py` | MODIFY | `app/main.py` | Remove email from seed logic + add DROP COLUMN migration |
-| `admin.py` | MODIFY | `app/routers/admin.py` | Remove email from import-csv (4 sites) + CSV header |
-| `browse.py` | MODIFY | `app/routers/browse.py` | 502→404 for photo proxy errors |
-| `suggest.py` | MODIFY | `app/routers/suggest.py` | Validate sanitized query not empty |
-| `pilot_service.py` | MODIFY | `app/services/pilot_service.py` | Update deprecated model string |
+| `LoginPage` | MODIFY | `frontend/src/admin/LoginPage.tsx` | Add username field; expiry timestamp on login |
+| `RequireAuth` | MODIFY | `frontend/src/admin/RequireAuth.tsx` | Check expiry timestamp; auto-logout on expiry |
+| `useAdminData` | MODIFY | `frontend/src/admin/hooks/useAdminData.ts` | 401 handler → auto-logout; expiry check in `adminFetch` |
+| `ExpertList` | NEW | `frontend/src/components/marketplace/ExpertList.tsx` | Virtuoso-based dense list view for experts |
+| `filterSlice` | MODIFY | `frontend/src/store/filterSlice.ts` | Add `viewMode`, `industryTags`, `toggleIndustryTag`, `setIndustryTags` |
+| `useExplore` | MODIFY | `frontend/src/hooks/useExplore.ts` | Pass `industryTags` to `/api/explore` |
+| `TagCloud` | MODIFY | `frontend/src/components/sidebar/TagCloud.tsx` | Second industry tag section |
+| `MobileInlineFilters` | MODIFY | `frontend/src/components/marketplace/MobileInlineFilters.tsx` | Add industry tags to TagPickerSheet |
+| `MarketplacePage` | MODIFY | `frontend/src/pages/MarketplacePage.tsx` | Grid/list toggle button; conditional ExpertGrid vs ExpertList |
+| `constants/tags.ts` | MODIFY | `frontend/src/constants/tags.ts` | Add `TOP_INDUSTRY_TAGS` export |
+| `Expert` interface | MODIFY | `frontend/src/store/resultsSlice.ts` | Add `industry_tags` field |
+| `LeadsPage` | MODIFY | `frontend/src/admin/pages/LeadsPage.tsx` | Add "Export Leads CSV" button |
+| `AdminSidebar` | MODIFY | `frontend/src/admin/components/AdminSidebar.tsx` | Remove items per simplification |
+| `OverviewPage` | MODIFY | `frontend/src/admin/pages/OverviewPage.tsx` | Add unmet demand card; simplify |
+| `main.tsx` | MODIFY | `frontend/src/main.tsx` | Lazy-load admin routes; adjust routing after simplification |
+| `Expert` model | MODIFY | `app/models.py` | Add `industry_tags` column |
+| `main.py` | MODIFY | `app/main.py` | Idempotent `industry_tags` column migration |
+| `admin.py` | MODIFY | `app/routers/admin.py` | Auth: username+password; new export/leads.csv endpoint; industry_tags in expert serialization |
+| `explorer.py` | MODIFY | `app/services/explorer.py` | Add `industry_tags` filter parameter and Stage 1 loop |
+| `explore.py` router | MODIFY | `app/routers/explore.py` | Accept `industry_tags` query param |
 
 ---
 
 ## Data Flow Changes
 
-### Mobile Filter Flow (Before → After)
+### Auth Flow (Before → After)
 
 ```
-BEFORE (v3.0):
-  Mobile "Filters" button click
+BEFORE (v3.1):
+  LoginPage: single "Admin Key" field
       ↓
-  setSheetOpen(true)  [local useState in MarketplacePage]
+  POST /api/admin/auth { key }
       ↓
-  MobileFilterSheet renders as Vaul Drawer
+  Backend: key === ADMIN_SECRET  (plain string compare)
       ↓
-  User edits draft state (local copy of filters)
+  sessionStorage.setItem('admin_key', key)
       ↓
-  "Apply" button → handleApply() → setQuery/setRateRange/toggleTag
-      ↓
-  useExplorerStore updates → useExplore re-fetches
+  RequireAuth: key !== null → allow
+  adminFetch: X-Admin-Key header = sessionStorage value
 
-AFTER (v3.1):
-  Mobile filter bar always visible (below header on mobile)
+AFTER (v4.0):
+  LoginPage: "Username" + "Password" fields
       ↓
-  User interacts with rate or tag dropdown
+  POST /api/admin/auth { username, password }
       ↓
-  setRateRange / toggleTag directly on useExplorerStore (live)
+  Backend: username === ADMIN_USERNAME AND bcrypt.checkpw(password, ADMIN_PASSWORD_HASH)
       ↓
-  useExplore re-fetches (same as desktop sidebar)
+  sessionStorage.setItem('admin_key', password)  ← value is still ADMIN_SECRET (the password)
+  sessionStorage.setItem('admin_expires', Date.now() + 8*3600*1000)  ← 8h TTL
+      ↓
+  RequireAuth: key !== null AND expires > Date.now() → allow
+  adminFetch: X-Admin-Key = key (unchanged); if 401 → clear session, redirect login
 ```
 
-### GA Event Flow (New)
+### Industry Tag Filter Flow (New)
 
 ```
-User action (card click, filter change, Sage query)
+User selects industry tag in sidebar or TagPickerSheet
     ↓
-trackEvent(event_type, payload)  [tracking.ts]
-    ├── void fetch('/api/events', {...})  [existing — internal marketplace intelligence]
-    └── window.gtag('event', event_type, payload)  [NEW — Google Analytics]
+store.toggleIndustryTag(tag)  [filterSlice]
+    ↓
+useExplore re-fires (industry_tags in dep array)
+    ↓
+GET /api/explore?...&industry_tags=FinTech,HealthTech
+    ↓
+explorer.py Stage 1: Expert.industry_tags LIKE '%"FinTech"%' AND LIKE '%"HealthTech"%'
+    ↓
+setResults(filtered_experts, ...)  → grid/list re-renders
 ```
 
-### Email Purge Flow
+### List View Toggle Flow (New)
 
 ```
-Current state: Expert.email column exists in SQLite (populated from CSV)
-               experts.csv has "Email" as first column
-               admin.py import-csv writes email on upsert and insert
-               main.py seed reads email from CSV
-
-After v3.1:   Expert.email column dropped via ALTER TABLE in lifespan()
-              (idempotent — no-op on subsequent restarts)
-               experts.csv: Email column removed
-               admin.py: email ignored in all write paths
-               main.py: email not read from CSV
-               FTS5 / FAISS / API response: unaffected (never included email)
+User clicks grid/list toggle button
+    ↓
+store.setViewMode('list' | 'grid')  [filterSlice — persisted]
+    ↓
+MarketplacePage conditional render:
+  viewMode === 'grid' → <ExpertGrid /> (VirtuosoGrid)
+  viewMode === 'list' → <ExpertList /> (Virtuoso)
+Both components read same experts[] from resultsSlice
+Both call loadNextPage on endReached (same infinite scroll)
+No API call triggered — only renderer switches
 ```
 
 ---
 
 ## Suggested Build Order
 
-Dependencies drive this ordering. Each task is independent from the next unless noted.
+Dependencies drive this ordering. Numbers represent suggested phase groupings.
 
 ```
-1. Expert email purge
-   Why first: Pure data hygiene — no UI/UX risk. Backend-only change.
-   Blocks nothing. If something breaks, catch early before adding UI changes.
-   Files: app/models.py, app/main.py, app/routers/admin.py, data/experts.csv
+1. Admin auth upgrade (username + password + expiry)
+   Why first: Security-critical; backend + frontend touch. Complete before any
+   other admin work so all subsequent testing uses the new auth flow.
+   Blocks: nothing else. Can be developed in isolation.
+   Files: admin.py (auth endpoint), LoginPage.tsx, RequireAuth.tsx, useAdminData.ts
 
-2. Error hardening (backend)
-   Why second: All Sentry fixes are in Python files. No frontend changes.
-   Photo proxy: browse.py (502→404)
-   FTS5 guard: suggest.py (empty sanitized query)
-   Model update: pilot_service.py (deprecated gemini string)
-   These are independent of each other — can be done in any order.
+2. Industry tags — schema + backend filter
+   Why second: Schema migration must land before frontend can send industry_tags param.
+   Backend work: models.py (column), main.py (migration), explorer.py (filter), explore.py (param)
+   This does NOT require admin UI yet — deploy schema first, then add UI.
+   Blocks: frontend industry tag filter UI
 
-3. Redirect loop fix
-   Why third: Isolated to main.tsx routing. Only change is simplifying
-   RedirectWithParams or replacing it. Can be verified independently.
-   Files: frontend/src/main.tsx
+3. Industry tags — frontend UI (after schema is deployed)
+   filterSlice (add industryTags), useExplore (param), TagCloud (2nd section),
+   MobileInlineFilters (TagPickerSheet), constants/tags.ts (TOP_INDUSTRY_TAGS)
+   Blocks: nothing else
 
-4. Google Analytics
-   Why fourth: index.html + tracking.ts only. Low-risk addition.
-   Testable in isolation: open browser devtools → Network → verify gtag calls.
-   Files: frontend/index.html, frontend/src/tracking.ts, frontend/src/vite-env.d.ts
+4. Grid/list view toggle
+   Why after schema: Does not depend on industry tags, but benefits from having
+   industry_tags in Expert interface first (avoids double-touching resultsSlice).
+   New component: ExpertList.tsx
+   Modify: filterSlice (viewMode), MarketplacePage (conditional render)
 
-5. Desktop tag cloud (18-20 tags)
-   Why fifth: Single constant change. Fast, low-risk.
-   Files: frontend/src/components/sidebar/TagCloud.tsx (or constants/tags.ts)
+5. Lead export (joins user_events + newsletter)
+   Why fifth: Pure backend endpoint addition + frontend button. No dependencies on above.
+   Could be earlier but admin auth should be complete first (it uses protected endpoint).
+   Files: admin.py (new endpoint), LeadsPage.tsx
 
-6. Mobile filter redesign (most complex UI change — save for last)
-   Why last: Requires new component, deleting existing component, updating
-   MarketplacePage layout, and potentially adjusting Header flex behavior.
-   Most likely to surface layout regressions — isolate from other changes.
-   Files: MobileFilterSheet.tsx, MobileFilterBar.tsx (new), MarketplacePage.tsx, Header.tsx
+6. Admin dashboard simplification
+   Why sixth: Destructive (removes pages) — do after new features are confirmed working.
+   Avoids removing a page that's still being tested.
+   Files: AdminSidebar.tsx, main.tsx, OverviewPage.tsx, delete target pages
+
+7. Code splitting (lazy loading)
+   Why last: Pure optimization. Safe to do last — no functional change.
+   Easy to verify: Vite build output will show separate admin chunks.
+   Files: main.tsx (lazy imports + Suspense wrappers)
 ```
 
 ---
 
 ## Architectural Patterns in Use (Reference)
 
-### Pattern: Idempotent SQLite Migration in Lifespan
+### Pattern: Idempotent SQLite Column Migration in Lifespan
 
-**What:** ALTER TABLE wrapped in try/except inside `main.py` lifespan — runs on every startup but succeeds only once (subsequent runs catch the "duplicate column" or "no such column" error silently).
+**What:** `ALTER TABLE experts ADD COLUMN X` wrapped in `try/except` inside `main.py` lifespan. Runs on every restart but errors silently if column already exists.
 
-**Applied for email removal:**
+**Applied for industry_tags:**
 ```python
 with engine.connect() as _conn:
     try:
-        _conn.execute(_text("ALTER TABLE experts DROP COLUMN email"))
+        _conn.execute(_text("ALTER TABLE experts ADD COLUMN industry_tags TEXT"))
         _conn.commit()
     except Exception:
-        pass  # Already removed — idempotent
+        pass  # Already exists — idempotent
 ```
 
-This matches the existing v3.0 pattern for `photo_url` column addition and analytics column additions.
+Established pattern — already used for `otr_at_k`, `source`, `photo_url` column additions.
 
-### Pattern: Direct Store Write (No Draft)
+### Pattern: Dual-Renderer with Shared Store Data
 
-**What:** Desktop sidebar components call `setRateRange` / `toggleTag` directly on `useExplorerStore`. Results update live.
+**What:** Two separate components (ExpertGrid, ExpertList) render the same `experts[]` array from `resultsSlice`. A `viewMode` flag in `filterSlice` determines which renders. No data duplication, no separate fetch.
 
-**Applied to mobile dropdowns:** Mobile filter bar should follow the same pattern — no local draft state, no Apply button. Simplifies code and unifies UX with desktop.
+**Trade-off:** Both components must handle `onEndReached → loadNextPage`. The infinite scroll `cursor` is global in `resultsSlice` — switching views mid-scroll preserves pagination state (correct behavior).
 
-### Pattern: Fire-and-Forget Module Function for Side Effects
+### Pattern: Additive Filter Parameters
 
-**What:** `trackEvent()` in `tracking.ts` is a plain module function (not a React hook). Callable from anywhere — async handlers, debounce callbacks, non-component code.
+**What:** New filter dimensions (industry_tags) are added to the explore pipeline as additive AND conditions. An empty array means "no filter applied" — not "filter to experts with empty industry_tags".
 
-**Applied to GA:** `window.gtag()` call added inside `trackEvent()`. Never awaited. Guard with `typeof window.gtag === 'function'` to safely handle cases where the script hasn't loaded yet.
+**Implementation contract:**
+```python
+# Only apply filter if tags list is non-empty
+for industry_tag in industry_tags:  # if industry_tags is [], loop doesn't execute
+    stmt = stmt.where(...)
+```
+
+This is the same pattern used by domain tags today — safe to replicate.
+
+### Pattern: Session Expiry via Client-Side Timestamp
+
+**What:** After login, write a Unix timestamp expiry to sessionStorage alongside the session key. `RequireAuth` and `adminFetch` check it before proceeding.
+
+**Why not JWT:** For a single-admin panel with a Railway backend, JWT adds token verification complexity (signing keys, refresh tokens) with no additional security benefit over a timestamped sessionStorage value. Both expire at tab close. The timestamp approach is 5 lines vs 50+ lines.
 
 ---
 
 ## Anti-Patterns to Avoid
 
-### Anti-Pattern: Removing `vaul` when gutting MobileFilterSheet
+### Anti-Pattern: Using VirtuosoGrid for List View
 
-**What people do:** See that `MobileFilterSheet.tsx` imports Vaul, delete the package when deleting the component.
+**What people do:** Try to use the existing `VirtuosoGrid` in "1 column" mode for list view, or add list-row styles to ExpertCard.
 
-**Why it's wrong:** `RootLayout.tsx` renders `SageMobileSheet` which also uses Vaul. Removing the package breaks the Sage mobile experience.
+**Why it's wrong:** `VirtuosoGrid` assumes uniform item heights (hardcoded to `h-[180px]` for cards). List rows have variable heights. VirtuosoGrid will miscalculate scroll positions, causing visual glitches.
 
-**Do this instead:** Delete only the `import { Drawer } from 'vaul'` from `MobileFilterSheet.tsx`. Keep the `vaul` package in `package.json`.
+**Do this instead:** Use `Virtuoso` (not `VirtuosoGrid`) for list view. `Virtuoso` handles variable-height items correctly via dynamic measurement.
 
-### Anti-Pattern: Draft State in Live Dropdowns
+### Anti-Pattern: Embedding industry_tags in FAISS Vectors Immediately
 
-**What people do:** Copy the existing `MobileFilterSheet` draft pattern into the new dropdown bar.
+**What people do:** Add `industry_tags` column and immediately modify the embedding pipeline to include them in FAISS vectors, triggering a full index rebuild.
 
-**Why it's wrong:** The draft pattern exists specifically for the bottom-sheet's deferred-commit UX (user configures many filters, then taps Apply). Inline dropdowns apply immediately — draft state adds unnecessary complexity and diverges from the desktop sidebar behavior.
+**Why it's wrong:** FAISS rebuild for 530 experts takes significant Gemini API calls + time. Industry tags are sector labels ("FinTech") — they add limited semantic value to the embedding that is not already captured by the expert's bio + domain tags. The Stage 1 SQLAlchemy pre-filter handles industry tag filtering correctly without FAISS involvement.
 
-**Do this instead:** Write directly to the Zustand store on each change.
+**Do this instead:** Filter industry tags in Stage 1 only. Defer FAISS embedding enhancement to a future version if semantic search across industry tags becomes needed.
 
-### Anti-Pattern: Calling FTS5 MATCH with Empty String
+### Anti-Pattern: DB Table for Admin Credentials
 
-**What people do:** Pass a user query through to FTS5 MATCH without validating the sanitized output.
+**What people do:** Create an `admin_users` table with `username` and `hashed_password` columns to store admin credentials.
 
-**Why it's wrong:** An empty MATCH expression is a syntax error in SQLite FTS5 (`fts5: syntax error near ""`), which raises an exception and generates Sentry noise.
+**Why it's wrong:** Creates a bootstrap problem (how to create the first user?), adds a migration, and requires either a seed script or a "create admin" endpoint (security risk). For a single-admin system with one set of credentials, env vars are simpler, more secure (not in the DB/backup), and already the pattern used by `ADMIN_SECRET`.
 
-**Do this instead:** Always check `if not safe_q: skip` after sanitization, before constructing the SQL query.
+**Do this instead:** Store `ADMIN_USERNAME` and `ADMIN_PASSWORD_HASH` as Railway env vars. The `admin.py` `/auth` endpoint reads them for verification only.
 
-### Anti-Pattern: Blocking on ALTER TABLE for Running Production DB
+### Anti-Pattern: Lazy Loading MarketplacePage or Core Components
 
-**What people do:** Run a migration script that assumes the column exists and will block if it doesn't.
+**What people do:** Apply `React.lazy` to `MarketplacePage` or other components on the public route.
 
-**Why it's wrong:** Railway deploys with the existing SQLite volume. If the column was already dropped in a previous deploy, the migration will error.
+**Why it's wrong:** `MarketplacePage` is the primary user-facing page — lazy loading it would add a loading flash on initial navigation for every public user, degrading the first-impression experience.
 
-**Do this instead:** Use the existing try/except idempotent pattern — already established in `main.py`.
+**Do this instead:** Lazy load ONLY the admin routes (`/admin/*`). Everything under `/` remains statically imported.
 
 ---
 
 ## Scaling Considerations
 
-| Concern | At Current Scale (530 experts) |
-|---------|-------------------------------|
-| Email column drop | Zero risk — SQLite, < 1ms |
-| Mobile dropdown renders | Zero risk — DOM only, no virtual scrolling |
-| GA event volume | Zero risk — client-side, off-thread |
-| Photo proxy 404 vs 502 | Zero risk — status code change only |
-
-This is a hardening milestone — no scaling trade-offs to manage. All changes are subtractive (removing data, simplifying code paths) or additive-only (gtag, inline dropdowns).
+| Concern | At Current Scale (530 experts, single admin) |
+|---------|----------------------------------------------|
+| Industry tag filter | Zero risk — Stage 1 SQL LIKE, same complexity as existing domain tag filter |
+| List view with Virtuoso | Zero risk — 530 items, Virtuoso handles 100k+ items |
+| bcrypt verification | ~100ms per login — acceptable for admin login; not user-facing |
+| Session expiry check | Zero cost — single timestamp comparison |
+| Lead export JOIN | Low risk — conversations table is small; LEFT JOIN is efficient |
+| Code splitting | Positive impact — reduces initial bundle for public users |
 
 ---
 
 ## Sources
 
-- Direct inspection: `app/models.py`, `app/main.py`, `app/routers/admin.py`, `app/routers/browse.py`, `app/routers/suggest.py`, `app/services/explorer.py`
-- Direct inspection: `frontend/src/main.tsx`, `frontend/src/pages/MarketplacePage.tsx`, `frontend/src/components/sidebar/MobileFilterSheet.tsx`, `frontend/src/components/sidebar/FilterSidebar.tsx`, `frontend/src/components/Header.tsx`, `frontend/src/tracking.ts`, `frontend/src/instrument.ts`, `frontend/src/hooks/useUrlSync.ts`, `frontend/src/store/filterSlice.ts`
-- Direct inspection: `frontend/index.html`, `frontend/src/layouts/RootLayout.tsx`
-- Google Analytics gtag.js documentation: https://developers.google.com/analytics/devguides/collection/ga4/reference/config
-- SQLite ALTER TABLE DROP COLUMN: supported since SQLite 3.35.0 (2021-03-12)
+- Direct inspection: `app/models.py`, `app/main.py`, `app/routers/admin.py`, `app/services/explorer.py`, `app/routers/explore.py`
+- Direct inspection: `frontend/src/main.tsx`, `frontend/src/pages/MarketplacePage.tsx`, `frontend/src/admin/LoginPage.tsx`, `frontend/src/admin/RequireAuth.tsx`, `frontend/src/admin/hooks/useAdminData.ts`, `frontend/src/admin/components/AdminSidebar.tsx`
+- Direct inspection: `frontend/src/store/filterSlice.ts`, `frontend/src/store/resultsSlice.ts`, `frontend/src/store/index.ts`, `frontend/src/hooks/useExplore.ts`
+- Direct inspection: `frontend/src/components/marketplace/ExpertGrid.tsx`, `frontend/vite.config.ts`
+- react-virtuoso docs: `VirtuosoGrid` for uniform-height grids; `Virtuoso` for variable-height lists
+- Vite code splitting: dynamic `import()` + `React.lazy` automatically creates separate chunks
 
 ---
 
-*Architecture research for: v3.1 Launch Prep — Expert Marketplace hardening*
-*Researched: 2026-02-26*
+*Architecture research for: v4.0 Public Launch — Expert Marketplace feature integration*
+*Researched: 2026-02-27*

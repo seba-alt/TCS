@@ -1,28 +1,27 @@
 # Feature Research
 
-**Domain:** Expert Marketplace — v3.1 Launch Hardening
-**Milestone:** v3.1 (hardening existing v3.0 codebase for public launch)
-**Researched:** 2026-02-26
-**Confidence:** MEDIUM-HIGH overall — mobile filter UX MEDIUM (research confirms bottom-sheet is defensible but dropdown inline pattern is also legitimate; no authoritative A/B data for this exact context), GA4 SPA HIGH (official docs + multiple 2025 sources confirm pattern), email removal MEDIUM-HIGH (standard SQLite migration pattern + privacy practice), error hardening HIGH (Sentry + FastAPI patterns well-documented)
+**Domain:** Expert marketplace admin + public explorer (React + FastAPI)
+**Milestone:** v4.0 Public Launch — polish, admin overhaul, production hardening
+**Researched:** 2026-02-27
+**Confidence:** HIGH overall — codebase fully inspected; patterns verified against 2025/2026 sources
 
 ---
 
 ## Context: What Already Exists (do NOT re-implement)
 
-This milestone hardens and polishes the existing v3.0 product. Nothing listed below is rebuilt — it is fixed, replaced, or removed.
+This is a polish/hardening milestone on top of a fully-shipped v3.1 product. All research
+below is scoped to the six new feature areas only.
 
-| Existing Feature | Status | v3.1 Action |
-|-----------------|--------|-------------|
-| Vaul bottom-sheet mobile filter drawer | Live — works | Replace with inline dropdown controls |
-| Mobile search input (compact in header) | Live — narrow | Expand to full-width on mobile |
-| Expert email field in SQLite + metadata.json | Live — privacy risk | Remove entirely from all data stores |
-| Photo proxy endpoint (returns 502 on broken URLs) | Live — Sentry errors | Add graceful fallback instead of 502 |
-| React redirect loop in RedirectWithParams | Live — Sentry errors | Fix the redirect logic |
-| FTS5 MATCH with empty string | Live — Sentry errors | Add empty-string guard before MATCH |
-| `gemini-2.0-flash-lite` model string | Live — deprecated | Update to current model name |
-| Sentry (frontend + backend already initialized) | Live — partially configured | Improve source maps, fingerprinting |
-| Desktop tag cloud (12 tags visible) | Live | Expand to 18–20 tags |
-| Google Analytics — not installed | Not present | Add gtag.js G-0T526W3E1Z with SPA route tracking |
+| Existing Baseline | Status |
+|-------------------|--------|
+| Single-key admin auth (`ADMIN_SECRET` env var, raw key in sessionStorage) | Live — replace with bcrypt |
+| `VirtuosoGrid` with `grid-cols-2 md:grid-cols-3`, fixed `h-[180px]` cards | Live — extend with list toggle |
+| Tag cloud with 18 domain tags from `TOP_TAGS` constant | Live — extend with industry row |
+| `user_events` table: `card_click`, `sage_query`, `filter_change` events | Live — use for export |
+| Newsletter leads on `LeadsPage`; email leads linked to `Conversation` search history | Live — extend with CSV export |
+| `OverviewPage` with health speedometer + 4 KPI cards + zero-result top-5 + Sage sparkline | Live — extend with 2 cards |
+| `SkeletonGrid` on initial load; `EmptyState` on zero results; `animate-pulse` loading text | Live — extend with error state |
+| Logout button in `AdminSidebar` (sessionStorage.removeItem) | Live — no changes needed |
 
 ---
 
@@ -30,131 +29,134 @@ This milestone hardens and polishes the existing v3.0 product. Nothing listed be
 
 ### Table Stakes (Users Expect These)
 
-Features where launch readiness depends on getting them right. Missing or broken = public trust issue.
+These are non-negotiable for a product going to public launch. Missing them signals incomplete or
+unsafe software.
 
 | Feature | Why Expected | Complexity | Notes |
 |---------|--------------|------------|-------|
-| **No personal email data exposed** | Any marketplace that stores user/expert PII without necessity is a liability. GDPR's data minimization principle requires removing data that is not actively used. Expert emails are not displayed to users, not used in search, and not in any API response — they are pure dead weight that creates breach risk. | MEDIUM | Remove `email` column from SQLite `Expert` table via Alembic batch migration (SQLite requires batch ops for column drops). Remove from `metadata.json` and `experts.csv`. Add validation in bulk import endpoint to reject future uploads containing email fields. Three-step: migrate DB, sanitize flat files, guard import. |
-| **Zero Sentry errors on normal user flows** | Production users encountering errors that surface in Sentry (502s, stack overflows, syntax errors) are experiencing a broken product. Pre-launch error budget should be zero for P0 flows (search, filter, card expand, Sage). | HIGH | Four distinct error sources, each needs its own fix: (1) photo proxy 502 → catch upstream failure and return 307 redirect to monogram SVG fallback; (2) React redirect loop → audit RedirectWithParams component, likely a `useEffect` dependency array missing `navigate`; (3) FTS5 empty string → validate `query.strip()` before building MATCH clause; (4) deprecated model → update string in `pilot_service.py` and `lang_detect.py`. |
-| **Mobile filters that work without a drawer** | Mobile marketplace apps in 2025 increasingly use inline filter controls rather than bottom-sheet drawers for secondary filter sets. NN/G research found that bottom sheets create dismissal friction and the reachability advantage is overstated. For a small filter set (rate range + tags + text search), inline dropdowns above the grid eliminate the "open drawer → filter → close drawer → see results" round-trip. | MEDIUM | Replace Vaul `MobileFilterSheet` with inline horizontal filter bar: full-width search input + rate dropdown + tag multi-select dropdown. Dropdowns use native `<select>` or a lightweight headless component (no new library). The filter bar sits between the Command Center header and the VirtuosoGrid. On mobile, the sidebar (`FilterSidebar`) remains hidden (`md:hidden`); the inline bar replaces it. |
-| **Google Analytics tracking on route changes** | Any product going to public launch needs baseline analytics: page views per route, user sessions, acquisition source. GA4 with the provided measurement ID (G-0T526W3E1Z) is the stated requirement. Without it, launch is analytically blind. | LOW | Inject `gtag.js` script in `index.html`. Initialize in `analytics.ts` module using the `arguments` object pattern (not spread — see PITFALLS.md). Add `useAnalytics` hook using `useLocation` from React Router that fires `page_view` events on route change. Set `send_page_view: false` in initial config to prevent double-counting. The existing `trackEvent()` fire-and-forget module can be extended to call `window.gtag('event', ...)` alongside the existing internal `/api/events` endpoint. |
-| **Full-width search bar on mobile** | The current mobile header has a compact search input that is visually constrained. On mobile, search is the primary discovery tool. A full-width input with adequate touch target (min 44px height) is the baseline expectation for any search-first product. | LOW | CSS change in `CommandCenterHeader.tsx` or equivalent: `w-full` on mobile, remove any `max-w` constraint on small screens. Ensure the search input is the first interactive element in the mobile DOM flow. |
-| **Desktop tag cloud shows 18–20 tags** | The current 12-tag limit was an arbitrary cap. With 530 experts across diverse domains, a 12-tag cloud hides coverage. Users scanning the tag cloud to understand the expert pool need sufficient breadth. 18–20 tags represents the maximum legible count before the cloud becomes a list. | LOW | Update the tag count constant in `TagCloud.tsx` (or equivalent). No backend change needed — the tag frequency data is already computed. |
-
----
+| Admin login with username + hashed password | A single plaintext env var secret is not defensible for a public product. Any internal tool with a web-accessible login form needs bcrypt-hashed credentials. | LOW | Backend: bcrypt hash stored as `ADMIN_PASSWORD_HASH` env var; frontend adds username field. No JWT needed — sessionStorage expiry is sufficient for a single-admin tool. |
+| Error state on public explorer grid | If `/api/explore` returns 5xx, users see a blank grid with no explanation — unacceptable for launch. | LOW | Inline error card in the grid area: "Something went wrong — try refreshing" with a retry button. Not a full-page crash. Handled in `useExplore` hook on non-200 response. |
+| White search input for contrast | Current header input uses `bg-slate-900`, blending into the dark header. A public-facing product needs high-contrast, visible input fields. | LOW | CSS change in `Header.tsx`: `bg-white text-gray-900 placeholder-gray-400`. Keyword placeholders: "e.g. SaaS fundraising advisor" instead of animated role names. |
+| Grid / list view toggle | Any marketplace that shows browsable cards is expected to offer a density toggle. Users want list view to compare rates and bios side-by-side. | MEDIUM | `viewMode: 'grid' \| 'list'` in Zustand `filterSlice`; localStorage persist; conditional render of `VirtuosoGrid` vs `Virtuoso` (list variant). |
+| Lead export CSV | Admin needs to export email leads with search history for post-launch outreach. Currently there is no cross-referenced leads CSV (newsletter CSV exists separately). | MEDIUM | New endpoint `GET /api/admin/export/leads.csv`; JOIN `email_leads` + `conversations`; columns: email, first seen, last active, search count, gap searches. |
 
 ### Differentiators (Competitive Advantage)
 
-These features are above what a basic "fix the bugs" milestone would deliver. Each adds launch-day quality signal.
+These features directly support the v4.0 goal of a polished, intelligence-rich admin and a
+production-hardened explorer.
 
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| **Sentry source maps via `@sentry/vite-plugin`** | Production errors in Sentry currently show minified stack traces (line 1, column 87432). Source maps uploaded to Sentry via the Vite plugin show actual TypeScript file names and line numbers. This reduces mean-time-to-fix from "unclear" to "exact". Already have Sentry initialized — source maps are the next step. | LOW | Install `@sentry/vite-plugin` as dev dependency. Add to `vite.config.ts`: `sentryVitePlugin({ org, project, authToken })`. Set `build.sourcemap: 'hidden'` (generates maps, doesn't serve them to users). Maps upload on every production build automatically. Auth token stored as `SENTRY_AUTH_TOKEN` env var in Vercel. |
-| **GA4 custom events that extend existing internal tracking** | The existing `trackEvent()` already captures card clicks, Sage queries, and filter changes to `/api/events`. Routing those same events to GA4 simultaneously gives the admin: (1) internal demand signal data for the Admin Marketplace Intelligence page, and (2) Google's acquisition/retention analytics without duplicating instrumentation. Two birds, one `trackEvent()` call. | LOW | In `trackEvent.ts`, add a GA4 call alongside the existing fetch: `window.gtag?.('event', eventName, eventParams)`. Map internal event names to GA4 event names (e.g., `card_click` → `select_content`, `sage_query` → `search`, `filter_change` → `view_item_list`). Use GA4's recommended e-commerce event taxonomy where applicable. |
-| **Email removal with upload guard** | Removing existing email data is the minimum. Adding a server-side guard that rejects future expert CSV uploads containing an `email` column prevents the data from re-entering via the admin bulk import flow. This makes the removal durable, not just a one-time cleanup. | LOW | In the bulk import endpoint (`/api/admin/experts/import` or equivalent), add a check: if any row in the uploaded CSV contains an `email` or `Email` key, return 422 with message "Email field detected — remove before import for privacy compliance." This is a 5-line guard in the CSV parsing logic. |
-| **Graceful photo proxy fallback (SVG monogram)** | The current photo proxy returns 502 when the upstream photo URL is unreachable. The frontend then shows a broken image. A graceful fallback returns a valid SVG monogram generated from the expert's initials. This means the proxy never returns an error — it always returns an image. Eliminates an entire class of Sentry errors. | MEDIUM | In the FastAPI photo proxy endpoint, wrap the upstream HTTP request in a try/except. On any failure (timeout, 4xx, 5xx, network error), generate a minimal SVG with the expert's initials and return it as `image/svg+xml`. Initials derived from `first_name` and `last_name` passed as query params. Cache the fallback SVG for the same 24h as the proxy cache. |
+| Industry tags alongside domain tags | Domain tags describe *what* an expert does (skills); industry tags describe *where* they work (verticals). These are orthogonal dimensions users expect to filter independently on a mature marketplace. | HIGH | Requires: `industry_tags` field on Expert model + metadata.json; Gemini batch-tagging with curated ~15-tag taxonomy; FilterSidebar industry section; `run_explore()` pipeline update; TagCloud second row. Touches 6+ files. |
+| Streamlined admin "one-snap overview" | `OverviewPage` already exists but omits total leads count and expert pool count. An admin should answer "what is the state of this system?" without navigating elsewhere. | LOW | Add "Total Leads" and "Expert Pool" stat cards to the existing KPI grid. Requires two new fields in `GET /api/admin/stats` response. |
+| Admin session with password + username | Two-field login (username + hashed password) is the expected pattern for any credential-based admin. The existing single-field key form is functional but feels like a temp hack. | LOW | Additive — same form, same sessionStorage pattern, same `RequireAuth` guard. Change is entirely in the `/auth` endpoint logic and the login form fields. |
+| Production hardening: mobile polish and loading speed | Public launch traffic will include users on slow mobile connections. The current Sage double-rendering bug (desktop + mobile popout overlap) and double-click profile-open on mobile are known issues that affect first impressions. | MEDIUM | Sage: add `md:hidden` guard to mobile sheet, `hidden md:block` to desktop panel (they already coexist but conditionals are missing). Mobile double-click: change from double-tap expand to single-tap (desktop hover covers the expand need). Loading speed: audit lazy-loading of heavy dependencies. |
 
----
-
-### Anti-Features (Explicitly Avoid)
+### Anti-Features (Commonly Requested, Often Problematic)
 
 | Feature | Why Requested | Why Problematic | Alternative |
 |---------|---------------|-----------------|-------------|
-| **Keeping the Vaul bottom sheet as-is** | "It already works, why replace it?" | The Vaul bottom sheet requires 3 interactions to change a filter (tap FAB → drawer opens → change filter → drawer closes → see results). NN/G research confirms bottom sheet dismissal is frequently confusing. More importantly: the existing implementation is generating Sentry errors on some mobile gesture interactions. The stated v3.1 requirement is to replace it. | Inline filter bar above the expert grid: search input (full-width) + rate dropdown + tag dropdown. Visible at all times, no drawer open/close cycle. Matches the desktop sidebar pattern in a mobile-appropriate layout. |
-| **Installing react-ga4 or react-ga library** | "There's a library for GA4 in React" | `react-ga4` (the most popular) has not been meaningfully updated since 2022 and its last substantive release was 2023. The library wraps `gtag.js` but adds a dependency maintenance burden. The correct implementation for 2025 is a thin custom module (30 lines) around the native `gtag` function — no library needed, no maintenance risk, full control. | Custom `analytics.ts` module: initialize gtag, export `trackPageView()` and `trackEvent()` functions. `useAnalytics` hook using `useLocation`. This is the pattern recommended by multiple 2025 sources and is what the library would generate anyway. |
-| **Pseudonymization instead of deletion for expert emails** | "We might need emails later" | Pseudonymization (hashing the email) retains the data in a non-identifiable form. For expert data, there is no stated use case for emails in TCS — they are not displayed, not used in search, not in any API response. Retaining hashed emails is data minimization theater: you still store personal data, it just looks different. GDPR's data minimization principle applies to the need to store, not just the format. If you don't need it, delete it. | Hard deletion: `ALTER TABLE` to drop the column (via Alembic batch), remove from flat files, add import guard. Zero stored email data. |
-| **GTM (Google Tag Manager) instead of direct gtag.js** | "GTM is more powerful for future analytics" | GTM is appropriate when a non-developer (marketing team) needs to add tracking without code changes. TCS is a developer-maintained product with no separate marketing operations team. GTM adds a layer of complexity (GTM container, tag configuration, trigger rules) on top of gtag.js for zero benefit in this context. Direct gtag.js is simpler, faster to load, and directly controlled in code. | Direct `gtag.js` script injection in `index.html` + custom `analytics.ts` module. If GTM is needed in the future, it's a 30-minute migration. |
-| **Fixing deprecated Gemini model by upgrading to Gemini 2.5 Flash** | "If we're touching the model string, why not upgrade to the latest?" | Upgrading the generation model (`gemini-2.0-flash` → `gemini-2.5-flash`) is a behavior change that requires re-testing Sage function calling accuracy, Dutch detection routing, and the "smart funny friend" persona. This is out of scope for a hardening milestone. The fix is narrow: update only the deprecated `gemini-2.0-flash-lite` model string (used for Dutch detection) to its non-deprecated successor. | Update `gemini-2.0-flash-lite` to `gemini-2.0-flash` (the non-lite variant, which is stable) or to the current equivalent. Do not change the main Sage generation model in this milestone. Validate Dutch detection still routes correctly with the updated model. |
-| **Full mobile filter redesign (accordion, multi-panel)** | "If we're replacing the bottom sheet, let's do a full redesign" | A full mobile filter redesign (accordion sections, animated panels, saved filter presets) is a v4.0 feature. v3.1's mobile filter goal is narrow: eliminate the bottom-sheet drawer friction with a simpler inline bar. Adding complexity to a hardening milestone delays launch. | Inline filter bar: three controls (search, rate dropdown, tags dropdown) visible above the grid. No animation, no accordion. Functional, fast, and achievable in one phase. |
+| JWT session tokens with expiry | "Proper auth" implies JWTs | For a single-admin internal tool, JWT refresh flows add 3-4x implementation complexity with zero user-facing benefit. sessionStorage already expires on tab close — that is the right expiry model for a solo operator. | bcrypt password hashing on the existing single-key flow. Same security surface, 20% of the code. |
+| Admin password reset via email | Security hygiene | There is one admin. Email-based reset requires SMTP integration, a reset token table, and a recovery UI — disproportionate for a solo operator tool. | Document: rotate `ADMIN_PASSWORD_HASH` in Railway env vars. Takes 30 seconds. |
+| Real-time live admin events | "See what users are doing now" | WebSocket or rapid polling for live admin events adds backend complexity and Railway egress. The 30s health check interval already in `OverviewPage` is the right model. | Manual refresh button on Overview if needed. Keep 30s health polling as-is. |
+| Inline expert editing in list view | "While in list view, edit expert from card" | Expert management belongs on `ExpertsPage`. Mixing browse and edit in the same view creates confusing IA and testing surface. | Link from list-view card to `/admin/experts?highlight=username`. |
+| Free-form AI-invented industry tags | "Let Gemini choose industry labels" | Without a fixed taxonomy, Gemini produces "fin-tech", "FinTech", "financial technology" — inconsistent values that break filter matching. | Curated taxonomy of ~15 industry tags passed as an enum in the Gemini prompt. Force-fit to nearest match. |
+| Card click export (email + click correlation) | "Show which experts each lead viewed" | `user_events.session_id` is an anonymous random string. `email_leads.email` is captured at the email gate. These are not currently linked in the DB — reliable correlation is not possible without a data model addition. | Export email + search queries from `Conversation` table (fully available now). Document the session linking gap for v4.1. |
 
 ---
 
 ## Feature Dependencies
 
 ```
-[Expert Email Removal]
-    └──step 1──> [Alembic batch migration: drop email column from Expert table]
-    └──step 2──> [Sanitize metadata.json and experts.csv (remove email fields)]
-    └──step 3──> [Add import guard in bulk upload endpoint]
-    └──no conflicts with──> [any other v3.1 feature]
-    └──note: Must complete step 1 before step 3; steps 1 and 2 can be parallel]
+[Admin bcrypt password login]
+    └──replaces──> [ADMIN_SECRET plaintext comparison in /auth endpoint]
+    └──requires──> [ADMIN_PASSWORD_HASH env var pre-generated with passlib]
+    └──requires──> [ADMIN_USERNAME env var (defaults to "admin")]
+    └──frontend: add username field to LoginPage.tsx]
+    └──backend: 10-line change in admin.py /auth endpoint]
 
-[Sentry Error Fixes — four independent bugs]
-    ├──[Photo proxy 502 → graceful SVG fallback]
-    │       └──independent of other fixes]
-    │       └──requires: first_name + last_name available as proxy query params]
-    ├──[React redirect loop → fix RedirectWithParams]
-    │       └──independent of other fixes]
-    │       └──requires: reading the existing component to diagnose]
-    ├──[FTS5 empty string → validate before MATCH]
-    │       └──independent of other fixes]
-    │       └──requires: finding every location that builds a MATCH clause]
-    └──[Deprecated gemini-2.0-flash-lite → update model string]
-            └──independent of other fixes]
-            └──requires: test Dutch detection still works after update]
+[Grid / list view toggle]
+    └──requires──> [viewMode state in Zustand useFilterSlice]
+    └──requires──> [Virtuoso (list variant) component as alternative to VirtuosoGrid]
+    └──requires──> [ExpertCard list layout variant (wider, bio visible, no tap-expand)]
+    └──enhances──> [localStorage persist via existing Zustand persist middleware]
+    └──note: VirtuosoGrid assumes uniform height — list cards are variable height;
+             must conditionally render Virtuoso, not pass a prop to VirtuosoGrid]
 
-[Mobile Filter Redesign]
-    └──removes: Vaul MobileFilterSheet component]
-    └──adds: inline filter bar (search + rate dropdown + tags dropdown)]
-    └──requires: full-width search bar (listed separately, must coordinate)]
-    └──affects: CommandCenterHeader.tsx layout on mobile]
-    └──note: Rate dropdown must align to filterSlice.rateMax default (5000) to avoid]
-    └──      [spurious filter chip bug already fixed in v2.0 — preserve that fix]
-    └──independent of: Sentry fixes, email removal, GA4]
+[Industry tags]
+    └──requires──> [industry_tags column on Expert model (SQLite ADD COLUMN migration)]
+    └──requires──> [industry_tags field in metadata.json]
+    └──requires──> [Gemini batch-tagging script with curated 15-tag taxonomy]
+    └──requires──> [run_explore() pipeline: industry_tags pre-filter]
+    └──requires──> [FilterSidebar: industry multi-select section]
+    └──requires──> [useExplorerStore: industryTags: string[] filter slice]
+    └──enhances──> [TagCloud: second row labeled "Industry"]
+    └──conflicts with timing of──> [Grid/list toggle]
+       (both touch ExpertCard layout — ship in separate phases to avoid merge conflicts)
 
-[Full-width Search Bar]
-    └──requires: mobile filter redesign (both touch the header layout)]
-    └──should be: implemented in same phase as mobile filter bar]
-    └──note: Coordinate so header doesn't get two separate layout passes]
+[Lead export CSV]
+    └──requires──> [email_leads table] (ALREADY BUILT)
+    └──requires──> [conversations table] (ALREADY BUILT)
+    └──requires──> [new GET /api/admin/export/leads.csv endpoint on authenticated router]
+    └──enhances──> [LeadsPage: "Export Leads CSV" button, matching newsletter export pattern]
+    └──note: card click correlation NOT achievable without data model addition;
+             scope to email + search queries for v4.0]
 
-[Google Analytics GA4]
-    └──step 1──> [Inject gtag.js script in index.html]
-    └──step 2──> [Create analytics.ts module with arguments-object gtag init]
-    └──step 3──> [Add useAnalytics hook with useLocation for route tracking]
-    └──step 4──> [Extend existing trackEvent() to dual-fire to GA4]
-    └──requires: step 1 before steps 2–4]
-    └──independent of: all other v3.1 features]
-    └──note: Must set send_page_view: false to prevent double-counting on initial load]
+[One-snap overview additions]
+    └──requires──> [total_leads and expert_count added to /api/admin/stats response]
+    └──enhances──> [OverviewPage: two new stat cards in existing KPI grid]
+    └──independent of all other v4.0 features]
+    └──note: simplest change in the milestone — good first PR]
 
-[Sentry Source Maps]
-    └──requires: @sentry/vite-plugin in vite.config.ts]
-    └──requires: SENTRY_AUTH_TOKEN env var in Vercel]
-    └──independent of: all other v3.1 features]
-    └──note: Do not set sourcemap: true (serves maps publicly); use sourcemap: 'hidden']
+[White search input]
+    └──modifies──> [Header.tsx: input className only]
+    └──independent of all other v4.0 features]
 
-[Desktop Tag Cloud 18–20 Tags]
-    └──requires: updating count constant in TagCloud component]
-    └──independent of: all other v3.1 features]
-    └──note: Simplest change in the milestone; good first commit]
+[Error state on public explorer]
+    └──modifies──> [useExplore hook: handle non-200 response from /api/explore]
+    └──modifies──> [MarketplacePage.tsx or ExpertGrid.tsx: render error banner]
+    └──independent of all other v4.0 features]
 ```
+
+### Dependency Notes
+
+- **Industry tags requires startup migration:** Adding `industry_tags` to `Expert` uses SQLite
+  `ALTER TABLE ADD COLUMN NULL` — safe and idempotent. Match the existing startup migration
+  pattern (`idempotent_startup_migration` for email purge).
+- **Grid/list toggle requires component switch, not a prop:** `VirtuosoGrid` requires uniform
+  item height. List mode cards contain variable-height bio text. Conditionally render
+  `<VirtuosoGrid>` vs `<Virtuoso>` based on `viewMode`. This is 15 lines in `ExpertGrid.tsx`.
+- **Lead export is read-only:** No new tables. The JOIN over `email_leads` + `conversations` is
+  straightforward SQL.
+- **Bcrypt admin auth is a surgical change:** The `/auth` endpoint body changes from `{key}`
+  to `{username, password}`; the comparison changes from `body.key != secret` to
+  `pwd_context.verify(body.password, stored_hash)`. Frontend adds one `<input>` field.
 
 ---
 
 ## MVP Definition
 
-### Launch With (v3.1 milestone = public launch readiness)
+### Launch With (v4.0 — required for public launch)
 
-All items below are P0 for launch. Missing any one creates a launch blocker (privacy, trust, or analytics blindness).
+- [ ] White search input with keyword placeholders — 30-minute change; immediate polish signal
+- [ ] Error state on public explorer grid — prevents blank page on backend failure
+- [ ] Admin bcrypt password + username login — plaintext key comparison is not defensible
+- [ ] Grid / list view toggle — table stakes for a marketplace product
+- [ ] Lead export CSV (email + search history) — enables post-launch outreach
+- [ ] One-snap overview additions (total leads + expert pool count) — zero-cost win
 
-- [ ] **Expert email purge** — GDPR data minimization, privacy risk eliminated before any public marketing drives traffic to the platform
-- [ ] **Photo proxy graceful fallback** — eliminates highest-frequency Sentry error category; broken images on public launch are an immediate trust signal failure
-- [ ] **React redirect loop fix** — stack overflow errors cause blank pages for a subset of users; cannot launch with a known blank-page bug
-- [ ] **FTS5 empty-string guard** — syntax errors in search on empty input; search is the primary discovery mechanism
-- [ ] **Deprecated model string update** — running on a deprecated API endpoint means Google can drop it without notice; pre-empt outage
-- [ ] **Google Analytics G-0T526W3E1Z** — need baseline acquisition and engagement data from day one of public launch
+### Add After Validation (v4.x)
 
-### Add in Same Milestone (P1 — high value, low risk)
+- [ ] Industry tags — high complexity, high value; ship after launch traffic validates domain tag
+  model first
+- [ ] Card click correlation in lead export — requires `session_id → email` data model addition
+- [ ] Admin session expiry (configurable timeout) — add if security audit requires it
 
-- [ ] **Mobile filter inline bar** — replaces Vaul bottom-sheet with the simpler inline pattern; improves mobile conversion funnel
-- [ ] **Full-width mobile search** — accompanies mobile filter bar (same layout area)
-- [ ] **Desktop tag cloud 18–20 tags** — single constant change; ship with the first PR
-- [ ] **Sentry source maps** — enables readable error traces for any errors that surface post-launch
+### Future Consideration (v5+)
 
-### Future Consideration (v3.2+)
-
-- [ ] **GA4 e-commerce event mapping** — map `card_click` to `select_content` etc. for Google's recommended taxonomy; useful for funnel analysis but not day-one critical
-- [ ] **Admin analytics dashboard for GA4 data** — bringing GA4 data into the admin Marketplace Intelligence view; requires GA4 Data API integration (non-trivial)
-- [ ] **Deeper Sentry performance monitoring (tracing)** — Sentry has performance tracing beyond error tracking; useful once error volume is zero and performance becomes the next investigation target
+- [ ] Multi-admin user management with roles
+- [ ] Export with date-range filtering
+- [ ] Saved filter presets
 
 ---
 
@@ -162,275 +164,319 @@ All items below are P0 for launch. Missing any one creates a launch blocker (pri
 
 | Feature | User Value | Implementation Cost | Priority |
 |---------|------------|---------------------|----------|
-| Expert email purge | HIGH (privacy, compliance) | MEDIUM | P0 |
-| Photo proxy graceful fallback | HIGH (eliminates broken images) | MEDIUM | P0 |
-| React redirect loop fix | HIGH (blank page for some users) | MEDIUM | P0 |
-| FTS5 empty-string guard | HIGH (broken search) | LOW | P0 |
-| Deprecated model string | MEDIUM (latent outage risk) | LOW | P0 |
-| Google Analytics | HIGH (launch analytics) | LOW | P0 |
-| Mobile filter inline bar | HIGH (UX improvement) | MEDIUM | P1 |
-| Full-width mobile search | MEDIUM (touch UX) | LOW | P1 |
-| Desktop tag cloud expansion | MEDIUM (discovery coverage) | LOW | P1 |
-| Sentry source maps | MEDIUM (dev productivity) | LOW | P1 |
-| GA4 custom event dual-fire | LOW (nice-to-have data) | LOW | P2 |
-| GTM integration | LOW (marketing tooling) | MEDIUM | P3 (defer) |
+| White search input + keyword placeholders | MEDIUM | LOW | P1 |
+| Error state on explorer grid | HIGH | LOW | P1 |
+| Admin bcrypt password login | HIGH | LOW | P1 |
+| Grid / list view toggle | HIGH | MEDIUM | P1 |
+| Lead export CSV | HIGH | MEDIUM | P1 |
+| One-snap overview (2 stat cards) | MEDIUM | LOW | P1 |
+| Industry tags | HIGH | HIGH | P2 |
+| Sage double-rendering fix | MEDIUM | LOW | P1 |
+| Mobile double-click profile fix | LOW | LOW | P1 |
+| Admin session expiry | LOW | MEDIUM | P3 |
 
 **Priority key:**
-- P0: Must have before any public launch announcement
-- P1: Should ship in v3.1, no strong reason to defer
-- P2: Nice to have, ship if time allows
-- P3: Defer to future milestone
+- P1: Must have for v4.0 launch
+- P2: Ship in v4.1 after launch validates the data model
+- P3: Defer
 
 ---
 
-## Detailed Pattern Notes by Feature Area
+## Per-Feature Implementation Notes
 
-### 1. Expert Email Removal
+### 1. Admin Login with Username + Hashed Password
 
-**The migration pattern (HIGH confidence — Alembic official docs, SQLite batch mode):**
+**Current state:** `POST /api/admin/auth` accepts `{key: string}` and compares raw string
+against `ADMIN_SECRET` env var. Plaintext comparison.
 
-SQLite does not support `ALTER TABLE ... DROP COLUMN` in older SQLite versions. Alembic handles this via batch mode, which: reflects the current table, creates a new table without the column, copies data via `INSERT INTO ... SELECT`, drops the old table, and renames the new one.
+**Target state:** Accept `{username: string, password: string}`; compare username against
+`ADMIN_USERNAME` env var; verify password against bcrypt hash in `ADMIN_PASSWORD_HASH` env var.
 
+**Backend change (10 lines in admin.py):**
 ```python
-# alembic migration
-def upgrade():
-    with op.batch_alter_table('experts') as batch_op:
-        batch_op.drop_column('email')
+from passlib.context import CryptContext
+_pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-def downgrade():
-    with op.batch_alter_table('experts') as batch_op:
-        batch_op.add_column(sa.Column('email', sa.String(), nullable=True))
+class AuthBody(BaseModel):
+    username: str
+    password: str
+
+@auth_router.post("/auth")
+def authenticate(body: AuthBody):
+    stored_username = os.getenv("ADMIN_USERNAME", "admin")
+    stored_hash = os.getenv("ADMIN_PASSWORD_HASH", "")
+    if not stored_hash or body.username != stored_username:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    if not _pwd_context.verify(body.password, stored_hash):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    return {"ok": True}
 ```
 
-**Flat file sanitization:**
+**Library note:** FastAPI docs now reference `pwdlib` instead of `passlib` (passlib maintenance
+lapsed per GitHub discussion #11773). For a single-endpoint auth with no legacy hashes, either
+works. `pwdlib` is the forward-looking choice. `passlib` remains battle-tested and is the safer
+choice if Railway's Python environment already has it. Use `passlib` for v4.0 — switching later is
+a one-line change.
 
-Both `data/metadata.json` and `data/experts.csv` need email fields removed. Python one-liner approach for the JSON:
-
+**Pre-generating the hash (operator one-time setup):**
 ```python
-import json
-with open('data/metadata.json') as f:
-    experts = json.load(f)
-for expert in experts:
-    expert.pop('Email', None)
-    expert.pop('email', None)  # both casings, per the capital+spaced field naming convention
-with open('data/metadata.json', 'w') as f:
-    json.dump(experts, f, indent=2)
+from passlib.context import CryptContext
+ctx = CryptContext(schemes=["bcrypt"], deprecated="auto")
+print(ctx.hash("your-secure-password"))
+# Output: $2b$12$... (paste this into ADMIN_PASSWORD_HASH in Railway)
 ```
 
-Note: the field in `metadata.json` uses capital+spaced naming (`"Email"` not `"email"`). Check both casings.
+**Frontend change:** Add `username` text input above the existing password field in
+`LoginPage.tsx`. Pass `{username, password}` in the POST body. Store the key in sessionStorage
+as before — or store `username` separately and use it only for display.
 
-**Import guard (prevent re-introduction):**
+**Session management:** sessionStorage provides implicit expiry (clears on tab close). No
+server-side session table needed for v4.0. This is the correct tradeoff for a solo-operator
+internal tool — confirmed by FastAPI auth best practices sources.
 
-In the CSV import endpoint, after parsing the CSV rows, add:
+**No password reset UI:** Rotate `ADMIN_PASSWORD_HASH` and `ADMIN_USERNAME` in the Railway
+dashboard. Document this in `ADMIN.md`. Takes 30 seconds.
+
+**Confidence:** HIGH — bcrypt/passlib is thoroughly documented; the codebase change is surgical.
+
+---
+
+### 2. Grid / List View Toggle
+
+**Current state:** `VirtuosoGrid` renders `grid-cols-2 md:grid-cols-3` with fixed `h-[180px]`
+cards. No view mode state exists.
+
+**Target state:** Toggle in the `FilterChips` toolbar area; `viewMode: 'grid' | 'list'` in
+`useFilterSlice` Zustand slice; `localStorage` persist; conditional rendering in `ExpertGrid.tsx`.
+
+**Key technical constraint:** `VirtuosoGrid` requires uniform row height. List mode cards expose
+bio text and variable content — must render `<Virtuoso>` (standard list variant) instead of
+`VirtuosoGrid`. This is a conditional render, not a prop.
+
+**List card layout:** Full-width single column; shows `photo + name + title + company + rate +
+2-3 tags + bio preview (2 lines) + View Full Profile`. Match reason visible by default (no
+tap-expand needed). Card height: auto (variable). Remove the `h-[180px]` constraint in list mode.
+
+**Grid card layout:** Unchanged from current — `h-[180px]`, four bento zones, tap-expand on
+mobile.
+
+**Toggle persistence:** `localStorage` via Zustand `persist` middleware is already configured on
+`filterSlice`. Adding `viewMode` to the persisted slice is a two-line addition.
+
+**Mobile behavior:** List view is the better default on mobile (single column, easier to scan
+titles and rates). On mobile, grid = 2 columns (existing); list = 1 column. Toggle visible on
+both breakpoints.
+
+**Toggle UI:** Two icon buttons in the toolbar (grid icon and list icon), active state uses
+`text-brand-purple`, inactive uses `text-gray-400`. No labels needed — icons are universally
+recognized. Place in `FilterChips.tsx` rightmost area or above the grid as a standalone control.
+
+**Confidence:** HIGH — VirtuosoGrid/Virtuoso conditional rendering is well-documented in
+react-virtuoso docs; Zustand persist pattern is already in the codebase.
+
+---
+
+### 3. Industry Tags Alongside Domain Tags
+
+**Current state:** `tags` field on Expert contains 3–8 AI-assigned domain tags (skills/topics).
+`category` field exists in DB and `metadata.json` but is `None` for all 536 experts — populated
+only by keyword-matching in `_auto_categorize()` based on job titles (9 broad categories: Tech,
+Marketing, Finance, etc.). Category is not exposed in the public Explorer UI.
+
+**Target state:** A separate `industry_tags` field (list of 1–3 industry verticals) shown as a
+second row in the `TagCloud` and as a second multi-select section in `FilterSidebar`. Industry
+tags filter the FAISS/BM25 pipeline as a pre-filter.
+
+**Recommended industry taxonomy (curated, ~15 tags):**
+`fintech`, `healthcare`, `e-commerce`, `saas / software`, `real estate`, `construction`,
+`energy`, `media & entertainment`, `professional services`, `manufacturing`, `education`,
+`nonprofit`, `hospitality & food`, `logistics`, `legal`
+
+Using a fixed enum in the Gemini prompt prevents free-form inconsistencies ("fin-tech" vs
+"FinTech" vs "financial technology"). This is the critical implementation decision — confirmed by
+filter UX research showing that filter values must be predictable for users to trust them.
+
+**Implementation path (6 touch points):**
+1. Startup migration: `ALTER TABLE experts ADD COLUMN industry_tags TEXT NULL` — idempotent
+2. Update `_serialize_expert()` in `admin.py` to include `industry_tags`
+3. Batch-tagging script: `scripts/tag_industry.py` using Gemini flash-lite with enum-constrained
+   prompt; updates both SQLite and `metadata.json`
+4. `run_explore()` in `explore.py`: add `industry_tags` SQLite JSON contains pre-filter
+5. `useExplorerStore`: add `industryTags: string[]` to filter slice and URL sync
+6. UI: `IndustryTagCloud` row in `FilterSidebar` + second row in `TagCloud.tsx`
+
+**Complexity:** HIGH — touches 6+ files across model, scripts, pipeline, store, and UI.
+Batch tagging for 536 experts takes ~5 minutes with Gemini flash-lite. Data quality depends
+on bio content — experts with thin bios may get imprecise industry assignments.
+
+**Confidence for UX pattern:** HIGH (separate filter dimensions for skills vs industry is
+standard marketplace pattern per NN/G research). **Confidence for implementation timeline:**
+MEDIUM — Gemini enum-constrained tagging works but needs a test pass to verify accuracy.
+
+---
+
+### 4. Lead Export with Search/Click History
+
+**Current state:** `LeadsPage` shows email-grouped leads with expandable recent queries from
+`Conversation` table. Newsletter CSV export exists (`GET /api/admin/export/newsletter.csv`).
+No cross-referenced export of email + full search history.
+
+**Target state:** "Export Leads CSV" button on `LeadsPage` → `GET /api/admin/export/leads.csv`.
+One row per email lead.
+
+**Available columns (all from existing tables):**
+```
+email           — email_leads.email
+first_seen      — email_leads.created_at
+last_active_at  — MAX(conversations.created_at) grouped by email
+search_count    — COUNT(conversations.id) grouped by email
+gap_searches    — COUNT WHERE response_type='clarification'
+newsletter_sub  — boolean: email in newsletter_subscribers table
+recent_queries  — pipe-separated last 5 queries from conversations
+```
+
+**Card click data gap:** `user_events.session_id` is an anonymous string generated client-side.
+`email_leads.email` is captured separately at the email gate. There is no `session_id → email`
+join in the current data model. Card clicks cannot be reliably attributed to emails. Do not
+fabricate this column in v4.0. Label it "not available" or omit it. Document the gap for v4.1
+(fix: include `session_id` in the email gate submission).
+
+**Backend implementation:**
 ```python
-if any('email' in key.lower() for key in first_row.keys()):
-    raise HTTPException(status_code=422, detail="Email field detected. Remove before import.")
+@router.get("/export/leads.csv")
+def export_leads_csv(db: Session = Depends(get_db)):
+    # JOIN email_leads + conversations
+    rows = db.execute(text("""
+        SELECT
+            el.email,
+            el.created_at AS first_seen,
+            MAX(c.created_at) AS last_active_at,
+            COUNT(c.id) AS search_count,
+            SUM(CASE WHEN c.response_type = 'clarification' THEN 1 ELSE 0 END) AS gap_searches,
+            GROUP_CONCAT(c.query, ' | ') AS recent_queries
+        FROM email_leads el
+        LEFT JOIN conversations c ON c.email = el.email
+        GROUP BY el.email
+        ORDER BY last_active_at DESC
+    """)).fetchall()
+    # Stream CSV response (matching newsletter export pattern)
 ```
+
+**Frontend:** Identical to newsletter export button in `LeadsPage.tsx` — `fetch blob → URL.createObjectURL → a.click()` pattern already exists. Add a second button labeled "Export Leads CSV".
+
+**Confidence:** HIGH for email + search data (fully available now). LOW for card click
+correlation (requires data model addition, not in v4.0 scope).
 
 ---
 
-### 2. Photo Proxy Graceful Fallback
+### 5. Admin One-Snap Overview
 
-**The correct pattern (MEDIUM confidence — FastAPI error handling official docs + SVG generation pattern):**
+**Current state:** `OverviewPage` has: health speedometer + 4 KPI cards (total searches,
+matches, match rate, gaps) + zero-result top-5 + Sage sparkline + top queries + top feedback.
 
-The proxy endpoint currently does `httpx.get(photo_url)` and forwards the response. On failure, it propagates the upstream error as a 502. The fix:
+**Gap:** No total leads count, no expert pool count. The duplicate "Match Rate" standalone card
+(already shown as sub-label on "Matches" card) wastes a slot that should show business metrics.
 
+**Target state:** Replace the two least-informative KPI cards with actionable business metrics:
+- Replace standalone "Match Rate" card with "Total Leads" (email_leads count, sub: newsletter
+  subscribers count)
+- Replace "Gaps" card with "Expert Pool" (expert count, sub: "X with photos")
+
+The "gaps" data already appears prominently in the zero-result table immediately below — it does
+not need a redundant KPI card.
+
+**API change:** `GET /api/admin/stats` must return two new fields:
 ```python
-@router.get("/api/photos/{username}")
-async def proxy_photo(username: str, first_name: str = "", last_name: str = ""):
-    try:
-        async with httpx.AsyncClient(timeout=5.0) as client:
-            resp = await client.get(f"https://tinrate.com/storage/{username}/avatar")
-            if resp.status_code == 200:
-                return Response(content=resp.content, media_type="image/jpeg")
-    except Exception:
-        pass  # fall through to monogram
-
-    # Generate SVG monogram
-    initials = (first_name[:1] + last_name[:1]).upper() or "?"
-    svg = f'''<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200">
-      <rect width="200" height="200" fill="#7C3AED"/>
-      <text x="50%" y="50%" dominant-baseline="central" text-anchor="middle"
-            font-family="sans-serif" font-size="80" fill="white">{initials}</text>
-    </svg>'''
-    return Response(content=svg.encode(), media_type="image/svg+xml",
-                    headers={"Cache-Control": "public, max-age=86400"})
+"total_leads": db.query(func.count(EmailLead.id)).scalar(),
+"expert_count": db.query(func.count(Expert.id)).scalar(),
 ```
 
-This returns a valid image in all cases. The frontend never needs to handle a broken image state.
+**Frontend change:** Replace two `<StatCard>` entries in `OverviewPage.tsx` with the new data.
+The `StatCard` component already supports `label`, `value`, `sub`, and `accent` props — no
+component changes needed.
 
-**Frontend implication:** Remove any `onError` broken-image fallback handlers on `<img>` tags pointing to this proxy — the proxy now handles it server-side.
+**F-pattern layout alignment:** Eye-tracking research confirms users scan top-left to
+bottom-right. "Total Searches" (top-left) and "Total Leads" (second card) are the two most
+executive-relevant metrics — correct placement per 2025 SaaS dashboard design guidance.
+
+**Confidence:** HIGH — additive change to existing endpoint and component.
 
 ---
 
-### 3. Mobile Filter Inline Bar
+### 6. Production Error States and Loading Patterns
 
-**When to use inline vs bottom-sheet (MEDIUM confidence — NN/G + Pencil & Paper research):**
+**Current state:**
+- Admin: `animate-pulse` loading text + inline `text-red-400` error strings per page
+- Explorer: `SkeletonGrid` on initial load; `EmptyState` on zero results
+- Missing: no explicit error UI if `/api/explore` returns 500 — grid stays blank indefinitely
 
-Bottom sheets are appropriate for: complex filter sets (5+ controls), filter operations requiring dedicated focus, or when filters need to be hidden to show context. They are NOT appropriate for: small filter sets (2–3 controls), cases where seeing the results while filtering is important, or where users filter frequently.
+**Target state for public explorer:**
 
-The TCS mobile filter set has 3 controls (text search, rate range, tags). This maps directly to the "small filter set, inline" pattern.
-
-**Recommended layout for the inline filter bar:**
-
+If `/api/explore` fails (network error or 5xx), show an error banner inside the grid area:
 ```
-┌────────────────────────────────────────────────┐
-│  [Search input — full width                  ] │  ← row 1: search
-│  [Rate ▼      ] [Tags ▼                      ] │  ← row 2: two dropdowns
-└────────────────────────────────────────────────┘
+[!] Having trouble loading experts. Try refreshing.   [Retry]
 ```
+This is an inline error card, not a full-page error. The banner replaces the skeleton/grid area
+on failure. Retry button re-triggers the `useExplore` fetch.
 
-- Row 1: Full-width text search input (existing `SearchInput` component, remove width constraint)
-- Row 2: Two dropdowns side-by-side, each 50% width
-  - Rate dropdown: options like "Any rate", "Under €100/hr", "€100–200/hr", "Over €200/hr" — maps to `rateMax` values. This replaces the continuous slider (which is fine on desktop but awkward with touch). Discrete rate brackets are easier to tap.
-  - Tags dropdown: a `<select multiple>` or a simple popover with checkboxes for the top 10–15 tags
+Implementation in `useExplore` hook: catch non-200 responses; set `error` state; pass to
+`ExpertGrid`. In `ExpertGrid.tsx`, add an error branch before the skeleton/empty checks.
 
-**Rate slider vs rate dropdown on mobile (MEDIUM confidence — UX research consensus):**
+**Target state for Sage panel:**
+Sage already handles errors partially. Ensure the Sage panel shows an error message (not a blank
+panel) if the Gemini call fails. Check `SagePanel.tsx` — if there is no error branch, add one.
 
-Continuous sliders on mobile have notoriously poor UX: small touch targets, imprecise dragging, and difficulty setting exact values. Discrete rate brackets ("Under €100", "€100–250", etc.) are unambiguous to tap and cover the practical use cases. The existing `RateSlider` component with its `min/max/step` is the right desktop component; a `<select>` or button group is the right mobile component for the same filter.
+**Target state for admin:**
+Admin API errors already render `text-red-400` inline — acceptable for internal tooling. No
+changes needed to admin error states.
 
-**Existing state compatibility:**
+**React error state best practice (MEDIUM confidence — LogRocket 2025):**
+- Content-level API errors: inline error card within the content area (not full-page)
+- Network errors: banner with retry button; auto-retry optional
+- Use `ErrorBoundary` only for catastrophic JS exceptions, not for API fetch failures
+- Never show raw error messages to public users (show friendly copy; log details to Sentry)
 
-The `filterSlice` stores `rateMax` as a number. The mobile rate dropdown must map bracket selections to the same `rateMax` values that the desktop slider uses. This preserves URL sync, filter chip display, and store state without any slice changes.
+**Loading patterns already in codebase (no changes needed):**
+- `SkeletonGrid` for initial grid load — correct, keep
+- `animate-pulse` for sub-section loads — correct for admin, keep
+- `SkeletonFooter` in `ExpertGrid.tsx` for infinite scroll — correct, keep
+- Sage in-flight pulse in header — correct, keep
+
+**Confidence:** HIGH for patterns. LOW for which specific failure modes currently produce blank
+screens (requires integration testing to confirm).
 
 ---
 
-### 4. Google Analytics 4 Integration
+## Competitor Feature Analysis
 
-**The correct gtag.js initialization pattern (HIGH confidence — November 2025 article + multiple sources confirmed):**
-
-The critical error: arrow functions and spread operators break `gtag.js` because it relies on JavaScript's native `arguments` object, which arrow functions do not have. The bug causes silent failures — no console error, but no data in GA4.
-
-**index.html injection (in `<head>`):**
-```html
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-0T526W3E1Z"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag() { dataLayer.push(arguments); }  // NOT: const gtag = (...args) => dataLayer.push(args)
-  gtag('js', new Date());
-  gtag('config', 'G-0T526W3E1Z', { send_page_view: false });  // false = manual SPA tracking
-</script>
-```
-
-**Route-change tracking hook:**
-```typescript
-// src/hooks/useAnalytics.ts
-import { useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
-
-export function useAnalytics() {
-  const location = useLocation();
-
-  useEffect(() => {
-    if (typeof window.gtag !== 'function') return;
-    window.gtag('event', 'page_view', {
-      page_path: location.pathname + location.search,
-      page_title: document.title,
-    });
-  }, [location]);
-}
-```
-
-Mount in `App.tsx` (inside `<BrowserRouter>`, outside `<Routes>`).
-
-**Key pitfalls (from research):**
-1. Arrow function in `gtag` definition → silent failure (most common mistake)
-2. `send_page_view: true` (default) → double-counts first page view when SPA hook also fires
-3. Placing the `useAnalytics` hook outside `<BrowserRouter>` → `useLocation` throws a context error
-4. Using `react-ga4` library → dependency on a 2-year stale package for 30 lines of code
-
----
-
-### 5. FTS5 Empty-String Guard
-
-**The error (HIGH confidence — SQLite FTS5 official spec + GitHub issue confirmed):**
-
-`MATCH ''` (empty string) throws `fts5: syntax error near ""`. This is not a caught exception in the current implementation — it propagates as a 500 error. Any user who submits a search with only spaces, or triggers a search before typing, can hit this.
-
-**Fix pattern:**
-```python
-def build_fts5_query(raw_query: str) -> str | None:
-    """Return None if query is empty/whitespace — caller skips MATCH clause."""
-    cleaned = raw_query.strip()
-    if not cleaned:
-        return None
-    # Escape special FTS5 operators
-    cleaned = cleaned.replace('"', '""')
-    return f'"{cleaned}"*'  # prefix match
-
-# In the search function:
-fts_query = build_fts5_query(query)
-if fts_query:
-    stmt = stmt.where(text("experts_fts MATCH :q").bindparam(q=fts_query))
-# else: skip MATCH clause entirely, return all experts (or return empty)
-```
-
-This should be applied everywhere a MATCH clause is constructed — search the codebase for `MATCH` to find all locations.
-
----
-
-### 6. Sentry Source Maps
-
-**The setup (HIGH confidence — official `@sentry/vite-plugin` docs):**
-
-```bash
-npm install -D @sentry/vite-plugin
-```
-
-```typescript
-// vite.config.ts
-import { sentryVitePlugin } from '@sentry/vite-plugin';
-
-export default defineConfig({
-  plugins: [
-    react(),
-    sentryVitePlugin({
-      org: 'your-org',
-      project: 'tcs-frontend',
-      authToken: process.env.SENTRY_AUTH_TOKEN,
-    }),
-  ],
-  build: {
-    sourcemap: 'hidden',  // generates maps, does NOT serve them to users
-  },
-});
-```
-
-Add `SENTRY_AUTH_TOKEN` to Vercel environment variables (not in `.env` committed to git).
-
-**Why `sourcemap: 'hidden'` not `true`:** Setting `sourcemap: true` serves the source maps publicly alongside the bundle. This means anyone can read your original TypeScript source code. `'hidden'` generates maps for Sentry upload only — they are not referenced in the bundle and not served to browsers.
+| Feature | Standard Marketplace Pattern | Our v4.0 Approach |
+|---------|------------------------------|-------------------|
+| Grid/list toggle | List primary (LinkedIn, Upwork); grid primary (photo-heavy products) | Grid default (photos are the primary differentiator), list toggle in toolbar |
+| Tag filtering | Single tag dimension (most platforms) | Two dimensions (domain + industry) — launches as domain-only; industry in v4.1 |
+| Admin auth | Single admin key OR full auth service | Single admin with bcrypt hash — pragmatic for solo operator |
+| Lead export | CRM integration or CSV with email + activity | CSV with email + search history — actionable without a CRM |
+| Error states | Full error page with support links (large products); inline retry (small products) | Inline error card with retry — appropriate for marketplace scale |
+| Admin overview | Health + KPIs above the fold, details below | Existing OverviewPage is already close to one-snap ideal; two card additions complete it |
 
 ---
 
 ## Sources
 
-**Mobile filter UX patterns:**
-- [Mobile Filter UX Design Patterns — Pencil & Paper](https://www.pencilandpaper.io/articles/ux-pattern-analysis-mobile-filters) — MEDIUM confidence
-- [Bottom Sheets: Definition and UX Guidelines — Nielsen Norman Group](https://www.nngroup.com/articles/bottom-sheet/) — HIGH confidence (authoritative)
-- [Getting Filters Right: UX/UI Design Patterns — LogRocket](https://blog.logrocket.com/ux-design/filtering-ux-ui-design-patterns-best-practices/) — MEDIUM confidence
-- [15 Filter UI Patterns That Actually Work in 2025 — Bricx Labs](https://bricxlabs.com/blogs/universal-search-and-filters-ui) — MEDIUM confidence
-
-**Google Analytics 4 / React SPA:**
-- [Implementing Google Analytics 4 in React: The Right Way — Mykola Aleksandrov (Nov 2025)](https://www.mykolaaleksandrov.dev/posts/2025/11/react-google-analytics-implementation/) — HIGH confidence (recent, detailed, argues against spread operator correctly)
-- [Tracking Page Views in a React SPA with GA4 — DEV Community](https://dev.to/highcenburg/tracking-page-views-in-a-react-spa-with-google-analytics-4-1bd7) — MEDIUM confidence
-- [How to integrate GA4 into a ReactJS app in 2025 — Medium](https://medium.com/@nicolas.nunge/how-to-integrate-google-analytics-ga4-into-a-reactjs-app-in-2025-b62e121d4590) — MEDIUM confidence
-- [Track Single Page Apps with GA4 and GTM — Analytics Mania](https://www.analyticsmania.com/post/single-page-web-app-with-google-tag-manager/) — MEDIUM confidence
-
-**Expert email data removal / GDPR:**
-- [GDPR: Data Compliance Best Practices For 2025 — Alation](https://www.alation.com/blog/gdpr-data-compliance-best-practices-2025/) — MEDIUM confidence
-- [GDPR & Data Deletion: When Can You Remove Personal Info? — Sprintlaw UK](https://sprintlaw.co.uk/articles/gdpr-data-deletion-when-can-you-remove-personal-info/) — MEDIUM confidence
-- [Running Batch Migrations for SQLite — Alembic official docs](https://alembic.sqlalchemy.org/en/latest/batch.html) — HIGH confidence (official)
-
-**Sentry + FastAPI + Vite:**
-- [Setting Up Sentry with Vite and Source Maps — Medium](https://medium.com/@rachelcantor/setting-up-sentry-with-vite-and-source-maps-634231732ef1) — MEDIUM confidence
-- [Source Maps — Sentry for React (official docs)](https://docs.sentry.io/platforms/javascript/guides/react/sourcemaps/) — HIGH confidence
-- [FastAPI + Sentry: Tracking and Debugging Errors — Medium](https://medium.com/@bhagyarana80/fastapi-sentry-tracking-and-debugging-errors-in-production-apis-9a2506cc164a) — MEDIUM confidence
-
-**FTS5 empty string:**
-- [SQLite FTS5 Extension — official spec](https://sqlite.org/fts5.html) — HIGH confidence
-- [FTS5 syntax error near "" — SQLdelight GitHub issue](https://github.com/sqldelight/sqldelight/issues/3566) — HIGH confidence (confirmed behavior)
+- **Codebase inspection (HIGH confidence):** `frontend/src/admin/LoginPage.tsx`,
+  `frontend/src/admin/pages/OverviewPage.tsx`, `frontend/src/admin/pages/LeadsPage.tsx`,
+  `frontend/src/components/marketplace/ExpertGrid.tsx`,
+  `frontend/src/components/sidebar/TagCloud.tsx`, `app/routers/admin.py`, `app/models.py`,
+  `data/metadata.json`
+- [FastAPI Security — official docs](https://fastapi.tiangolo.com/tutorial/security/) — HIGH confidence
+- [Authentication and Authorization with FastAPI — Better Stack](https://betterstack.com/community/guides/scaling-python/authentication-fastapi/) — MEDIUM confidence
+- [passlib vs pwdlib discussion — fastapi/fastapi GitHub #11773](https://github.com/fastapi/fastapi/discussions/11773) — HIGH confidence (official repo)
+- [UI best practices for loading, error, empty states — LogRocket](https://blog.logrocket.com/ui-design-best-practices-loading-error-empty-state-react/) — MEDIUM confidence
+- [Helpful Filter Categories and Values — Nielsen Norman Group](https://www.nngroup.com/articles/filter-categories-values/) — HIGH confidence (authoritative UX research)
+- [15 Filter UI Patterns That Actually Work in 2025 — Bricxlabs](https://bricxlabs.com/blogs/universal-search-and-filters-ui) — MEDIUM confidence
+- [Smart SaaS Dashboard Design Guide 2026 — F1Studioz](https://f1studioz.com/blog/smart-saas-dashboard-design/) — MEDIUM confidence
+- [React Loading Skeleton: Smooth Loading States — Medium](https://medium.com/@joodi/react-loading-skeleton-smooth-loading-states-in-your-app-1061c92e2f73) — MEDIUM confidence
 
 ---
 
-*Feature research for: TCS v3.1 Launch Hardening*
-*Researched: 2026-02-26*
+*Feature research for: Tinrate Expert Marketplace v4.0 Public Launch*
+*Researched: 2026-02-27*

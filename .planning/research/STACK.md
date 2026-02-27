@@ -1,289 +1,492 @@
 # Stack Research
 
-**Domain:** Expert Marketplace — v3.1 Launch Hardening additions only
-**Researched:** 2026-02-26
+**Domain:** Expert Marketplace — v4.0 Public Launch additions only
+**Researched:** 2026-02-27
 **Research Mode:** Ecosystem (Subsequent Milestone — stack additions only)
-**Confidence:** HIGH for all items — verified against current package.json, requirements.txt, and official documentation
+**Confidence:** HIGH for all items — verified against current package.json, requirements.txt, official docs, and PyPI
 
 ---
 
 ## Scope of This Document
 
-Covers ONLY what is new or changed for v3.1 Launch Prep. The existing production stack is validated and must not change:
+Covers ONLY what is new or changed for v4.0 Public Launch. The existing production stack is
+validated and must not change unless explicitly noted:
 
-- **Backend:** FastAPI 0.129.* + SQLAlchemy 2.0.* + SQLite + faiss-cpu 1.13.* + google-genai 1.64.* + tenacity 8.4.* + httpx 0.28.*
-- **Frontend:** React 19.2 + Vite 7.3 + Tailwind v3.4 + React Router v7 + motion/react v12.34 + Zustand v5.0.11 + react-virtuoso 4.18 + vaul 1.1.2 + lucide-react 0.575
+- **Backend:** FastAPI 0.129.* + SQLAlchemy 2.0.* + SQLite + faiss-cpu 1.13.* + google-genai 1.64.*
+  + scikit-learn 1.8.0 + numpy 2.2.* + pandas 2.2.* + tenacity 8.4.* + httpx 0.28.* + structlog 24.2.*
+- **Frontend:** React 19.2 + Vite 7.3 + Tailwind v3.4 + React Router v7.13 + motion/react v12.34
+  + Zustand v5.0.11 + react-virtuoso 4.18 + vaul 1.1.2 + lucide-react 0.575 + recharts 3.7
+  + @radix-ui/react-slider 1.3.6 + @tanstack/react-table 8.21
 
-The four new capability areas for v3.1:
+The seven new capability areas for v4.0:
 
-1. Gemini model update (deprecated `gemini-2.0-flash-lite` → `gemini-2.5-flash-lite`)
-2. Expert email column removal from DB, CSV, and ORM model
-3. Mobile filter UX redesign (Vaul bottom-sheet → inline dropdown controls)
-4. Google Analytics GA4 integration (gtag.js, measurement ID `G-0T526W3E1Z`)
-
----
-
-## 1. Gemini Model Update — String Constant Change Only
-
-### What Is Deprecated
-
-`gemini-2.0-flash-lite` is used in one location: `app/services/pilot_service.py` line 116, in the `_detect_and_translate()` function for Dutch language detection.
-
-`gemini-2.5-flash` (the main generation model in `llm.py`) is already current and does not need updating.
-
-### Replacement
-
-**`gemini-2.5-flash-lite`** — the direct successor, confirmed on the official Gemini deprecations page and models page.
-
-| Attribute | Old | New |
-|-----------|-----|-----|
-| Model ID string | `"gemini-2.0-flash-lite"` | `"gemini-2.5-flash-lite"` |
-| SDK | google-genai (unchanged) | google-genai (unchanged) |
-| API | Gemini API (unchanged) | Gemini API (unchanged) |
-| Shutdown date of old model | June 1, 2026 | — |
-
-### Why gemini-2.5-flash-lite (Not gemini-2.5-flash)
-
-The Dutch detection call is a structured JSON extraction — a tiny `{"lang": ..., "english": ...}` response. `gemini-2.5-flash-lite` is the fastest, cheapest model in the 2.5 family and is explicitly recommended for "low latency and high volume tasks." Using the heavier `gemini-2.5-flash` here would be wasteful and inconsistent with the existing design intent.
-
-### No Package Change Required
-
-`google-genai==1.64.*` supports `gemini-2.5-flash-lite`. The model ID is a string constant — no requirements.txt update needed.
-
-### Change Required
-
-```python
-# app/services/pilot_service.py — one line change
-# Before:
-model="gemini-2.0-flash-lite",
-# After:
-model="gemini-2.5-flash-lite",
-```
-
-### Confidence: HIGH
-
-Source: [Gemini API deprecations](https://ai.google.dev/gemini-api/docs/deprecations) — shutdown June 1, 2026, replacement `gemini-2.5-flash-lite` confirmed. [Gemini models page](https://ai.google.dev/gemini-api/docs/models) — `gemini-2.5-flash-lite` listed as current stable.
+1. Proper admin auth — username + hashed password + JWT session expiry
+2. Grid/list view toggle on the expert grid
+3. Industry-level tags separate from domain tags in the tag cloud
+4. Lead and click-event CSV export
+5. Expert CSV import improvements (upsert with industry tag support)
+6. Frontend performance optimization for public launch
+7. Fixing the t-SNE embedding heatmap (always shows "loading")
 
 ---
 
-## 2. Expert Email Column Removal — Raw SQL Migration, No Alembic
-
-### Context
-
-The `Expert` SQLAlchemy model has an `email` field (`String(320)`, non-nullable with default `""`). The project has no Alembic setup — all migrations are inline raw SQL executed at startup in `app/main.py` using `engine.connect()` + `text()`. This is the established project pattern.
-
-### Approach: SQLite DROP COLUMN (native, no batch mode needed)
-
-SQLite has supported `ALTER TABLE ... DROP COLUMN` natively since version **3.35.0** (released March 2021). The local environment runs SQLite 3.50.4. Railway uses Python's built-in `sqlite3` module, which ships with modern Python 3.11/3.12/3.13 — all well above 3.35. No compatibility concern.
-
-**Pattern used by this project (raw SQL in startup lifespan):**
-
-```python
-# app/main.py — add to startup lifespan block (same pattern as existing migrations)
-with engine.connect() as _conn:
-    try:
-        _conn.execute(_text("ALTER TABLE experts DROP COLUMN email"))
-        _conn.commit()
-    except Exception:
-        pass  # Column already dropped — idempotent
-log.info("startup: expert email column dropped")
-```
-
-### What Else Must Change
-
-Beyond the DB column, the email purge touches three places:
-
-| Location | Change |
-|----------|--------|
-| `app/models.py` — `Expert` class | Remove `email: Mapped[str]` field |
-| `app/routers/admin.py` — CSV import (line 1035, 1053) | Remove `email` from CSV ingestion |
-| `data/experts.csv` | Delete the `Email` column from the file |
-| `app/routers/admin.py` — `POST /api/admin/experts` (line 928) | Remove `email=""` from Expert object creation |
-| Future CSV upload validation | Reject uploads that include an `email` column |
-
-### No New Packages
-
-This is pure SQLAlchemy + raw SQL. No Alembic, no migration framework — consistent with the rest of the project.
-
-### Why Not Alembic
-
-Alembic adds a versions directory, migration scripts, and a separate alembic.ini. For a SQLite-backed project that already uses inline migrations and has no existing Alembic setup, adding it for a single column drop introduces significant complexity with zero benefit. The inline pattern used throughout `main.py` is battle-tested in this codebase.
-
-### Confidence: HIGH
-
-SQLite 3.35+ DROP COLUMN confirmed at [sqlite.org/lang_altertable.html](https://sqlite.org/lang_altertable.html). Project migration pattern verified in `app/main.py`.
-
----
-
-## 3. Mobile Filter UX — Native HTML Select, No New Package
+## 1. Admin Auth — bcrypt + PyJWT, No Passlib
 
 ### Current State
 
-The Vaul bottom-sheet (`MobileFilterSheet.tsx`) is a full-screen drawer triggered by a filter button in the mobile header. It contains a text search input, two number inputs for rate range, and a scrollable tag multi-select. The requirement is to replace this with inline dropdown controls — filters visible in the mobile layout without a drawer.
+The current login sends a raw API key to `POST /api/admin/auth`, which compares it against
+`ADMIN_SECRET` env var (plain string equality). The key is stored in `sessionStorage` on the
+frontend and sent as `X-Admin-Key` header on every admin request. This works but has two problems:
+no password hashing (secret stored in plain env var) and no session expiry (key stays valid until
+manually rotated).
 
-### Recommendation: Native `<select>` + Tailwind, Zero New Dependencies
+### What to Add
 
-For the mobile filter controls (rate range presets, tag category select), native `<select>` elements styled with Tailwind are the right tool.
+**Backend — two new Python packages:**
 
-**Rationale:**
+| Package | Version | Purpose | Why |
+|---------|---------|---------|-----|
+| `bcrypt` | 5.0.0 | Hash + verify the admin password | Actively maintained (pyca org), no passlib dependency, simple API: `bcrypt.hashpw()` + `bcrypt.checkpw()`. passlib is abandoned and throws deprecation warnings on Python 3.13+. |
+| `PyJWT` | 2.11.0 | Generate + verify short-lived JWT tokens | Lightweight, actively maintained (last release Jan 2026), does not require cryptography package for HS256. python-jose is nearly abandoned (last commit 2023, open security issues). |
 
-- Native `<select>` triggers the OS-native picker on iOS/Android — the correct mobile UX, with accessible scrolling and no touch event conflicts.
-- The existing tag filter uses a multi-select chip interface (not a single-select dropdown). This is retained as chips but moved inline below the search bar, not inside a drawer.
-- Rate filter can become a `<select>` with preset brackets (€0-500, €500-1500, etc.) or remain as number inputs but rendered inline. Either avoids the drawer.
-- No Radix UI `Select` or Headless UI needed — the added JS bundle cost (Radix Select alone is ~15 kB) is unjustified when native `<select>` handles simple option lists.
+**Frontend — zero new packages.** The login page already exists. It needs to be updated to
+submit `{username, password}` instead of `{key}` and store the returned JWT token (not the
+raw key) in `sessionStorage`. The `X-Admin-Key` header name is fine to keep as-is; the value
+becomes the JWT token.
 
-**When a custom select IS needed:** Only if the dropdown must show custom option styling (avatars, colors, multi-line). Not the case here — filter options are plain text labels.
+### Why Not Passlib
 
-**Tailwind styling pattern for native select:**
+passlib has not had a release since 2020. It throws `DeprecationWarning: 'crypt' is deprecated
+and slated for removal in Python 3.13` on modern Python. The FastAPI official template
+(`fastapi/full-stack-fastapi-template`) migrated away from passlib in 2024 — PR #1539 shows
+direct bcrypt usage as the replacement.
 
-```tsx
-// Styled native select — works cross-browser, mobile-optimal
-<select
-  value={ratePreset}
-  onChange={(e) => setRatePreset(e.target.value)}
-  className="w-full appearance-none bg-white border border-gray-300 rounded-lg
-             px-3 py-2 text-sm text-gray-700 focus:outline-none
-             focus:ring-2 focus:ring-brand-purple"
->
-  <option value="">Any rate</option>
-  <option value="0-500">Under €500/hr</option>
-  <option value="500-1500">€500–1500/hr</option>
-  <option value="1500+">Over €1500/hr</option>
-</select>
-```
+### Why Not python-jose
 
-**Tag filter stays as chip multi-select** — there is no native HTML control for multi-select that is usable on mobile. The chip-based approach remains but is relocated to render inline (collapsed/expandable row) rather than inside the Vaul drawer.
+python-jose has known unresolved security issues and the project is effectively unmaintained
+(last commit 2023). PyJWT is the active standard: 2.11.0 released January 2026, used by the
+official FastAPI JWT tutorial examples in 2025.
 
-### What Happens to Vaul
-
-`vaul` (v1.1.2) is already installed and used for the **Sage bottom sheet** (`SagePanel.tsx` mobile mode). Do NOT remove vaul from package.json — it is still needed. Only `MobileFilterSheet.tsx` is removed/replaced.
-
-### No New Packages
+### Auth Pattern to Implement
 
 ```
-# Nothing to install — native HTML + Tailwind only
+1. Startup: read ADMIN_USERNAME + ADMIN_PASSWORD_HASH from env vars
+   (ADMIN_PASSWORD_HASH = bcrypt.hashpw(password, bcrypt.gensalt()).decode())
+2. POST /api/admin/auth: accept {username, password}
+   → bcrypt.checkpw(password, hash) → if OK, return JWT token (1 day expiry)
+3. All admin endpoints: verify JWT in X-Admin-Key header
+   → PyJWT.decode(token, SECRET_KEY, algorithms=["HS256"])
+4. Frontend: store JWT in sessionStorage['admin_token']
+   → send as X-Admin-Key header (same header name, different value format)
 ```
 
-### Alternatives Considered
+Expiry: 24 hours (`exp` claim in JWT). Simple, no refresh token needed — admin sessions are
+explicit log-ins, not user sessions.
 
-| Option | Verdict |
-|--------|---------|
-| Radix UI Select (`@radix-ui/react-select`) | Rejected — ~15 kB for plain text dropdowns; touch events on mobile have documented bug (#2083 in radix-ui/primitives); overkill |
-| Headless UI Select | Rejected — adds a dependency for a thin native select wrapper; Tailwind forms plugin already handles this |
-| `react-select` | Rejected — 26 kB bundle, designed for searchable multi-selects; too heavy |
-| Keep Vaul for filters | Rejected — the explicit requirement is to replace the bottom-sheet UX |
+### Hashed Password Bootstrap
+
+The admin needs a way to generate the initial hash. Two approaches are valid:
+- A one-off CLI script: `python -c "import bcrypt; print(bcrypt.hashpw(b'mypassword', bcrypt.gensalt(12)).decode())"`
+- Store the hash as `ADMIN_PASSWORD_HASH` env var on Railway
+
+### Session Storage Consideration
+
+`sessionStorage` is fine for admin use (single-tab, cleared on browser close). The JWT approach
+adds expiry enforcement that `sessionStorage` alone cannot provide. No change to storage mechanism
+needed — only the stored value changes from raw key to JWT token.
+
+### Installation
+
+```bash
+# Backend only
+pip install "bcrypt==5.0.0" "PyJWT==2.11.0"
+```
+
+`requirements.txt` additions:
+```
+bcrypt==5.0.*
+PyJWT==2.11.*
+```
 
 ### Confidence: HIGH
 
-Verified against existing `MobileFilterSheet.tsx` and `vaul` usage in the codebase. Native select mobile behavior confirmed via MDN + Tailwind CSS docs. Radix UI touch bug confirmed at [radix-ui/primitives#2083](https://github.com/radix-ui/primitives/issues/2083).
+- bcrypt 5.0.0: verified at [pypi.org/project/bcrypt](https://pypi.org/project/bcrypt/) — Python >=3.8, Apache-2.0
+- PyJWT 2.11.0: verified at [pypi.org/project/PyJWT](https://pypi.org/project/PyJWT/) — released 2026-01-30, Python >=3.9
+- passlib abandonment confirmed: [fastapi/fastapi Discussion #11773](https://github.com/fastapi/fastapi/discussions/11773)
+- python-jose abandonment confirmed: [fastapi/fastapi Discussion #9587](https://github.com/fastapi/fastapi/discussions/9587)
+- FastAPI official template bcrypt migration: [full-stack-fastapi-template PR #1539](https://github.com/fastapi/full-stack-fastapi-template/pull/1539)
 
 ---
 
-## 4. Google Analytics GA4 — Manual gtag.js Script, No Library
+## 2. Grid/List View Toggle — Virtuoso Component Swap, No New Package
 
-### Recommendation
+### Current State
 
-**No new npm package.** Add the standard GA4 `gtag.js` script snippet directly to `frontend/index.html`. Track route changes manually with a `useEffect` in `App.tsx` or a dedicated hook.
+The expert grid uses `VirtuosoGrid` (uniform-height cards, `h-[180px]` fixed). This is already
+installed via `react-virtuoso 4.18.1`.
 
-### Why Not react-ga4
+### Approach
 
-`react-ga4` (latest: v2.1.0) was last published **3 years ago** and is unmaintained. The `react-ga` ecosystem generally wraps an API that Google has superseded. For a Vite SPA with React Router v7, the direct gtag.js integration is simpler, has no runtime dependency, and is what Google officially recommends.
+Toggle between `VirtuosoGrid` (current grid) and `Virtuoso` (list) using React state.
+`Virtuoso` is already exported from `react-virtuoso` — no new dependency.
 
-### Why Not vite-plugin-radar
-
-`vite-plugin-radar` works but is a build-time plugin that adds complexity for what is a two-line `index.html` change. The plugin is also not well-maintained for Vite 7.
-
-### Implementation Pattern
-
-**Step 1: Add script to `frontend/index.html`**
-
-```html
-<!-- Google Analytics — add before </head> -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-0T526W3E1Z"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-0T526W3E1Z', { send_page_view: false });
-</script>
+```
+Grid mode: VirtuosoGrid — same as today, multi-column, h-[180px] cards
+List mode: Virtuoso — single column, variable-height list rows
 ```
 
-`send_page_view: false` disables the automatic page view (which only fires once on load for SPAs). Route change page views are sent manually.
+**State:** Add `viewMode: 'grid' | 'list'` to the Zustand `filterSlice` (or as local state in
+`ExpertGrid.tsx`). Persist to `localStorage` if desired (not required for v4.0).
 
-**Step 2: TypeScript declaration (no @types package needed)**
+**List row design:** A compact horizontal card — photo/monogram + name + title + company + rate
+on one line, tags below. Height is auto (no fixed `h-[180px]` constraint).
 
-```typescript
-// frontend/src/vite-env.d.ts — add to existing file
-declare function gtag(...args: unknown[]): void;
-declare const dataLayer: unknown[];
+**Toggle button:** Two icon buttons (grid icon + list icon) in the toolbar area. `lucide-react`
+already includes `LayoutGrid` and `List` icons — no new icons needed.
+
+### Why Not a New Library
+
+`react-virtuoso` already exports both `Virtuoso` and `VirtuosoGrid`. Swapping between them is
+a conditional render. No new package needed. The `itemContent` render function is different
+(grid card vs list row), but the data source `totalCount` / `data` props are identical.
+
+### The `stateChanged` Consideration
+
+`VirtuosoGrid` and `Virtuoso` do not share scroll state. When toggling views, the scroll position
+resets to the top. This is the correct UX — no attempt to preserve scroll position across
+view mode switches.
+
+### Installation
+
+```bash
+# Nothing to install — react-virtuoso already in package.json
 ```
 
-**Step 3: Route-change tracking hook**
+### Confidence: HIGH
+
+Verified against `react-virtuoso` API docs at [virtuoso.dev](https://virtuoso.dev/) — both
+`Virtuoso` (variable height list) and `VirtuosoGrid` (uniform grid) are first-class exports.
+Current `package.json` confirms `react-virtuoso@4.18.1` is installed.
+
+---
+
+## 3. Industry Tags — Data Modeling Change, No New Package
+
+### Current State
+
+Tags are stored as a JSON array in `Expert.tags` (SQLite TEXT column). These are domain-level
+tags (e.g., "AI Strategy", "Revenue Growth"). The tag cloud uses all tags from `Expert.tags`.
+
+### What Changes
+
+Add a second tag field: **industry tags** (e.g., "SaaS", "FinTech", "Healthcare", "Retail").
+Industry tags differ from domain tags — they describe the sector the expert works IN, not the
+skills they have.
+
+### Approach: New DB Column + No New Package
+
+Add `industry_tags TEXT` column to the `experts` table via the startup migration pattern:
+
+```python
+# app/main.py — startup lifespan (same pattern as existing)
+try:
+    _conn.execute(_text("ALTER TABLE experts ADD COLUMN industry_tags TEXT"))
+    _conn.commit()
+except Exception:
+    pass  # Already exists — idempotent
+```
+
+Store as JSON array (same pattern as `tags`). Serialize/deserialize with `json.loads()`/`json.dumps()`.
+
+No new package needed. The existing JSON pattern used for `tags` is sufficient.
+
+**Admin UI:** The expert import CSV should accept an `Industry Tags` column. The tag cloud
+component accepts a separate `industryTags` array prop. Filtering supports industry tags as
+a separate multi-select chip row or a second section in the existing tag cloud.
+
+**Auto-classification:** Industry tags can be keyword-matched from `job_title` / `company` / `bio`
+(same approach as `CATEGORY_KEYWORDS` in admin.py). Initial population can happen via the
+existing tagging script or a startup migration loop.
+
+### Why Not a Separate Table
+
+For 530 experts, a separate `expert_industries` table would be premature normalization. The
+existing `tags` column uses JSON arrays and it works well. Industry tags follow the same
+pattern for consistency.
+
+### Confidence: HIGH
+
+Verified against existing `app/models.py` and `app/main.py` patterns. SQLite JSON text column
+pattern is already used for `tags`.
+
+---
+
+## 4. Lead + Click Export — Pure Python/CSV, No New Package
+
+### Current State
+
+Existing exports: `GET /api/admin/export/searches.csv`, `GET /api/admin/export/gaps.csv`,
+`GET /api/admin/export/newsletter.csv`, `GET /api/admin/export/demand.csv`,
+`GET /api/admin/export/exposure.csv`. All use `io.StringIO` + `csv.writer` + `StreamingResponse`.
+This pattern is already in the codebase and working.
+
+### What to Add
+
+Two new export endpoints following the exact same pattern:
+
+**`GET /api/admin/export/leads.csv`** — lead data enriched with click history from `user_events`
+
+```
+Columns: email, first_seen, last_seen, total_searches, gap_count, recent_queries,
+         card_clicks (count), top_clicked_experts (top 3 expert usernames from card_click events)
+```
+
+The join: `Conversation` table has `email`; `user_events` has `session_id` but NOT `email` directly.
+Leads export enrichment uses the `email` from `Conversation` rows matched by date range or
+session proximity. This is a best-effort join — exact session-to-email linking is not possible
+without a session table.
+
+**`GET /api/admin/export/events.csv`** — raw `user_events` table dump with JSON payload expanded
+
+```
+Columns: id, session_id, event_type, created_at, + payload fields expanded inline
+```
+
+The `payload` is a JSON blob — expand key fields per event type:
+- `card_click`: expert_id, context, rank
+- `sage_query`: query_text, result_count, zero_results
+- `filter_change`: filter_type, value
+
+### Pattern (already established)
+
+```python
+@router.get("/export/leads.csv")
+def export_leads_csv(db: Session = Depends(get_db)):
+    rows = db.scalars(select(Conversation).order_by(Conversation.created_at.desc())).all()
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(["# Export date", date.today().isoformat()])
+    writer.writerow([])
+    writer.writerow(["email", "total_searches", "last_search_at", ...])
+    # ... aggregate by email
+    return StreamingResponse(
+        iter([buf.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename=leads-{date.today().isoformat()}.csv"},
+    )
+```
+
+### Frontend
+
+Add "Export CSV" buttons to the Leads admin page and a new Events admin page.
+No new library needed — plain `<a href="/api/admin/export/leads.csv">` with the `X-Admin-Key`
+header requires a `fetch()` + `Blob` + `URL.createObjectURL()` pattern (already used in
+`ExportDialog.tsx`).
+
+### Confidence: HIGH
+
+Pattern verified against existing `export_newsletter_csv`, `export_demand_csv`,
+`export_exposure_csv` implementations in `app/routers/admin.py`. No new packages.
+
+---
+
+## 5. Expert CSV Import Improvements — No New Package
+
+### Current State
+
+`POST /api/admin/experts/import-csv` reads CSV via Python stdlib `csv.DictReader`, upserts
+into SQLite via SQLAlchemy row-by-row, returns `{inserted, updated, skipped}`. Tags are
+preserved on update (not overwritten). Email column is deliberately ignored.
+
+### What to Add
+
+**Industry tags import:** The CSV importer should read an `Industry Tags` column (semicolon or
+comma separated) and write to the new `industry_tags` JSON field.
+
+**Auto-tag on import:** New experts inserted via CSV currently get `tags=NULL` and no
+`findability_score`. The import should optionally trigger background Gemini tagging for new rows
+(same pattern as `POST /api/admin/experts` — the `_retry_tag_expert_background` background task).
+
+**Dry-run mode:** Add a `?dry_run=true` query param that returns `{would_insert, would_update,
+would_skip}` without writing. Useful for previewing large CSV files before committing.
+
+**Better error reporting:** Currently, a single bad row silently increments `skipped`. Return
+a `warnings` list with `{row, reason}` for skipped rows so the admin knows what was rejected.
+
+### Why Not pandas for Import
+
+`pandas` is already in the stack (`requirements.txt`) and is tempting here, but:
+- The existing `csv.DictReader` pattern is simpler for row-by-row upsert logic
+- pandas `to_sql` doesn't support SQLAlchemy ORM upsert semantics
+- For 530 rows, performance is irrelevant — clarity beats speed
+- Keep the pattern consistent with the existing importer
+
+### Confidence: HIGH
+
+Verified against existing `import_experts_csv` in `app/routers/admin.py` (lines 999–1066).
+No new packages. Dry-run pattern is a standard query param addition.
+
+---
+
+## 6. Frontend Performance — React.lazy + Vite manualChunks, No New Package
+
+### Current State
+
+The admin panel (`/admin`) loads in the same Vite bundle as the public-facing Explorer (`/`).
+This means every public user downloads admin-specific code (recharts, @tanstack/react-table,
+complex admin components) they will never use.
+
+### What to Do
+
+**Route-level code splitting with `React.lazy` + `Suspense`:**
 
 ```typescript
-// frontend/src/hooks/useAnalytics.ts
-import { useEffect } from 'react'
-import { useLocation } from 'react-router-dom'
+// frontend/src/App.tsx (or router config)
+const AdminApp = React.lazy(() => import('./admin/AdminApp'))
 
-export function usePageTracking() {
-  const location = useLocation()
-  useEffect(() => {
-    if (typeof gtag !== 'undefined') {
-      gtag('event', 'page_view', {
-        page_path: location.pathname + location.search,
-      })
+// Wrap with Suspense
+<Suspense fallback={<div className="min-h-screen bg-slate-900" />}>
+  <Route path="/admin/*" element={<AdminApp />} />
+</Suspense>
+```
+
+**Vite `manualChunks` for stable vendor libraries:**
+
+```typescript
+// vite.config.ts
+build: {
+  rollupOptions: {
+    output: {
+      manualChunks: {
+        'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+        'vendor-motion': ['motion'],
+        'vendor-recharts': ['recharts'],
+        'vendor-table': ['@tanstack/react-table'],
+      }
     }
-  }, [location])
+  }
 }
 ```
 
-Mount in `App.tsx` (top-level) so every route change is tracked.
+**Expected result:** Admin chunks download only when `/admin` is visited. Public Explorer
+gets a smaller initial bundle. `recharts` (chart library, ~100 kB) and `@tanstack/react-table`
+stay in separate chunks that cache independently between deploys.
 
-**Critical implementation note:** The `gtag` function MUST use `arguments` (not spread operators). The script tag above uses the correct `function gtag(){dataLayer.push(arguments);}` pattern — do not refactor with arrow functions or spread.
+**Image optimization:** The logo images in `frontend/` (PNG files) should be served from Vercel's
+CDN — they already are, since Vercel serves the `public/` directory with proper cache headers.
+No change needed here. However, if the aurora gradient and glassmorphism are causing paint delays,
+the correct fix is CSS `will-change: transform` on animated elements, not a new library.
 
-### Custom Event Tracking
+**No new packages required.** `React.lazy` and `Suspense` are built into React 19.
+Vite `manualChunks` is a built-in Rollup option.
 
-The existing `trackEvent()` module in `frontend/src/tracking.ts` is a fire-and-forget internal analytics call to the FastAPI backend. GA4 tracking is a separate parallel concern — they coexist. For GA4 events:
+### What NOT to Do for Performance
 
-```typescript
-// Fire GA4 custom events alongside existing internal tracking
-gtag('event', 'expert_card_click', { expert_id: id, rank })
-gtag('event', 'sage_query', { result_count: n })
-```
-
-This is optional for v3.1 — page views alone satisfy the analytics requirement.
-
-### No npm Install Required
-
-```bash
-# Nothing to install — script tag in index.html only
-```
-
-### Alternatives Considered
-
-| Option | Verdict |
-|--------|---------|
-| `react-ga4` (v2.1.0) | Rejected — 3 years unmaintained, unnecessary abstraction layer |
-| `vite-plugin-radar` | Rejected — build complexity overhead for a two-line HTML change |
-| Google Tag Manager (GTM) | Over-engineered for a direct GA4 measurement ID; GTM adds a second script tag and a container layer. Use direct gtag.js. |
-| `@connectaryal/google-analytics` | Rejected — new/small package, not battle-tested; direct gtag.js is simpler |
+| Rejected Approach | Why |
+|-------------------|-----|
+| `react-window` or `react-virtual` | react-virtuoso is already installed and covers all virtualization needs |
+| `@loadable/component` | Adds a dependency for what React.lazy handles natively |
+| `vite-plugin-compression` | Vercel already serves gzip/brotli on all assets by default |
+| Server-side rendering (SSR/Next.js) | The project is a client-side SPA deployed on Vercel; SSR migration is a separate architectural decision, not a v4.0 task |
 
 ### Confidence: HIGH
 
-Direct gtag.js integration is the approach documented at [developers.google.com/analytics/devguides/collection/gtagjs](https://developers.google.com/analytics/devguides/collection/gtagjs). SPA page view pattern verified across multiple 2025 implementation guides.
+Vite `manualChunks` pattern verified at [vite.dev/guide/build](https://vite.dev/guide/build).
+React.lazy verified in React 19 docs. Bundle size reduction expectation (admin/public split)
+confirmed in multiple 2025 case studies — typical drop of 30-40% in public bundle size when
+admin routes are split out.
 
 ---
 
-## Summary: Net-New Packages for v3.1
+## 7. t-SNE Embedding Heatmap Fix — Code Bug, No New Package
 
-**None.** All four v3.1 features require zero new npm packages and zero requirements.txt changes.
+### Root Cause Identified
 
-| Feature | What Changes | Package Delta |
-|---------|-------------|---------------|
-| Gemini model update | 1 string constant in `pilot_service.py` | None |
-| Expert email purge | ORM model + raw SQL migration + CSV + admin routes | None |
-| Mobile filter UX | Replace `MobileFilterSheet.tsx` with inline Tailwind selects | None (vaul stays for Sage) |
-| Google Analytics | 2-line script in `index.html` + hook | None |
+The t-SNE background task is launched at the WRONG place in the lifespan context manager.
+
+```python
+# app/main.py — CURRENT (broken)
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # ... startup code ...
+    yield
+    asyncio.create_task(_compute_tsne_background(app))  # WRONG: runs at SHUTDOWN, not startup
+```
+
+In FastAPI's `@asynccontextmanager` lifespan pattern:
+- Code **before** `yield` = startup (runs when server starts)
+- Code **after** `yield` = shutdown (runs when server stops)
+
+The `asyncio.create_task()` call is placed after `yield`, so it only executes when Railway
+shuts down the container — never on startup. This is why the heatmap always shows "Loading..."
+with HTTP 202 `{status: computing}` — `app.state.tsne_ready` is never set to `True` during
+normal operation.
+
+### Fix
+
+Move the task launch to **before** `yield` using `asyncio.ensure_future()` or
+`asyncio.get_event_loop().create_task()` — but these must be called after the event loop
+is running. The correct pattern for FastAPI lifespan is:
+
+```python
+# app/main.py — FIXED
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # ... all startup code (DB, FAISS, FTS5, etc.) ...
+
+    # Launch t-SNE computation as background task DURING startup
+    # create_task() requires a running event loop — safe here because we're inside async lifespan
+    asyncio.create_task(_compute_tsne_background(app))
+    log.info("tsne.background_task_scheduled")
+
+    yield
+    # Shutdown: nothing to do
+```
+
+This places the task launch in the startup phase. The task runs asynchronously (does not block
+startup) because `_compute_tsne_background` uses `asyncio.to_thread()` for the CPU-intensive
+sklearn TSNE computation. The 5-second polling in `useEmbeddingMap()` hook will correctly
+receive HTTP 202 while computing and HTTP 200 when done.
+
+### Additional Hardening
+
+The frontend hook already handles the polling pattern correctly. The only concern is Railway
+deployments where the t-SNE computation (30s for 530 experts) might race with health checks.
+Since the computation runs in a thread (not blocking the event loop), health checks continue
+to respond normally during t-SNE computation.
+
+**No new packages.** The fix is a 2-line code move: delete `asyncio.create_task(...)` from
+after `yield` and add it before `yield`.
+
+### Confidence: HIGH
+
+Root cause confirmed by code inspection of `app/main.py` lines 334-335 and the FastAPI lifespan
+pattern at [fastapi.tiangolo.com/advanced/events](https://fastapi.tiangolo.com/advanced/events/).
+asyncio.create_task() semantics confirmed in Python docs — must be called from a coroutine or a
+running event loop.
+
+---
+
+## Net-New Packages for v4.0
+
+Two new Python packages. Zero new frontend packages.
+
+| Package | Version Pinned | Language | Purpose |
+|---------|---------------|----------|---------|
+| `bcrypt` | 5.0.* | Python | Admin password hashing |
+| `PyJWT` | 2.11.* | Python | Admin JWT session tokens |
+
+### requirements.txt Changes
+
+```
+# Add these two lines:
+bcrypt==5.0.*
+PyJWT==2.11.*
+```
+
+### package.json Changes
+
+None.
 
 ---
 
@@ -291,27 +494,44 @@ Direct gtag.js integration is the approach documented at [developers.google.com/
 
 | Rejected Package | Reason | Use Instead |
 |-----------------|--------|-------------|
-| `alembic` | No existing setup; inline raw SQL is the project pattern; single column drop doesn't justify migration framework | Raw `ALTER TABLE experts DROP COLUMN email` via `engine.connect()` |
-| `react-ga4` | Unmaintained (last release 3 years ago); adds a layer over an API Google itself documents directly | Manual gtag.js script tag in index.html |
-| `@radix-ui/react-select` | ~15 kB for plain text dropdowns; documented mobile touch event bug; already have `@radix-ui/react-slider` | Native `<select>` with Tailwind |
-| `react-select` | 26 kB, designed for searchable multi-selects; vastly over-engineered for rate preset dropdowns | Native `<select>` with Tailwind |
-| `vite-plugin-radar` | Build-time plugin for what is a two-line index.html change; not well-maintained for Vite 7 | gtag.js script tag |
-| `headlessui` | Full component library for a single select element; already have Radix Slider in stack | Native `<select>` |
+| `passlib` | Abandoned since 2020, DeprecationWarning on Python 3.13, FastAPI official template migrated away | `bcrypt` directly |
+| `python-jose` | Near-abandoned (last commit 2023), open security issues | `PyJWT` |
+| `fastapi-jwt-auth` | Third-party wrapper with its own opinions; adds dependency for a 20-line implementation | PyJWT directly |
+| `alembic` | No existing setup; startup raw SQL is the project pattern; would require migration file management | Raw `ALTER TABLE` in `main.py` |
+| `@loadable/component` | Adds dependency for what React.lazy handles natively in React 19 | `React.lazy` + `Suspense` |
+| `react-window` | Redundant — react-virtuoso already handles all virtualization | react-virtuoso `Virtuoso` (list) / `VirtuosoGrid` (grid) |
+| `vite-plugin-compression` | Vercel auto-serves gzip/brotli — no manual compression plugin needed | Vercel default behavior |
+| `react-select` | 26 kB for dropdowns, over-engineered for simple filter selects | Native `<select>` with Tailwind |
+| `pandas` (for import) | Already in stack but wrong tool for row-by-row ORM upsert | `csv.DictReader` (existing pattern) |
+
+---
+
+## Version Compatibility Notes
+
+| Package | Constraint | Notes |
+|---------|-----------|-------|
+| `bcrypt==5.0.*` | Python >=3.8 | Compatible with all Python 3.11-3.13 on Railway |
+| `PyJWT==2.11.*` | Python >=3.9 | HS256 algorithm requires no cryptography extras |
+| `react-virtuoso==4.18.*` | React 19.x | Confirmed compatible — no peer dep warnings in current install |
 
 ---
 
 ## Sources
 
-- [Gemini API deprecations — gemini-2.0-flash-lite shutdown June 1, 2026](https://ai.google.dev/gemini-api/docs/deprecations)
-- [Gemini models page — gemini-2.5-flash-lite current stable](https://ai.google.dev/gemini-api/docs/models)
-- [SQLite ALTER TABLE DROP COLUMN — requires 3.35+](https://sqlite.org/lang_altertable.html)
-- [Google gtag.js developer guide](https://developers.google.com/analytics/devguides/collection/gtagjs)
-- [react-ga4 npm — last published 3 years ago, v2.1.0](https://www.npmjs.com/package/react-ga4)
-- [Radix UI Select mobile touch bug #2083](https://github.com/radix-ui/primitives/issues/2083)
-- [Implementing GA4 in React: The Right Way (Nov 2025)](https://www.mykolaaleksandrov.dev/posts/2025/11/react-google-analytics-implementation/)
-- Current `frontend/package.json` and `requirements.txt` verified directly
-- `app/models.py`, `app/services/pilot_service.py`, `app/main.py`, `frontend/src/components/sidebar/MobileFilterSheet.tsx` verified directly
+- [bcrypt 5.0.0 on PyPI](https://pypi.org/project/bcrypt/) — verified 2026-02-27, Python >=3.8
+- [PyJWT 2.11.0 on PyPI](https://pypi.org/project/PyJWT/) — verified 2026-02-27, released 2026-01-30
+- [passlib abandonment discussion — fastapi/fastapi #11773](https://github.com/fastapi/fastapi/discussions/11773)
+- [python-jose abandonment discussion — fastapi/fastapi #9587](https://github.com/fastapi/fastapi/discussions/9587)
+- [FastAPI official template passlib → bcrypt migration PR #1539](https://github.com/fastapi/full-stack-fastapi-template/pull/1539)
+- [FastAPI lifespan events docs](https://fastapi.tiangolo.com/advanced/events/) — startup vs shutdown
+- [Vite build manualChunks docs](https://vite.dev/guide/build) — Rollup output options
+- [react-virtuoso API reference](https://virtuoso.dev/react-virtuoso/api-reference/virtuoso-grid/) — Virtuoso + VirtuosoGrid exports
+- [Vite code splitting 2025 case study](https://www.mykolaaleksandrov.dev/posts/2025/10/react-lazy-suspense-vite-manualchunks/) — 40% bundle size reduction with route splitting
+- Current `frontend/package.json` verified (react-virtuoso@4.18.1, no PyJWT/bcrypt present)
+- Current `requirements.txt` verified (no bcrypt, no PyJWT)
+- `app/main.py` lines 315-335: t-SNE task placement bug confirmed by direct code inspection
+- `app/routers/admin.py`: existing CSV export pattern + import-csv endpoint verified
 
 ---
-*Stack research for: Expert Marketplace v3.1 Launch Prep*
-*Researched: 2026-02-26*
+*Stack research for: Expert Marketplace v4.0 Public Launch*
+*Researched: 2026-02-27*
