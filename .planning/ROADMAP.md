@@ -110,10 +110,10 @@ Plans:
   1. Admin routes load via dynamic import — the public Explorer page does not include admin JS in its initial bundle
   2. Recharts and react-table ship as separate chunks that load only when the admin panel is visited
   3. A Suspense fallback renders while admin chunks load, with no blank screen or unhandled error boundary
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 46-01: React.lazy admin route splitting and Vite manualChunks configuration
+- [ ] 46-01-PLAN.md — React.lazy admin route splitting and Vite manualChunks configuration
 
 ### Phase 47: Public Explorer Polish
 **Goal**: The public Explorer delivers a polished, resilient browsing experience with correct Sage behavior and mobile interactions
