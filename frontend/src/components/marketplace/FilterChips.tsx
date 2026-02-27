@@ -19,7 +19,7 @@ interface Chip {
 }
 
 export function FilterChips() {
-  const { query, rateMin, rateMax, tags, industryTags, sortBy, savedExperts, setQuery, setRateRange, toggleTag, toggleIndustryTag, setSortBy, resetFilters } =
+  const { query, rateMin, rateMax, tags, industryTags, sortBy, setQuery, setRateRange, toggleTag, toggleIndustryTag, setSortBy, resetFilters } =
     useFilterSlice()
   const { total } = useResultsSlice()
   const sageMode = useExplorerStore((s) => s.sageMode)
