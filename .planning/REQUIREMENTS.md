@@ -72,31 +72,31 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SEC-01 | TBD | Pending |
-| SEC-02 | TBD | Pending |
-| SEC-03 | TBD | Pending |
-| EXP-01 | TBD | Pending |
-| EXP-02 | TBD | Pending |
-| EXP-03 | TBD | Pending |
-| EXP-04 | TBD | Pending |
-| EXP-05 | TBD | Pending |
-| EXP-06 | TBD | Pending |
-| ADM-01 | TBD | Pending |
-| ADM-02 | TBD | Pending |
-| ADM-03 | TBD | Pending |
-| ADM-04 | TBD | Pending |
-| ADM-05 | TBD | Pending |
-| DISC-01 | TBD | Pending |
-| DISC-02 | TBD | Pending |
-| DISC-03 | TBD | Pending |
-| PERF-01 | TBD | Pending |
-| PERF-02 | TBD | Pending |
+| SEC-01 | Phase 45 | Pending |
+| SEC-02 | Phase 45 | Pending |
+| SEC-03 | Phase 45 | Pending |
+| ADM-03 | Phase 45 | Pending |
+| PERF-01 | Phase 46 | Pending |
+| PERF-02 | Phase 46 | Pending |
+| EXP-01 | Phase 47 | Pending |
+| EXP-02 | Phase 47 | Pending |
+| EXP-03 | Phase 47 | Pending |
+| EXP-04 | Phase 47 | Pending |
+| EXP-05 | Phase 47 | Pending |
+| EXP-06 | Phase 47 | Pending |
+| ADM-01 | Phase 48 | Pending |
+| ADM-02 | Phase 48 | Pending |
+| ADM-05 | Phase 48 | Pending |
+| DISC-01 | Phase 48 | Pending |
+| DISC-02 | Phase 48 | Pending |
+| DISC-03 | Phase 48 | Pending |
+| ADM-04 | Phase 49 | Pending |
 
 **Coverage:**
 - v4.0 requirements: 19 total
-- Mapped to phases: 0
-- Unmapped: 19 ⚠️
+- Mapped to phases: 19
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-27*
-*Last updated: 2026-02-27 after initial definition*
+*Last updated: 2026-02-27 — traceability updated after roadmap creation*
