@@ -2,7 +2,7 @@
 
 ## What This Is
 
-A professional Expert Marketplace for the Tinrate platform. Users discover 530 vetted experts via an immersive aurora-aesthetic Explorer — glassmorphic Command Center header with autocomplete search (debounced suggestions for job titles, companies, and tags), spring expert count, and Sage-in-flight pulse; animated aurora mesh background; bento-style expert cards with profile photos and monogram fallback; animated claymorphic tag cloud with 18 visible tags and proximity-based scaling; and a floating Sage AI co-pilot that actively searches experts via FAISS and injects results directly into the grid. Mobile-optimized with tap-expand cards, inline filter controls (tag picker, sort, active chip row), full-width search bar, and Sage bottom sheet. Expert bookmarking with localStorage persistence. User behavior (card clicks, Sage queries, filter changes) is tracked for marketplace intelligence. GA4 analytics tracks every page view with SPA route change support. Expert email PII has been purged from all data stores. A newsletter gate captures leads on "View Full Profile". The admin dashboard includes restructured 3-section navigation, marketplace intelligence (unmet demand, expert exposure, Sage trends), index management, and intelligence metrics. Playful users can trigger barrel rolls and a "tinrate" header tilt easter egg.
+A professional Expert Marketplace for the Tinrate platform. Users discover 530 vetted experts via an immersive aurora-aesthetic Explorer — glassmorphic Command Center header with autocomplete search (debounced suggestions for job titles, companies, and tags), spring expert count, and Sage-in-flight pulse; animated aurora mesh background; bento-style expert cards with profile photos and monogram fallback in grid or list view; animated claymorphic tag cloud with 18 domain tags plus industry-level tags (Finance, Healthcare, Tech, etc.) and proximity-based scaling; and a floating Sage AI co-pilot that actively searches experts via FAISS and injects results directly into the grid. Mobile-optimized with tap-expand cards, inline filter controls (tag picker, sort, active chip row), full-width search bar, and Sage bottom sheet. Expert bookmarking with localStorage persistence. User behavior (card clicks, Sage queries, filter changes) is tracked for marketplace intelligence. GA4 analytics tracks every page view with SPA route change support. Expert email PII has been purged from all data stores. A newsletter gate captures leads on "View Full Profile". Admin panel secured with bcrypt+JWT authentication and rate limiting; streamlined sidebar with overview dashboard (stat cards, recent leads/searches), lead export CSV, bulk expert CSV import, marketplace intelligence, and intelligence metrics. Playful users can trigger barrel rolls and a "tinrate" header tilt easter egg.
 
 ## Core Value
 
@@ -80,29 +80,28 @@ A user describes any problem and instantly gets expertly matched professionals t
 - ✓ Full-width search bar on mobile (logo hidden with hidden md:block) — v3.1
 - ✓ Desktop tag cloud expanded from 12 to 18 visible tags — v3.1
 - ✓ GA4 analytics (G-0T526W3E1Z) with SPA route change tracking via React Analytics component — v3.1
+- ✓ Admin auth upgraded to bcrypt+JWT with rate limiting (SEC-01, SEC-02) — v4.0
+- ✓ SQLite WAL mode with busy_timeout for concurrent traffic (SEC-03) — v4.0
+- ✓ t-SNE embedding heatmap fixed (ADM-03) — v4.0
+- ✓ Admin routes lazy-loaded with React.lazy + Suspense; vendor chunks split (PERF-01, PERF-02) — v4.0
+- ✓ White search bar input with keyword placeholder (EXP-01, EXP-02) — v4.0
+- ✓ Grid/list view toggle with localStorage persistence (EXP-03) — v4.0
+- ✓ Sage single-render fix on desktop (EXP-04) — v4.0
+- ✓ Mobile tap-expand / desktop direct-click behavior (EXP-05) — v4.0
+- ✓ API error state with retry button (EXP-06) — v4.0
+- ✓ Admin overview stat cards — Total Leads, Expert Pool, Sage volume (ADM-01) — v4.0
+- ✓ Lead export CSV with search queries and card clicks (ADM-02) — v4.0
+- ✓ Bulk expert CSV import with drag-drop, preview, column mapping (ADM-05) — v4.0
+- ✓ Industry-level tag taxonomy — data model, Gemini batch-tagging, tag cloud UI, filter integration (DISC-01, DISC-02, DISC-03) — v4.0
+- ✓ Unused admin tools removed, sidebar simplified (ADM-04) — v4.0
 
 ### Active
 
-## Current Milestone: v4.0 Public Launch
-
-**Goal:** Fix frontend bugs, streamline admin panel, harden for full public launch.
-
-**Target features:**
-- Search bar with white input field for contrast, keyword-oriented placeholders
-- Separate industry tags alongside domain tags in tag cloud
-- Grid/list toggle view for expert results
-- Fix Sage double-rendering on desktop (desktop + mobile popout overlap)
-- Double-click profile open → mobile only
-- Admin panel cleanup: remove unused tools, one-snap dashboard overview
-- Easy lead export (with search/click history), easy expert import
-- Fix embedding heatmap (always loading)
-- Proper admin login (username + password, hashed credentials, session expiry)
-- Error state handling, mobile polish, loading speed optimization
-- General production hardening for public launch
+(No active requirements — planning next milestone)
 
 ### Out of Scope
 
-- User authentication / accounts — users interact anonymously; admin uses session key
+- User authentication / accounts — users interact anonymously; admin uses bcrypt+JWT credentials
 - Booking/payment flow — cards link to Tinrate profiles where booking happens
 - Mobile native app — web-first
 - Real-time availability or calendar integration — not in CSV data
@@ -113,6 +112,15 @@ A user describes any problem and instantly gets expertly matched professionals t
 - Custom analytics dashboard — GA4 dashboard is sufficient for launch
 
 ## Shipped Versions
+
+### v4.0 Public Launch — Shipped 2026-02-27
+- Admin auth upgraded to bcrypt+JWT with rate limiting; SQLite WAL mode for concurrent traffic; t-SNE heatmap fixed
+- Public bundle halved by lazy-loading 11 admin routes + Vite vendor chunk splitting (~711 kB vs ~1,261 kB)
+- Explorer polished: white search bar, grid/list toggle, Sage double-render fix, desktop card click bypass, API error states
+- Industry-level tag taxonomy: Gemini batch-tagging, backend filter, tag cloud UI section, independent filtering
+- Admin streamlined: unused tools removed, lead export CSV, overview stat cards, bulk expert CSV import
+- All 19 requirements verified across 6 phases — production-ready for public launch
+- Archive: `.planning/milestones/v4.0-ROADMAP.md`
 
 ### v3.1 Launch Prep — Shipped 2026-02-26
 - Expert email PII purged: idempotent startup migration blanks all Expert.email values; CSV Email column stripped; import/add/seed paths permanently closed
@@ -186,25 +194,25 @@ A user describes any problem and instantly gets expertly matched professionals t
 
 ## Current State
 
-**Deployed version:** v3.1 (Railway + Vercel, auto-deploys on push to main)
-**Expert pool:** 530 experts (data/metadata.json), all AI-tagged; FAISS index at 530 vectors; profile photos via proxy endpoint; expert email PII purged
+**Deployed version:** v4.0 (Railway + Vercel, auto-deploys on push to main)
+**Expert pool:** 530 experts (data/metadata.json), all AI-tagged with domain + industry tags; FAISS index at 530 vectors; profile photos via proxy endpoint; expert email PII purged
 **Search intelligence:** Three-stage hybrid pipeline live; HyDE + feedback re-ranking toggled via admin steering panel; FTS5 autocomplete suggestions; Search Lab aligned with live pipeline
-**Sage AI:** Active search engine — discovers experts via FAISS, injects results directly into grid, "smart funny friend" personality, Dutch auto-detection; mobile Sage bottom sheet (Vaul)
-**Explorer:** Single-page aurora-aesthetic marketplace at `/` with glassmorphic Command Center header, autocomplete search (debounced suggestions), bento cards with photos/monograms, animated tag cloud (18 tags), inline mobile filters (tag picker, sort, active chips), Sage AI co-pilot; bookmarking; behavior tracking; newsletter gate
-**Admin panel:** 3-section sidebar (Analytics/Tools/Admin); OverviewPage dashboard with zero-result queries + Sage sparkline; Marketplace Intelligence (demand/exposure/trends); ToolsPage (Search Lab with pipeline badges/Score Explainer/Index); Intelligence tab with OTR@K, Index Drift, t-SNE
+**Sage AI:** Active search engine — discovers experts via FAISS, injects results directly into grid, "smart funny friend" personality, Dutch auto-detection; mobile Sage bottom sheet (Vaul); single-render on desktop (fixed)
+**Explorer:** Single-page aurora-aesthetic marketplace at `/` with glassmorphic Command Center header, autocomplete search (debounced suggestions), bento cards with photos/monograms in grid or list view, animated tag cloud (18 domain tags + industry tags), inline mobile filters (tag picker, sort, active chips), Sage AI co-pilot; bookmarking; behavior tracking; newsletter gate; API error states with retry
+**Admin panel:** Secured with bcrypt+JWT + rate limiting; streamlined sidebar — Overview (stat cards, recent leads/searches), Marketplace Intelligence (demand/exposure/trends), Intelligence (OTR@K, Index Drift, t-SNE), Experts (bulk CSV import), Leads (CSV export with search/click history)
 **Analytics:** GA4 (G-0T526W3E1Z) tracking all page views with SPA route change support
-**Next milestone:** v4.0 Public Launch — frontend fixes, admin streamlining, production hardening
+**Next milestone:** Planning
 
 ## Context
 
 - **Expert data:** SQLite table with 530 profiles (email PII purged); FAISS index at 530 tag-enriched vectors; all experts AI-tagged with 3–8 domain tags + findability scores
 - **AI stack:** Google GenAI (gemini-embedding-001) for embeddings, Gemini 2.5 Flash for generation + Sage function calling, Gemini 2.5-flash-lite for Dutch detection
-- **Codebase:** ~14,562 LOC TypeScript/TSX + Python
+- **Codebase:** ~15,910 LOC TypeScript/TSX + Python
 - **Deployed:** Railway (FastAPI + SQLite + FAISS) + Vercel (React/Vite/Tailwind v3)
 - **Live since:** 2026-02-20
 - **Behavior tracking:** `user_events` table with card_click, sage_query, filter_change events; fire-and-forget frontend instrumentation
 - **Analytics:** GA4 (G-0T526W3E1Z) with SPA route change tracking, admin routes excluded
-- **Admin dashboard:** Available at /admin — OverviewPage dashboard, Marketplace Intelligence, search analytics, lead tracking, expert management, ToolsPage (Search Lab, Score Explainer, Index), intelligence steering panel
+- **Admin dashboard:** Available at /admin — bcrypt+JWT auth with rate limiting; Overview (stat cards, recent leads/searches), Marketplace Intelligence, Experts (bulk CSV import), Leads (CSV export), Intelligence (t-SNE, OTR@K, Index Drift)
 
 ## Constraints
 
@@ -251,6 +259,13 @@ A user describes any problem and instantly gets expertly matched professionals t
 | Inline mobile filters (no drawer) | MobileInlineFilters with TagPickerSheet — always visible, no drawer interaction needed | ✓ Good — better mobile UX than Vaul drawer |
 | Logo hidden on mobile for search | hidden md:block on logo — search bar fills full viewport width | ✓ Good — cleanest approach per research |
 | Instant-apply tags (no draft buffer) | AbortController in useExplore deduplicates rapid requests — no need for draft buffer | ✓ Good — responsive UX |
+| Bcrypt+JWT replacing session key | Proper credential auth with token expiry; dual-mode endpoint during deploy window | ✓ Good — production-grade admin security |
+| slowapi rate limiting on login | 3 attempts/min from same IP — prevents brute force without external service | ✓ Good — simple, effective |
+| SQLite WAL mode | WAL + 5000ms busy_timeout — handles concurrent public traffic without "database locked" | ✓ Good — zero-ops concurrency |
+| React.lazy admin route splitting | All 11 admin components lazy-loaded — public bundle halved (~711 kB vs ~1,261 kB) | ✓ Good — significant bundle reduction |
+| Separate industryTags field | `industryTags: string[]` in filterSlice, never shared with domain tags array | ✓ Good — clean separation |
+| Atomic admin page removal | Frontend route + backend endpoint + background task removed together per page | ✓ Good — no orphaned computation |
+| Single Suspense at RequireAuth | One boundary covers all nested admin children; loading fallback is admin-themed | ✓ Good — minimal Suspense boundaries |
 
 ---
-*Last updated: 2026-02-27 after v4.0 milestone start*
+*Last updated: 2026-02-27 after v4.0 milestone completion*

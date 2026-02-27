@@ -153,3 +153,32 @@
 
 ---
 
+
+## v4.0 Public Launch (Shipped: 2026-02-27)
+
+**Phases completed:** 6 phases (45–50), 12 plans
+**Timeline:** 7 days (2026-02-20 → 2026-02-27)
+**Codebase:** ~15,910 LOC TypeScript/TSX + Python
+**Files modified:** 75 (+8,109 / -307)
+**Git range:** a6bf93b → 96968b2
+
+**Key accomplishments:**
+1. Upgraded admin authentication from shared key to bcrypt+JWT credentials with rate limiting (3 attempts/min)
+2. Halved public bundle size by lazy-loading all 11 admin routes and splitting vendor chunks (~711 kB vs ~1,261 kB)
+3. Polished Explorer with white search bar, grid/list toggle, Sage de-duplication fix, and API error states with retry
+4. Added industry-level tag taxonomy — Gemini batch-tagging, backend filter, tag cloud UI section, independent filtering
+5. Streamlined admin dashboard — removed unused tools, added lead export CSV with search/click history, overview stat cards
+6. All 19 requirements formally verified across 6 phases with VERIFICATION.md artifacts — production-ready
+
+**Tech debt (from audit):**
+- Suspense fallback replaces full admin frame during inter-page navigation (cosmetic)
+- Phase 48 SUMMARY.md files not generated (requirements_completed frontmatter missing)
+- `POST /api/admin/experts/assign-industry-tags` endpoint has no frontend button
+
+**Archive:**
+- Roadmap: `.planning/milestones/v4.0-ROADMAP.md`
+- Requirements: `.planning/milestones/v4.0-REQUIREMENTS.md`
+- Audit: `.planning/milestones/v4.0-MILESTONE-AUDIT.md`
+
+---
+
