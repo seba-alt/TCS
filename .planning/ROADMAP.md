@@ -178,6 +178,6 @@ Plans:
 | 41-44. Launch Prep | v3.1 | 5/5 | Complete | 2026-02-26 |
 | 45. Security + Infrastructure | 2/2 | Complete    | 2026-02-27 | - |
 | 46. Frontend Performance | 1/1 | Complete    | 2026-02-27 | - |
-| 47. Explorer Polish | 3/3 | Complete   | 2026-02-27 | - |
+| 47. Explorer Polish | 3/3 | Complete    | 2026-02-27 | - |
 | 48. Admin Features + Industry Tags | v4.0 | 0/4 | Not started | - |
 | 49. Admin Cleanup | v4.0 | 0/1 | Not started | - |
