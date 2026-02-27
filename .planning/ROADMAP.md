@@ -10,7 +10,7 @@
 - ✅ **v2.3 Sage Evolution & Marketplace Intelligence** — Phases 28-35 (shipped 2026-02-24)
 - ✅ **v3.0 Netflix Browse & Agentic Navigation** — Phases 36-40.3.1 (shipped 2026-02-26)
 - ✅ **v3.1 Launch Prep** — Phases 41-44 (shipped 2026-02-26)
-- 🚧 **v4.0 Public Launch** — Phases 45-49 (in progress)
+- 🚧 **v4.0 Public Launch** — Phases 45-50 (in progress)
 
 ## Phases
 
@@ -84,6 +84,7 @@ See `.planning/milestones/v3.1-ROADMAP.md`
 - [x] **Phase 47: Public Explorer Polish** - Grid/list toggle, white search input, error states, Sage double-render fix, mobile tap behavior (completed 2026-02-27)
 - [x] **Phase 48: Admin Features and Industry Tags** - Lead export CSV, one-snap overview stats, improved expert import, and industry tag taxonomy (completed 2026-02-27)
 - [x] **Phase 49: Admin Dashboard Cleanup** - Remove unused admin tools and simplify sidebar for current configuration (completed 2026-02-27)
+- [ ] **Phase 50: Verification & Requirements Cleanup** - Generate Phase 48 VERIFICATION.md and update all REQUIREMENTS.md checkboxes for satisfied requirements (gap closure)
 
 ## Phase Details
 
@@ -163,6 +164,17 @@ Plans:
 
 Plans:
 - [ ] 49-01-PLAN.md — Remove legacy redirect routes, add catch-all, consolidate overview with recent leads and searches
+
+### Phase 50: Verification & Requirements Cleanup
+**Goal**: All v4.0 requirements are formally verified and REQUIREMENTS.md accurately reflects milestone completion
+**Depends on**: Phase 49
+**Requirements**: ADM-01, ADM-02, ADM-05, DISC-01, DISC-02, DISC-03
+**Gap Closure:** Closes gaps from audit — all procedural (missing verification artifacts, not missing code)
+**Success Criteria** (what must be TRUE):
+  1. Phase 48 VERIFICATION.md exists and documents verification of all 6 requirements (ADM-01, ADM-02, ADM-05, DISC-01, DISC-02, DISC-03)
+  2. All 19 REQUIREMENTS.md checkboxes reflect actual status — 19/19 checked for satisfied requirements
+  3. Traceability table statuses updated from Pending to Complete for all satisfied requirements
+**Plans**: TBD
 
 ## Progress
 
