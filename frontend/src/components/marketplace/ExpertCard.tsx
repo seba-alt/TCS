@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Bookmark } from 'lucide-react'
 import type { Expert } from '../../store/resultsSlice'
 import { useExplorerStore, useFilterSlice } from '../../store'
+import { useNltrStore } from '../../store/nltrStore'
 import { trackEvent } from '../../tracking'
 
 const API_BASE = import.meta.env.VITE_API_URL ?? ''
@@ -42,6 +43,23 @@ export function ExpertCard({ expert, onViewProfile, isExpanded = false, onExpand
     toggleSavedExpert(expert.username)
   }
 
+  // Fires a lead-click POST when the user is email-identified (fire-and-forget)
+  function _fireLeadClick(searchQuery: string) {
+    const nltrEmail = useNltrStore.getState().email
+    if (nltrEmail) {
+      void fetch(`${API_BASE}/api/admin/lead-clicks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        keepalive: true,
+        body: JSON.stringify({
+          email: nltrEmail,
+          expert_username: expert.username,
+          search_query: searchQuery,
+        }),
+      })
+    }
+  }
+
   // Card-level click: desktop opens profile directly; mobile uses two-tap expand flow
   function handleCardClick() {
     // Desktop: skip expand, open profile directly
@@ -58,6 +76,7 @@ export function ExpertCard({ expert, onViewProfile, isExpanded = false, onExpand
           tags: storeState.tags,
         },
       })
+      _fireLeadClick(storeState.query)
       onViewProfile(expert.profile_url)
       return
     }
@@ -77,6 +96,7 @@ export function ExpertCard({ expert, onViewProfile, isExpanded = false, onExpand
           tags: storeState.tags,
         },
       })
+      _fireLeadClick(storeState.query)
       onViewProfile(expert.profile_url)
     }
   }

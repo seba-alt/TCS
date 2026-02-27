@@ -286,3 +286,30 @@ export interface MarketplaceTrendResponse {
     prior_period_total: number
   }
 }
+
+// ── Lead Click Tracking types ─────────────────────────────────────────────────
+
+export interface LeadClickEntry {
+  expert_username: string
+  expert_name: string
+  search_query: string
+  created_at: string
+}
+
+export interface LeadClicksByEmail {
+  email: string
+  clicks: LeadClickEntry[]
+}
+
+export interface LeadClicksResponse {
+  leads: LeadClicksByEmail[]
+}
+
+export interface LeadClicksByExpertResponse {
+  expert_username: string
+  clicks: {
+    email: string
+    search_query: string
+    created_at: string
+  }[]
+}
