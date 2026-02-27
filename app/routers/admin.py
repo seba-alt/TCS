@@ -51,7 +51,7 @@ import structlog
 from app.config import FAISS_INDEX_PATH, METADATA_PATH
 from app.database import get_db, SessionLocal
 from app.limiter import limiter
-from app.models import AdminUser, Conversation, EmailLead, Expert, Feedback, NewsletterSubscriber, UserEvent
+from app.models import AdminUser, Conversation, EmailLead, Expert, Feedback, LeadClick, NewsletterSubscriber, UserEvent
 from app.services.tagging import compute_findability_score, tag_expert_sync
 from app.services.retriever import retrieve
 from app.services.search_intelligence import (  # noqa: PLC2701
@@ -304,6 +304,31 @@ def authenticate(body: AuthBody, request: Request):
     expire = datetime.now(timezone.utc) + timedelta(hours=JWT_EXPIRE_HOURS)
     token = jwt.encode({"sub": user.username, "exp": expire}, SECRET_KEY, algorithm=ALGORITHM)
     return {"token": token}
+
+
+# ── Lead Click Capture (public, no auth required) ────────────────────────────
+
+class LeadClickRequest(BaseModel):
+    email: str = Field(..., min_length=1, max_length=320)
+    expert_username: str = Field(..., min_length=1, max_length=100)
+    search_query: str = Field(default="", max_length=2000)
+
+
+@auth_router.post("/lead-clicks", status_code=202)
+def record_lead_click(body: LeadClickRequest, db: Session = Depends(get_db)):
+    """
+    Record a lead click — fires when an email-identified user clicks an expert card.
+    Public endpoint (no admin auth required), fire-and-forget from the frontend.
+    Returns 202 Accepted immediately after DB write.
+    """
+    record = LeadClick(
+        email=body.email,
+        expert_username=body.expert_username,
+        search_query=body.search_query,
+    )
+    db.add(record)
+    db.commit()
+    return {"status": "accepted"}
 
 
 # ── Stats ─────────────────────────────────────────────────────────────────────
@@ -1894,20 +1919,71 @@ def export_exposure_csv(days: int = 30, db: Session = Depends(get_db)):
     )
 
 
+# ── Lead Click Admin Endpoints ────────────────────────────────────────────────
+
+@router.get("/lead-clicks")
+def get_lead_clicks(db: Session = Depends(get_db)):
+    """
+    Return all lead clicks grouped by email, with expert full names resolved.
+    Batch lookups expert names to avoid N+1 queries.
+    """
+    rows = db.scalars(
+        select(LeadClick).order_by(LeadClick.created_at.desc())
+    ).all()
+
+    # Batch lookup expert names to avoid N+1
+    all_usernames = {row.expert_username for row in rows}
+    experts_map = {
+        e.username: f"{e.first_name} {e.last_name}"
+        for e in db.scalars(select(Expert).where(Expert.username.in_(all_usernames))).all()
+    } if all_usernames else {}
+
+    leads: dict = {}
+    for row in rows:
+        expert_name = experts_map.get(row.expert_username, row.expert_username)
+        if row.email not in leads:
+            leads[row.email] = []
+        leads[row.email].append({
+            "expert_username": row.expert_username,
+            "expert_name": expert_name,
+            "search_query": row.search_query,
+            "created_at": row.created_at.isoformat(),
+        })
+
+    return {"leads": [{"email": email, "clicks": clicks} for email, clicks in leads.items()]}
+
+
+@router.get("/lead-clicks/by-expert/{username}")
+def get_lead_clicks_by_expert(username: str, db: Session = Depends(get_db)):
+    """Return all lead clicks for a specific expert, ordered newest-first."""
+    rows = db.scalars(
+        select(LeadClick)
+        .where(LeadClick.expert_username == username)
+        .order_by(LeadClick.created_at.desc())
+    ).all()
+    return {
+        "expert_username": username,
+        "clicks": [
+            {"email": r.email, "search_query": r.search_query, "created_at": r.created_at.isoformat()}
+            for r in rows
+        ],
+    }
+
+
 # ── Reset Data ────────────────────────────────────────────────────────────────
 
 @router.post("/reset-data")
 def reset_data(db: Session = Depends(get_db)):
     """
     Truncate all search/usage data tables: conversations, email_leads, feedback,
-    newsletter_subscribers, user_events.
+    newsletter_subscribers, user_events, lead_clicks.
 
     Preserves: experts, admin_users, app_settings (config/content, not test data).
 
     Response: {"ok": True, "deleted": {table: count, ...}}
     """
     counts = {}
-    for model in [Feedback, Conversation, EmailLead, NewsletterSubscriber, UserEvent]:
+    for model in [Feedback, Conversation, EmailLead, NewsletterSubscriber, UserEvent, LeadClick]:
         count = db.query(model).count()
         db.query(model).delete()
         counts[model.__tablename__] = count

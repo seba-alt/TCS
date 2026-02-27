@@ -161,6 +161,24 @@ class UserEvent(Base):
     )
 
 
+class LeadClick(Base):
+    """
+    Records expert card clicks by identified leads (email-gated users).
+    Distinct from user_events which uses anonymous session_id.
+    Used by admin /lead-clicks endpoints for lead-level click attribution.
+    Auto-created by Base.metadata.create_all at startup — no migration needed.
+    """
+    __tablename__ = "lead_clicks"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    email: Mapped[str] = mapped_column(String(320), nullable=False, index=True)
+    expert_username: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    search_query: Mapped[str] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime, default=datetime.datetime.utcnow, nullable=False
+    )
+
+
 class AppSetting(Base):
     """
     Runtime configuration overrides for search intelligence.
