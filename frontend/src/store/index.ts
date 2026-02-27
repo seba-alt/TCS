@@ -30,17 +30,26 @@ export const useExplorerStore = create<ExplorerStore>()(
     {
       name: 'explorer-filters',
       storage: createJSONStorage(() => localStorage),
-      version: 1,
+      version: 2,
       // Only persist filter DATA fields — never actions, never results, never pilot
       partialize: (state) => ({
-        query:     state.query,
-        rateMin:   state.rateMin,
-        rateMax:   state.rateMax,
-        tags:      state.tags,
-        sortBy:    state.sortBy,
-        sortOrder: state.sortOrder,
-        viewMode:  state.viewMode,
+        query:        state.query,
+        rateMin:      state.rateMin,
+        rateMax:      state.rateMax,
+        tags:         state.tags,
+        industryTags: state.industryTags,
+        sortBy:       state.sortBy,
+        sortOrder:    state.sortOrder,
+        viewMode:     state.viewMode,
       }),
+      migrate: (persisted: unknown, version: number) => {
+        const state = persisted as Record<string, unknown>
+        if (version < 2) {
+          // v1 → v2: add industryTags field (default empty array)
+          state.industryTags = []
+        }
+        return state as ExplorerStore
+      },
       onRehydrateStorage: () => (_state) => {
       },
     }
@@ -55,6 +64,7 @@ export const useFilterSlice = () =>
       rateMin:             state.rateMin,
       rateMax:             state.rateMax,
       tags:                state.tags,
+      industryTags:        state.industryTags,
       sortBy:              state.sortBy,
       sortOrder:           state.sortOrder,
       viewMode:            state.viewMode,
@@ -64,6 +74,8 @@ export const useFilterSlice = () =>
       setRateRange:        state.setRateRange,
       toggleTag:           state.toggleTag,
       setTags:             state.setTags,
+      toggleIndustryTag:   state.toggleIndustryTag,
+      resetIndustryTags:   state.resetIndustryTags,
       setSortBy:           state.setSortBy,
       setViewMode:         state.setViewMode,
       setSavedFilter:      state.setSavedFilter,

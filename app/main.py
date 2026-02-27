@@ -230,6 +230,18 @@ async def lifespan(app: FastAPI):
                 pass  # Column already exists — idempotent
     log.info("startup: expert photo_url column migrated/verified")
 
+    # Phase 48: industry_tags column
+    with engine.connect() as _conn:
+        for _col_ddl in [
+            "ALTER TABLE experts ADD COLUMN industry_tags TEXT",
+        ]:
+            try:
+                _conn.execute(_text(_col_ddl))
+                _conn.commit()
+            except Exception:
+                pass  # Column already exists — idempotent
+    log.info("startup: expert industry_tags column migrated/verified")
+
     # Phase 41: Expert email purge — blank all Expert.email values (PII removal)
     with engine.connect() as _conn:
         _conn.execute(_text("UPDATE experts SET email = ''"))

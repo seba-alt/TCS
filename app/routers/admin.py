@@ -175,6 +175,34 @@ GAP_THRESHOLD = 0.60  # Matches SIMILARITY_THRESHOLD in retriever.py
 
 EXPERTS_CSV_PATH = METADATA_PATH.parent / "experts.csv"
 
+INDUSTRY_KEYWORDS = {
+    "Finance":     ["finance", "cfo", "accountant", "banker", "investment", "fintech", "trading", "corporate finance", "private equity", "venture capital"],
+    "Technology":  ["engineer", "developer", "cto", "software", "data", "ai", "ml", "saas", "product", "web", "devops", "tech"],
+    "Healthcare":  ["health", "medical", "doctor", "pharma", "wellness", "biotech"],
+    "Real Estate": ["real estate", "property", "construction", "renovation", "architecture"],
+    "Marketing":   ["marketing", "cmo", "brand", "social media", "growth", "seo", "content", "digital marketing"],
+    "Sales":       ["sales", "revenue", "business development", "account management"],
+    "Operations":  ["operations", "coo", "supply chain", "logistics", "procurement", "process"],
+    "Legal":       ["legal", "lawyer", "attorney", "compliance", "gdpr", "regulatory"],
+    "HR":          ["hr", "human resources", "recruiter", "talent", "coaching", "people"],
+    "Strategy":    ["strategy", "consulting", "advisor", "entrepreneur", "founder", "ceo", "board"],
+    "Sports":      ["sport", "football", "fitness", "athlete", "coach", "esports"],
+    "Media":       ["media", "journalism", "publishing", "entertainment", "film", "music"],
+}
+
+
+def _auto_industry_tags(job_title: str, bio: str = "", company: str = "") -> list[str]:
+    """Return up to 3 matching industry tags from job title + bio + company."""
+    text = f"{job_title} {bio} {company}".lower()
+    matched = []
+    for industry, keywords in INDUSTRY_KEYWORDS.items():
+        if any(kw in text for kw in keywords):
+            matched.append(industry)
+        if len(matched) == 3:
+            break
+    return matched
+
+
 CATEGORY_KEYWORDS = {
     "Finance": ["finance", "cfo", "accountant", "banker", "investment", "fintech", "trading"],
     "Marketing": ["marketing", "cmo", "brand", "social media", "growth", "seo", "content"],
@@ -247,6 +275,7 @@ def _serialize_expert(e: Expert) -> dict:
         "tags": json.loads(e.tags or "[]"),
         "findability_score": e.findability_score,
         "photo_url": e.photo_url,
+        "industry_tags": json.loads(e.industry_tags) if e.industry_tags else [],
     }
 
 
@@ -978,6 +1007,27 @@ def auto_classify_experts(db: Session = Depends(get_db)):
     return {"classified": classified, "categories": categories}
 
 
+@router.post("/experts/assign-industry-tags")
+def assign_industry_tags(db: Session = Depends(get_db)):
+    """
+    Batch-assign industry tags to ALL existing experts based on keyword matching.
+    One-time bootstrap for experts that lack industry_tags.
+
+    Response: {"updated": N}
+    """
+    all_experts = db.scalars(select(Expert)).all()
+    updated = 0
+    for expert in all_experts:
+        itags = _auto_industry_tags(expert.job_title or "", expert.bio or "", expert.company or "")
+        new_val = json.dumps(itags) if itags else None
+        if expert.industry_tags != new_val:
+            expert.industry_tags = new_val
+            updated += 1
+    if updated:
+        db.commit()
+    return {"updated": updated}
+
+
 def _retry_tag_expert_background(expert_id: int) -> None:
     """
     Background retry for auto-tagging when synchronous Gemini call fails.
@@ -1031,6 +1081,7 @@ def add_expert(body: AddExpertBody, background_tasks: BackgroundTasks, db: Sessi
         "?utm_source=chat&utm_medium=search&utm_campaign=chat"
     )
 
+    _itags = _auto_industry_tags(body.job_title, body.bio, body.company)
     new_expert = Expert(
         username=body.username,
         email="",
@@ -1044,6 +1095,7 @@ def add_expert(body: AddExpertBody, background_tasks: BackgroundTasks, db: Sessi
         profile_url=profile_url,
         profile_url_utm=profile_url_utm,
         category=_auto_categorize(body.job_title),
+        industry_tags=json.dumps(_itags) if _itags else None,
     )
     db.add(new_expert)
     db.commit()
@@ -1180,17 +1232,25 @@ async def import_experts_csv(file: UploadFile = File(...), column_mapping: str =
 
         existing = db.scalar(select(Expert).where(Expert.username == username))
 
+        # Pre-compute industry tags for both insert and update paths
+        _jt = (row.get("Job Title") or "").strip()
+        _bio = (row.get("Bio") or "").strip()
+        _co = (row.get("Company") or "").strip()
+        _itags = _auto_industry_tags(_jt, _bio, _co)
+        _itags_val = json.dumps(_itags) if _itags else None
+
         if existing:
             existing.first_name = (row.get("First Name") or "").strip()
             existing.last_name = (row.get("Last Name") or "").strip()
-            existing.job_title = (row.get("Job Title") or "").strip()
-            existing.company = (row.get("Company") or "").strip()
-            existing.bio = (row.get("Bio") or "").strip()
+            existing.job_title = _jt
+            existing.company = _co
+            existing.bio = _bio
             existing.hourly_rate = hourly_rate
             existing.currency = (row.get("Currency") or "EUR").strip()
             existing.profile_url = (row.get("Profile URL") or "").strip()
             existing.profile_url_utm = (row.get("Profile URL with UTM") or "").strip()
             existing.photo_url = (row.get("Profile Image Url") or "").strip() or None
+            existing.industry_tags = _itags_val
             # Intentionally preserve existing.tags and existing.findability_score
             updated += 1
         else:
@@ -1200,15 +1260,16 @@ async def import_experts_csv(file: UploadFile = File(...), column_mapping: str =
                 username=username,
                 first_name=(row.get("First Name") or "").strip(),
                 last_name=(row.get("Last Name") or "").strip(),
-                job_title=(row.get("Job Title") or "").strip(),
-                company=(row.get("Company") or "").strip(),
-                bio=(row.get("Bio") or "").strip(),
+                job_title=_jt,
+                company=_co,
+                bio=_bio,
                 hourly_rate=hourly_rate,
                 currency=(row.get("Currency") or "EUR").strip(),
                 profile_url=profile_url,
                 profile_url_utm=profile_url_utm,
                 photo_url=(row.get("Profile Image Url") or "").strip() or None,
-                category=_auto_categorize((row.get("Job Title") or "").strip()),
+                category=_auto_categorize(_jt),
+                industry_tags=_itags_val,
             ))
             inserted += 1
 
@@ -1955,6 +2016,7 @@ def _explore_for_lab(
         cursor=0,
         db=db,
         app_state=app_state,
+        industry_tags=[],
     )
 
     experts = [

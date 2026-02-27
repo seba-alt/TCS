@@ -7,6 +7,7 @@ export interface FilterSlice {
   rateMin: number
   rateMax: number
   tags: string[]
+  industryTags: string[]
   sortBy: 'relevance' | 'rate_asc' | 'rate_desc'
   sortOrder: 'asc' | 'desc'
 
@@ -24,6 +25,8 @@ export interface FilterSlice {
   setRateRange: (min: number, max: number) => void
   toggleTag: (tag: string) => void
   setTags: (tags: string[]) => void
+  toggleIndustryTag: (tag: string) => void
+  resetIndustryTags: () => void
   setSortBy: (sortBy: FilterSlice['sortBy']) => void
   setViewMode: (mode: 'grid' | 'list') => void
   setSavedFilter: (v: boolean) => void
@@ -36,6 +39,7 @@ const filterDefaults = {
   rateMin: 0,
   rateMax: 5000,
   tags: [] as string[],
+  industryTags: [] as string[],
   sortBy: 'relevance' as const,
   sortOrder: 'desc' as const,
   viewMode: 'grid' as const,
@@ -84,6 +88,20 @@ export const createFilterSlice: StateCreator<
   setTags: (tags) => {
     get().setSageMode(false)
     set({ tags })
+  },
+
+  toggleIndustryTag: (tag) => {
+    get().setSageMode(false)
+    set((state) => ({
+      industryTags: state.industryTags.includes(tag)
+        ? state.industryTags.filter((t) => t !== tag)
+        : [...state.industryTags, tag],
+    }))
+  },
+
+  resetIndustryTags: () => {
+    get().setSageMode(false)
+    set({ industryTags: [] })
   },
 
   setSortBy: (sortBy) => set({ sortBy }),  // sort does NOT exit sage mode

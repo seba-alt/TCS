@@ -10,6 +10,7 @@ export function useExplore() {
   const rateMin = useExplorerStore((s) => s.rateMin)
   const rateMax = useExplorerStore((s) => s.rateMax)
   const tags = useExplorerStore((s) => s.tags)
+  const industryTags = useExplorerStore((s) => s.industryTags)
   const sortBy = useExplorerStore((s) => s.sortBy)
   const sageMode = useExplorerStore((s) => s.sageMode)
   const retryTrigger = useExplorerStore((s) => s.retryTrigger)
@@ -54,6 +55,7 @@ export function useExplore() {
       rate_min: String(rateMin),
       rate_max: String(rateMax),
       tags: tags.join(','),
+      industry_tags: industryTags.join(','),
       limit: '20',
       cursor: '0',
     })
@@ -86,7 +88,7 @@ export function useExplore() {
     }
     // sortBy is in dep array even though /api/explore doesn't currently use it —
     // ensures re-fetch when sort is added later; avoids stale-closure bug
-  }, [query, rateMin, rateMax, tags, sortBy, sageMode, retryTrigger, setLoading, setResults, setError, resetResults])
+  }, [query, rateMin, rateMax, tags, industryTags, sortBy, sageMode, retryTrigger, setLoading, setResults, setError, resetResults])
 
   // loadNextPage — passed to VirtuosoGrid endReached prop
   // Guard: don't fetch if no more pages (cursor null), already fetching more, or initial load in progress
@@ -98,7 +100,8 @@ export function useExplore() {
       if (query) params.set('query', query)
       params.set('rate_min', String(rateMin))
       params.set('rate_max', String(rateMax))
-      tags.forEach((t) => params.append('tags', t))
+      params.set('tags', tags.join(','))
+      params.set('industry_tags', industryTags.join(','))
       params.set('cursor', String(cursor))
       const res = await fetch(`${API_BASE}/api/explore?${params}`)
       if (!res.ok) return
@@ -109,7 +112,7 @@ export function useExplore() {
     } finally {
       setFetchingMore(false)
     }
-  }, [cursor, isFetchingMore, loading, query, rateMin, rateMax, tags, appendResults, setFetchingMore])
+  }, [cursor, isFetchingMore, loading, query, rateMin, rateMax, tags, industryTags, appendResults, setFetchingMore])
 
   return { loadNextPage }
 }

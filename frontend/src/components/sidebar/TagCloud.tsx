@@ -8,6 +8,7 @@ import {
 } from 'motion/react'
 import { useExplorerStore } from '../../store'
 import { TOP_TAGS } from '../../constants/tags'
+import { INDUSTRY_TAGS } from '../../constants/industryTags'
 
 // Per-pill hook: reads shared mouse position, measures own DOM rect, derives spring scale
 function useProximityScale(
@@ -69,6 +70,8 @@ function TagPill({
 export function TagCloud() {
   const toggleTag = useExplorerStore((s) => s.toggleTag)
   const tags = useExplorerStore((s) => s.tags)
+  const toggleIndustryTag = useExplorerStore((s) => s.toggleIndustryTag)
+  const industryTags = useExplorerStore((s) => s.industryTags)
 
   const mouseX = useMotionValue<number>(-999)
   const mouseY = useMotionValue<number>(-999)
@@ -83,32 +86,62 @@ export function TagCloud() {
     mouseY.set(-999)
   }
 
-  // Selected tags first, then up to 18 total — keeps cloud compact so "Everything is possible" is visible
+  // Domain tags: selected first, then up to 18 total
   const selected = TOP_TAGS.filter((t) => tags.includes(t))
   const unselected = TOP_TAGS.filter((t) => !tags.includes(t))
   const visibleCount = Math.max(18, selected.length)
   const sortedTags = [...selected, ...unselected.slice(0, visibleCount - selected.length)]
 
   return (
-    <LayoutGroup>
-      <div
-        className="flex flex-wrap gap-2"
-        onMouseMove={handleMouseMove}
-        onMouseLeave={handleMouseLeave}
-        role="group"
-        aria-label="Domain tags"
-      >
-        {sortedTags.map((tag) => (
-          <TagPill
-            key={tag}
-            tag={tag}
-            isSelected={tags.includes(tag)}
-            mouseX={mouseX}
-            mouseY={mouseY}
-            onToggle={() => toggleTag(tag)}
-          />
-        ))}
-      </div>
-    </LayoutGroup>
+    <div
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+    >
+      {/* Domain Tags */}
+      <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1 block">
+        Domain
+      </span>
+      <LayoutGroup id="domain">
+        <div
+          className="flex flex-wrap gap-2 mb-3"
+          role="group"
+          aria-label="Domain tags"
+        >
+          {sortedTags.map((tag) => (
+            <TagPill
+              key={tag}
+              tag={tag}
+              isSelected={tags.includes(tag)}
+              mouseX={mouseX}
+              mouseY={mouseY}
+              onToggle={() => toggleTag(tag)}
+            />
+          ))}
+        </div>
+      </LayoutGroup>
+
+      {/* Industry Tags */}
+      <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1 block">
+        Industry
+      </span>
+      <LayoutGroup id="industry">
+        <div
+          className="flex flex-wrap gap-2"
+          role="group"
+          aria-label="Industry tags"
+        >
+          {INDUSTRY_TAGS.map((tag) => (
+            <TagPill
+              key={tag}
+              tag={tag}
+              isSelected={industryTags.includes(tag)}
+              mouseX={mouseX}
+              mouseY={mouseY}
+              onToggle={() => toggleIndustryTag(tag)}
+            />
+          ))}
+        </div>
+      </LayoutGroup>
+    </div>
   )
 }

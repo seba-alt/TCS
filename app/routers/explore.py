@@ -25,6 +25,7 @@ async def explore(
     rate_min: float = Query(default=0.0, ge=0),
     rate_max: float = Query(default=10000.0, le=10000),
     tags: str = Query(default=""),    # comma-separated, e.g. "seo,blockchain"
+    industry_tags: str = Query(default=""),  # comma-separated, e.g. "Finance,Healthcare"
     limit: int = Query(default=20, ge=1, le=100),
     cursor: int = Query(default=0, ge=0),
 ) -> ExploreResponse:
@@ -34,6 +35,7 @@ async def explore(
     Rate range: inclusive on both ends. Tags: comma-separated, AND logic (expert must have ALL).
     """
     tag_list = [t.strip() for t in tags.split(",") if t.strip()]
+    industry_tag_list = [t.strip() for t in industry_tags.split(",") if t.strip()]
     loop = asyncio.get_event_loop()
     return await loop.run_in_executor(
         None,
@@ -42,6 +44,7 @@ async def explore(
             rate_min=rate_min,
             rate_max=rate_max,
             tags=tag_list,
+            industry_tags=industry_tag_list,
             limit=limit,
             cursor=cursor,
             db=db,

@@ -3,6 +3,7 @@ import { Tag, ArrowUpDown, Bookmark, X } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
 import { useExplorerStore, useFilterSlice, useResultsSlice } from '../../store'
 import { TOP_TAGS } from '../../constants/tags'
+import { INDUSTRY_TAGS } from '../../constants/industryTags'
 
 const SORT_OPTIONS: { label: string; value: 'relevance' | 'rate_asc' | 'rate_desc' }[] = [
   { label: 'Relevance', value: 'relevance' },
@@ -17,10 +18,12 @@ export function MobileInlineFilters() {
 
   const {
     tags,
+    industryTags,
     sortBy,
     savedExperts,
     savedFilter,
     toggleTag,
+    toggleIndustryTag,
     setSortBy,
     setSavedFilter,
     resetFilters,
@@ -31,8 +34,13 @@ export function MobileInlineFilters() {
 
   const savedCount = savedExperts.length
 
-  const filteredTags = TOP_TAGS.filter((t) =>
-    tagSearch ? t.includes(tagSearch.toLowerCase()) : true
+  const totalTagCount = tags.length + industryTags.length
+
+  const filteredDomainTags = TOP_TAGS.filter((t) =>
+    tagSearch ? t.toLowerCase().includes(tagSearch.toLowerCase()) : true
+  )
+  const filteredIndustryTags = INDUSTRY_TAGS.filter((t) =>
+    tagSearch ? t.toLowerCase().includes(tagSearch.toLowerCase()) : true
   )
 
   const currentSortLabel =
@@ -49,14 +57,14 @@ export function MobileInlineFilters() {
             setTagPickerOpen(true)
           }}
           className={`flex items-center gap-1.5 text-sm rounded-md px-2.5 py-1.5 shrink-0 transition-colors ${
-            tags.length > 0
+            totalTagCount > 0
               ? 'bg-brand-purple text-white'
               : 'border border-gray-300 text-gray-700'
           }`}
           aria-label="Open tag picker"
         >
           <Tag size={15} />
-          {tags.length > 0 ? `Tags (${tags.length})` : 'Tags'}
+          {totalTagCount > 0 ? `Tags (${totalTagCount})` : 'Tags'}
         </button>
 
         {/* Sort button */}
@@ -92,11 +100,11 @@ export function MobileInlineFilters() {
       </div>
 
       {/* Active tag chips row — only shown when tags are selected */}
-      {tags.length > 0 && (
+      {totalTagCount > 0 && (
         <div className="flex gap-1.5 flex-wrap px-4 py-2 border-b border-gray-100">
           {tags.map((tag) => (
             <span
-              key={tag}
+              key={`d-${tag}`}
               className="inline-flex items-center gap-1 text-xs bg-gray-100 text-gray-700 rounded-full px-2.5 py-1"
             >
               {tag}
@@ -104,6 +112,21 @@ export function MobileInlineFilters() {
                 onClick={() => toggleTag(tag)}
                 aria-label={`Remove ${tag} filter`}
                 className="hover:text-gray-900 transition-colors"
+              >
+                <X size={11} />
+              </button>
+            </span>
+          ))}
+          {industryTags.map((tag) => (
+            <span
+              key={`i-${tag}`}
+              className="inline-flex items-center gap-1 text-xs bg-purple-100 text-purple-700 rounded-full px-2.5 py-1"
+            >
+              {tag}
+              <button
+                onClick={() => toggleIndustryTag(tag)}
+                aria-label={`Remove ${tag} industry filter`}
+                className="hover:text-purple-900 transition-colors"
               >
                 <X size={11} />
               </button>
@@ -155,46 +178,77 @@ export function MobileInlineFilters() {
 
             {/* Scrollable tag list */}
             <div className="flex-1 overflow-y-auto">
-              {filteredTags.map((tag) => {
-                const isSelected = tags.includes(tag)
-                return (
-                  <button
-                    key={tag}
-                    onClick={() => toggleTag(tag)}
-                    className="flex items-center gap-3 px-4 py-3 border-b border-gray-50 text-sm w-full text-left transition-colors hover:bg-gray-50"
-                  >
-                    {/* Selected indicator */}
-                    <span
-                      className={`w-5 h-5 rounded-full shrink-0 flex items-center justify-center transition-colors ${
-                        isSelected
-                          ? 'bg-brand-purple'
-                          : 'border-2 border-gray-300'
-                      }`}
-                    >
-                      {isSelected && (
-                        <svg
-                          width="10"
-                          height="8"
-                          viewBox="0 0 10 8"
-                          fill="none"
-                          aria-hidden="true"
+              {/* Domain section */}
+              {filteredDomainTags.length > 0 && (
+                <>
+                  <div className="px-4 pt-3 pb-1">
+                    <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Domain</span>
+                  </div>
+                  {filteredDomainTags.map((tag) => {
+                    const isSelected = tags.includes(tag)
+                    return (
+                      <button
+                        key={`d-${tag}`}
+                        onClick={() => toggleTag(tag)}
+                        className="flex items-center gap-3 px-4 py-3 border-b border-gray-50 text-sm w-full text-left transition-colors hover:bg-gray-50"
+                      >
+                        <span
+                          className={`w-5 h-5 rounded-full shrink-0 flex items-center justify-center transition-colors ${
+                            isSelected
+                              ? 'bg-brand-purple'
+                              : 'border-2 border-gray-300'
+                          }`}
                         >
-                          <path
-                            d="M1 4L3.5 6.5L9 1"
-                            stroke="white"
-                            strokeWidth="1.5"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        </svg>
-                      )}
-                    </span>
-                    <span className={isSelected ? 'text-brand-purple font-medium' : 'text-gray-700'}>
-                      {tag}
-                    </span>
-                  </button>
-                )
-              })}
+                          {isSelected && (
+                            <svg width="10" height="8" viewBox="0 0 10 8" fill="none" aria-hidden="true">
+                              <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          )}
+                        </span>
+                        <span className={isSelected ? 'text-brand-purple font-medium' : 'text-gray-700'}>
+                          {tag}
+                        </span>
+                      </button>
+                    )
+                  })}
+                </>
+              )}
+
+              {/* Industry section */}
+              {filteredIndustryTags.length > 0 && (
+                <>
+                  <div className="px-4 pt-3 pb-1">
+                    <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Industry</span>
+                  </div>
+                  {filteredIndustryTags.map((tag) => {
+                    const isSelected = industryTags.includes(tag)
+                    return (
+                      <button
+                        key={`i-${tag}`}
+                        onClick={() => toggleIndustryTag(tag)}
+                        className="flex items-center gap-3 px-4 py-3 border-b border-gray-50 text-sm w-full text-left transition-colors hover:bg-gray-50"
+                      >
+                        <span
+                          className={`w-5 h-5 rounded-full shrink-0 flex items-center justify-center transition-colors ${
+                            isSelected
+                              ? 'bg-brand-purple'
+                              : 'border-2 border-gray-300'
+                          }`}
+                        >
+                          {isSelected && (
+                            <svg width="10" height="8" viewBox="0 0 10 8" fill="none" aria-hidden="true">
+                              <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          )}
+                        </span>
+                        <span className={isSelected ? 'text-brand-purple font-medium' : 'text-gray-700'}>
+                          {tag}
+                        </span>
+                      </button>
+                    )
+                  })}
+                </>
+              )}
             </div>
 
             {/* Done button */}
@@ -203,7 +257,7 @@ export function MobileInlineFilters() {
                 onClick={() => setTagPickerOpen(false)}
                 className="bg-brand-purple text-white w-full py-3 font-medium text-sm rounded-xl"
               >
-                Done{tags.length > 0 ? ` (${tags.length} selected)` : ''}
+                Done{totalTagCount > 0 ? ` (${totalTagCount} selected)` : ''}
               </button>
             </div>
           </motion.div>

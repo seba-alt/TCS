@@ -154,6 +154,7 @@ def run_explore(
     cursor: int,
     db: Session,
     app_state,
+    industry_tags: list[str] | None = None,
 ) -> ExploreResponse:
     """
     Three-stage hybrid search pipeline.
@@ -176,6 +177,10 @@ def run_explore(
     # AND logic: expert must have ALL selected tags; normalize to lowercase
     for tag in tags:
         stmt = stmt.where(Expert.tags.like(f'%"{tag.lower()}"%'))
+
+    # Industry tag AND logic: expert must have ALL selected industry tags
+    for itag in (industry_tags or []):
+        stmt = stmt.where(Expert.industry_tags.like(f'%"{itag}"%'))
 
     filtered_experts: list[Expert] = list(db.scalars(stmt).all())
 
