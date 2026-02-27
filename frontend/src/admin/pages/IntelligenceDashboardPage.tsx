@@ -166,7 +166,7 @@ export default function IntelligenceDashboardPage() {
 
   async function handleToggle(key: string, newValue: boolean) {
     try {
-      await adminPost('/settings', { key, value: newValue })
+      await adminPost('/settings', { key, value: String(newValue) })
       refetch()
     } catch (e) {
       // On error, refetch to restore original state (revert)

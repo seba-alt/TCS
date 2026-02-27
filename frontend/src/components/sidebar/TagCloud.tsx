@@ -97,36 +97,13 @@ export function TagCloud() {
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
     >
-      {/* Domain Tags */}
-      <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1 block">
-        Domain
-      </span>
-      <LayoutGroup id="domain">
-        <div
-          className="flex flex-wrap gap-2 mb-3"
-          role="group"
-          aria-label="Domain tags"
-        >
-          {sortedTags.map((tag) => (
-            <TagPill
-              key={tag}
-              tag={tag}
-              isSelected={tags.includes(tag)}
-              mouseX={mouseX}
-              mouseY={mouseY}
-              onToggle={() => toggleTag(tag)}
-            />
-          ))}
-        </div>
-      </LayoutGroup>
-
       {/* Industry Tags */}
       <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1 block">
         Industry
       </span>
       <LayoutGroup id="industry">
         <div
-          className="flex flex-wrap gap-2"
+          className="flex flex-wrap gap-2 mb-3"
           role="group"
           aria-label="Industry tags"
         >
@@ -138,6 +115,29 @@ export function TagCloud() {
               mouseX={mouseX}
               mouseY={mouseY}
               onToggle={() => toggleIndustryTag(tag)}
+            />
+          ))}
+        </div>
+      </LayoutGroup>
+
+      {/* Domain Tags */}
+      <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1 block">
+        Domain
+      </span>
+      <LayoutGroup id="domain">
+        <div
+          className="flex flex-wrap gap-2"
+          role="group"
+          aria-label="Domain tags"
+        >
+          {sortedTags.map((tag) => (
+            <TagPill
+              key={tag}
+              tag={tag}
+              isSelected={tags.includes(tag)}
+              mouseX={mouseX}
+              mouseY={mouseY}
+              onToggle={() => toggleTag(tag)}
             />
           ))}
         </div>

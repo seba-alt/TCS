@@ -78,7 +78,7 @@ export function ExpertList({ experts, loading, isFetchingMore, onEndReached, onV
         overscan={200}
         computeItemKey={(_, expert) => expert.username}
         itemContent={(_, expert) => {
-          const showPhoto = Boolean(expert.photo_url)
+          const initials = `${expert.first_name?.[0] ?? ''}${expert.last_name?.[0] ?? ''}`
           return (
             <div
               className="flex items-center gap-3 px-4 py-3 border-b border-gray-50 hover:bg-gray-50 cursor-pointer transition-colors"
@@ -87,14 +87,28 @@ export function ExpertList({ experts, loading, isFetchingMore, onEndReached, onV
               tabIndex={0}
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onViewProfile(expert.profile_url) }}
             >
-              {/* Photo */}
-              {showPhoto && (
-                <img
-                  src={`${API_BASE}${expert.photo_url!}`}
-                  alt=""
-                  className="w-8 h-8 rounded-full object-cover shrink-0"
-                  loading="lazy"
-                />
+              {/* Photo with fallback initials */}
+              {expert.photo_url ? (
+                <div className="w-8 h-8 rounded-full shrink-0 relative">
+                  <img
+                    src={`${API_BASE}${expert.photo_url}`}
+                    alt=""
+                    className="w-8 h-8 rounded-full object-cover"
+                    loading="lazy"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none'
+                      const fallback = e.currentTarget.nextElementSibling as HTMLElement | null
+                      if (fallback) fallback.style.display = 'flex'
+                    }}
+                  />
+                  <div className="w-8 h-8 rounded-full bg-brand-purple/10 text-brand-purple text-xs font-semibold items-center justify-center absolute inset-0 hidden">
+                    {initials}
+                  </div>
+                </div>
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-brand-purple/10 text-brand-purple text-xs font-semibold flex items-center justify-center shrink-0">
+                  {initials}
+                </div>
               )}
 
               {/* Name + job title */}

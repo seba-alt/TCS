@@ -51,7 +51,7 @@ import structlog
 from app.config import FAISS_INDEX_PATH, METADATA_PATH
 from app.database import get_db, SessionLocal
 from app.limiter import limiter
-from app.models import AdminUser, Conversation, Expert, Feedback, NewsletterSubscriber
+from app.models import AdminUser, Conversation, EmailLead, Expert, Feedback, NewsletterSubscriber, UserEvent
 from app.services.tagging import compute_findability_score, tag_expert_sync
 from app.services.retriever import retrieve
 from app.services.search_intelligence import (  # noqa: PLC2701
@@ -1892,6 +1892,28 @@ def export_exposure_csv(days: int = 30, db: Session = Depends(get_db)):
         media_type="text/csv",
         headers={"Content-Disposition": f"attachment; filename={filename}"},
     )
+
+
+# ── Reset Data ────────────────────────────────────────────────────────────────
+
+@router.post("/reset-data")
+def reset_data(db: Session = Depends(get_db)):
+    """
+    Truncate all search/usage data tables: conversations, email_leads, feedback,
+    newsletter_subscribers, user_events.
+
+    Preserves: experts, admin_users, app_settings (config/content, not test data).
+
+    Response: {"ok": True, "deleted": {table: count, ...}}
+    """
+    counts = {}
+    for model in [Feedback, Conversation, EmailLead, NewsletterSubscriber, UserEvent]:
+        count = db.query(model).count()
+        db.query(model).delete()
+        counts[model.__tablename__] = count
+    db.commit()
+    log.info("admin.reset_data", deleted=counts)
+    return {"ok": True, "deleted": counts}
 
 
 # ── Search Lab A/B Compare ────────────────────────────────────────────────────
