@@ -13,6 +13,18 @@ export default defineConfig({
       disable: !process.env.SENTRY_AUTH_TOKEN, // skip in local dev
     }),
   ],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('recharts')) return 'vendor-charts'
+            if (id.includes('@tanstack/react-table')) return 'vendor-table'
+          }
+        },
+      },
+    },
+  },
   test: {
     environment: 'node',
     globals: true,
