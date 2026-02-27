@@ -13,6 +13,7 @@ import numpy as np
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 from app.config import EMBEDDING_MODEL, OUTPUT_DIM
 
@@ -33,6 +34,11 @@ def _get_client() -> genai.Client:
     return _client
 
 
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=1, max=8),
+    reraise=True,
+)
 def embed_query(text: str) -> list[float]:
     """
     Embed a single query string for semantic search.
