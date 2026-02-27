@@ -96,11 +96,11 @@ See `.planning/milestones/v3.1-ROADMAP.md`
   2. Five failed login attempts from the same IP within one minute are rejected with a rate-limit error, not processed
   3. The embedding heatmap (t-SNE) renders on the Intelligence page without a permanent loading spinner
   4. SQLite runs in WAL mode so concurrent user event writes do not produce "database is locked" errors under public traffic
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 45-01: Backend auth upgrade (bcrypt + PyJWT, dual-mode endpoint, rate limiting via slowapi)
-- [ ] 45-02: SQLite WAL mode + t-SNE lifespan fix
+- [ ] 45-01-PLAN.md — Backend auth upgrade: bcrypt+JWT credentials, slowapi rate limiting, frontend login form migration
+- [ ] 45-02-PLAN.md — SQLite WAL mode with busy_timeout and t-SNE background task lifespan fix
 
 ### Phase 46: Frontend Performance Optimization
 **Goal**: Public users download a smaller bundle because admin code is excluded from the initial load
