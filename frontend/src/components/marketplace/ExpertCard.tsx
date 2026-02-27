@@ -9,6 +9,8 @@ const API_BASE = import.meta.env.VITE_API_URL ?? ''
 interface ExpertCardProps {
   expert: Expert
   onViewProfile: (url: string) => void
+  isExpanded?: boolean
+  onExpand?: (username: string) => void
   context?: 'grid' | 'sage_panel'
   rank?: number
 }
@@ -21,7 +23,7 @@ function findabilityLabel(score: number | null): 'Top Match' | 'Good Match' | nu
   return null
 }
 
-export function ExpertCard({ expert, onViewProfile, context = 'grid', rank }: ExpertCardProps) {
+export function ExpertCard({ expert, onViewProfile, isExpanded = false, onExpand, context = 'grid', rank }: ExpertCardProps) {
   const toggleTag = useExplorerStore((s) => s.toggleTag)
   const query = useExplorerStore((s) => s.query)
   const tags = useExplorerStore((s) => s.tags)
@@ -30,9 +32,6 @@ export function ExpertCard({ expert, onViewProfile, context = 'grid', rank }: Ex
   // Profile photo state
   const [imgError, setImgError] = useState(false)
   const showPhoto = Boolean(expert.photo_url) && !imgError
-
-  // Tap-expand state — mobile first tap expands card, second tap opens profile
-  const [expanded, setExpanded] = useState(false)
 
   // Bookmark state — reactive via Zustand (no local state needed)
   const { savedExperts, toggleSavedExpert } = useFilterSlice()
@@ -43,12 +42,29 @@ export function ExpertCard({ expert, onViewProfile, context = 'grid', rank }: Ex
     toggleSavedExpert(expert.username)
   }
 
-  // Card-level click: first tap expands, second tap opens profile
+  // Card-level click: desktop opens profile directly; mobile uses two-tap expand flow
   function handleCardClick() {
-    if (!expanded) {
-      setExpanded(true)
+    // Desktop: skip expand, open profile directly
+    if (window.innerWidth >= 768) {
+      const storeState = useExplorerStore.getState()
+      void trackEvent('card_click', {
+        expert_id: expert.username,
+        context,
+        rank,
+        active_filters: {
+          query: storeState.query,
+          rate_min: storeState.rateMin,
+          rate_max: storeState.rateMax,
+          tags: storeState.tags,
+        },
+      })
+      onViewProfile(expert.profile_url)
+      return
+    }
+    // Mobile: two-tap expand behavior
+    if (!isExpanded) {
+      onExpand?.(expert.username)
     } else {
-      // Track card click — fire-and-forget, never await
       const storeState = useExplorerStore.getState()
       void trackEvent('card_click', {
         expert_id: expert.username,
@@ -71,13 +87,13 @@ export function ExpertCard({ expert, onViewProfile, context = 'grid', rank }: Ex
 
   return (
     <div
-      className={`expert-card bg-white/90 rounded-xl border border-gray-100 p-3 sm:p-4 flex flex-col gap-1.5 ${expanded ? 'min-h-[180px] ring-2 ring-brand-purple/30' : 'h-[180px] overflow-hidden'} cursor-pointer transition-all duration-150`}
+      className={`expert-card bg-white/90 rounded-xl border border-gray-100 p-3 sm:p-4 flex flex-col gap-1.5 ${isExpanded ? 'min-h-[180px] ring-2 ring-brand-purple/30' : 'h-[180px] overflow-hidden'} cursor-pointer transition-all duration-150`}
       onClick={handleCardClick}
       tabIndex={0}
-      onBlur={() => setExpanded(false)}
+      onBlur={() => onExpand?.('')}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleCardClick() }}
       role="button"
-      aria-expanded={expanded}
+      aria-expanded={isExpanded}
     >
 
       {/* Zone A: photo + name/role/company + bookmark — flex-shrink-0, content drives height (~52px) */}
@@ -123,8 +139,8 @@ export function ExpertCard({ expert, onViewProfile, context = 'grid', rank }: Ex
 
       {/* Zone C: Domain tag pills — hidden on mobile by default, shown when expanded.
           On mobile expanded: wrap tags so they don't get cut off; show only first tag to save space */}
-      <div className={`flex-shrink-0 ${expanded ? 'flex flex-wrap' : 'hidden sm:flex flex-nowrap overflow-hidden'} gap-1`}>
-        {expert.tags.slice(0, expanded ? 2 : 2).map((tag) => (
+      <div className={`flex-shrink-0 ${isExpanded ? 'flex flex-wrap' : 'hidden sm:flex flex-nowrap overflow-hidden'} gap-1`}>
+        {expert.tags.slice(0, isExpanded ? 2 : 2).map((tag) => (
           <button
             key={tag}
             onClick={(e) => { e.stopPropagation(); toggleTag(tag) }}
@@ -147,7 +163,7 @@ export function ExpertCard({ expert, onViewProfile, context = 'grid', rank }: Ex
 
         {/* View Full Profile — text changes on mobile when expanded to guide second tap */}
         <p className="mt-auto cursor-pointer text-xs text-brand-purple font-medium hover:underline self-start">
-          {expanded ? 'Tap again to view profile →' : 'View Full Profile →'}
+          {isExpanded ? 'Tap again to view profile →' : 'View Full Profile →'}
         </p>
       </div>
     </div>

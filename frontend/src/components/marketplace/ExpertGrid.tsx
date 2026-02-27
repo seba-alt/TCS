@@ -1,4 +1,4 @@
-import { useRef, useEffect, useMemo } from 'react'
+import { useRef, useEffect, useMemo, useState } from 'react'
 import { VirtuosoGrid } from 'react-virtuoso'
 import { animate } from 'motion/react'
 import type { Expert } from '../../store/resultsSlice'
@@ -32,6 +32,13 @@ export function ExpertGrid({ experts, loading, isFetchingMore, onEndReached, onV
   const containerRef = useRef<HTMLDivElement>(null)
   const { spinTrigger, resetSpin } = useNltrStore()
   const { savedFilter, savedExperts } = useFilterSlice()
+
+  // Parent-controlled expanded state — only one card expanded at a time (mobile)
+  const [expandedExpertId, setExpandedExpertId] = useState<string | null>(null)
+
+  function handleExpand(username: string) {
+    setExpandedExpertId(username || null)
+  }
 
   // When "Saved" filter is active, show only bookmarked experts from loaded list
   const displayExperts = useMemo(() => {
@@ -76,7 +83,13 @@ export function ExpertGrid({ experts, loading, isFetchingMore, onEndReached, onV
         itemClassName="min-h-0"
         computeItemKey={(_, expert) => expert.username}
         itemContent={(index, expert) => (
-          <ExpertCard expert={expert} onViewProfile={onViewProfile} rank={index} />
+          <ExpertCard
+            expert={expert}
+            onViewProfile={onViewProfile}
+            rank={index}
+            isExpanded={expandedExpertId === expert.username}
+            onExpand={handleExpand}
+          />
         )}
         components={{
           // Header spacer — VirtuosoGrid measures this correctly, pushing first row below the filter bar
