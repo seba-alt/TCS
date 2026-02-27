@@ -1,55 +1,37 @@
 ---
 gsd_state_version: 1.0
-milestone: v3.1
-milestone_name: Launch Prep
-status: complete
-last_updated: "2026-02-26"
+milestone: v4.0
+milestone_name: Public Launch
+status: defining_requirements
+last_updated: "2026-02-27"
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 5
-  completed_plans: 5
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-26)
+See: .planning/PROJECT.md (updated 2026-02-27)
 
 **Core value:** A user describes any problem and instantly gets expertly matched professionals they can browse, filter, and contact — no searching, no guesswork.
-**Current focus:** v3.1 shipped — planning next milestone
+**Current focus:** v4.0 Public Launch — frontend fixes, admin streamlining, production hardening
 
 ## Current Position
 
-Phase: 44 of 44 (Mobile Filter Redesign)
-Plan: 1 of 1 — COMPLETE
-Status: v3.1 MILESTONE COMPLETE — all phases shipped
-Last activity: 2026-02-26 — Milestone v3.1 archived
-
-Progress: [##########] 100%
-
-## Performance Metrics
-
-**Velocity:**
-- Total plans completed: 5 (v3.1)
-- Average duration: 6 min
-- Total execution time: 28 min
-
-**By Phase:**
-
-| Phase | Plans | Total | Avg/Plan |
-|-------|-------|-------|----------|
-| 41 | 1 | 8 min | 8 min |
-| 42 | 2 | 15 min | 8 min |
-| 43 | 1 | 2 min | 2 min |
-| 44 | 1 | 3 min | 3 min |
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-02-27 — Milestone v4.0 started
 
 ## Accumulated Context
 
 ### Decisions
 
-(Cleared at milestone boundary — full decision log in PROJECT.md Key Decisions table)
+(New milestone — decisions will be logged as they're made)
 
 ### Pending Todos
 
@@ -59,10 +41,10 @@ Progress: [##########] 100%
 
 ### Blockers/Concerns
 
-(None — milestone complete)
+(None)
 
 ## Session Continuity
 
-Last session: 2026-02-26
-Stopped at: v3.1 milestone archived — ready for /gsd:new-milestone
+Last session: 2026-02-27
+Stopped at: Defining v4.0 requirements
 Resume file: None

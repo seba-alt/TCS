@@ -83,7 +83,22 @@ A user describes any problem and instantly gets expertly matched professionals t
 
 ### Active
 
-(None — all v3.1 requirements shipped. Use `/gsd:new-milestone` to define next milestone requirements.)
+## Current Milestone: v4.0 Public Launch
+
+**Goal:** Fix frontend bugs, streamline admin panel, harden for full public launch.
+
+**Target features:**
+- Search bar with white input field for contrast, keyword-oriented placeholders
+- Separate industry tags alongside domain tags in tag cloud
+- Grid/list toggle view for expert results
+- Fix Sage double-rendering on desktop (desktop + mobile popout overlap)
+- Double-click profile open → mobile only
+- Admin panel cleanup: remove unused tools, one-snap dashboard overview
+- Easy lead export (with search/click history), easy expert import
+- Fix embedding heatmap (always loading)
+- Proper admin login (username + password, hashed credentials, session expiry)
+- Error state handling, mobile polish, loading speed optimization
+- General production hardening for public launch
 
 ### Out of Scope
 
@@ -178,7 +193,7 @@ A user describes any problem and instantly gets expertly matched professionals t
 **Explorer:** Single-page aurora-aesthetic marketplace at `/` with glassmorphic Command Center header, autocomplete search (debounced suggestions), bento cards with photos/monograms, animated tag cloud (18 tags), inline mobile filters (tag picker, sort, active chips), Sage AI co-pilot; bookmarking; behavior tracking; newsletter gate
 **Admin panel:** 3-section sidebar (Analytics/Tools/Admin); OverviewPage dashboard with zero-result queries + Sage sparkline; Marketplace Intelligence (demand/exposure/trends); ToolsPage (Search Lab with pipeline badges/Score Explainer/Index); Intelligence tab with OTR@K, Index Drift, t-SNE
 **Analytics:** GA4 (G-0T526W3E1Z) tracking all page views with SPA route change support
-**Next milestone:** Not yet defined — use `/gsd:new-milestone` to start
+**Next milestone:** v4.0 Public Launch — frontend fixes, admin streamlining, production hardening
 
 ## Context
 
@@ -238,4 +253,4 @@ A user describes any problem and instantly gets expertly matched professionals t
 | Instant-apply tags (no draft buffer) | AbortController in useExplore deduplicates rapid requests — no need for draft buffer | ✓ Good — responsive UX |
 
 ---
-*Last updated: 2026-02-26 after v3.1 milestone completion*
+*Last updated: 2026-02-27 after v4.0 milestone start*
