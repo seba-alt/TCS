@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback } from 'react'
-import { useAdminExperts, useAdminDomainMap, useIngestStatus, adminPost } from '../hooks/useAdminData'
+import { useAdminExperts, useAdminDomainMap, useIngestStatus, adminPost, adminFetch } from '../hooks/useAdminData'
 import CsvImportModal from '../components/CsvImportModal'
-import type { ExpertRow, DomainMapEntry } from '../types'
+import type { ExpertRow, DomainMapEntry, LeadClicksByExpertResponse } from '../types'
 
 // ─── Score helpers ────────────────────────────────────────────────────────────
 
@@ -17,6 +17,17 @@ const ZONE_STYLES: Record<string, string> = {
   yellow: 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30',
   green:  'bg-green-500/20 text-green-400 border border-green-500/30',
   none:   'bg-slate-700/40 text-slate-500 border border-transparent',
+}
+
+function timeAgo(isoString: string): string {
+  const diff = Date.now() - new Date(isoString).getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return 'just now'
+  if (mins < 60) return `${mins}m ago`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return `${hrs}h ago`
+  const days = Math.floor(hrs / 24)
+  return `${days}d ago`
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -118,6 +129,11 @@ export default function ExpertsPage() {
   // Domain-map state
   const [showDomainMap, setShowDomainMap] = useState(false)
 
+  // Lead clicks per-expert state
+  const [expandedUsername, setExpandedUsername] = useState<string | null>(null)
+  const [clickData, setClickData] = useState<Record<string, LeadClicksByExpertResponse['clicks']>>({})
+  const [clicksLoading, setClicksLoading] = useState<Record<string, boolean>>({})
+
   // ── Handlers ──────────────────────────────────────────────────────────────
 
   async function handleAutoClassify() {
@@ -173,6 +189,25 @@ export default function ExpertsPage() {
     setShowDomainMap(v => !v)
     if (!domainData && !domainLoading) fetchDomainMap()
   }, [domainData, domainLoading, fetchDomainMap])
+
+  async function handleExpandExpert(username: string) {
+    if (expandedUsername === username) {
+      setExpandedUsername(null)
+      return
+    }
+    setExpandedUsername(username)
+    if (!(username in clickData)) {
+      setClicksLoading(prev => ({ ...prev, [username]: true }))
+      try {
+        const res = await adminFetch<LeadClicksByExpertResponse>(`/lead-clicks/by-expert/${username}`)
+        setClickData(prev => ({ ...prev, [username]: res.clicks }))
+      } catch {
+        setClickData(prev => ({ ...prev, [username]: [] }))
+      } finally {
+        setClicksLoading(prev => ({ ...prev, [username]: false }))
+      }
+    }
+  }
 
   // handleCsvUpload replaced by CsvImportModal
 
@@ -387,6 +422,7 @@ export default function ExpertsPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-800">
+                  <th className="w-8 px-2 py-3" />
                   <SortHeader col="name"    label="Name"    current={sortCol} dir={sortDir} onClick={handleSort} />
                   <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Bio</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Tags</th>
@@ -397,44 +433,95 @@ export default function ExpertsPage() {
               </thead>
               <tbody>
                 {pageData.map((expert: ExpertRow) => (
-                  <tr key={expert.username} className="border-b border-slate-800/60 hover:bg-slate-800/30 transition-colors">
-                    <td className="px-4 py-3 text-sm text-slate-200 font-medium whitespace-nowrap">
-                      {expert.first_name} {expert.last_name}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-slate-400 max-w-xs">
-                      <span title={expert.bio || ''}>
-                        {expert.bio ? (expert.bio.length > 120 ? expert.bio.slice(0, 120) + '…' : expert.bio) : ''}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <TagPills tags={expert.tags || []} />
-                    </td>
-                    <td className="px-4 py-3 text-sm text-slate-400 max-w-[120px] truncate" title={expert.company || ''}>
-                      {expert.company || '—'}
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      {expert.profile_url && (
-                        <a
-                          href={expert.profile_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-slate-400 hover:text-slate-200 transition-colors"
-                          title={expert.profile_url}
+                  <>
+                    <tr
+                      key={expert.username}
+                      className="border-b border-slate-800/60 hover:bg-slate-800/30 transition-colors"
+                    >
+                      <td className="px-2 py-3 text-center">
+                        <button
+                          onClick={() => handleExpandExpert(expert.username)}
+                          className="text-slate-500 hover:text-slate-300 transition-colors"
+                          title="View lead clicks"
+                          aria-label={`${expandedUsername === expert.username ? 'Hide' : 'Show'} lead clicks for ${expert.first_name} ${expert.last_name}`}
                         >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          <svg
+                            className={`w-3.5 h-3.5 transition-transform ${expandedUsername === expert.username ? 'rotate-90' : ''}`}
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth={2}
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                           </svg>
-                        </a>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      <ScoreBadge score={expert.findability_score} />
-                    </td>
-                  </tr>
+                        </button>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-slate-200 font-medium whitespace-nowrap">
+                        {expert.first_name} {expert.last_name}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-slate-400 max-w-xs">
+                        <span title={expert.bio || ''}>
+                          {expert.bio ? (expert.bio.length > 120 ? expert.bio.slice(0, 120) + '…' : expert.bio) : ''}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <TagPills tags={expert.tags || []} />
+                      </td>
+                      <td className="px-4 py-3 text-sm text-slate-400 max-w-[120px] truncate" title={expert.company || ''}>
+                        {expert.company || '—'}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        {expert.profile_url && (
+                          <a
+                            href={expert.profile_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-slate-400 hover:text-slate-200 transition-colors"
+                            title={expert.profile_url}
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                            </svg>
+                          </a>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <ScoreBadge score={expert.findability_score} />
+                      </td>
+                    </tr>
+
+                    {/* Lead clicks expanded row */}
+                    {expandedUsername === expert.username && (
+                      <tr key={`${expert.username}-clicks`} className="border-b border-slate-800/60">
+                        <td colSpan={7} className="px-6 py-4 bg-slate-900/40">
+                          <h4 className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">Lead Clicks</h4>
+                          {clicksLoading[expert.username] ? (
+                            <p className="text-sm text-slate-500 animate-pulse">Loading lead clicks…</p>
+                          ) : (clickData[expert.username] ?? []).length === 0 ? (
+                            <p className="text-sm text-slate-600">No lead clicks recorded</p>
+                          ) : (
+                            <div className="space-y-2">
+                              {(clickData[expert.username] ?? []).map((click, i) => (
+                                <div key={i} className="flex items-center gap-3 text-sm">
+                                  <span className="font-medium text-slate-200">{click.email}</span>
+                                  {click.search_query && (
+                                    <span className="px-2 py-0.5 bg-slate-800 border border-slate-700 rounded text-xs text-slate-400">
+                                      {click.search_query}
+                                    </span>
+                                  )}
+                                  <span className="text-slate-500 text-xs ml-auto">{timeAgo(click.created_at)}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    )}
+                  </>
                 ))}
                 {pageData.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center text-slate-500 text-sm">
+                    <td colSpan={7} className="px-4 py-8 text-center text-slate-500 text-sm">
                       {filtered.length === 0 ? 'No experts match the current filters.' : 'Loading experts...'}
                     </td>
                   </tr>

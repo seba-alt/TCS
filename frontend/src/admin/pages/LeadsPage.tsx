@@ -1,9 +1,20 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { useAdminLeads, useNewsletterSubscribers } from '../hooks/useAdminData'
-import type { LeadRow } from '../types'
+import { useAdminLeads, useNewsletterSubscribers, adminFetch } from '../hooks/useAdminData'
+import type { LeadRow, LeadClicksResponse, LeadClickEntry } from '../types'
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
+
+function timeAgo(isoString: string): string {
+  const diff = Date.now() - new Date(isoString).getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return 'just now'
+  if (mins < 60) return `${mins}m ago`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return `${hrs}h ago`
+  const days = Math.floor(hrs / 24)
+  return `${days}d ago`
+}
 
 export default function LeadsPage() {
   const { data, loading, error } = useAdminLeads()
@@ -15,11 +26,34 @@ export default function LeadsPage() {
   const [expandedEmail, setExpandedEmail] = useState<string | null>(highlightEmail || null)
   const highlightRef = useRef<HTMLTableRowElement | null>(null)
 
+  // Lead clicks cache: email -> clicks array
+  const [leadClicks, setLeadClicks] = useState<Record<string, LeadClickEntry[]>>({})
+  const [clicksLoading, setClicksLoading] = useState<Record<string, boolean>>({})
+
   useEffect(() => {
     if (highlightEmail && highlightRef.current) {
       highlightRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' })
     }
   }, [highlightEmail, data])
+
+  async function handleRowExpand(email: string) {
+    const isExpanding = expandedEmail !== email
+    setExpandedEmail(isExpanding ? email : null)
+
+    // Lazy-load clicks on expand if not cached
+    if (isExpanding && !(email in leadClicks)) {
+      setClicksLoading(prev => ({ ...prev, [email]: true }))
+      try {
+        const clickData = await adminFetch<LeadClicksResponse>('/lead-clicks')
+        const match = clickData.leads.find(l => l.email === email)
+        setLeadClicks(prev => ({ ...prev, [email]: match?.clicks ?? [] }))
+      } catch {
+        setLeadClicks(prev => ({ ...prev, [email]: [] }))
+      } finally {
+        setClicksLoading(prev => ({ ...prev, [email]: false }))
+      }
+    }
+  }
 
   function formatDate(iso: string | null) {
     if (!iso) return '—'
@@ -146,7 +180,7 @@ export default function LeadsPage() {
             <span className="text-sm text-slate-400">
               {data.leads.length} unique {data.leads.length === 1 ? 'user' : 'users'}
             </span>
-            <span className="text-xs text-slate-600">Click a row to expand queries</span>
+            <span className="text-xs text-slate-600">Click a row to expand queries and clicks</span>
           </div>
 
           {/* Table */}
@@ -179,14 +213,14 @@ export default function LeadsPage() {
                 )}
                 {data.leads.map((lead: LeadRow) => {
                   const isHighlighted = lead.email === highlightEmail
+                  const clicks = leadClicks[lead.email] ?? []
+                  const isLoadingClicks = clicksLoading[lead.email] ?? false
                   return (
                     <>
                       <tr
                         key={lead.email}
                         ref={isHighlighted ? highlightRef : null}
-                        onClick={() =>
-                          setExpandedEmail(expandedEmail === lead.email ? null : lead.email)
-                        }
+                        onClick={() => handleRowExpand(lead.email)}
                         className={`border-b border-slate-700/40 cursor-pointer transition-colors ${
                           isHighlighted
                             ? 'bg-purple-900/20 hover:bg-purple-900/30'
@@ -240,22 +274,51 @@ export default function LeadsPage() {
                       {expandedEmail === lead.email && (
                         <tr key={`${lead.email}-expanded`} className="border-b border-slate-700/40">
                           <td colSpan={5} className="px-5 py-3 bg-slate-900/30">
-                            <div>
-                              <p className="text-xs text-slate-500 mb-2">Recent queries</p>
-                              {lead.recent_queries.length === 0 ? (
-                                <p className="text-slate-600 text-xs">No queries recorded</p>
-                              ) : (
-                                <div className="flex flex-wrap gap-2">
-                                  {lead.recent_queries.map((q, i) => (
-                                    <span
-                                      key={i}
-                                      className="inline-block bg-slate-800 border border-slate-700 text-slate-300 text-xs px-3 py-1 rounded-full"
-                                    >
-                                      {q}
-                                    </span>
-                                  ))}
-                                </div>
-                              )}
+                            <div className="space-y-4">
+                              {/* Recent queries section */}
+                              <div>
+                                <p className="text-xs text-slate-500 mb-2">Recent queries</p>
+                                {lead.recent_queries.length === 0 ? (
+                                  <p className="text-slate-600 text-xs">No queries recorded</p>
+                                ) : (
+                                  <div className="flex flex-wrap gap-2">
+                                    {lead.recent_queries.map((q, i) => (
+                                      <span
+                                        key={i}
+                                        className="inline-block bg-slate-800 border border-slate-700 text-slate-300 text-xs px-3 py-1 rounded-full"
+                                      >
+                                        {q}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Expert Clicks section */}
+                              <div>
+                                <h4 className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">
+                                  Expert Clicks
+                                </h4>
+                                {isLoadingClicks ? (
+                                  <p className="text-sm text-slate-500 animate-pulse">Loading clicks…</p>
+                                ) : clicks.length === 0 ? (
+                                  <p className="text-sm text-slate-600">No expert clicks recorded</p>
+                                ) : (
+                                  <div className="space-y-2">
+                                    {clicks.map((click, i) => (
+                                      <div key={i} className="flex items-center gap-3 text-sm">
+                                        <span className="font-medium text-slate-200">{click.expert_name}</span>
+                                        {click.search_query && (
+                                          <span className="px-2 py-0.5 bg-slate-800 border border-slate-700 rounded text-xs text-slate-400">
+                                            {click.search_query}
+                                          </span>
+                                        )}
+                                        <span className="text-slate-500 text-xs ml-auto">{timeAgo(click.created_at)}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </td>
                         </tr>
