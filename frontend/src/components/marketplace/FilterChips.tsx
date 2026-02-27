@@ -1,3 +1,4 @@
+import { useState, useRef, useEffect } from 'react'
 import { motion } from 'motion/react'
 import { ArrowUpDown } from 'lucide-react'
 import { useFilterSlice, useResultsSlice } from '../../store'
@@ -14,7 +15,6 @@ const DEFAULT_RATE_MAX = 5000
 
 interface Chip {
   label: string
-  variant?: 'default' | 'industry'
   onDismiss: () => void
 }
 
@@ -23,8 +23,23 @@ export function FilterChips() {
     useFilterSlice()
   const { total } = useResultsSlice()
   const sageMode = useExplorerStore((s) => s.sageMode)
-  const savedCount = savedExperts.length
   const currentSortLabel = SORT_OPTIONS.find((o) => o.value === sortBy)?.label ?? 'Relevance'
+
+  const [sortOpen, setSortOpen] = useState(false)
+  const sortRef = useRef<HTMLDivElement>(null)
+
+  // Close sort dropdown on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (sortRef.current && !sortRef.current.contains(e.target as Node)) {
+        setSortOpen(false)
+      }
+    }
+    if (sortOpen) {
+      document.addEventListener('mousedown', handleClick)
+      return () => document.removeEventListener('mousedown', handleClick)
+    }
+  }, [sortOpen])
 
   const chips: Chip[] = []
 
@@ -44,7 +59,7 @@ export function FilterChips() {
   }
 
   for (const tag of industryTags) {
-    chips.push({ label: tag, variant: 'industry', onDismiss: () => toggleIndustryTag(tag) })
+    chips.push({ label: tag, onDismiss: () => toggleIndustryTag(tag) })
   }
 
   return (
@@ -64,11 +79,7 @@ export function FilterChips() {
       {chips.map((chip) => (
         <span
           key={chip.label}
-          className={`inline-flex items-center gap-1 text-xs rounded-full px-2.5 py-0.5 ${
-            chip.variant === 'industry'
-              ? 'bg-purple-100 text-purple-700'
-              : 'bg-gray-100 text-gray-700'
-          }`}
+          className="inline-flex items-center gap-1 text-xs bg-gray-100 text-gray-700 rounded-full px-2.5 py-0.5"
         >
           {chip.label}
           <button
@@ -90,29 +101,39 @@ export function FilterChips() {
         </button>
       )}
 
-      {/* Sort dropdown — right-aligned */}
-      <div className="ml-auto relative group">
+      {/* Sort dropdown — click-based, right-aligned */}
+      <div className="ml-auto relative" ref={sortRef}>
         <button
-          className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 transition-colors px-2 py-1 rounded-md hover:bg-gray-50"
+          onClick={() => setSortOpen(!sortOpen)}
+          className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-md border transition-colors ${
+            sortOpen
+              ? 'border-brand-purple text-brand-purple bg-purple-50'
+              : 'border-gray-300 text-gray-600 hover:text-gray-800 hover:border-gray-400'
+          }`}
         >
           <ArrowUpDown size={13} />
           {currentSortLabel}
         </button>
-        <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-20 hidden group-hover:block min-w-[160px]">
-          {SORT_OPTIONS.map((option) => (
-            <button
-              key={option.value}
-              onClick={() => setSortBy(option.value)}
-              className={`block w-full text-left px-3 py-2 text-xs transition-colors ${
-                sortBy === option.value
-                  ? 'text-brand-purple font-medium bg-purple-50'
-                  : 'text-gray-700 hover:bg-gray-50'
-              }`}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
+        {sortOpen && (
+          <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-20 min-w-[170px]">
+            {SORT_OPTIONS.map((option) => (
+              <button
+                key={option.value}
+                onClick={() => {
+                  setSortBy(option.value)
+                  setSortOpen(false)
+                }}
+                className={`block w-full text-left px-3 py-2 text-sm transition-colors ${
+                  sortBy === option.value
+                    ? 'text-brand-purple font-medium bg-purple-50'
+                    : 'text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )
