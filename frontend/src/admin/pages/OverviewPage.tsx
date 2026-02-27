@@ -2,7 +2,18 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { LineChart, Line, ResponsiveContainer, Tooltip } from 'recharts'
 import { useAdminStats, adminFetch, useMarketplaceTrend } from '../hooks/useAdminData'
-import type { DemandResponse } from '../types'
+import type { DemandResponse, LeadsResponse, SearchesResponse } from '../types'
+
+function timeAgo(iso: string): string {
+  const seconds = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
+  if (seconds < 60) return 'just now'
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) return `${minutes}m ago`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.floor(hours / 24)
+  return `${days}d ago`
+}
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
 
@@ -204,6 +215,95 @@ function SageSparklineCard() {
   )
 }
 
+function RecentLeadsCard() {
+  const [data, setData] = useState<LeadsResponse | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    adminFetch<LeadsResponse>('/leads')
+      .then(setData)
+      .catch(() => setData(null))
+      .finally(() => setLoading(false))
+  }, [])
+
+  const rows = (data?.leads ?? [])
+    .filter(l => l.last_search_at)
+    .sort((a, b) => new Date(b.last_search_at!).getTime() - new Date(a.last_search_at!).getTime())
+    .slice(0, 5)
+
+  return (
+    <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl p-5">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-sm font-semibold text-white">Recent Leads</h2>
+        <Link to="/admin/leads" className="text-xs text-purple-400 hover:text-purple-300 transition-colors">
+          View all →
+        </Link>
+      </div>
+      {loading ? (
+        <p className="text-slate-500 text-sm animate-pulse">Loading…</p>
+      ) : rows.length === 0 ? (
+        <p className="text-slate-500 text-sm">No leads yet</p>
+      ) : (
+        <div className="space-y-2">
+          {rows.map((row) => (
+            <div key={row.email} className="flex items-center justify-between">
+              <span className="text-sm text-slate-300 truncate max-w-[60%]" title={row.email}>{row.email}</span>
+              <div className="flex items-center gap-3 flex-shrink-0 ml-2">
+                <span className="text-xs text-slate-500">{row.total_searches} searches</span>
+                <span className="text-xs text-slate-500">{timeAgo(row.last_search_at!)}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function RecentSearchesCard() {
+  const [data, setData] = useState<SearchesResponse | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    adminFetch<SearchesResponse>('/searches', { page: 0, page_size: 5 })
+      .then(setData)
+      .catch(() => setData(null))
+      .finally(() => setLoading(false))
+  }, [])
+
+  const rows = data?.rows ?? []
+
+  return (
+    <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl p-5">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-sm font-semibold text-white">Recent Searches</h2>
+        <Link to="/admin/data" className="text-xs text-purple-400 hover:text-purple-300 transition-colors">
+          View all →
+        </Link>
+      </div>
+      {loading ? (
+        <p className="text-slate-500 text-sm animate-pulse">Loading…</p>
+      ) : rows.length === 0 ? (
+        <p className="text-slate-500 text-sm">No searches yet</p>
+      ) : (
+        <div className="space-y-2">
+          {rows.map((row) => (
+            <div key={row.id} className="flex items-center justify-between">
+              <span className="text-sm text-slate-300 truncate max-w-[60%]" title={row.query}>{row.query}</span>
+              <div className="flex items-center gap-3 flex-shrink-0 ml-2">
+                <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
+                  row.source === 'sage' ? 'bg-cyan-900/50 text-cyan-400' : 'bg-indigo-900/50 text-indigo-400'
+                }`}>{row.source}</span>
+                <span className="text-xs text-slate-500">{timeAgo(row.created_at)}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function OverviewPage() {
   const { stats, loading, error } = useAdminStats()
   const { status: healthStatus, latency } = useHealthCheck()
@@ -279,6 +379,12 @@ export default function OverviewPage() {
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         <TopZeroResultsCard />
         <SageSparklineCard />
+      </div>
+
+      {/* Section 2.5: Recent activity — leads + searches */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <RecentLeadsCard />
+        <RecentSearchesCard />
       </div>
 
       {/* Section 3: Top Queries + Top Feedback */}
