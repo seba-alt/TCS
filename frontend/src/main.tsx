@@ -1,21 +1,23 @@
 import "./instrument";
-import { StrictMode, useEffect } from 'react'
+import { StrictMode, lazy, Suspense, useEffect } from 'react'
 import { createRoot } from 'react-dom/client'
 import { createBrowserRouter, RouterProvider, Navigate, useSearchParams, useNavigate } from 'react-router-dom'
 import './index.css'
 import RootLayout from './layouts/RootLayout.tsx'
 import MarketplacePage from './pages/MarketplacePage.tsx'
-import AdminApp from './admin/AdminApp.tsx'
-import LoginPage from './admin/LoginPage.tsx'
-import RequireAuth from './admin/RequireAuth.tsx'
-import OverviewPage from './admin/pages/OverviewPage.tsx'
-import GapsPage from './admin/pages/GapsPage.tsx'
-import LeadsPage from './admin/pages/LeadsPage.tsx'
-import ExpertsPage from './admin/pages/ExpertsPage.tsx'
-import SettingsPage from './admin/pages/SettingsPage.tsx'
-import IntelligenceDashboardPage from './admin/pages/IntelligenceDashboardPage.tsx'
-import ToolsPage from './admin/pages/ToolsPage.tsx'
-import DataPage from './admin/pages/DataPage.tsx'
+
+// Lazy-load all admin components — excluded from public Explorer bundle
+const AdminApp = lazy(() => import('./admin/AdminApp'))
+const LoginPage = lazy(() => import('./admin/LoginPage'))
+const RequireAuth = lazy(() => import('./admin/RequireAuth'))
+const OverviewPage = lazy(() => import('./admin/pages/OverviewPage'))
+const GapsPage = lazy(() => import('./admin/pages/GapsPage'))
+const LeadsPage = lazy(() => import('./admin/pages/LeadsPage'))
+const ExpertsPage = lazy(() => import('./admin/pages/ExpertsPage'))
+const SettingsPage = lazy(() => import('./admin/pages/SettingsPage'))
+const IntelligenceDashboardPage = lazy(() => import('./admin/pages/IntelligenceDashboardPage'))
+const ToolsPage = lazy(() => import('./admin/pages/ToolsPage'))
+const DataPage = lazy(() => import('./admin/pages/DataPage'))
 
 /**
  * Generic redirect component preserving query params.
@@ -34,6 +36,14 @@ function RedirectWithParams({ to }: { to: string }) {
   }, [])
 
   return null
+}
+
+function AdminLoadingFallback() {
+  return (
+    <div className="flex h-screen items-center justify-center bg-slate-950" role="status" aria-live="polite">
+      <span className="text-slate-400 text-sm">Loading…</span>
+    </div>
+  )
 }
 
 const router = createBrowserRouter([
@@ -65,11 +75,19 @@ const router = createBrowserRouter([
   },
   {
     path: '/admin/login',
-    element: <LoginPage />,
+    element: (
+      <Suspense fallback={<AdminLoadingFallback />}>
+        <LoginPage />
+      </Suspense>
+    ),
   },
   {
     path: '/admin',
-    element: <RequireAuth />,
+    element: (
+      <Suspense fallback={<AdminLoadingFallback />}>
+        <RequireAuth />
+      </Suspense>
+    ),
     children: [
       {
         element: <AdminApp />,
