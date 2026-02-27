@@ -717,6 +717,57 @@ def get_newsletter_subscribers(db: Session = Depends(get_db)):
     }
 
 
+@router.get("/export/leads.csv")
+def export_leads_csv(db: Session = Depends(get_db)):
+    """
+    Download all leads as CSV with timestamped search queries.
+
+    CSV format:
+        Metadata header rows (# lines)
+        Blank row
+        Column header row
+        Data rows (one per distinct email, ordered by last_active desc)
+    """
+    rows = db.scalars(
+        select(Conversation).order_by(Conversation.email, Conversation.created_at.asc())
+    ).all()
+
+    # Group by email
+    leads: dict[str, dict] = {}
+    for row in rows:
+        email = row.email
+        if email not in leads:
+            leads[email] = {"email": email, "queries": [], "last_active": row.created_at}
+        leads[email]["queries"].append(
+            f"{row.created_at.isoformat() if row.created_at else ''}|{row.query}"
+        )
+        if row.created_at and (leads[email]["last_active"] is None or row.created_at > leads[email]["last_active"]):
+            leads[email]["last_active"] = row.created_at
+
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(["# Export date", date.today().isoformat()])
+    writer.writerow(["# Total leads", len(leads)])
+    writer.writerow(["# Note: Card clicks not included — no session-to-email mapping in current schema (see LEAD-01 for v4.1)"])
+    writer.writerow([])
+    writer.writerow(["email", "last_active", "total_queries", "queries_timestamped", "card_clicks_timestamped"])
+    for lead in sorted(leads.values(), key=lambda x: x["last_active"] or datetime.min, reverse=True):
+        writer.writerow([
+            lead["email"],
+            lead["last_active"].isoformat() if lead["last_active"] else "",
+            len(lead["queries"]),
+            ";".join(lead["queries"]),
+            "",  # card_clicks_timestamped — empty due to session-to-email mapping limitation
+        ])
+
+    filename = f"leads-{date.today().isoformat()}.csv"
+    return StreamingResponse(
+        iter([buf.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+
 @router.get("/export/newsletter.csv")
 def export_newsletter_csv(db: Session = Depends(get_db)):
     """

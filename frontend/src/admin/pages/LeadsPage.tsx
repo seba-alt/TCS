@@ -33,6 +33,22 @@ export default function LeadsPage() {
     return new Date(iso).toLocaleDateString(undefined, { dateStyle: 'medium' })
   }
 
+  function downloadLeadsCsv() {
+    const adminToken = sessionStorage.getItem('admin_token') || ''
+    fetch(`${API_URL}/api/admin/export/leads.csv`, {
+      headers: { 'Authorization': `Bearer ${adminToken}` },
+    })
+      .then(r => r.blob())
+      .then(blob => {
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `leads-${new Date().toISOString().slice(0, 10)}.csv`
+        a.click()
+        URL.revokeObjectURL(url)
+      })
+  }
+
   function downloadNewsletterCsv() {
     const adminToken = sessionStorage.getItem('admin_token') || ''
     fetch(`${API_URL}/api/admin/export/newsletter.csv`, {
@@ -51,11 +67,19 @@ export default function LeadsPage() {
 
   return (
     <div className="p-8 space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-white">Leads</h1>
-        <p className="text-slate-500 text-sm mt-1">
-          All users grouped by email with search history and gap activity
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-white">Leads</h1>
+          <p className="text-slate-500 text-sm mt-1">
+            All users grouped by email with search history and gap activity
+          </p>
+        </div>
+        <button
+          onClick={downloadLeadsCsv}
+          className="bg-purple-600 hover:bg-purple-500 text-white text-sm px-4 py-2 rounded-lg transition-colors"
+        >
+          Export CSV
+        </button>
       </div>
 
       {/* Newsletter Subscribers section */}
