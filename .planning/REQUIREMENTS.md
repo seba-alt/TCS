@@ -84,12 +84,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | EXP-04 | Phase 47 | Complete |
 | EXP-05 | Phase 47 | Complete |
 | EXP-06 | Phase 47 | Complete |
-| ADM-01 | Phase 48 → 50 | Pending |
-| ADM-02 | Phase 48 → 50 | Pending |
-| ADM-05 | Phase 48 → 50 | Pending |
-| DISC-01 | Phase 48 → 50 | Pending |
-| DISC-02 | Phase 48 → 50 | Pending |
-| DISC-03 | Phase 48 → 50 | Pending |
+| ADM-01 | Phase 48 | Complete |
+| ADM-02 | Phase 48 | Complete |
+| ADM-05 | Phase 48 | Complete |
+| DISC-01 | Phase 48 | Complete |
+| DISC-02 | Phase 48 | Complete |
+| DISC-03 | Phase 48 | Complete |
 | ADM-04 | Phase 49 | Complete |
 
 **Coverage:**
