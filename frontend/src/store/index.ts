@@ -48,7 +48,7 @@ export const useExplorerStore = create<ExplorerStore>()(
           // v1 → v2: add industryTags field (default empty array)
           state.industryTags = []
         }
-        return state as ExplorerStore
+        return state as unknown as ExplorerStore
       },
       onRehydrateStorage: () => (_state) => {
       },

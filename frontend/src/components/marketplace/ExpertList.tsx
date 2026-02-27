@@ -3,7 +3,6 @@ import { Virtuoso } from 'react-virtuoso'
 import type { Expert } from '../../store/resultsSlice'
 import { useExplorerStore, useFilterSlice } from '../../store'
 import { EmptyState } from './EmptyState'
-import { SkeletonGrid } from './SkeletonGrid'
 
 interface ExpertListProps {
   experts: Expert[]
