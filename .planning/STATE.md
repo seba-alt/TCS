@@ -36,6 +36,8 @@ Progress: [██████████] 100% (plans 01, 02, 03 complete)
 - Public lead-click endpoint mounted on auth_router at /api/admin/lead-clicks (no admin auth required)
 - Used useNltrStore.getState() static access in ExpertCard (same pattern as useExplorerStore.getState())
 - Lead-click fires on both desktop and mobile second-tap paths for full coverage
+- Lazy-load lead clicks on row expand with client-side cache to avoid fetching on mount (plan 02)
+- expert_name added alongside expert_id in exposure endpoint response — backwards-compatible (plan 02)
 - Dry-run is default in reset_for_launch.py — --confirm required for actual deletion
 - TABLES_TO_WIPE delete Feedback before Conversation to avoid ordering issues in reset script
 

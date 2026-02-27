@@ -81,7 +81,7 @@ See `.planning/milestones/v4.0-ROADMAP.md`
 - [x] Phase 48: Admin Features and Industry Tags (4/4 plans) — completed 2026-02-27
 - [x] Phase 49: Admin Dashboard Cleanup (1/1 plan) — completed 2026-02-27
 - [x] Phase 50: Verification & Requirements Cleanup (1/1 plan) — completed 2026-02-27
-- [ ] Phase 50.1: Lead Click Tracking, Data Reset for Launch & Search Bar Visibility (3 plans)
+- [x] Phase 50.1: Lead Click Tracking, Data Reset for Launch & Search Bar Visibility (3 plans) (completed 2026-02-27)
   - [x] 50.1-01-PLAN.md — Lead click tracking backend + frontend capture — completed 2026-02-27
   - [ ] 50.1-02-PLAN.md — Admin UI: lead click views, expert name fix, search bar CSS
   - [ ] 50.1-03-PLAN.md — Pre-launch data reset script
@@ -106,4 +106,4 @@ See `.planning/milestones/v4.0-ROADMAP.md`
 | 48. Admin Features + Industry Tags | v4.0 | 4/4 | Complete | 2026-02-27 |
 | 49. Admin Cleanup | v4.0 | 1/1 | Complete | 2026-02-27 |
 | 50. Verification Cleanup | v4.0 | 1/1 | Complete | 2026-02-27 |
-| 50.1. Lead Click Tracking + Reset + Search Bar | 2/3 | In Progress|  | — |
+| 50.1. Lead Click Tracking + Reset + Search Bar | 3/3 | Complete   | 2026-02-27 | — |
