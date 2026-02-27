@@ -8,6 +8,12 @@ export interface AdminStats {
   gap_count: number
   top_queries: { query: string; count: number }[]
   top_feedback: { query: string; vote: string; count: number }[]
+  total_leads?: number
+  expert_pool?: number
+  leads_7d?: number
+  leads_prior_7d?: number
+  expert_pool_7d?: number
+  lead_rate?: number
 }
 
 export interface SearchRow {

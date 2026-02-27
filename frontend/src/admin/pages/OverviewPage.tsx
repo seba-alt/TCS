@@ -72,6 +72,26 @@ function Speedometer({ status, latency }: { status: HealthStatus; latency: numbe
   )
 }
 
+function TrendStatCard({ label, value, delta, deltaLabel }: {
+  label: string; value: number | string; delta: number; deltaLabel: string
+}) {
+  const isUp = delta > 0
+  return (
+    <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl p-5">
+      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">{label}</p>
+      <p className="text-3xl font-bold text-white">{typeof value === 'string' && value.length > 20 ? <span className="text-lg">{value}</span> : value}</p>
+      <div className="flex items-center gap-1 mt-1">
+        {delta !== 0 && (
+          <span className={`text-xs font-medium ${isUp ? 'text-emerald-400' : 'text-red-400'}`}>
+            {isUp ? '\u2191' : '\u2193'} {Math.abs(delta)}
+          </span>
+        )}
+        <span className="text-xs text-slate-500">{deltaLabel}</span>
+      </div>
+    </div>
+  )
+}
+
 function StatCard({
   label,
   value,
@@ -208,6 +228,34 @@ export default function OverviewPage() {
 
   return (
     <div className="p-8 space-y-6">
+      {/* Section 0: Key overview stat cards with 7-day trends */}
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+        <TrendStatCard
+          label="Total Leads"
+          value={stats.total_leads ?? 0}
+          delta={(stats.leads_7d ?? 0) - (stats.leads_prior_7d ?? 0)}
+          deltaLabel="vs prev 7d"
+        />
+        <TrendStatCard
+          label="Expert Pool"
+          value={stats.expert_pool ?? 0}
+          delta={stats.expert_pool_7d ?? 0}
+          deltaLabel="new this week"
+        />
+        <TrendStatCard
+          label="Top Searches"
+          value={stats.top_queries?.slice(0, 3).map(q => q.query).join(', ') || 'None yet'}
+          delta={0}
+          deltaLabel=""
+        />
+        <TrendStatCard
+          label="Lead Rate"
+          value={`${((stats.lead_rate ?? 0) * 100).toFixed(1)}%`}
+          delta={0}
+          deltaLabel="searches \u2192 leads"
+        />
+      </div>
+
       {/* Section 1: Health strip — Speedometer left-aligned, KPI cards right */}
       <div className="flex items-start gap-6">
         <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl px-6 py-4 flex flex-col items-center gap-1 flex-shrink-0">

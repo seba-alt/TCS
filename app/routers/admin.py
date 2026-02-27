@@ -329,6 +329,36 @@ def get_stats(db: Session = Depends(get_db)):
     ).all()
     top_feedback = [{"query": r.query, "vote": r.vote, "count": r.count} for r in top_fb_rows]
 
+    # Phase 48: Total leads (distinct emails), expert pool, 7-day trends
+    total_leads = db.scalar(
+        select(func.count(func.distinct(Conversation.email))).select_from(Conversation)
+    ) or 0
+
+    expert_pool = db.scalar(
+        select(func.count()).select_from(Expert).where(Expert.first_name != "")
+    ) or 0
+
+    seven_days_ago = datetime.utcnow() - timedelta(days=7)
+    fourteen_days_ago = datetime.utcnow() - timedelta(days=14)
+
+    leads_7d = db.scalar(
+        select(func.count(func.distinct(Conversation.email)))
+        .select_from(Conversation)
+        .where(Conversation.created_at >= seven_days_ago)
+    ) or 0
+
+    leads_prior_7d = db.scalar(
+        select(func.count(func.distinct(Conversation.email)))
+        .select_from(Conversation)
+        .where(Conversation.created_at >= fourteen_days_ago)
+        .where(Conversation.created_at < seven_days_ago)
+    ) or 0
+
+    # Expert pool 7d trend — Expert has no created_at, set to 0
+    expert_pool_7d = 0
+
+    lead_rate = round(total_leads / max(total, 1), 3)
+
     return {
         "total_searches": total,
         "match_count": match_count,
@@ -336,6 +366,12 @@ def get_stats(db: Session = Depends(get_db)):
         "gap_count": gap_count,
         "top_queries": top_queries,
         "top_feedback": top_feedback,
+        "total_leads": total_leads,
+        "expert_pool": expert_pool,
+        "leads_7d": leads_7d,
+        "leads_prior_7d": leads_prior_7d,
+        "expert_pool_7d": expert_pool_7d,
+        "lead_rate": lead_rate,
     }
 
 
