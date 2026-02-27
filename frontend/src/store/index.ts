@@ -39,6 +39,7 @@ export const useExplorerStore = create<ExplorerStore>()(
         tags:      state.tags,
         sortBy:    state.sortBy,
         sortOrder: state.sortOrder,
+        viewMode:  state.viewMode,
       }),
       onRehydrateStorage: () => (_state) => {
       },
@@ -56,6 +57,7 @@ export const useFilterSlice = () =>
       tags:                state.tags,
       sortBy:              state.sortBy,
       sortOrder:           state.sortOrder,
+      viewMode:            state.viewMode,
       savedExperts:        state.savedExperts,
       savedFilter:         state.savedFilter,
       setQuery:            state.setQuery,
@@ -63,6 +65,7 @@ export const useFilterSlice = () =>
       toggleTag:           state.toggleTag,
       setTags:             state.setTags,
       setSortBy:           state.setSortBy,
+      setViewMode:         state.setViewMode,
       setSavedFilter:      state.setSavedFilter,
       toggleSavedExpert:   state.toggleSavedExpert,
       resetFilters:        state.resetFilters,

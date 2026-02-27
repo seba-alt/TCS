@@ -10,6 +10,9 @@ export interface FilterSlice {
   sortBy: 'relevance' | 'rate_asc' | 'rate_desc'
   sortOrder: 'asc' | 'desc'
 
+  // View mode — persisted to localStorage
+  viewMode: 'grid' | 'list'
+
   // Saved experts — managed via manual localStorage under tcs_saved_experts key (NOT in persist envelope)
   savedExperts: string[]
 
@@ -22,6 +25,7 @@ export interface FilterSlice {
   toggleTag: (tag: string) => void
   setTags: (tags: string[]) => void
   setSortBy: (sortBy: FilterSlice['sortBy']) => void
+  setViewMode: (mode: 'grid' | 'list') => void
   setSavedFilter: (v: boolean) => void
   toggleSavedExpert: (username: string) => void
   resetFilters: () => void
@@ -34,6 +38,7 @@ const filterDefaults = {
   tags: [] as string[],
   sortBy: 'relevance' as const,
   sortOrder: 'desc' as const,
+  viewMode: 'grid' as const,
   savedFilter: false,
 }
 
@@ -82,6 +87,8 @@ export const createFilterSlice: StateCreator<
   },
 
   setSortBy: (sortBy) => set({ sortBy }),  // sort does NOT exit sage mode
+
+  setViewMode: (mode) => set({ viewMode: mode }),
 
   setSavedFilter: (v) => set({ savedFilter: v }),
 
