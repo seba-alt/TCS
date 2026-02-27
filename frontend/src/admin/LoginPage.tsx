@@ -5,12 +5,13 @@ const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
 
 export default function LoginPage() {
   const navigate = useNavigate()
-  const [key, setKey] = useState('')
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    if (sessionStorage.getItem('admin_key')) {
+    if (sessionStorage.getItem('admin_token')) {
       navigate('/admin', { replace: true })
     }
   }, [navigate])
@@ -23,13 +24,15 @@ export default function LoginPage() {
       const res = await fetch(`${API_URL}/api/admin/auth`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ key }),
+        body: JSON.stringify({ username, password }),
       })
       if (res.ok) {
-        sessionStorage.setItem('admin_key', key)
+        const data = await res.json()
+        sessionStorage.removeItem('admin_key') // clean up old key if present
+        sessionStorage.setItem('admin_token', data.token)
         navigate('/admin', { replace: true })
       } else {
-        setError('Invalid key. Please try again.')
+        setError('Invalid credentials')
       }
     } catch {
       setError('Connection error. Is the server running?')
@@ -49,7 +52,7 @@ export default function LoginPage() {
             </svg>
           </div>
           <h1 className="text-2xl font-bold text-white">Tinrate Admin</h1>
-          <p className="text-slate-400 text-sm mt-1">Enter your admin key to continue</p>
+          <p className="text-slate-400 text-sm mt-1">Sign in to continue</p>
         </div>
 
         {/* Login card */}
@@ -57,13 +60,29 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-2">
-                Admin Key
+                Username
+              </label>
+              <input
+                type="text"
+                value={username}
+                onChange={e => setUsername(e.target.value)}
+                placeholder="Username"
+                autoComplete="username"
+                required
+                className="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                Password
               </label>
               <input
                 type="password"
-                value={key}
-                onChange={e => setKey(e.target.value)}
-                placeholder="Enter admin key"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                placeholder="Password"
+                autoComplete="current-password"
                 required
                 className="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
               />
@@ -80,10 +99,10 @@ export default function LoginPage() {
 
             <button
               type="submit"
-              disabled={loading || !key}
+              disabled={loading || !username || !password}
               className="w-full py-3 px-4 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-colors"
             >
-              {loading ? 'Authenticating…' : 'Enter Dashboard'}
+              {loading ? 'Authenticating...' : 'Sign In'}
             </button>
           </form>
         </div>

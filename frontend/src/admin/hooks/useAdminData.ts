@@ -17,7 +17,7 @@ import type {
   MarketplaceTrendResponse,
 } from '../types'
 
-const getAdminKey = () => sessionStorage.getItem('admin_key') ?? ''
+const getAdminToken = () => sessionStorage.getItem('admin_token') ?? ''
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
 
 export async function adminFetch<T>(
@@ -33,8 +33,13 @@ export async function adminFetch<T>(
     })
   }
   const res = await fetch(url.toString(), {
-    headers: { 'X-Admin-Key': getAdminKey() },
+    headers: { 'Authorization': `Bearer ${getAdminToken()}` },
   })
+  if (res.status === 401) {
+    sessionStorage.removeItem('admin_token')
+    window.location.href = '/admin/login'
+    throw new Error('Session expired')
+  }
   if (!res.ok) throw new Error(`Admin API error ${res.status}: ${await res.text()}`)
   return res.json() as Promise<T>
 }
@@ -44,11 +49,16 @@ export async function adminPost<T>(path: string, body: unknown): Promise<T> {
   const res = await fetch(url.toString(), {
     method: 'POST',
     headers: {
-      'X-Admin-Key': getAdminKey(),
+      'Authorization': `Bearer ${getAdminToken()}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(body),
   })
+  if (res.status === 401) {
+    sessionStorage.removeItem('admin_token')
+    window.location.href = '/admin/login'
+    throw new Error('Session expired')
+  }
   if (!res.ok) throw new Error(`Admin API error ${res.status}: ${await res.text()}`)
   return res.json() as Promise<T>
 }
@@ -57,9 +67,14 @@ export async function adminPostFormData<T>(path: string, formData: FormData): Pr
   const url = new URL(`${API_URL}/api/admin${path}`)
   const res = await fetch(url.toString(), {
     method: 'POST',
-    headers: { 'X-Admin-Key': getAdminKey() },
+    headers: { 'Authorization': `Bearer ${getAdminToken()}` },
     body: formData,
   })
+  if (res.status === 401) {
+    sessionStorage.removeItem('admin_token')
+    window.location.href = '/admin/login'
+    throw new Error('Session expired')
+  }
   if (!res.ok) throw new Error(`Admin API error ${res.status}: ${await res.text()}`)
   return res.json() as Promise<T>
 }
@@ -290,7 +305,7 @@ export function useEmbeddingMap() {
     try {
       const res = await fetch(
         `${API_URL}/api/admin/embedding-map`,
-        { headers: { 'X-Admin-Key': getAdminKey() } }
+        { headers: { 'Authorization': `Bearer ${getAdminToken()}` } }
       )
       if (res.status === 202) {
         setStatus('computing')

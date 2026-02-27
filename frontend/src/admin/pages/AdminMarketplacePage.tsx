@@ -12,7 +12,7 @@ import {
 import { useMarketplaceDemand, useMarketplaceExposure, useMarketplaceTrend } from '../hooks/useAdminData'
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
-const getAdminKey = () => sessionStorage.getItem('admin_key') ?? ''
+const getAdminToken = () => sessionStorage.getItem('admin_token') ?? ''
 
 // ── Time range dropdown ────────────────────────────────────────────────────────
 
@@ -62,7 +62,7 @@ async function downloadMarketplaceCsv(section: 'demand' | 'exposure', days: numb
   if (days > 0) url.searchParams.set('days', String(days))
 
   const res = await fetch(url.toString(), {
-    headers: { 'X-Admin-Key': getAdminKey() },
+    headers: { 'Authorization': `Bearer ${getAdminToken()}` },
   })
   if (!res.ok) throw new Error(`Export failed: ${res.status}`)
 

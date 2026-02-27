@@ -34,9 +34,9 @@ export default function LeadsPage() {
   }
 
   function downloadNewsletterCsv() {
-    const adminKey = sessionStorage.getItem('admin_key') || ''
+    const adminToken = sessionStorage.getItem('admin_token') || ''
     fetch(`${API_URL}/api/admin/export/newsletter.csv`, {
-      headers: { 'X-Admin-Key': adminKey },
+      headers: { 'Authorization': `Bearer ${adminToken}` },
     })
       .then(r => r.blob())
       .then(blob => {

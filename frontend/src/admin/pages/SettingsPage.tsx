@@ -17,7 +17,7 @@ export default function SettingsPage() {
   const navigate = useNavigate()
 
   function handleLogout() {
-    sessionStorage.removeItem('admin_key')
+    sessionStorage.removeItem('admin_token')
     navigate('/admin/login', { replace: true })
   }
 
@@ -64,7 +64,7 @@ export default function SettingsPage() {
       <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl p-5">
         <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-3">Session</h2>
         <p className="text-sm text-slate-400 mb-4">
-          Your admin key is stored in <code className="text-purple-400 font-mono text-xs bg-slate-900 px-1.5 py-0.5 rounded">sessionStorage</code> and
+          Your session token is stored in <code className="text-purple-400 font-mono text-xs bg-slate-900 px-1.5 py-0.5 rounded">sessionStorage</code> and
           cleared when you close the tab or log out.
         </p>
         <button

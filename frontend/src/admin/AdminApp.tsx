@@ -5,7 +5,7 @@ export default function AdminApp() {
   const navigate = useNavigate()
 
   function handleLogout() {
-    sessionStorage.removeItem('admin_key')
+    sessionStorage.removeItem('admin_token')
     navigate('/admin/login', { replace: true })
   }
 

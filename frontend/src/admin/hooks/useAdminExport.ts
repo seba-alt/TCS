@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { SearchFilters } from '../types'
 
-const ADMIN_KEY = import.meta.env.VITE_ADMIN_KEY ?? ''
+const getAdminToken = () => sessionStorage.getItem('admin_token') ?? ''
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
 
 export type ExportSection = 'searches' | 'gaps'
@@ -26,7 +26,7 @@ export function useAdminExport() {
       }
 
       const res = await fetch(url.toString(), {
-        headers: { 'X-Admin-Key': ADMIN_KEY },
+        headers: { 'Authorization': `Bearer ${getAdminToken()}` },
       })
       if (!res.ok) throw new Error(`Export failed: ${res.status}`)
 

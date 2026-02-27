@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import type { GapRow } from '../types'
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
-const getAdminKey = () => sessionStorage.getItem('admin_key') ?? ''
+const getAdminToken = () => sessionStorage.getItem('admin_token') ?? ''
 
 interface GapsTableProps {
   data: GapRow[]
@@ -16,7 +16,7 @@ export default function GapsTable({ data, onResolved }: GapsTableProps) {
     try {
       await fetch(`${API_URL}/api/admin/gaps/${encodeURIComponent(gap.query)}/resolve`, {
         method: 'POST',
-        headers: { 'X-Admin-Key': getAdminKey(), 'Content-Type': 'application/json' },
+        headers: { 'Authorization': `Bearer ${getAdminToken()}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ resolved: true }),
       })
       onResolved()
