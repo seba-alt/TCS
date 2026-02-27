@@ -37,7 +37,7 @@ from typing import Optional
 import faiss
 import jwt
 from jwt.exceptions import InvalidTokenError
-from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, Request, Security, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Query, Request, Security, UploadFile
 from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel, Field
@@ -1104,14 +1104,37 @@ def add_expert(body: AddExpertBody, background_tasks: BackgroundTasks, db: Sessi
     }
 
 
+@router.post("/experts/preview-csv")
+async def preview_csv(file: UploadFile = File(...)):
+    """
+    Parse a CSV file and return the first 5 rows as JSON for preview,
+    plus the detected column headers and approximate total row count.
+
+    Response: {"headers": [...], "preview_rows": [...], "total_rows": N}
+    """
+    content = (await file.read()).decode("utf-8-sig")
+    reader = csv.DictReader(io.StringIO(content))
+    headers = reader.fieldnames or []
+    rows = []
+    for i, row in enumerate(reader):
+        if i >= 5:
+            break
+        rows.append(dict(row))
+    total_rows = content.count('\n') - 1  # approximate (header row subtracted)
+    return {"headers": headers, "preview_rows": rows, "total_rows": max(total_rows, len(rows))}
+
+
 @router.post("/experts/import-csv")
-async def import_experts_csv(file: UploadFile = File(...), db: Session = Depends(get_db)):
+async def import_experts_csv(file: UploadFile = File(...), column_mapping: str = Form(default=""), db: Session = Depends(get_db)):
     """
     Bulk-import experts from a CSV file with upsert behaviour.
 
     Accepts the same column layout as data/experts.csv:
         Email, Username, First Name, Last Name, Job Title, Company, Bio,
         Hourly Rate, Currency, Profile URL, Profile URL with UTM
+
+    Optional column_mapping: JSON string mapping {csv_column: expected_field}.
+    When provided, CSV headers are remapped before processing.
 
     For existing usernames: updates basic fields, preserves tags + findability_score.
     For new usernames: inserts new Expert row.
@@ -1123,9 +1146,28 @@ async def import_experts_csv(file: UploadFile = File(...), db: Session = Depends
     text = content.decode("utf-8-sig")  # handles UTF-8 BOM from Excel exports
     reader = csv.DictReader(io.StringIO(text))
 
+    # Apply column mapping if provided
+    mapping = {}
+    if column_mapping:
+        try:
+            mapping = json.loads(column_mapping)
+        except (json.JSONDecodeError, TypeError):
+            pass
+
     inserted = updated = skipped = 0
 
-    for row in reader:
+    for raw_row in reader:
+        # Remap columns if mapping provided: {csv_column -> expected_field}
+        if mapping:
+            row = {}
+            reverse_map = {v: k for k, v in mapping.items()}
+            for expected_field in ["Username", "First Name", "Last Name", "Job Title",
+                                   "Company", "Bio", "Hourly Rate", "Currency",
+                                   "Profile URL", "Profile URL with UTM", "Profile Image Url"]:
+                csv_col = reverse_map.get(expected_field, expected_field)
+                row[expected_field] = raw_row.get(csv_col, "")
+        else:
+            row = raw_row
         username = (row.get("Username") or "").strip()
         if not username:
             skipped += 1

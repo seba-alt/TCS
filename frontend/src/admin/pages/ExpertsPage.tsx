@@ -1,5 +1,6 @@
-import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
-import { useAdminExperts, useAdminDomainMap, useIngestStatus, adminPost, adminPostFormData } from '../hooks/useAdminData'
+import { useState, useMemo, useEffect, useCallback } from 'react'
+import { useAdminExperts, useAdminDomainMap, useIngestStatus, adminPost } from '../hooks/useAdminData'
+import CsvImportModal from '../components/CsvImportModal'
 import type { ExpertRow, DomainMapEntry } from '../types'
 
 // ─── Score helpers ────────────────────────────────────────────────────────────
@@ -97,10 +98,8 @@ export default function ExpertsPage() {
   const [autoClassifying, setAutoClassifying] = useState(false)
   const [autoResult, setAutoResult] = useState<string | null>(null)
 
-  // CSV import state
-  const csvInputRef = useRef<HTMLInputElement>(null)
-  const [csvImporting, setCsvImporting] = useState(false)
-  const [csvResult, setCsvResult] = useState<string | null>(null)
+  // CSV import modal state
+  const [importModalOpen, setImportModalOpen] = useState(false)
 
   // Add expert form state
   const [showAddForm, setShowAddForm] = useState(false)
@@ -175,28 +174,7 @@ export default function ExpertsPage() {
     if (!domainData && !domainLoading) fetchDomainMap()
   }, [domainData, domainLoading, fetchDomainMap])
 
-  async function handleCsvUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
-    setCsvImporting(true)
-    setCsvResult(null)
-    try {
-      const fd = new FormData()
-      fd.append('file', file)
-      const res = await adminPostFormData<{ inserted: number; updated: number; skipped: number }>(
-        '/experts/import-csv',
-        fd,
-      )
-      setCsvResult(`Imported: ${res.inserted} added, ${res.updated} updated, ${res.skipped} skipped`)
-      refetch()
-    } catch (err) {
-      setCsvResult(`Error: ${err}`)
-    } finally {
-      setCsvImporting(false)
-      // Reset input so same file can be re-uploaded
-      if (csvInputRef.current) csvInputRef.current.value = ''
-    }
-  }
+  // handleCsvUpload replaced by CsvImportModal
 
   // Auto-refresh expert list when ingest completes
   useEffect(() => {
@@ -267,21 +245,12 @@ export default function ExpertsPage() {
         {autoResult && <span className="text-sm text-slate-400">{autoResult}</span>}
 
         {/* CSV Import button */}
-        <input
-          ref={csvInputRef}
-          type="file"
-          accept=".csv"
-          className="hidden"
-          onChange={handleCsvUpload}
-        />
         <button
-          onClick={() => csvInputRef.current?.click()}
-          disabled={csvImporting}
-          className="px-4 py-2 bg-slate-700 hover:bg-slate-600 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors"
+          onClick={() => setImportModalOpen(true)}
+          className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm font-medium rounded-lg transition-colors"
         >
-          {csvImporting ? 'Importing…' : 'Import CSV'}
+          Import CSV
         </button>
-        {csvResult && <span className="text-sm text-slate-400">{csvResult}</span>}
 
         {/* Zone filter */}
         <div className="flex gap-1">
@@ -497,6 +466,13 @@ export default function ExpertsPage() {
           </div>
         </div>
       )}
+
+      {/* CSV Import Modal */}
+      <CsvImportModal
+        isOpen={importModalOpen}
+        onClose={() => setImportModalOpen(false)}
+        onImportComplete={() => refetch()}
+      />
 
       {/* Domain-map section */}
       {data && (
