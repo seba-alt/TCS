@@ -79,7 +79,7 @@ See `.planning/milestones/v3.1-ROADMAP.md`
 
 **Milestone Goal:** Fix frontend bugs, streamline admin panel, harden for full public launch.
 
-- [ ] **Phase 45: Security and Infrastructure Hardening** - Upgrade admin auth to bcrypt+JWT, add rate limiting, enable SQLite WAL mode, fix t-SNE heatmap
+- [x] **Phase 45: Security and Infrastructure Hardening** - Upgrade admin auth to bcrypt+JWT, add rate limiting, enable SQLite WAL mode, fix t-SNE heatmap (completed 2026-02-27)
 - [ ] **Phase 46: Frontend Performance Optimization** - Lazy-load admin routes and split large vendor chunks for a smaller public bundle
 - [ ] **Phase 47: Public Explorer Polish** - Grid/list toggle, white search input, error states, Sage double-render fix, mobile tap behavior
 - [ ] **Phase 48: Admin Features and Industry Tags** - Lead export CSV, one-snap overview stats, improved expert import, and industry tag taxonomy
@@ -176,7 +176,7 @@ Plans:
 | 28-35. Sage Evolution | v2.3 | 17/17 | Complete | 2026-02-24 |
 | 36-40.3.1. Browse & Navigation | v3.0 | 19/19 | Complete | 2026-02-26 |
 | 41-44. Launch Prep | v3.1 | 5/5 | Complete | 2026-02-26 |
-| 45. Security + Infrastructure | v4.0 | 0/2 | Not started | - |
+| 45. Security + Infrastructure | 2/2 | Complete    | 2026-02-27 | - |
 | 46. Frontend Performance | v4.0 | 0/1 | Not started | - |
 | 47. Explorer Polish | v4.0 | 0/3 | Not started | - |
 | 48. Admin Features + Industry Tags | v4.0 | 0/4 | Not started | - |
