@@ -2,7 +2,6 @@
 // Shared constant used by TagMultiSelect and EmptyState
 export const TOP_TAGS = [
   'fundraising',
-  'real estate',
   'entrepreneurship',
   'digital marketing',
   'marketing strategy',
