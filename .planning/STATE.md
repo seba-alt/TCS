@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-27)
 
 **Core value:** A user describes any problem and instantly gets expertly matched professionals they can browse, filter, and contact — no searching, no guesswork.
-**Current focus:** Phase 50.1 complete (plan 01/01 done)
+**Current focus:** Phase 50.1 plan 03/03 complete — all 3 plans done
 
 ## Current Position
 
 Milestone: v4.0 Public Launch — Phase 50.1 extension in progress
 Phase: 50.1-lead-click-tracking-data-reset-search-visibility
-Plan: 01/01 — COMPLETE
-Last activity: 2026-02-27 — Plan 50.1-01 execution complete
+Plan: 03/03 — COMPLETE
+Last activity: 2026-02-27 — Plan 50.1-03 execution complete
 
-Progress: [██████████] 100% (plan 01 complete)
+Progress: [██████████] 100% (plans 01, 02, 03 complete)
 
 ## Accumulated Context
 
@@ -36,6 +36,8 @@ Progress: [██████████] 100% (plan 01 complete)
 - Public lead-click endpoint mounted on auth_router at /api/admin/lead-clicks (no admin auth required)
 - Used useNltrStore.getState() static access in ExpertCard (same pattern as useExplorerStore.getState())
 - Lead-click fires on both desktop and mobile second-tap paths for full coverage
+- Dry-run is default in reset_for_launch.py — --confirm required for actual deletion
+- TABLES_TO_WIPE delete Feedback before Conversation to avoid ordering issues in reset script
 
 (Prior decisions archived to PROJECT.md Key Decisions table)
 
@@ -56,5 +58,5 @@ Progress: [██████████] 100% (plan 01 complete)
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Completed 50.1-01-PLAN.md
-Resume file: .planning/milestones/v4.0-phases/50.1-lead-click-tracking-data-reset-search-visibility/50.1-01-SUMMARY.md
+Stopped at: Completed 50.1-03-PLAN.md
+Resume file: .planning/milestones/v4.0-phases/50.1-lead-click-tracking-data-reset-search-visibility/50.1-03-SUMMARY.md
