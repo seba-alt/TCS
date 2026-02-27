@@ -12,6 +12,16 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.database import Base
 
 
+class AdminUser(Base):
+    __tablename__ = "admin_users"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    username: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
+    hashed_password: Mapped[str] = mapped_column(String(200), nullable=False)
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime, default=datetime.datetime.utcnow, nullable=False
+    )
+
+
 class Conversation(Base):
     __tablename__ = "conversations"
 

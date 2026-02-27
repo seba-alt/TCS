@@ -105,7 +105,7 @@ def _seed_experts_from_csv() -> int:
 async def _compute_tsne_background(app: FastAPI) -> None:
     """
     Compute t-SNE projection of FAISS embeddings in a background thread.
-    Called via asyncio.create_task after lifespan yield — NEVER before yield.
+    Called via asyncio.create_task before lifespan yield — runs during server lifetime.
     Sets app.state.tsne_ready = True on completion (or on failure, to stop 202 responses).
     """
     try:
@@ -331,8 +331,28 @@ async def lifespan(app: FastAPI):
             _db.commit()
             log.info("startup: category auto-classification", count=len(_uncategorized))
 
+    # Seed admin user from env vars on first boot
+    _admin_user = os.getenv("ADMIN_USERNAME", "")
+    _admin_pass = os.getenv("ADMIN_PASSWORD", "")
+    if _admin_user and _admin_pass:
+        from app.models import AdminUser  # noqa: PLC0415
+        from pwdlib import PasswordHash  # noqa: PLC0415
+        from pwdlib.hashers.bcrypt import BcryptHasher  # noqa: PLC0415
+        _pwd = PasswordHash([BcryptHasher()])
+        with SessionLocal() as _db:
+            existing = _db.scalar(select(func.count()).select_from(AdminUser))
+            if existing == 0:
+                _db.add(AdminUser(username=_admin_user, hashed_password=_pwd.hash(_admin_pass)))
+                _db.commit()
+                log.info("startup: admin user seeded", username=_admin_user)
+    elif not os.getenv("JWT_SECRET"):
+        log.warning("startup: ADMIN_USERNAME/ADMIN_PASSWORD not set — admin login disabled")
+
+    if not os.getenv("JWT_SECRET") and os.getenv("RAILWAY_ENVIRONMENT"):
+        log.error("startup: JWT_SECRET must be set in production")
+
+    asyncio.create_task(_compute_tsne_background(app))  # Phase 45: launch at startup (before yield = startup, after yield = shutdown)
     yield
-    asyncio.create_task(_compute_tsne_background(app))  # Phase 26: post-yield — NEVER above yield
     # Shutdown: in-memory FAISS index is garbage-collected automatically
 
 
@@ -343,6 +363,14 @@ app = FastAPI(
     version="0.1.0",
     lifespan=lifespan,
 )
+
+# --- Rate Limiting ---
+from slowapi.errors import RateLimitExceeded  # noqa: E402, PLC0415
+from slowapi import _rate_limit_exceeded_handler  # noqa: E402, PLC0415
+from app.limiter import limiter  # noqa: E402, PLC0415
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # --- CORS ---
 # NEVER use ["*"] in production — use explicit Vercel domain.
@@ -355,7 +383,7 @@ app.add_middleware(
     allow_origins=ALLOWED_ORIGINS,
     allow_credentials=False,
     allow_methods=["GET", "POST"],
-    allow_headers=["Content-Type", "X-Admin-Key"],
+    allow_headers=["Content-Type", "Authorization"],
 )
 
 # --- Routes ---

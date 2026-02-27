@@ -1,11 +1,11 @@
 """
 /api/admin/* — Analytics dashboard endpoints for admin use.
 
-All endpoints (except /auth) require X-Admin-Key header matching the ADMIN_SECRET env var.
-Returns 401 for missing or incorrect key.
+All endpoints (except /auth) require a valid JWT token in the Authorization: Bearer header.
+Returns 401 for missing or invalid token.
 
 Endpoints:
-    POST /api/admin/auth                        — validate admin key (no auth required)
+    POST /api/admin/auth                        — authenticate with username+password, returns JWT
     GET  /api/admin/stats                       — aggregate counts + top queries/feedback
     GET  /api/admin/searches                    — paginated conversation rows with gap flag
     GET  /api/admin/gaps                        — gap queries grouped by frequency
@@ -31,14 +31,18 @@ import sys
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from typing import Optional
 
 import faiss
+import jwt
+from jwt.exceptions import InvalidTokenError
 from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, Request, Security, UploadFile, status
 from fastapi.responses import JSONResponse, StreamingResponse
-from fastapi.security import APIKeyHeader
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel, Field
+from pwdlib import PasswordHash
+from pwdlib.hashers.bcrypt import BcryptHasher
 from sqlalchemy import Integer, func, select, update
 from sqlalchemy.orm import Session
 
@@ -46,7 +50,8 @@ import structlog
 
 from app.config import FAISS_INDEX_PATH, METADATA_PATH
 from app.database import get_db, SessionLocal
-from app.models import Conversation, Expert, Feedback, NewsletterSubscriber
+from app.limiter import limiter
+from app.models import AdminUser, Conversation, Expert, Feedback, NewsletterSubscriber
 from app.services.tagging import compute_findability_score, tag_expert_sync
 from app.services.retriever import retrieve
 from app.services.search_intelligence import (  # noqa: PLC2701
@@ -160,7 +165,11 @@ def _run_ingest_job(app) -> None:
 
 # ── Auth ─────────────────────────────────────────────────────────────────────
 
-_api_key_header = APIKeyHeader(name="X-Admin-Key", auto_error=False)
+SECRET_KEY = os.getenv("JWT_SECRET", "")
+ALGORITHM = "HS256"
+JWT_EXPIRE_HOURS = 24
+_pwd = PasswordHash([BcryptHasher()])
+_bearer = HTTPBearer(auto_error=False)
 
 GAP_THRESHOLD = 0.60  # Matches SIMILARITY_THRESHOLD in retriever.py
 
@@ -181,21 +190,26 @@ CATEGORY_KEYWORDS = {
 }
 
 
-def _require_admin(api_key: Optional[str] = Security(_api_key_header)) -> str:
-    """Dependency: validate X-Admin-Key against ADMIN_SECRET env var."""
-    secret = os.getenv("ADMIN_SECRET", "")
-    if not secret or not api_key or api_key != secret:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or missing X-Admin-Key header",
-        )
-    return api_key
+def _require_admin(credentials: Optional[HTTPAuthorizationCredentials] = Security(_bearer)) -> str:
+    """Dependency: validate JWT from Authorization: Bearer header."""
+    if not credentials:
+        raise HTTPException(status_code=401, detail="Missing Authorization header")
+    if not SECRET_KEY:
+        raise HTTPException(status_code=500, detail="JWT_SECRET not configured")
+    try:
+        payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get("sub")
+        if not username:
+            raise InvalidTokenError
+        return username
+    except InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
 
 
 # Auth router — no authentication required (used by the login page)
 auth_router = APIRouter(prefix="/api/admin")
 
-# Main router — all endpoints require X-Admin-Key
+# Main router — all endpoints require JWT Bearer token
 router = APIRouter(prefix="/api/admin", dependencies=[Depends(_require_admin)])
 
 
@@ -239,21 +253,28 @@ def _serialize_expert(e: Expert) -> dict:
 # ── Auth endpoint (no auth required) ─────────────────────────────────────────
 
 class AuthBody(BaseModel):
-    key: str
+    username: str
+    password: str
 
 
 @auth_router.post("/auth")
-def authenticate(body: AuthBody):
+@limiter.limit("5/minute")
+def authenticate(body: AuthBody, request: Request):
     """
-    Validate admin key without requiring X-Admin-Key header.
-    Used by the login page to exchange a password for a session key.
+    Authenticate with username and password, returns a JWT token.
+    Rate limited to 5 attempts per minute per IP.
 
-    Returns 200 {"ok": True} if key matches ADMIN_SECRET, else 401.
+    Returns 200 {"token": "<jwt>"} on success, else 401.
     """
-    secret = os.getenv("ADMIN_SECRET", "")
-    if not secret or body.key != secret:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid key")
-    return {"ok": True}
+    if not SECRET_KEY:
+        raise HTTPException(status_code=500, detail="JWT_SECRET not configured")
+    with SessionLocal() as db:
+        user = db.scalar(select(AdminUser).where(AdminUser.username == body.username))
+    if not user or not _pwd.verify(body.password, user.hashed_password):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    expire = datetime.now(timezone.utc) + timedelta(hours=JWT_EXPIRE_HOURS)
+    token = jwt.encode({"sub": user.username, "exp": expire}, SECRET_KEY, algorithm=ALGORITHM)
+    return {"token": token}
 
 
 # ── Stats ─────────────────────────────────────────────────────────────────────
