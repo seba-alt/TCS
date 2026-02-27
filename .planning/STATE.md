@@ -40,6 +40,10 @@ Progress: [██████████] 100%
 - Verify FTS5 availability on Railway SQLite at startup
 - Validate gemini-2.5-flash-lite structured JSON output with a live Dutch query after deployment
 
+### Roadmap Evolution
+
+- Phase 50.1 inserted after Phase 50: Lead click tracking, data reset for launch, and search bar visibility improvements (URGENT)
+
 ### Blockers/Concerns
 
 (None — milestone complete)
@@ -47,5 +51,5 @@ Progress: [██████████] 100%
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: v4.0 milestone archived
-Resume file: None
+Stopped at: Phase 50.1 context gathered
+Resume file: .planning/milestones/v4.0-phases/50.1-lead-click-tracking-data-reset-search-visibility/50.1-CONTEXT.md
