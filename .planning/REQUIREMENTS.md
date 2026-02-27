@@ -27,7 +27,7 @@ Requirements for public launch. Each maps to roadmap phases.
 - [ ] **ADM-01**: Dashboard shows one-snap overview with key stats (Total Leads, Expert Pool, Sage volume)
 - [ ] **ADM-02**: Admin can export leads as CSV including their search queries and card clicks
 - [ ] **ADM-03**: Embedding heatmap (t-SNE) loads correctly on dashboard
-- [ ] **ADM-04**: Unused admin tools removed, sidebar simplified for current configuration
+- [x] **ADM-04**: Unused admin tools removed, sidebar simplified for current configuration
 - [ ] **ADM-05**: Admin can bulk import experts via improved CSV upload flow
 
 ### Discovery
@@ -90,7 +90,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DISC-01 | Phase 48 | Pending |
 | DISC-02 | Phase 48 | Pending |
 | DISC-03 | Phase 48 | Pending |
-| ADM-04 | Phase 49 | Pending |
+| ADM-04 | Phase 49 | Complete |
 
 **Coverage:**
 - v4.0 requirements: 19 total

@@ -83,7 +83,7 @@ See `.planning/milestones/v3.1-ROADMAP.md`
 - [x] **Phase 46: Frontend Performance Optimization** - Lazy-load admin routes and split large vendor chunks for a smaller public bundle (completed 2026-02-27)
 - [x] **Phase 47: Public Explorer Polish** - Grid/list toggle, white search input, error states, Sage double-render fix, mobile tap behavior (completed 2026-02-27)
 - [x] **Phase 48: Admin Features and Industry Tags** - Lead export CSV, one-snap overview stats, improved expert import, and industry tag taxonomy (completed 2026-02-27)
-- [ ] **Phase 49: Admin Dashboard Cleanup** - Remove unused admin tools and simplify sidebar for current configuration
+- [x] **Phase 49: Admin Dashboard Cleanup** - Remove unused admin tools and simplify sidebar for current configuration (completed 2026-02-27)
 
 ## Phase Details
 
@@ -180,4 +180,4 @@ Plans:
 | 46. Frontend Performance | 1/1 | Complete    | 2026-02-27 | - |
 | 47. Explorer Polish | 3/3 | Complete    | 2026-02-27 | - |
 | 48. Admin Features + Industry Tags | v4.0 | 4/4 | Complete | 2026-02-27 |
-| 49. Admin Cleanup | v4.0 | 0/1 | Not started | - |
+| 49. Admin Cleanup | 1/1 | Complete   | 2026-02-27 | - |
