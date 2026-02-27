@@ -37,7 +37,7 @@ from typing import Optional
 import faiss
 import jwt
 from jwt.exceptions import InvalidTokenError
-from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, Request, Security, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, Request, Security, UploadFile
 from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel, Field
