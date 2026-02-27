@@ -12,6 +12,7 @@ export function useExplore() {
   const tags = useExplorerStore((s) => s.tags)
   const sortBy = useExplorerStore((s) => s.sortBy)
   const sageMode = useExplorerStore((s) => s.sageMode)
+  const retryTrigger = useExplorerStore((s) => s.retryTrigger)
 
   // Zustand actions are referentially stable — safe in dep array without useCallback
   const setLoading = useExplorerStore((s) => s.setLoading)
@@ -85,7 +86,7 @@ export function useExplore() {
     }
     // sortBy is in dep array even though /api/explore doesn't currently use it —
     // ensures re-fetch when sort is added later; avoids stale-closure bug
-  }, [query, rateMin, rateMax, tags, sortBy, sageMode, setLoading, setResults, setError, resetResults])
+  }, [query, rateMin, rateMax, tags, sortBy, sageMode, retryTrigger, setLoading, setResults, setError, resetResults])
 
   // loadNextPage — passed to VirtuosoGrid endReached prop
   // Guard: don't fetch if no more pages (cursor null), already fetching more, or initial load in progress

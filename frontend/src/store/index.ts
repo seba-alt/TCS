@@ -82,6 +82,7 @@ export const useResultsSlice = () =>
       error:            state.error,
       isFetchingMore:   state.isFetchingMore,
       sageMode:         state.sageMode,
+      retryTrigger:     state.retryTrigger,
       setResults:       state.setResults,
       setLoading:       state.setLoading,
       setError:         state.setError,
@@ -89,6 +90,7 @@ export const useResultsSlice = () =>
       appendResults:    state.appendResults,
       setFetchingMore:  state.setFetchingMore,
       setSageMode:      state.setSageMode,
+      retry:            state.retry,
     }))
   )
 

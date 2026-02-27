@@ -2,11 +2,12 @@ import { useRef, useEffect, useMemo, useState } from 'react'
 import { VirtuosoGrid } from 'react-virtuoso'
 import { animate } from 'motion/react'
 import type { Expert } from '../../store/resultsSlice'
-import { useFilterSlice } from '../../store'
+import { useFilterSlice, useExplorerStore } from '../../store'
 import { ExpertCard } from './ExpertCard'
 import { EmptyState } from './EmptyState'
 import { SkeletonGrid } from './SkeletonGrid'
 import { useNltrStore } from '../../store/nltrStore'
+import { AlertCircle, RefreshCw, WifiOff } from 'lucide-react'
 
 
 interface ExpertGridProps {
@@ -32,6 +33,8 @@ export function ExpertGrid({ experts, loading, isFetchingMore, onEndReached, onV
   const containerRef = useRef<HTMLDivElement>(null)
   const { spinTrigger, resetSpin } = useNltrStore()
   const { savedFilter, savedExperts } = useFilterSlice()
+  const error = useExplorerStore((s) => s.error)
+  const retry = useExplorerStore((s) => s.retry)
 
   // Parent-controlled expanded state — only one card expanded at a time (mobile)
   const [expandedExpertId, setExpandedExpertId] = useState<string | null>(null)
@@ -63,6 +66,37 @@ export function ExpertGrid({ experts, loading, isFetchingMore, onEndReached, onV
   // Initial load: show skeleton grid (built in Phase 16)
   if (loading && experts.length === 0) {
     return <SkeletonGrid />
+  }
+
+  // API error: show friendly message with retry
+  if (error && experts.length === 0) {
+    const isNetworkError = error.toLowerCase().includes('failed to fetch')
+      || error.toLowerCase().includes('networkerror')
+      || error.toLowerCase().includes('network')
+    return (
+      <div className="flex flex-col items-center justify-center py-20 gap-4 text-center px-6">
+        {isNetworkError ? (
+          <WifiOff size={40} className="text-gray-300" />
+        ) : (
+          <AlertCircle size={40} className="text-gray-300" />
+        )}
+        <div>
+          <p className="text-gray-600 font-medium">
+            Oops, something went wrong. Let&apos;s try that again.
+          </p>
+          {isNetworkError && (
+            <p className="text-sm text-gray-400 mt-1">Check your connection and retry.</p>
+          )}
+        </div>
+        <button
+          onClick={retry}
+          className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-brand-purple text-white text-sm font-medium hover:bg-brand-purple/90 transition-colors"
+        >
+          <RefreshCw size={14} />
+          Try again
+        </button>
+      </div>
+    )
   }
 
   // Zero results after load completes (or saved filter yields nothing)

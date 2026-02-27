@@ -27,6 +27,9 @@ export interface ResultsSlice {
   isFetchingMore: boolean
   sageMode: boolean
 
+  // Retry mechanism — counter incremented by retry() triggers re-fetch in useExplore
+  retryTrigger: number
+
   // Results actions
   setResults: (experts: Expert[], total: number, cursor: number | null) => void
   setLoading: (loading: boolean) => void
@@ -35,6 +38,7 @@ export interface ResultsSlice {
   appendResults: (experts: Expert[], cursor: number | null) => void
   setFetchingMore: (v: boolean) => void
   setSageMode: (v: boolean) => void
+  retry: () => void
 }
 
 export const createResultsSlice: StateCreator<
@@ -50,6 +54,7 @@ export const createResultsSlice: StateCreator<
   error: null,
   isFetchingMore: false,
   sageMode: false,
+  retryTrigger: 0,
 
   setResults: (experts, total, cursor) => set({ experts, total, cursor }),
 
@@ -66,4 +71,6 @@ export const createResultsSlice: StateCreator<
   setFetchingMore: (v) => set({ isFetchingMore: v }),
 
   setSageMode: (v) => set({ sageMode: v }),
+
+  retry: () => set((s) => ({ error: null, retryTrigger: s.retryTrigger + 1 })),
 })
