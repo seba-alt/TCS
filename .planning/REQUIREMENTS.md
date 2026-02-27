@@ -38,8 +38,8 @@ Requirements for public launch. Each maps to roadmap phases.
 
 ### Performance
 
-- [ ] **PERF-01**: Admin routes lazy-loaded (React.lazy) for smaller public bundle
-- [ ] **PERF-02**: Vite build splits large dependencies (recharts, react-table) into separate chunks
+- [x] **PERF-01**: Admin routes lazy-loaded (React.lazy) for smaller public bundle
+- [x] **PERF-02**: Vite build splits large dependencies (recharts, react-table) into separate chunks
 
 ## Future Requirements
 
@@ -76,8 +76,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SEC-02 | Phase 45 | Pending |
 | SEC-03 | Phase 45 | Pending |
 | ADM-03 | Phase 45 | Pending |
-| PERF-01 | Phase 46 | Pending |
-| PERF-02 | Phase 46 | Pending |
+| PERF-01 | Phase 46 | Complete |
+| PERF-02 | Phase 46 | Complete |
 | EXP-01 | Phase 47 | Pending |
 | EXP-02 | Phase 47 | Pending |
 | EXP-03 | Phase 47 | Pending |
