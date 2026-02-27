@@ -1790,9 +1790,25 @@ def get_exposure(days: int = 30, db: Session = Depends(get_db)):
         ORDER BY total_clicks DESC
     """), {"cutoff": cutoff}).all()
 
+    # Batch-resolve expert full names to avoid N+1 queries
+    all_ids = {r.expert_id for r in rows if r.expert_id}
+    name_map = {
+        e.username: f"{e.first_name} {e.last_name}"
+        for e in db.scalars(select(Expert).where(Expert.username.in_(all_ids))).all()
+    } if all_ids else {}
+
     return {
         "data_since": data_since,
-        "exposure": [{"expert_id": r.expert_id, "total_clicks": r.total_clicks, "grid_clicks": r.grid_clicks, "sage_clicks": r.sage_clicks} for r in rows],
+        "exposure": [
+            {
+                "expert_id": r.expert_id,
+                "expert_name": name_map.get(r.expert_id),
+                "total_clicks": r.total_clicks,
+                "grid_clicks": r.grid_clicks,
+                "sage_clicks": r.sage_clicks,
+            }
+            for r in rows
+        ],
     }
 
 

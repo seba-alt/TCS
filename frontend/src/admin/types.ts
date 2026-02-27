@@ -260,6 +260,7 @@ export interface DemandResponse {
 
 export interface ExposureRow {
   expert_id: string      // username / expert identifier
+  expert_name?: string | null  // full "First Last" name — resolved by backend
   total_clicks: number
   grid_clicks: number
   sage_clicks: number

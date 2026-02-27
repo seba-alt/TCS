@@ -180,7 +180,7 @@ export default function Header() {
               setIsFocused(false)
               handleBlur()
             }}
-            className="w-full pl-14 pr-8 py-2.5 rounded-xl text-sm bg-white border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-purple/20 focus:border-brand-purple/40 transition-colors"
+            className="w-full pl-14 pr-8 py-2.5 rounded-xl text-sm bg-white border-2 border-slate-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-purple/20 focus:border-brand-purple/40 transition-colors"
             aria-label="Search experts"
             aria-autocomplete="list"
             aria-expanded={showDropdown}

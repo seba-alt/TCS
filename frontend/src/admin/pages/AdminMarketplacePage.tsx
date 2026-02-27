@@ -369,7 +369,7 @@ function ExposureSection({ days }: { days: number }) {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-700/60">
-                  <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Expert ID</th>
+                  <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Expert</th>
                   <th className="text-right px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Clicks</th>
                   <th className="text-right px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Context Breakdown</th>
                 </tr>
@@ -387,7 +387,7 @@ function ExposureSection({ days }: { days: number }) {
                       key={i}
                       className="border-b border-slate-700/30 hover:bg-slate-700/20 transition-colors"
                     >
-                      <td className="px-5 py-3 text-slate-200 font-mono text-xs">{row.expert_id}</td>
+                      <td className="px-5 py-3 text-slate-200 text-sm">{row.expert_name ?? row.expert_id}</td>
                       <td className="px-5 py-3 text-right font-mono text-slate-300">{row.total_clicks}</td>
                       <td className="px-5 py-3 text-right text-slate-400 text-xs">
                         Grid: {row.grid_clicks} / Sage: {row.sage_clicks}
