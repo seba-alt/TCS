@@ -159,10 +159,10 @@ Plans:
   1. Unused admin pages and sidebar links are removed; navigating to a removed route redirects to the overview
   2. All corresponding backend endpoints and background tasks for removed pages are also removed (no orphaned computation)
   3. The admin overview page surfaces the most important marketplace signals without requiring navigation to sub-pages
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 49-01: Admin sidebar simplification and atomic page removal (frontend + backend + background tasks)
+- [ ] 49-01-PLAN.md — Remove legacy redirect routes, add catch-all, consolidate overview with recent leads and searches
 
 ## Progress
 
