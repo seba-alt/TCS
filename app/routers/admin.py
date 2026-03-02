@@ -926,6 +926,112 @@ def assign_industry_tags(db: Session = Depends(get_db)):
     return {"updated": updated}
 
 
+# ── Expert Deletion ──────────────────────────────────────────────────────────
+
+@router.delete("/experts/{username}")
+def delete_expert(username: str, request: Request, db: Session = Depends(get_db)):
+    """
+    Delete a single expert from DB, metadata.json, and experts.csv.
+    Triggers FAISS rebuild in background.
+
+    Response: {"ok": True, "username": str, "rebuilding": True}
+    """
+    expert = db.scalar(select(Expert).where(Expert.username == username))
+    if not expert:
+        raise HTTPException(status_code=404, detail=f"Expert '{username}' not found")
+
+    db.delete(expert)
+    db.commit()
+
+    # Remove from metadata.json
+    if METADATA_PATH.exists():
+        with open(METADATA_PATH, "r", encoding="utf-8") as f:
+            metadata = json.load(f)
+        metadata = [m for m in metadata if m.get("Username") != username]
+        with open(METADATA_PATH, "w", encoding="utf-8") as f:
+            json.dump(metadata, f, indent=2, ensure_ascii=False)
+
+    # Remove from experts.csv
+    if EXPERTS_CSV_PATH.exists():
+        with open(EXPERTS_CSV_PATH, "r", newline="", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            fieldnames = reader.fieldnames or []
+            rows = [row for row in reader if row.get("Username") != username]
+        with open(EXPERTS_CSV_PATH, "w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(rows)
+
+    # Trigger FAISS rebuild in background
+    rebuilding = False
+    if _ingest["status"] != "running":
+        _ingest["status"] = "running"
+        thread = threading.Thread(target=_run_ingest_job, args=(request.app,), daemon=True)
+        thread.start()
+        rebuilding = True
+
+    log.info("admin.expert_deleted", username=username, rebuilding=rebuilding)
+    return {"ok": True, "username": username, "rebuilding": rebuilding}
+
+
+class BulkDeleteBody(BaseModel):
+    usernames: list[str] = Field(..., min_length=1)
+
+
+@router.post("/experts/delete-bulk")
+def delete_experts_bulk(body: BulkDeleteBody, request: Request, db: Session = Depends(get_db)):
+    """
+    Delete multiple experts from DB, metadata.json, and experts.csv.
+    Triggers FAISS rebuild in background.
+
+    Response: {"ok": True, "deleted": int, "rebuilding": True}
+    """
+    experts = db.scalars(
+        select(Expert).where(Expert.username.in_(body.usernames))
+    ).all()
+
+    deleted_usernames = []
+    for expert in experts:
+        deleted_usernames.append(expert.username)
+        db.delete(expert)
+    db.commit()
+
+    if not deleted_usernames:
+        return {"ok": True, "deleted": 0, "rebuilding": False}
+
+    username_set = set(deleted_usernames)
+
+    # Remove from metadata.json
+    if METADATA_PATH.exists():
+        with open(METADATA_PATH, "r", encoding="utf-8") as f:
+            metadata = json.load(f)
+        metadata = [m for m in metadata if m.get("Username") not in username_set]
+        with open(METADATA_PATH, "w", encoding="utf-8") as f:
+            json.dump(metadata, f, indent=2, ensure_ascii=False)
+
+    # Remove from experts.csv
+    if EXPERTS_CSV_PATH.exists():
+        with open(EXPERTS_CSV_PATH, "r", newline="", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            fieldnames = reader.fieldnames or []
+            rows = [row for row in reader if row.get("Username") not in username_set]
+        with open(EXPERTS_CSV_PATH, "w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(rows)
+
+    # Trigger FAISS rebuild in background
+    rebuilding = False
+    if _ingest["status"] != "running":
+        _ingest["status"] = "running"
+        thread = threading.Thread(target=_run_ingest_job, args=(request.app,), daemon=True)
+        thread.start()
+        rebuilding = True
+
+    log.info("admin.experts_bulk_deleted", count=len(deleted_usernames), usernames=deleted_usernames, rebuilding=rebuilding)
+    return {"ok": True, "deleted": len(deleted_usernames), "rebuilding": rebuilding}
+
+
 def _retry_tag_expert_background(expert_id: int) -> None:
     """
     Background retry for auto-tagging when synchronous Gemini call fails.
