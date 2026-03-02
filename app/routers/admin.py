@@ -38,7 +38,7 @@ import faiss
 import jwt
 from jwt.exceptions import InvalidTokenError
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Query, Request, Security, UploadFile
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import StreamingResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel, Field
 from pwdlib import PasswordHash
@@ -156,7 +156,6 @@ def _run_ingest_job(app) -> None:
 
         _ingest["last_rebuild_at"] = time.time()
         _ingest["expert_count_at_rebuild"] = len(app.state.metadata)
-        app.state.tsne_cache = []   # Phase 26: invalidate stale t-SNE projection
         _ingest["status"] = "done"
     except Exception as exc:
         _ingest["status"] = "error"
@@ -428,142 +427,6 @@ def get_stats(db: Session = Depends(get_db)):
         "leads_prior_7d": leads_prior_7d,
         "expert_pool_7d": expert_pool_7d,
         "lead_rate": lead_rate,
-    }
-
-
-@router.get("/intelligence-stats")
-def get_intelligence_stats(db: Session = Depends(get_db)):
-    """
-    Return search intelligence metrics: HyDE trigger rate, feedback re-ranking rate,
-    gap rate, and daily trends for the last 30 days.
-    """
-    import os as _os
-
-    # Flag status (read env vars that Railway injects)
-    flags = {
-        "hyde_enabled": _os.getenv("QUERY_EXPANSION_ENABLED", "false").lower() in ("true", "1", "yes"),
-        "feedback_enabled": _os.getenv("FEEDBACK_LEARNING_ENABLED", "false").lower() in ("true", "1", "yes"),
-    }
-
-    # Totals
-    total = db.scalar(select(func.count()).select_from(Conversation)) or 0
-    hyde_count = db.scalar(
-        select(func.count()).select_from(Conversation).where(Conversation.hyde_triggered == True)  # noqa: E712
-    ) or 0
-    feedback_count = db.scalar(
-        select(func.count()).select_from(Conversation).where(Conversation.feedback_applied == True)  # noqa: E712
-    ) or 0
-    gap_count = db.scalar(
-        select(func.count()).select_from(Conversation).where(
-            (Conversation.top_match_score.is_(None))
-            | (Conversation.top_match_score < GAP_THRESHOLD)
-            | (Conversation.response_type == "clarification")
-        )
-    ) or 0
-    avg_score = db.scalar(
-        select(func.avg(Conversation.top_match_score)).select_from(Conversation).where(
-            Conversation.top_match_score.is_not(None)
-        )
-    )
-
-    totals = {
-        "conversations": total,
-        "hyde_triggered": hyde_count,
-        "hyde_rate": round(hyde_count / total, 3) if total else 0.0,
-        "feedback_applied": feedback_count,
-        "feedback_rate": round(feedback_count / total, 3) if total else 0.0,
-        "gaps": gap_count,
-        "gap_rate": round(gap_count / total, 3) if total else 0.0,
-        "avg_score": round(float(avg_score), 3) if avg_score is not None else None,
-    }
-
-    # Daily trend — last 30 days using raw SQL (avoids SQLite cast quirks)
-    cutoff = (datetime.utcnow() - timedelta(days=30)).strftime("%Y-%m-%d")
-
-    from sqlalchemy import text as _text  # noqa: PLC0415
-    daily_rows = db.execute(_text("""
-        SELECT
-            strftime('%Y-%m-%d', created_at) AS day,
-            COUNT(*) AS conversations,
-            SUM(CASE WHEN hyde_triggered = 1 THEN 1 ELSE 0 END) AS hyde_triggered,
-            SUM(CASE WHEN feedback_applied = 1 THEN 1 ELSE 0 END) AS feedback_applied,
-            SUM(CASE WHEN top_match_score IS NULL OR top_match_score < :threshold OR response_type = 'clarification' THEN 1 ELSE 0 END) AS gaps,
-            AVG(top_match_score) AS avg_score
-        FROM conversations
-        WHERE date(created_at) >= :cutoff
-        GROUP BY strftime('%Y-%m-%d', created_at)
-        ORDER BY day
-    """), {"threshold": GAP_THRESHOLD, "cutoff": cutoff}).all()
-
-    daily = [
-        {
-            "date": r.day,
-            "conversations": r.conversations,
-            "hyde_triggered": r.hyde_triggered or 0,
-            "feedback_applied": r.feedback_applied or 0,
-            "gaps": r.gaps or 0,
-            "avg_score": round(float(r.avg_score), 3) if r.avg_score is not None else None,
-        }
-        for r in daily_rows
-    ]
-
-    return {"flags": flags, "totals": totals, "daily": daily}
-
-
-@router.get("/intelligence")
-def get_intelligence_metrics(request: Request, db: Session = Depends(get_db)):
-    """OTR@K 7-day rolling average + Index Drift from _ingest dict."""
-    from sqlalchemy import text as _text  # noqa: PLC0415
-
-    cutoff = (datetime.utcnow() - timedelta(days=7)).strftime("%Y-%m-%d")
-    row = db.execute(_text("""
-        SELECT AVG(otr_at_k) AS rolling_avg, COUNT(*) AS query_count
-        FROM conversations
-        WHERE otr_at_k IS NOT NULL
-          AND date(created_at) >= :cutoff
-    """), {"cutoff": cutoff}).one_or_none()
-
-    otr_rolling_avg = round(float(row.rolling_avg), 4) if row and row.rolling_avg is not None else None
-    otr_query_count = int(row.query_count) if row else 0
-
-    # Index Drift — reads from Phase 24 _ingest dict (in-memory, resets on deploy)
-    current_expert_count = len(request.app.state.metadata)
-    last_rebuild_at = _ingest.get("last_rebuild_at")
-    expert_count_at_rebuild = _ingest.get("expert_count_at_rebuild")
-
-    return {
-        "otr": {
-            "rolling_avg_7d": otr_rolling_avg,
-            "query_count_7d": otr_query_count,
-        },
-        "index_drift": {
-            "last_rebuild_at": last_rebuild_at,
-            "expert_count_at_rebuild": expert_count_at_rebuild,
-            "current_expert_count": current_expert_count,
-            "expert_delta": (
-                current_expert_count - expert_count_at_rebuild
-                if expert_count_at_rebuild is not None else None
-            ),
-        },
-    }
-
-
-# ── Embedding map ─────────────────────────────────────────────────────────────
-
-@router.get("/embedding-map")
-def get_embedding_map(request: Request):
-    """
-    Return t-SNE 2D projection of all expert embeddings.
-    Returns HTTP 202 with {status: computing} while background task runs (up to ~30s post-startup).
-    Returns HTTP 200 with {status: ready, points: [...], count: N} when ready.
-    Each point: {x: float, y: float, name: str, category: str, username: str}
-    """
-    if not getattr(request.app.state, "tsne_ready", False):
-        return JSONResponse({"status": "computing"}, status_code=202)
-    return {
-        "status": "ready",
-        "points": request.app.state.embedding_map,
-        "count": len(request.app.state.embedding_map),
     }
 
 
@@ -1814,59 +1677,6 @@ def get_exposure(days: int = 30, db: Session = Depends(get_db)):
     }
 
 
-@router.get("/events/trend")
-def get_trend(db: Session = Depends(get_db)):
-    from sqlalchemy import text as _text
-    earliest = db.execute(_text("SELECT MIN(created_at) FROM user_events")).scalar()
-    data_since = earliest
-
-    cutoff_14d = (datetime.utcnow() - timedelta(days=14)).strftime("%Y-%m-%d")
-    cutoff_28d = (datetime.utcnow() - timedelta(days=28)).strftime("%Y-%m-%d")
-
-    daily_rows = db.execute(_text("""
-        SELECT
-            strftime('%Y-%m-%d', created_at) AS day,
-            COUNT(*) AS total,
-            SUM(CASE WHEN json_extract(payload, '$.zero_results') = 1 THEN 1 ELSE 0 END) AS zero_results,
-            SUM(CASE WHEN json_extract(payload, '$.zero_results') = 0 THEN 1 ELSE 0 END) AS hits
-        FROM user_events
-        WHERE event_type = 'sage_query'
-          AND date(created_at) >= :cutoff
-        GROUP BY strftime('%Y-%m-%d', created_at)
-        ORDER BY day
-    """), {"cutoff": cutoff_14d}).all()
-
-    current_total = db.execute(_text("""
-        SELECT COUNT(*) FROM user_events
-        WHERE event_type = 'sage_query' AND date(created_at) >= :cutoff
-    """), {"cutoff": cutoff_14d}).scalar() or 0
-
-    current_zero = db.execute(_text("""
-        SELECT COUNT(*) FROM user_events
-        WHERE event_type = 'sage_query'
-          AND json_extract(payload, '$.zero_results') = 1
-          AND date(created_at) >= :cutoff
-    """), {"cutoff": cutoff_14d}).scalar() or 0
-
-    prior_total = db.execute(_text("""
-        SELECT COUNT(*) FROM user_events
-        WHERE event_type = 'sage_query'
-          AND date(created_at) >= :prior AND date(created_at) < :cutoff
-    """), {"prior": cutoff_28d, "cutoff": cutoff_14d}).scalar() or 0
-
-    zero_result_rate = round(current_zero / current_total * 100, 1) if current_total > 0 else 0.0
-
-    return {
-        "data_since": data_since,
-        "daily": [{"day": r.day, "total": r.total, "hits": r.hits, "zero_results": r.zero_results} for r in daily_rows],
-        "kpis": {
-            "total_queries": current_total,
-            "zero_result_rate": zero_result_rate,
-            "prior_period_total": prior_total,
-        },
-    }
-
-
 @router.get("/analytics-summary")
 def get_analytics_summary(db: Session = Depends(get_db)):
     """
@@ -1945,41 +1755,6 @@ def get_analytics_summary(db: Session = Depends(get_db)):
         "recent_searches": recent_searches,
         "recent_clicks": recent_clicks,
     }
-
-
-@router.get("/export/demand.csv")
-def export_demand_csv(days: int = 30, db: Session = Depends(get_db)):
-    from sqlalchemy import text as _text
-    cutoff = (datetime.utcnow() - timedelta(days=days)).strftime("%Y-%m-%d") if days > 0 else "2000-01-01"
-    rows = db.execute(_text("""
-        SELECT
-            json_extract(payload, '$.query_text') AS query_text,
-            COUNT(*) AS frequency,
-            MAX(created_at) AS last_seen,
-            COUNT(DISTINCT session_id) AS unique_users
-        FROM user_events
-        WHERE event_type = 'sage_query'
-          AND json_extract(payload, '$.zero_results') = 1
-          AND date(created_at) >= :cutoff
-        GROUP BY json_extract(payload, '$.query_text')
-        ORDER BY frequency DESC
-    """), {"cutoff": cutoff}).all()
-
-    buf = io.StringIO()
-    writer = csv.writer(buf)
-    writer.writerow(["# Export date", date.today().isoformat()])
-    writer.writerow(["# Days window", days])
-    writer.writerow([])
-    writer.writerow(["query_text", "frequency", "last_seen", "unique_users"])
-    for r in rows:
-        writer.writerow([r.query_text or "", r.frequency, r.last_seen or "", r.unique_users])
-
-    filename = f"demand-{date.today().isoformat()}.csv"
-    return StreamingResponse(
-        iter([buf.getvalue()]),
-        media_type="text/csv",
-        headers={"Content-Disposition": f"attachment; filename={filename}"},
-    )
 
 
 @router.get("/export/exposure.csv")

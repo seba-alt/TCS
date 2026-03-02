@@ -14,13 +14,10 @@ Uses ALLOWED_ORIGINS env var (comma-separated).
 Default: localhost:5173 (Vite dev server).
 Production: Railway injects the actual Vercel URL.
 """
-import asyncio
 import csv
 import json
 import os
 from contextlib import asynccontextmanager
-
-import numpy as np
 
 import app.models  # noqa: F401 — registers ORM models with Base metadata
 import faiss
@@ -100,78 +97,6 @@ def _seed_experts_from_csv() -> int:
             db.commit()
 
         return len(experts)
-
-
-async def _compute_tsne_background(app: FastAPI) -> None:
-    """
-    Compute t-SNE projection of FAISS embeddings in a background thread.
-    Called via asyncio.create_task before lifespan yield — runs during server lifetime.
-    Sets app.state.tsne_ready = True on completion (or on failure, to stop 202 responses).
-    """
-    try:
-        log.info("tsne.background_task_started")
-        index = app.state.faiss_index
-        metadata = app.state.metadata
-        n = index.ntotal
-
-        if n == 0:
-            log.warning("tsne.no_vectors")
-            app.state.embedding_map = []
-            app.state.tsne_ready = True
-            return
-
-        def _run() -> list:
-            from sklearn.decomposition import PCA
-            from sklearn.manifold import TSNE
-
-            # Extract raw vectors from FAISS index (reconstruct:i works on all flat index types)
-            vectors = np.zeros((n, index.d), dtype=np.float32)
-            for i in range(n):
-                vectors[i] = index.reconstruct(i)
-
-            # Normalize for cosine metric (safe no-op if already unit-normalized)
-            norms = np.linalg.norm(vectors, axis=1, keepdims=True)
-            norms[norms == 0] = 1.0
-            vectors = vectors / norms
-
-            # PCA pre-reduction (mandatory — cuts compute 4-8x vs. direct t-SNE on 768-dim)
-            n_components = min(50, n - 1, vectors.shape[1])
-            pca = PCA(n_components=n_components)
-            reduced = pca.fit_transform(vectors)
-
-            # t-SNE projection — use max_iter NOT n_iter (n_iter removed in sklearn 1.7)
-            perplexity = min(30, n - 1)
-            tsne = TSNE(
-                perplexity=perplexity,
-                max_iter=1000,
-                init='pca',
-                random_state=42,
-                metric='cosine',
-            )
-            coords = tsne.fit_transform(reduced)  # shape (n, 2)
-
-            # Build result list aligned with metadata order
-            points = []
-            for i, row in enumerate(metadata):
-                points.append({
-                    "x": float(coords[i, 0]),
-                    "y": float(coords[i, 1]),
-                    "name": f"{row.get('First Name', '')} {row.get('Last Name', '')}".strip(),
-                    "category": row.get("category") or "Unknown",
-                    "username": row.get("Username", ""),
-                })
-            return points
-
-        result = await asyncio.to_thread(_run)
-        # Set embedding_map BEFORE tsne_ready to avoid serving empty results
-        app.state.embedding_map = result
-        app.state.tsne_ready = True
-        log.info("tsne.complete", points=len(result))
-
-    except Exception as exc:
-        log.error("tsne.failed", error=str(exc))
-        app.state.embedding_map = []
-        app.state.tsne_ready = True  # Mark ready even on failure so 202 stops being returned
 
 
 @asynccontextmanager
@@ -324,10 +249,6 @@ async def lifespan(app: FastAPI):
         "startup: username-to-FAISS-position mapping built",
         count=len(_username_to_pos),
     )
-    app.state.tsne_cache = []   # Phase 26: t-SNE projection cache; invalidated on index rebuild
-    app.state.tsne_ready = False    # Phase 26: False until background task completes
-    app.state.embedding_map = []    # Phase 26: populated by _compute_tsne_background
-
     # Phase 14: category auto-classification (one-time startup migration)
     from app.routers.admin import _auto_categorize as _categorize  # noqa: PLC0415
     from sqlalchemy import select as _select  # noqa: PLC0415
@@ -363,7 +284,6 @@ async def lifespan(app: FastAPI):
     if not os.getenv("JWT_SECRET") and os.getenv("RAILWAY_ENVIRONMENT"):
         log.error("startup: JWT_SECRET must be set in production")
 
-    asyncio.create_task(_compute_tsne_background(app))  # Phase 45: launch at startup (before yield = startup, after yield = shutdown)
     yield
     # Shutdown: in-memory FAISS index is garbage-collected automatically
 
