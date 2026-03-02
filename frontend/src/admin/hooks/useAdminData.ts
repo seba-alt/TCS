@@ -15,6 +15,7 @@ import type {
   DemandResponse,
   ExposureResponse,
   MarketplaceTrendResponse,
+  AnalyticsSummary,
 } from '../types'
 
 const getAdminToken = () => sessionStorage.getItem('admin_token') ?? ''
@@ -392,4 +393,19 @@ export function useMarketplaceTrend() {
   useEffect(() => { fetchData() }, [fetchData])
 
   return { data, loading, error, refetch: fetchData }
+}
+
+export function useAnalyticsSummary() {
+  const [data, setData] = useState<AnalyticsSummary | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    adminFetch<AnalyticsSummary>('/analytics-summary')
+      .then(setData)
+      .catch((e: Error) => setError(e.message))
+      .finally(() => setLoading(false))
+  }, [])
+
+  return { data, loading, error }
 }

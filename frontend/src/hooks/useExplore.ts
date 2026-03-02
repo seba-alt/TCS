@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react'
 import { useExplorerStore } from '../store'
+import { trackEvent } from '../tracking'
 
 const API_BASE = import.meta.env.VITE_API_URL ?? ''
 
@@ -71,6 +72,13 @@ export function useExplore() {
       .then((data) => {
         setResults(data.experts, data.total, data.cursor)
         setLoading(false)
+        // Track search query for analytics (only for non-empty queries)
+        if (query.trim().length > 0) {
+          void trackEvent('search_query', {
+            query_text: query,
+            result_count: data.total ?? 0,
+          })
+        }
       })
       .catch((err: Error) => {
         if (err.name === 'AbortError') {

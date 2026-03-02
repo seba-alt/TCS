@@ -314,3 +314,26 @@ export interface LeadClicksByExpertResponse {
     created_at: string
   }[]
 }
+
+// -- Analytics Summary (Phase 50.2) --
+
+export interface RecentSearchEntry {
+  query_text: string
+  result_count: number
+  created_at: string
+}
+
+export interface RecentClickEntry {
+  expert_id: string
+  expert_name: string | null
+  source: string
+  created_at: string
+}
+
+export interface AnalyticsSummary {
+  total_card_clicks: number
+  total_search_queries: number
+  total_lead_clicks: number
+  recent_searches: RecentSearchEntry[]
+  recent_clicks: RecentClickEntry[]
+}

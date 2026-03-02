@@ -1865,6 +1865,86 @@ def get_trend(db: Session = Depends(get_db)):
     }
 
 
+@router.get("/analytics-summary")
+def get_analytics_summary(db: Session = Depends(get_db)):
+    """
+    Return aggregated analytics for the admin overview dashboard:
+    total card clicks, total search queries, total lead clicks,
+    recent searches (last 10), and recent clicks (last 10).
+    """
+    from sqlalchemy import text as _text  # noqa: PLC0415
+
+    total_card_clicks = db.execute(
+        _text("SELECT COUNT(*) FROM user_events WHERE event_type = 'card_click'")
+    ).scalar() or 0
+
+    total_search_queries = db.execute(
+        _text("SELECT COUNT(*) FROM user_events WHERE event_type = 'search_query'")
+    ).scalar() or 0
+
+    total_lead_clicks = db.execute(
+        _text("SELECT COUNT(*) FROM lead_clicks")
+    ).scalar() or 0
+
+    # Recent searches — last 10 search_query events
+    recent_search_rows = db.execute(_text("""
+        SELECT
+            json_extract(payload, '$.query_text') AS query_text,
+            json_extract(payload, '$.result_count') AS result_count,
+            created_at
+        FROM user_events
+        WHERE event_type = 'search_query'
+        ORDER BY created_at DESC
+        LIMIT 10
+    """)).all()
+
+    recent_searches = [
+        {
+            "query_text": r.query_text or "",
+            "result_count": int(r.result_count) if r.result_count is not None else 0,
+            "created_at": r.created_at or "",
+        }
+        for r in recent_search_rows
+    ]
+
+    # Recent clicks — last 10 card_click events with expert name resolution
+    recent_click_rows = db.execute(_text("""
+        SELECT
+            json_extract(payload, '$.expert_id') AS expert_id,
+            json_extract(payload, '$.context') AS source,
+            created_at
+        FROM user_events
+        WHERE event_type = 'card_click'
+        ORDER BY created_at DESC
+        LIMIT 10
+    """)).all()
+
+    # Batch-resolve expert names
+    click_expert_ids = {r.expert_id for r in recent_click_rows if r.expert_id}
+    click_name_map = {
+        e.username: f"{e.first_name} {e.last_name}"
+        for e in db.scalars(select(Expert).where(Expert.username.in_(list(click_expert_ids)))).all()
+    } if click_expert_ids else {}
+
+    recent_clicks = [
+        {
+            "expert_id": r.expert_id or "",
+            "expert_name": click_name_map.get(r.expert_id),
+            "source": r.source or "grid",
+            "created_at": r.created_at or "",
+        }
+        for r in recent_click_rows
+    ]
+
+    return {
+        "total_card_clicks": total_card_clicks,
+        "total_search_queries": total_search_queries,
+        "total_lead_clicks": total_lead_clicks,
+        "recent_searches": recent_searches,
+        "recent_clicks": recent_clicks,
+    }
+
+
 @router.get("/export/demand.csv")
 def export_demand_csv(days: int = 30, db: Session = Depends(get_db)):
     from sqlalchemy import text as _text

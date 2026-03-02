@@ -18,7 +18,7 @@ function getSessionId(): string {
   return sid
 }
 
-type EventType = 'card_click' | 'sage_query' | 'filter_change'
+type EventType = 'card_click' | 'sage_query' | 'filter_change' | 'search_query'
 
 interface TrackPayload {
   [key: string]: unknown
