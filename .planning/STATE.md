@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-27)
 
 **Core value:** A user describes any problem and instantly gets expertly matched professionals they can browse, filter, and contact — no searching, no guesswork.
-**Current focus:** Phase 50.3 plan 01/03 complete
+**Current focus:** Phase 50.3 plan 02/03 complete — Sage frontend removal done
 
 ## Current Position
 
 Milestone: v4.0 Public Launch — Phase 50.3 in progress
 Phase: 50.3-remove-sage-replace-with-intercom
-Plan: 01/03 — COMPLETE
-Last activity: 2026-03-02 — Plan 50.3-01 execution complete
+Plan: 02/03 — COMPLETE
+Last activity: 2026-03-02 — Plan 50.3-02 execution complete
 
-Progress: [█░░] 33% (plan 01 complete, 02-03 remaining)
+Progress: [██░] 67% (plans 01, 02 complete; plan 03 remaining)
 
 ## Accumulated Context
 
@@ -42,6 +42,9 @@ Progress: [█░░] 33% (plan 01 complete, 02-03 remaining)
 (Prior decisions archived to PROJECT.md Key Decisions table)
 - [Phase 50.3]: Also cleaned tsne background task from main.py — dead code once embedding-map removed
 - [Phase 50.3]: Removed asyncio and numpy imports from main.py — only used by deleted _compute_tsne_background
+- [Phase 50.3-02]: Kept DailyTrendRow/MarketplaceTrendResponse types — still used by AdminMarketplacePage TrendSection
+- [Phase 50.3-02]: Kept row.source==='sage' data labels in admin tables — backend API field values, historical data
+- [Phase 50.3-02]: All cascading Sage store references auto-fixed (filterSlice, useExplore, RateSlider, Header)
 
 ### Pending Todos
 
@@ -62,5 +65,5 @@ Progress: [█░░] 33% (plan 01 complete, 02-03 remaining)
 ## Session Continuity
 
 Last session: 2026-03-02
-Stopped at: Completed 50.3-01-PLAN.md
-Resume file: .planning/milestones/v4.0-phases/50.3-remove-sage-replace-with-intercom/50.3-01-SUMMARY.md
+Stopped at: Completed 50.3-02-PLAN.md
+Resume file: .planning/milestones/v4.0-phases/50.3-remove-sage-replace-with-intercom/50.3-02-SUMMARY.md
