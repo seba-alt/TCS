@@ -178,7 +178,7 @@ Plans:
 | 50.1. Lead Click Tracking + Reset | v4.0 | 3/3 | Complete | 2026-02-27 |
 | 50.2. Analytics Fix | v4.0 | 2/2 | Complete | 2026-03-02 |
 | 50.3. Intercom Integration | v4.0 | 3/3 | Complete | 2026-03-02 |
-| 51. Admin Fixes | 2/2 | Complete   | 2026-03-02 | - |
+| 51. Admin Fixes | 2/2 | Complete    | 2026-03-02 | - |
 | 52. Explorer & Search UX | v4.1 | 0/TBD | Not started | - |
 | 53. Card & Mobile Redesign | v4.1 | 0/TBD | Not started | - |
 | 54. Bookmarks & Analytics | v4.1 | 0/TBD | Not started | - |
