@@ -64,32 +64,32 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ADMN-01 | — | Pending |
-| ADMN-02 | — | Pending |
-| ADMN-03 | — | Pending |
-| EXPL-01 | — | Pending |
-| EXPL-02 | — | Pending |
-| EXPL-03 | — | Pending |
-| EXPL-04 | — | Pending |
-| EXPL-05 | — | Pending |
-| EXPL-06 | — | Pending |
-| CARD-01 | — | Pending |
-| CARD-02 | — | Pending |
-| CARD-03 | — | Pending |
-| MOBL-01 | — | Pending |
-| MOBL-02 | — | Pending |
-| MOBL-03 | — | Pending |
-| MOBL-04 | — | Pending |
-| BOOK-01 | — | Pending |
-| BOOK-02 | — | Pending |
-| ANLT-01 | — | Pending |
-| ANLT-02 | — | Pending |
+| ADMN-01 | Phase 51 | Pending |
+| ADMN-02 | Phase 51 | Pending |
+| ADMN-03 | Phase 51 | Pending |
+| EXPL-01 | Phase 52 | Pending |
+| EXPL-02 | Phase 52 | Pending |
+| EXPL-03 | Phase 52 | Pending |
+| EXPL-04 | Phase 52 | Pending |
+| EXPL-05 | Phase 52 | Pending |
+| EXPL-06 | Phase 52 | Pending |
+| CARD-01 | Phase 53 | Pending |
+| CARD-02 | Phase 53 | Pending |
+| CARD-03 | Phase 53 | Pending |
+| MOBL-01 | Phase 53 | Pending |
+| MOBL-02 | Phase 53 | Pending |
+| MOBL-03 | Phase 53 | Pending |
+| MOBL-04 | Phase 53 | Pending |
+| BOOK-01 | Phase 54 | Pending |
+| BOOK-02 | Phase 54 | Pending |
+| ANLT-01 | Phase 54 | Pending |
+| ANLT-02 | Phase 54 | Pending |
 
 **Coverage:**
 - v4.1 requirements: 20 total
-- Mapped to phases: 0
-- Unmapped: 20 ⚠️
+- Mapped to phases: 20
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-03-02*
-*Last updated: 2026-03-02 after initial definition*
+*Last updated: 2026-03-02 after roadmap creation*
