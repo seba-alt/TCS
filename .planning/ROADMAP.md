@@ -147,7 +147,10 @@ Plans:
   4. Mobile filter controls have no clear button and no search-within-tags or industry picker
   5. Tapping a tag on mobile resets the active search query and applies the tag as the sole filter
   6. The tag row on mobile scrolls smoothly without visual glitching
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 53-01-PLAN.md — Card layout redesign (mobile photo-centric + desktop photo-left) and tap-expand removal
+- [ ] 53-02-PLAN.md — Mobile filter simplification (remove clear, search inputs, sort) + tag-click clears query + scroll fix
 
 ### Phase 54: Bookmarks & Analytics
 **Goal**: Saved profiles are visually obvious, the saved view is filter-independent, all searches are tracked, and Clarity analytics is live
