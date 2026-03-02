@@ -65,5 +65,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-02
-Stopped at: Roadmap created — v4.1 phases 51-54 defined
-Resume file: —
+Stopped at: Phase 51 context gathered
+Resume file: .planning/phases/51-admin-fixes/51-CONTEXT.md
