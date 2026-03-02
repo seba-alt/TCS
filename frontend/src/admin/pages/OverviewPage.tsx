@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { LineChart, Line, ResponsiveContainer, Tooltip } from 'recharts'
-import { useAdminStats, adminFetch, useMarketplaceTrend, useAnalyticsSummary } from '../hooks/useAdminData'
+import { useAdminStats, adminFetch, useAnalyticsSummary } from '../hooks/useAdminData'
 import type { DemandResponse, LeadsResponse, SearchesResponse, RecentSearchEntry, RecentClickEntry } from '../types'
 
 function timeAgo(iso: string): string {
@@ -167,49 +166,6 @@ function TopZeroResultsCard() {
             </div>
           ))}
         </div>
-      )}
-    </div>
-  )
-}
-
-function SageSparklineCard() {
-  const { data, loading } = useMarketplaceTrend()
-  const last7 = (data?.daily ?? []).slice(-7)
-
-  return (
-    <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl p-5">
-      <h2 className="text-sm font-semibold text-white mb-1">Sage Volume</h2>
-      <p className="text-xs text-slate-500 mb-4">Last 7 days</p>
-      {loading ? (
-        <div className="h-16 flex items-center">
-          <p className="text-slate-500 text-sm animate-pulse">Loading…</p>
-        </div>
-      ) : data?.data_since === null ? (
-        <div className="h-16 flex items-center">
-          <p className="text-slate-500 text-sm">No tracking data yet</p>
-        </div>
-      ) : (
-        <>
-          <div className="text-2xl font-bold text-white mb-3">
-            {data?.kpis?.total_queries ?? 0}
-            <span className="text-sm font-normal text-slate-500 ml-1.5">queries / 14d</span>
-          </div>
-          <ResponsiveContainer width="100%" height={56}>
-            <LineChart data={last7}>
-              <Line type="monotone" dataKey="total" stroke="#22d3ee" strokeWidth={2} dot={{ r: 3, fill: '#22d3ee', strokeWidth: 0 }} />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: '#1e293b',
-                  border: '1px solid #22d3ee40',
-                  borderRadius: '6px',
-                  fontSize: '11px',
-                }}
-                labelStyle={{ color: '#94a3b8' }}
-                itemStyle={{ color: '#22d3ee' }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </>
       )}
     </div>
   )
@@ -464,10 +420,9 @@ export default function OverviewPage() {
         />
       </div>
 
-      {/* Section 2: Two-column insight cards */}
+      {/* Section 2: Insight cards */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         <TopZeroResultsCard />
-        <SageSparklineCard />
       </div>
 
       {/* Section 2.5: Recent activity — leads + searches */}

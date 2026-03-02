@@ -8,8 +8,6 @@ import type {
   ExpertsResponse,
   DomainMapResponse,
   IngestStatus,
-  IntelligenceStats,
-  IntelligenceMetrics,
   AdminSettingsResponse,
   NewsletterSubscribersResponse,
   DemandResponse,
@@ -185,42 +183,6 @@ export function useAdminDomainMap() {
   return { data, loading, error, fetchData }
 }
 
-export function useIntelligenceStats() {
-  const [data, setData] = useState<IntelligenceStats | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  const fetchData = useCallback(() => {
-    setLoading(true)
-    adminFetch<IntelligenceStats>('/intelligence-stats')
-      .then(setData)
-      .catch((e: Error) => setError(e.message))
-      .finally(() => setLoading(false))
-  }, [])
-
-  useEffect(() => { fetchData() }, [fetchData])
-
-  return { data, loading, error, refetch: fetchData }
-}
-
-export function useIntelligenceMetrics() {
-  const [data, setData] = useState<IntelligenceMetrics | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  const fetchData = useCallback(() => {
-    setLoading(true)
-    adminFetch<IntelligenceMetrics>('/intelligence')
-      .then(setData)
-      .catch((e: Error) => setError(e.message))
-      .finally(() => setLoading(false))
-  }, [])
-
-  useEffect(() => { fetchData() }, [fetchData])
-
-  return { data, loading, error, refetch: fetchData }
-}
-
 export function useIngestStatus() {
   const [ingest, setIngest] = useState<IngestStatus>({
     status: 'idle',
@@ -295,50 +257,6 @@ export function useNewsletterSubscribers() {
   }, [])
 
   return { data, loading, error }
-}
-
-export function useEmbeddingMap() {
-  const [data, setData] = useState<import('../types').EmbeddingMapResponse | null>(null)
-  const [status, setStatus] = useState<'loading' | 'computing' | 'ready' | 'error'>('loading')
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
-
-  const poll = useCallback(async () => {
-    try {
-      const res = await fetch(
-        `${API_URL}/api/admin/embedding-map`,
-        { headers: { 'Authorization': `Bearer ${getAdminToken()}` } }
-      )
-      if (res.status === 202) {
-        setStatus('computing')
-        return // keep polling
-      }
-      if (!res.ok) {
-        setStatus('error')
-        if (intervalRef.current) clearInterval(intervalRef.current)
-        return
-      }
-      const json = await res.json() as import('../types').EmbeddingMapResponse
-      setData(json)
-      setStatus('ready')
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current)
-        intervalRef.current = null
-      }
-    } catch {
-      setStatus('error')
-      if (intervalRef.current) clearInterval(intervalRef.current)
-    }
-  }, [])
-
-  useEffect(() => {
-    poll()
-    intervalRef.current = setInterval(poll, 5000)
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current)
-    }
-  }, [poll])
-
-  return { data, status }
 }
 
 export function useMarketplaceDemand(days: number, page: number) {

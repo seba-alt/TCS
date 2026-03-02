@@ -15,7 +15,6 @@ const GapsPage = lazy(() => import('./admin/pages/GapsPage'))
 const LeadsPage = lazy(() => import('./admin/pages/LeadsPage'))
 const ExpertsPage = lazy(() => import('./admin/pages/ExpertsPage'))
 const SettingsPage = lazy(() => import('./admin/pages/SettingsPage'))
-const IntelligenceDashboardPage = lazy(() => import('./admin/pages/IntelligenceDashboardPage'))
 const ToolsPage = lazy(() => import('./admin/pages/ToolsPage'))
 const DataPage = lazy(() => import('./admin/pages/DataPage'))
 
@@ -97,7 +96,6 @@ const router = createBrowserRouter([
           { path: 'leads', element: <LeadsPage /> },
           { path: 'experts', element: <ExpertsPage /> },
           { path: 'settings', element: <SettingsPage /> },
-          { path: 'intelligence', element: <IntelligenceDashboardPage /> },
           // New consolidated pages
           { path: 'tools', element: <ToolsPage /> },
           { path: 'data',  element: <DataPage /> },

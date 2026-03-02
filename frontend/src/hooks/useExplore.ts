@@ -13,7 +13,6 @@ export function useExplore() {
   const tags = useExplorerStore((s) => s.tags)
   const industryTags = useExplorerStore((s) => s.industryTags)
   const sortBy = useExplorerStore((s) => s.sortBy)
-  const sageMode = useExplorerStore((s) => s.sageMode)
   const retryTrigger = useExplorerStore((s) => s.retryTrigger)
 
   // Zustand actions are referentially stable — safe in dep array without useCallback
@@ -32,17 +31,6 @@ export function useExplore() {
   const controllerRef = useRef<AbortController | null>(null)
 
   useEffect(() => {
-    // Sage mode guard — abort any in-flight explore request and yield control to useSage.
-    // Must come FIRST (before setLoading) to avoid loading flash.
-    // Aborting here ensures a mid-flight /api/explore response cannot overwrite sage results.
-    if (sageMode) {
-      if (controllerRef.current) {
-        controllerRef.current.abort()
-        controllerRef.current = null
-      }
-      return
-    }
-
     // Abort any in-flight request from the previous effect run
     if (controllerRef.current) {
       controllerRef.current.abort()
@@ -96,7 +84,7 @@ export function useExplore() {
     }
     // sortBy is in dep array even though /api/explore doesn't currently use it —
     // ensures re-fetch when sort is added later; avoids stale-closure bug
-  }, [query, rateMin, rateMax, tags, industryTags, sortBy, sageMode, retryTrigger, setLoading, setResults, setError, resetResults])
+  }, [query, rateMin, rateMax, tags, industryTags, sortBy, retryTrigger, setLoading, setResults, setError, resetResults])
 
   // loadNextPage — passed to VirtuosoGrid endReached prop
   // Guard: don't fetch if no more pages (cursor null), already fetching more, or initial load in progress

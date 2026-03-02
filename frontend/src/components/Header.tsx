@@ -31,7 +31,6 @@ export default function Header() {
     placeholderIndex,
     placeholders,
     total,
-    isStreaming,
     tiltActive,
     showParticles,
     suggestions,
@@ -141,16 +140,9 @@ export default function Header() {
           transition={{ type: 'spring', stiffness: 400, damping: 30 }}
           className="relative"
         >
-          {/* Sage in-flight pulse dot — left of search icon */}
-          <motion.div
-            animate={{ opacity: isStreaming ? 1 : 0 }}
-            transition={{ duration: 0.3 }}
-            className="absolute left-3 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-brand-purple animate-pulse"
-            aria-hidden="true"
-          />
           {/* Search icon */}
           <Search
-            className="absolute left-8 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none"
+            className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none"
             aria-hidden="true"
           />
           {/* Animated placeholder overlay — shown only when no input */}
@@ -162,7 +154,7 @@ export default function Header() {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.3 }}
-                className="absolute left-14 top-1/2 -translate-y-1/2 text-sm text-slate-400 pointer-events-none select-none truncate max-w-[calc(100%-4rem)]"
+                className="absolute left-9 top-1/2 -translate-y-1/2 text-sm text-slate-400 pointer-events-none select-none truncate max-w-[calc(100%-4rem)]"
                 aria-hidden="true"
               >
                 {placeholders[placeholderIndex]}
@@ -180,7 +172,7 @@ export default function Header() {
               setIsFocused(false)
               handleBlur()
             }}
-            className="w-full pl-14 pr-8 py-2.5 rounded-xl text-sm bg-white border-2 border-slate-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-purple/20 focus:border-brand-purple/40 transition-colors"
+            className="w-full pl-9 pr-8 py-2.5 rounded-xl text-sm bg-white border-2 border-slate-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-purple/20 focus:border-brand-purple/40 transition-colors"
             aria-label="Search experts"
             aria-autocomplete="list"
             aria-expanded={showDropdown}

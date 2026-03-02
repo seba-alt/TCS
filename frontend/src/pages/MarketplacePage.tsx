@@ -167,7 +167,6 @@ export default function MarketplacePage() {
         </main>
       </div>
 
-      {/* Sage FAB + Panel now rendered by RootLayout (Phase 39) */}
 
       {/* Newsletter gate modal */}
       <NewsletterGateModal

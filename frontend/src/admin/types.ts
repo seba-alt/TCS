@@ -100,43 +100,6 @@ export interface ExpertsResponse {
   experts: ExpertRow[]
 }
 
-export interface IntelligenceDailyRow {
-  date: string
-  conversations: number
-  hyde_triggered: number
-  feedback_applied: number
-  gaps: number
-  avg_score: number | null
-}
-
-export interface IntelligenceStats {
-  flags: { hyde_enabled: boolean; feedback_enabled: boolean }
-  totals: {
-    conversations: number
-    hyde_triggered: number
-    hyde_rate: number
-    feedback_applied: number
-    feedback_rate: number
-    gaps: number
-    gap_rate: number
-    avg_score: number | null
-  }
-  daily: IntelligenceDailyRow[]
-}
-
-export interface IntelligenceMetrics {
-  otr: {
-    rolling_avg_7d: number | null
-    query_count_7d: number
-  }
-  index_drift: {
-    last_rebuild_at: number | null           // Unix timestamp seconds
-    expert_count_at_rebuild: number | null
-    current_expert_count: number
-    expert_delta: number | null
-  }
-}
-
 export interface IngestStatus {
   status: 'idle' | 'running' | 'done' | 'error'
   log: string
@@ -203,29 +166,6 @@ export type LabConfigKey =
 export interface LabOverrides {
   QUERY_EXPANSION_ENABLED?: boolean
   FEEDBACK_LEARNING_ENABLED?: boolean
-}
-
-// ── Embedding Heatmap (Phase 26) ──────────────────────────────────────────
-
-/** One expert point in the t-SNE 2D projection */
-export interface EmbeddingPoint {
-  x: number
-  y: number
-  name: string        // "First Last"
-  category: string    // expert category or "Unknown"
-  username: string
-}
-
-/** Response when t-SNE projection is complete */
-export interface EmbeddingMapResponse {
-  status: 'ready'
-  points: EmbeddingPoint[]
-  count: number
-}
-
-/** Response while t-SNE is still computing (HTTP 202) */
-export interface EmbeddingMapComputing {
-  status: 'computing'
 }
 
 // ── Newsletter Subscribers (Phase 27) ────────────────────────────────────────

@@ -85,7 +85,7 @@ function TrendSection() {
   if (loading) {
     return (
       <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl p-5">
-        <h2 className="text-sm font-semibold text-white mb-4">Sage Query Volume</h2>
+        <h2 className="text-sm font-semibold text-white mb-4">Search Query Volume</h2>
         <Spinner />
       </div>
     )
@@ -94,7 +94,7 @@ function TrendSection() {
   if (data?.data_since === null) {
     return (
       <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl p-5 space-y-4">
-        <h2 className="text-sm font-semibold text-white">Sage Query Volume</h2>
+        <h2 className="text-sm font-semibold text-white">Search Query Volume</h2>
         <ColdStartBlock />
       </div>
     )
@@ -115,7 +115,7 @@ function TrendSection() {
   return (
     <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl p-5 space-y-4">
       <div>
-        <h2 className="text-sm font-semibold text-white">Sage Query Volume</h2>
+        <h2 className="text-sm font-semibold text-white">Search Query Volume</h2>
         <p className="text-xs text-slate-500 mt-1">Last 14 days — stacked by outcome</p>
       </div>
 
@@ -215,7 +215,7 @@ function DemandSection({ days }: { days: number }) {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-base font-semibold text-white">Unmet Demand</h2>
-          <p className="text-xs text-slate-500 mt-0.5">Zero-result Sage queries sorted by frequency</p>
+          <p className="text-xs text-slate-500 mt-0.5">Zero-result search queries sorted by frequency</p>
         </div>
         <button
           onClick={handleExport}
@@ -230,10 +230,10 @@ function DemandSection({ days }: { days: number }) {
         <p className="text-sm text-red-400">{exportError}</p>
       )}
 
-      {/* Zero-Result Sage Queries */}
+      {/* Zero-Result Search Queries */}
       <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl overflow-hidden">
         <div className="px-5 py-3 border-b border-slate-700/60">
-          <h3 className="text-sm font-medium text-slate-200">Zero-Result Sage Queries</h3>
+          <h3 className="text-sm font-medium text-slate-200">Zero-Result Search Queries</h3>
         </div>
 
         {loading ? (
@@ -390,7 +390,7 @@ function ExposureSection({ days }: { days: number }) {
                       <td className="px-5 py-3 text-slate-200 text-sm">{row.expert_name ?? row.expert_id}</td>
                       <td className="px-5 py-3 text-right font-mono text-slate-300">{row.total_clicks}</td>
                       <td className="px-5 py-3 text-right text-slate-400 text-xs">
-                        Grid: {row.grid_clicks} / Sage: {row.sage_clicks}
+                        Grid: {row.grid_clicks} / Chat: {row.sage_clicks}
                       </td>
                     </tr>
                   ))
@@ -416,7 +416,7 @@ export default function AdminMarketplacePage() {
         <div>
           <h1 className="text-2xl font-bold text-white">Marketplace Intelligence</h1>
           <p className="text-slate-500 text-sm mt-1">
-            Unmet demand signals, expert exposure, and Sage query trends.
+            Unmet demand signals, expert exposure, and search query trends.
           </p>
         </div>
         <TimeRangeDropdown value={days} onChange={setDays} />

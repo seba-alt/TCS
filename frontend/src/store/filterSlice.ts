@@ -60,51 +60,33 @@ export const createFilterSlice: StateCreator<
   [['zustand/persist', unknown]],
   [],
   FilterSlice
-> = (set, get) => ({
+> = (set) => ({
   ...filterDefaults,
   // Hydrate savedExperts from localStorage at store creation time
   // NOT inside partialize — we manage this key (tcs_saved_experts) manually
   savedExperts: hydratesavedExperts(),
 
-  setQuery: (q) => {
-    get().setSageMode(false)
-    set({ query: q })
-  },
+  setQuery: (q) => set({ query: q }),
 
-  setRateRange: (min, max) => {
-    get().setSageMode(false)
-    set({ rateMin: min, rateMax: max })
-  },
+  setRateRange: (min, max) => set({ rateMin: min, rateMax: max }),
 
-  toggleTag: (tag) => {
-    get().setSageMode(false)
-    set((state) => ({
-      tags: state.tags.includes(tag)
-        ? state.tags.filter((t) => t !== tag)
-        : [...state.tags, tag],
-    }))
-  },
+  toggleTag: (tag) => set((state) => ({
+    tags: state.tags.includes(tag)
+      ? state.tags.filter((t) => t !== tag)
+      : [...state.tags, tag],
+  })),
 
-  setTags: (tags) => {
-    get().setSageMode(false)
-    set({ tags })
-  },
+  setTags: (tags) => set({ tags }),
 
-  toggleIndustryTag: (tag) => {
-    get().setSageMode(false)
-    set((state) => ({
-      industryTags: state.industryTags.includes(tag)
-        ? state.industryTags.filter((t) => t !== tag)
-        : [...state.industryTags, tag],
-    }))
-  },
+  toggleIndustryTag: (tag) => set((state) => ({
+    industryTags: state.industryTags.includes(tag)
+      ? state.industryTags.filter((t) => t !== tag)
+      : [...state.industryTags, tag],
+  })),
 
-  resetIndustryTags: () => {
-    get().setSageMode(false)
-    set({ industryTags: [] })
-  },
+  resetIndustryTags: () => set({ industryTags: [] }),
 
-  setSortBy: (sortBy) => set({ sortBy }),  // sort does NOT exit sage mode
+  setSortBy: (sortBy) => set({ sortBy }),
 
   setViewMode: (mode) => set({ viewMode: mode }),
 
@@ -119,7 +101,6 @@ export const createFilterSlice: StateCreator<
   }),
 
   resetFilters: () => {
-    get().setSageMode(false)
     // Reset filter state but preserve savedExperts — resetting filters should not un-bookmark experts
     set({ ...filterDefaults })
   },

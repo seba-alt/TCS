@@ -16,8 +16,6 @@ export function useHeaderSearch() {
   const query = useExplorerStore((s) => s.query)
   const setQuery = useExplorerStore((s) => s.setQuery)
   const total = useExplorerStore((s) => s.total)
-  const isStreaming = useExplorerStore((s) => s.isStreaming)
-  const sageMode = useExplorerStore((s) => s.sageMode)
 
   const [localValue, setLocalValue] = useState(query)
   const [placeholderIndex, setPlaceholderIndex] = useState(0)
@@ -31,7 +29,7 @@ export function useHeaderSearch() {
 
   const suggestTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Sync local value when store query changes externally (e.g. Sage sets query)
+  // Sync local value when store query changes externally
   useEffect(() => {
     setLocalValue(query)
   }, [query])
@@ -184,8 +182,6 @@ export function useHeaderSearch() {
     placeholderIndex,
     placeholders: PLACEHOLDERS,
     total,
-    isStreaming,
-    sageMode,
     tiltActive,
     showParticles,
     suggestions,

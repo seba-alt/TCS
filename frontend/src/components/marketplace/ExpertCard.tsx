@@ -12,7 +12,7 @@ interface ExpertCardProps {
   onViewProfile: (url: string) => void
   isExpanded?: boolean
   onExpand?: (username: string) => void
-  context?: 'grid' | 'sage_panel'
+  context?: 'grid' | 'chat_panel'
   rank?: number
 }
 
