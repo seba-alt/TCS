@@ -88,7 +88,7 @@ See `.planning/milestones/v4.0-ROADMAP.md`
 - [x] Phase 50.2: Fix search tracking and click analytics not showing in admin overview (2 plans) (completed 2026-03-02)
   - [ ] 50.2-01-PLAN.md — CORS fix + search query tracking + analytics-summary endpoint
   - [ ] 50.2-02-PLAN.md — OverviewPage analytics display cards
-- [ ] Phase 50.3: Remove Sage (including from admin) and replace with Intercom (3 plans)
+- [x] Phase 50.3: Remove Sage (including from admin) and replace with Intercom (3 plans) (completed 2026-03-02)
   - [ ] 50.3-01-PLAN.md — Backend Sage removal (pilot router + admin intelligence endpoints)
   - [ ] 50.3-02-PLAN.md — Frontend Sage removal (pilot components, store, tracking, admin pages)
   - [ ] 50.3-03-PLAN.md — Intercom integration + vaul cleanup

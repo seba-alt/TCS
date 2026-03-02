@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-27)
 
 **Core value:** A user describes any problem and instantly gets expertly matched professionals they can browse, filter, and contact — no searching, no guesswork.
-**Current focus:** Phase 50.3 plan 02/03 complete — Sage frontend removal done
+**Current focus:** Phase 50.3 complete — Sage removed, Intercom integrated
 
 ## Current Position
 
-Milestone: v4.0 Public Launch — Phase 50.3 in progress
+Milestone: v4.0 Public Launch — Phase 50.3 COMPLETE
 Phase: 50.3-remove-sage-replace-with-intercom
-Plan: 02/03 — COMPLETE
-Last activity: 2026-03-02 — Plan 50.3-02 execution complete
+Plan: 03/03 — COMPLETE
+Last activity: 2026-03-02 — Plan 50.3-03 execution complete
 
-Progress: [██░] 67% (plans 01, 02 complete; plan 03 remaining)
+Progress: [███] 100% (plans 01, 02, 03 complete)
 
 ## Accumulated Context
 
@@ -45,6 +45,9 @@ Progress: [██░] 67% (plans 01, 02 complete; plan 03 remaining)
 - [Phase 50.3-02]: Kept DailyTrendRow/MarketplaceTrendResponse types — still used by AdminMarketplacePage TrendSection
 - [Phase 50.3-02]: Kept row.source==='sage' data labels in admin tables — backend API field values, historical data
 - [Phase 50.3-02]: All cascading Sage store references auto-fixed (filterSlice, useExplore, RateSlider, Header)
+- [Phase 50.3-03]: Intercom app ID o9v3tocw hardcoded as fallback — VITE_INTERCOM_APP_ID env var optional
+- [Phase 50.3-03]: autoBoot=true on IntercomProvider — no manual boot() call needed
+- [Phase 50.3-03]: IntercomProvider scoped to public route element — admin structurally excluded
 
 ### Pending Todos
 
@@ -65,5 +68,5 @@ Progress: [██░] 67% (plans 01, 02 complete; plan 03 remaining)
 ## Session Continuity
 
 Last session: 2026-03-02
-Stopped at: Completed 50.3-02-PLAN.md
-Resume file: .planning/milestones/v4.0-phases/50.3-remove-sage-replace-with-intercom/50.3-02-SUMMARY.md
+Stopped at: Completed 50.3-03-PLAN.md (Phase 50.3 complete)
+Resume file: .planning/milestones/v4.0-phases/50.3-remove-sage-replace-with-intercom/50.3-03-SUMMARY.md
