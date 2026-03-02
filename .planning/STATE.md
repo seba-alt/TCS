@@ -51,6 +51,7 @@ Progress: [██████████] 100% (plans 01, 02 complete)
 
 - Phase 50.1 inserted after Phase 50: Lead click tracking, data reset for launch, and search bar visibility improvements (URGENT)
 - Phase 50.2 inserted after Phase 50: Fix search tracking and click analytics not showing in admin overview (URGENT)
+- Phase 50.3 inserted after Phase 50: Remove Sage (including from admin) and replace with Intercom (URGENT)
 
 ### Blockers/Concerns
 
