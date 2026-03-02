@@ -2,9 +2,12 @@ import "./instrument";
 import { StrictMode, lazy, Suspense, useEffect } from 'react'
 import { createRoot } from 'react-dom/client'
 import { createBrowserRouter, RouterProvider, Navigate, useSearchParams, useNavigate } from 'react-router-dom'
+import { IntercomProvider } from 'react-use-intercom'
 import './index.css'
 import RootLayout from './layouts/RootLayout.tsx'
 import MarketplacePage from './pages/MarketplacePage.tsx'
+
+const INTERCOM_APP_ID = import.meta.env.VITE_INTERCOM_APP_ID ?? 'o9v3tocw'
 
 // Lazy-load all admin components — excluded from public Explorer bundle
 const AdminApp = lazy(() => import('./admin/AdminApp'))
@@ -47,7 +50,11 @@ function AdminLoadingFallback() {
 
 const router = createBrowserRouter([
   {
-    element: <RootLayout />,
+    element: (
+      <IntercomProvider appId={INTERCOM_APP_ID} autoBoot>
+        <RootLayout />
+      </IntercomProvider>
+    ),
     children: [
       {
         path: '/',
