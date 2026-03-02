@@ -115,7 +115,10 @@ See `.planning/milestones/v4.0-ROADMAP.md`
   1. Admin overview page shows non-zero values for matches, searches, leads, lead rate, top searches, and gaps when data exists in the database
   2. Clicking any stat card on the admin overview navigates to the corresponding detail page
   3. Admin can delete an expert from the experts list and the expert is removed immediately
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 51-01-PLAN.md — Fix overview stats + clickable stat card navigation
+- [ ] 51-02-PLAN.md — Expert deletion (single + bulk) with FAISS rebuild
 
 ### Phase 52: Explorer & Search UX
 **Goal**: Explorer loads with immediate usability — search focused, initial results varied, sort-by gone, autocomplete working, rate slider accurate
