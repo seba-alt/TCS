@@ -85,7 +85,7 @@ See `.planning/milestones/v4.0-ROADMAP.md`
   - [x] 50.1-01-PLAN.md — Lead click tracking backend + frontend capture — completed 2026-02-27
   - [ ] 50.1-02-PLAN.md — Admin UI: lead click views, expert name fix, search bar CSS
   - [ ] 50.1-03-PLAN.md — Pre-launch data reset script
-- [ ] Phase 50.2: Fix search tracking and click analytics not showing in admin overview (2 plans)
+- [x] Phase 50.2: Fix search tracking and click analytics not showing in admin overview (2 plans) (completed 2026-03-02)
   - [ ] 50.2-01-PLAN.md — CORS fix + search query tracking + analytics-summary endpoint
   - [ ] 50.2-02-PLAN.md — OverviewPage analytics display cards
 
