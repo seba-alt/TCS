@@ -62,6 +62,21 @@ export async function adminPost<T>(path: string, body: unknown): Promise<T> {
   return res.json() as Promise<T>
 }
 
+export async function adminDelete<T>(path: string): Promise<T> {
+  const url = new URL(`${API_URL}/api/admin${path}`)
+  const res = await fetch(url.toString(), {
+    method: 'DELETE',
+    headers: { 'Authorization': `Bearer ${getAdminToken()}` },
+  })
+  if (res.status === 401) {
+    sessionStorage.removeItem('admin_token')
+    window.location.href = '/admin/login'
+    throw new Error('Session expired')
+  }
+  if (!res.ok) throw new Error(`Admin API error ${res.status}: ${await res.text()}`)
+  return res.json() as Promise<T>
+}
+
 export async function adminPostFormData<T>(path: string, formData: FormData): Promise<T> {
   const url = new URL(`${API_URL}/api/admin${path}`)
   const res = await fetch(url.toString(), {

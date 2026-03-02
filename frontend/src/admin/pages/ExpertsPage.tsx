@@ -1,5 +1,5 @@
-import { useState, useMemo, useEffect, useCallback } from 'react'
-import { useAdminExperts, useAdminDomainMap, useIngestStatus, adminPost, adminFetch } from '../hooks/useAdminData'
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
+import { useAdminExperts, useAdminDomainMap, useIngestStatus, adminPost, adminFetch, adminDelete } from '../hooks/useAdminData'
 import CsvImportModal from '../components/CsvImportModal'
 import type { ExpertRow, DomainMapEntry, LeadClicksByExpertResponse } from '../types'
 
@@ -134,6 +134,13 @@ export default function ExpertsPage() {
   const [clickData, setClickData] = useState<Record<string, LeadClicksByExpertResponse['clicks']>>({})
   const [clicksLoading, setClicksLoading] = useState<Record<string, boolean>>({})
 
+  // Expert deletion state
+  const [selectedUsernames, setSelectedUsernames] = useState<Set<string>>(new Set())
+  const [deleteConfirm, setDeleteConfirm] = useState<{ type: 'single' | 'bulk'; username?: string; name?: string; count?: number } | null>(null)
+  const [deleting, setDeleting] = useState(false)
+  const [rebuildNotice, setRebuildNotice] = useState<string | null>(null)
+  const selectAllRef = useRef<HTMLInputElement>(null)
+
   // ── Handlers ──────────────────────────────────────────────────────────────
 
   async function handleAutoClassify() {
@@ -173,6 +180,48 @@ export default function ExpertsPage() {
       setFormError(String(err))
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  async function handleConfirmDelete() {
+    setDeleting(true)
+    try {
+      if (deleteConfirm?.type === 'single' && deleteConfirm.username) {
+        await adminDelete(`/experts/${deleteConfirm.username}`)
+      } else if (deleteConfirm?.type === 'bulk') {
+        await adminPost('/experts/delete-bulk', {
+          usernames: Array.from(selectedUsernames),
+        })
+      }
+      setDeleteConfirm(null)
+      setSelectedUsernames(new Set())
+      setRebuildNotice('FAISS index is rebuilding in the background...')
+      refetch()
+      setTimeout(() => setRebuildNotice(null), 10000)
+    } catch (err) {
+      alert(`Delete failed: ${err}`)
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  function handleToggleSelect(username: string) {
+    setSelectedUsernames(prev => {
+      const next = new Set(prev)
+      if (next.has(username)) {
+        next.delete(username)
+      } else {
+        next.add(username)
+      }
+      return next
+    })
+  }
+
+  function handleToggleSelectAll() {
+    if (selectedUsernames.size === pageData.length) {
+      setSelectedUsernames(new Set())
+    } else {
+      setSelectedUsernames(new Set(pageData.map(e => e.username)))
     }
   }
 
@@ -254,8 +303,18 @@ export default function ExpertsPage() {
   const totalPages = Math.max(1, Math.ceil(filtered.length / 50))
   const pageData = filtered.slice(pageIdx * 50, (pageIdx + 1) * 50)
 
-  // Reset page on filter/sort change
-  useEffect(() => { setPageIdx(0) }, [hideNoBio, zoneFilter, tagFilter, sortCol, sortDir])
+  // Reset page and clear selection on filter/sort change
+  useEffect(() => { setPageIdx(0); setSelectedUsernames(new Set()) }, [hideNoBio, zoneFilter, tagFilter, sortCol, sortDir])
+
+  // Update indeterminate state on select-all checkbox
+  useEffect(() => {
+    if (selectAllRef.current) {
+      const allSelected = pageData.length > 0 && selectedUsernames.size === pageData.length
+      const someSelected = selectedUsernames.size > 0 && selectedUsernames.size < pageData.length
+      selectAllRef.current.indeterminate = someSelected
+      selectAllRef.current.checked = allSelected
+    }
+  }, [selectedUsernames, pageData])
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -286,6 +345,16 @@ export default function ExpertsPage() {
         >
           Import CSV
         </button>
+
+        {/* Bulk delete button */}
+        {selectedUsernames.size > 0 && (
+          <button
+            onClick={() => setDeleteConfirm({ type: 'bulk', count: selectedUsernames.size })}
+            className="px-4 py-2 bg-red-600/20 hover:bg-red-600/30 text-red-400 text-sm font-medium rounded-lg border border-red-500/30 transition-colors"
+          >
+            Delete selected ({selectedUsernames.size})
+          </button>
+        )}
 
         {/* Zone filter */}
         <div className="flex gap-1">
@@ -344,6 +413,13 @@ export default function ExpertsPage() {
           </button>
         </div>
       </div>
+
+      {/* FAISS rebuild notice */}
+      {rebuildNotice && (
+        <div className="bg-amber-900/30 border border-amber-500/30 rounded-lg px-4 py-2 text-sm text-amber-300">
+          {rebuildNotice}
+        </div>
+      )}
 
       {/* Add Expert form */}
       {showAddForm && (
@@ -422,6 +498,15 @@ export default function ExpertsPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-800">
+                  <th className="w-8 px-2 py-3">
+                    <input
+                      ref={selectAllRef}
+                      type="checkbox"
+                      onChange={handleToggleSelectAll}
+                      className="rounded border-slate-600 bg-slate-900 text-purple-500 focus:ring-purple-500 focus:ring-offset-0 cursor-pointer"
+                      title="Select all"
+                    />
+                  </th>
                   <th className="w-8 px-2 py-3" />
                   <SortHeader col="name"    label="Name"    current={sortCol} dir={sortDir} onClick={handleSort} />
                   <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Bio</th>
@@ -429,6 +514,7 @@ export default function ExpertsPage() {
                   <SortHeader col="company" label="Company" current={sortCol} dir={sortDir} onClick={handleSort} />
                   <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider text-center">Link</th>
                   <SortHeader col="score"   label="Score"   current={sortCol} dir={sortDir} onClick={handleSort} />
+                  <th className="w-10 px-2 py-3" />
                 </tr>
               </thead>
               <tbody>
@@ -438,6 +524,14 @@ export default function ExpertsPage() {
                       key={expert.username}
                       className="border-b border-slate-800/60 hover:bg-slate-800/30 transition-colors"
                     >
+                      <td className="px-2 py-3 text-center">
+                        <input
+                          type="checkbox"
+                          checked={selectedUsernames.has(expert.username)}
+                          onChange={() => handleToggleSelect(expert.username)}
+                          className="rounded border-slate-600 bg-slate-900 text-purple-500 focus:ring-purple-500 focus:ring-offset-0 cursor-pointer"
+                        />
+                      </td>
                       <td className="px-2 py-3 text-center">
                         <button
                           onClick={() => handleExpandExpert(expert.username)}
@@ -468,7 +562,7 @@ export default function ExpertsPage() {
                         <TagPills tags={expert.tags || []} />
                       </td>
                       <td className="px-4 py-3 text-sm text-slate-400 max-w-[120px] truncate" title={expert.company || ''}>
-                        {expert.company || '—'}
+                        {expert.company || '\u2014'}
                       </td>
                       <td className="px-4 py-3 text-center">
                         {expert.profile_url && (
@@ -488,12 +582,23 @@ export default function ExpertsPage() {
                       <td className="px-4 py-3">
                         <ScoreBadge score={expert.findability_score} />
                       </td>
+                      <td className="px-2 py-3 text-center">
+                        <button
+                          onClick={() => setDeleteConfirm({ type: 'single', username: expert.username, name: `${expert.first_name} ${expert.last_name}` })}
+                          className="text-slate-600 hover:text-red-400 transition-colors"
+                          title={`Delete ${expert.first_name} ${expert.last_name}`}
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </td>
                     </tr>
 
                     {/* Lead clicks expanded row */}
                     {expandedUsername === expert.username && (
                       <tr key={`${expert.username}-clicks`} className="border-b border-slate-800/60">
-                        <td colSpan={7} className="px-6 py-4 bg-slate-900/40">
+                        <td colSpan={9} className="px-6 py-4 bg-slate-900/40">
                           <h4 className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">Lead Clicks</h4>
                           {clicksLoading[expert.username] ? (
                             <p className="text-sm text-slate-500 animate-pulse">Loading lead clicks…</p>
@@ -521,7 +626,7 @@ export default function ExpertsPage() {
                 ))}
                 {pageData.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="px-4 py-8 text-center text-slate-500 text-sm">
+                    <td colSpan={9} className="px-4 py-8 text-center text-slate-500 text-sm">
                       {filtered.length === 0 ? 'No experts match the current filters.' : 'Loading experts...'}
                     </td>
                   </tr>
@@ -560,6 +665,37 @@ export default function ExpertsPage() {
         onClose={() => setImportModalOpen(false)}
         onImportComplete={() => refetch()}
       />
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+          <div className="bg-slate-800 border border-slate-700 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
+            <h3 className="text-lg font-semibold text-white mb-2">Confirm Deletion</h3>
+            <p className="text-sm text-slate-300 mb-6">
+              {deleteConfirm.type === 'single'
+                ? `Delete ${deleteConfirm.name ?? deleteConfirm.username}? This cannot be undone.`
+                : `Delete ${deleteConfirm.count} expert${deleteConfirm.count !== 1 ? 's' : ''}? This cannot be undone.`
+              }
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setDeleteConfirm(null)}
+                disabled={deleting}
+                className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                disabled={deleting}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50"
+              >
+                {deleting ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Domain-map section */}
       {data && (
