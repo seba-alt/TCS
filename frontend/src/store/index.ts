@@ -4,34 +4,30 @@ import { useShallow } from 'zustand/react/shallow'
 
 import { createFilterSlice } from './filterSlice'
 import { createResultsSlice } from './resultsSlice'
-import { createPilotSlice } from './pilotSlice'
 
 import type { FilterSlice } from './filterSlice'
 import type { ResultsSlice } from './resultsSlice'
-import type { PilotSlice } from './pilotSlice'
 
 // Re-export types for consumers
-export type { FilterSlice, ResultsSlice, PilotSlice }
+export type { FilterSlice, ResultsSlice }
 export type { Expert } from './resultsSlice'
-export type { PilotMessage } from './pilotSlice'
 
 // Combined store type
-export type ExplorerStore = FilterSlice & ResultsSlice & PilotSlice
+export type ExplorerStore = FilterSlice & ResultsSlice
 
 // Combined store with persist middleware
-// Only filter DATA fields are persisted — never actions, never results, never pilot
+// Only filter DATA fields are persisted — never actions, never results
 export const useExplorerStore = create<ExplorerStore>()(
   persist(
     (...a) => ({
       ...createFilterSlice(...a),
       ...createResultsSlice(...a),
-      ...createPilotSlice(...a),
     }),
     {
       name: 'explorer-filters',
       storage: createJSONStorage(() => localStorage),
       version: 2,
-      // Only persist filter DATA fields — never actions, never results, never pilot
+      // Only persist filter DATA fields — never actions, never results
       partialize: (state) => ({
         query:        state.query,
         rateMin:      state.rateMin,
@@ -93,7 +89,6 @@ export const useResultsSlice = () =>
       loading:          state.loading,
       error:            state.error,
       isFetchingMore:   state.isFetchingMore,
-      sageMode:         state.sageMode,
       retryTrigger:     state.retryTrigger,
       setResults:       state.setResults,
       setLoading:       state.setLoading,
@@ -101,22 +96,6 @@ export const useResultsSlice = () =>
       resetResults:     state.resetResults,
       appendResults:    state.appendResults,
       setFetchingMore:  state.setFetchingMore,
-      setSageMode:      state.setSageMode,
       retry:            state.retry,
-    }))
-  )
-
-export const usePilotSlice = () =>
-  useExplorerStore(
-    useShallow((state) => ({
-      messages:     state.messages,
-      isOpen:       state.isOpen,
-      isStreaming:  state.isStreaming,
-      sessionId:    state.sessionId,
-      addMessage:   state.addMessage,
-      setOpen:      state.setOpen,
-      setStreaming:  state.setStreaming,
-      setSessionId: state.setSessionId,
-      resetPilot:   state.resetPilot,
     }))
   )
