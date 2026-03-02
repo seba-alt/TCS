@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-27)
 
 **Core value:** A user describes any problem and instantly gets expertly matched professionals they can browse, filter, and contact — no searching, no guesswork.
-**Current focus:** Phase 50.2 plan 02/02 complete — all plans done
+**Current focus:** Phase 50.3 plan 01/03 complete
 
 ## Current Position
 
-Milestone: v4.0 Public Launch — Phase 50.2 complete
-Phase: 50.2-fix-search-tracking-analytics-admin
-Plan: 02/02 — COMPLETE
-Last activity: 2026-03-02 — Plan 50.2-02 execution complete
+Milestone: v4.0 Public Launch — Phase 50.3 in progress
+Phase: 50.3-remove-sage-replace-with-intercom
+Plan: 01/03 — COMPLETE
+Last activity: 2026-03-02 — Plan 50.3-01 execution complete
 
-Progress: [██████████] 100% (plans 01, 02 complete)
+Progress: [█░░] 33% (plan 01 complete, 02-03 remaining)
 
 ## Accumulated Context
 
@@ -40,6 +40,8 @@ Progress: [██████████] 100% (plans 01, 02 complete)
 - Placed analytics counters between health strip and insight cards for high visibility
 
 (Prior decisions archived to PROJECT.md Key Decisions table)
+- [Phase 50.3]: Also cleaned tsne background task from main.py — dead code once embedding-map removed
+- [Phase 50.3]: Removed asyncio and numpy imports from main.py — only used by deleted _compute_tsne_background
 
 ### Pending Todos
 
@@ -60,5 +62,5 @@ Progress: [██████████] 100% (plans 01, 02 complete)
 ## Session Continuity
 
 Last session: 2026-03-02
-Stopped at: Completed 50.2-02-PLAN.md
-Resume file: .planning/milestones/v4.0-phases/50.2-fix-search-tracking-analytics-admin/50.2-02-SUMMARY.md
+Stopped at: Completed 50.3-01-PLAN.md
+Resume file: .planning/milestones/v4.0-phases/50.3-remove-sage-replace-with-intercom/50.3-01-SUMMARY.md
