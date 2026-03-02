@@ -52,6 +52,7 @@ Progress: [██████████] 100% (plans 01, 02, 03 complete)
 ### Roadmap Evolution
 
 - Phase 50.1 inserted after Phase 50: Lead click tracking, data reset for launch, and search bar visibility improvements (URGENT)
+- Phase 50.2 inserted after Phase 50: Fix search tracking and click analytics not showing in admin overview (URGENT)
 
 ### Blockers/Concerns
 
