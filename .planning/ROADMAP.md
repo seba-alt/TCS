@@ -131,7 +131,10 @@ Plans:
   4. When the grid returns no results, a CTA appears that opens Intercom so the user can describe their need or request an expert
   5. Typing in the search bar shows a working autocomplete dropdown with matching suggestions
   6. The rate slider's maximum value reflects the highest rate among currently filtered experts, not a fixed global cap
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 52-01-PLAN.md — Randomized initial display, sort-by removal, autofocus search, Intercom no-results CTA
+- [ ] 52-02-PLAN.md — Autocomplete tag-first ranking, dynamic rate slider
 
 ### Phase 53: Card & Mobile Redesign
 **Goal**: Expert cards are visually clear on both mobile and desktop, and mobile interaction is direct tap with simplified filter controls
