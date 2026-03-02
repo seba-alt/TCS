@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAdminStats, adminFetch, useAnalyticsSummary } from '../hooks/useAdminData'
 import type { DemandResponse, LeadsResponse, SearchesResponse, RecentSearchEntry, RecentClickEntry } from '../types'
 
@@ -82,12 +82,19 @@ function Speedometer({ status, latency }: { status: HealthStatus; latency: numbe
   )
 }
 
-function TrendStatCard({ label, value, delta, deltaLabel }: {
-  label: string; value: number | string; delta: number; deltaLabel: string
+function TrendStatCard({ label, value, delta, deltaLabel, to, onClick }: {
+  label: string; value: number | string; delta: number; deltaLabel: string; to?: string; onClick?: () => void
 }) {
   const isUp = delta > 0
   return (
-    <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl p-5">
+    <div
+      className={`bg-slate-800/60 border border-slate-700/60 rounded-xl p-5${
+        to || onClick ? ' cursor-pointer hover:border-purple-500/40 hover:bg-slate-800/80 transition-all' : ''
+      }`}
+      onClick={onClick}
+      role={to || onClick ? 'button' : undefined}
+      tabIndex={to || onClick ? 0 : undefined}
+    >
       <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">{label}</p>
       <p className="text-3xl font-bold text-white">{typeof value === 'string' && value.length > 20 ? <span className="text-lg">{value}</span> : value}</p>
       <div className="flex items-center gap-1 mt-1">
@@ -107,11 +114,15 @@ function StatCard({
   value,
   sub,
   accent = false,
+  to,
+  onClick,
 }: {
   label: string
   value: string | number
   sub?: string
   accent?: boolean
+  to?: string
+  onClick?: () => void
 }) {
   return (
     <div
@@ -119,7 +130,10 @@ function StatCard({
         accent
           ? 'border-purple-500/40 ring-1 ring-purple-500/20'
           : 'border-slate-700/60'
-      }`}
+      }${to || onClick ? ' cursor-pointer hover:border-purple-500/40 hover:bg-slate-800/80 transition-all' : ''}`}
+      onClick={onClick}
+      role={to || onClick ? 'button' : undefined}
+      tabIndex={to || onClick ? 0 : undefined}
     >
       <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">{label}</p>
       <p className={`text-3xl font-bold ${accent ? 'text-purple-400' : 'text-white'}`}>{value}</p>
@@ -332,6 +346,7 @@ export default function OverviewPage() {
   const { stats, loading, error } = useAdminStats()
   const { status: healthStatus, latency } = useHealthCheck()
   const { data: analytics, loading: analyticsLoading } = useAnalyticsSummary()
+  const navigate = useNavigate()
 
   if (loading) {
     return (
@@ -360,24 +375,32 @@ export default function OverviewPage() {
           value={stats.total_leads ?? 0}
           delta={(stats.leads_7d ?? 0) - (stats.leads_prior_7d ?? 0)}
           deltaLabel="vs prev 7d"
+          to="/admin/leads"
+          onClick={() => navigate('/admin/leads')}
         />
         <TrendStatCard
           label="Expert Pool"
           value={stats.expert_pool ?? 0}
           delta={stats.expert_pool_7d ?? 0}
           deltaLabel="new this week"
+          to="/admin/experts"
+          onClick={() => navigate('/admin/experts')}
         />
         <TrendStatCard
           label="Top Searches"
           value={stats.top_queries?.slice(0, 3).map(q => q.query).join(', ') || 'None yet'}
           delta={0}
           deltaLabel=""
+          to="/admin/marketplace"
+          onClick={() => navigate('/admin/marketplace')}
         />
         <TrendStatCard
           label="Lead Rate"
           value={`${((stats.lead_rate ?? 0) * 100).toFixed(1)}%`}
           delta={0}
           deltaLabel="searches \u2192 leads"
+          to="/admin/marketplace"
+          onClick={() => navigate('/admin/marketplace')}
         />
       </div>
 
@@ -388,15 +411,17 @@ export default function OverviewPage() {
           <Speedometer status={healthStatus} latency={latency} />
         </div>
         <div className="flex-1 grid grid-cols-2 xl:grid-cols-4 gap-4">
-          <StatCard label="Total Searches" value={stats.total_searches} />
+          <StatCard label="Total Searches" value={stats.total_searches} to="/admin/marketplace" onClick={() => navigate('/admin/marketplace')} />
           <StatCard
             label="Matches"
             value={stats.match_count}
             sub={`${(stats.match_rate * 100).toFixed(1)}% match rate`}
             accent
+            to="/admin/marketplace"
+            onClick={() => navigate('/admin/marketplace')}
           />
-          <StatCard label="Match Rate" value={`${(stats.match_rate * 100).toFixed(1)}%`} />
-          <StatCard label="Gaps" value={stats.gap_count} sub="queries needing improvement" />
+          <StatCard label="Match Rate" value={`${(stats.match_rate * 100).toFixed(1)}%`} to="/admin/marketplace" onClick={() => navigate('/admin/marketplace')} />
+          <StatCard label="Gaps" value={stats.gap_count} sub="queries needing improvement" to="/admin/marketplace" onClick={() => navigate('/admin/marketplace')} />
         </div>
       </div>
 
@@ -406,17 +431,23 @@ export default function OverviewPage() {
           label="Expert Card Clicks"
           value={analyticsLoading ? '...' : (analytics?.total_card_clicks ?? 0)}
           sub="all-time marketplace clicks"
+          to="/admin/marketplace"
+          onClick={() => navigate('/admin/marketplace')}
         />
         <StatCard
           label="Explore Searches"
           value={analyticsLoading ? '...' : (analytics?.total_search_queries ?? 0)}
           sub="marketplace search queries"
+          to="/admin/marketplace"
+          onClick={() => navigate('/admin/marketplace')}
         />
         <StatCard
           label="Lead Clicks"
           value={analyticsLoading ? '...' : (analytics?.total_lead_clicks ?? 0)}
           sub="clicks by identified leads"
           accent
+          to="/admin/leads"
+          onClick={() => navigate('/admin/leads')}
         />
       </div>
 
