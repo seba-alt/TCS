@@ -13,4 +13,5 @@ export const INDUSTRY_TAGS = [
   'Strategy',
   'Sports',
   'Media',
+  'Food',
 ]

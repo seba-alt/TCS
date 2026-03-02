@@ -188,6 +188,7 @@ INDUSTRY_KEYWORDS = {
     "Strategy":    ["strategy", "consulting", "advisor", "entrepreneur", "founder", "ceo", "board"],
     "Sports":      ["sport", "football", "fitness", "athlete", "coach", "esports"],
     "Media":       ["media", "journalism", "publishing", "entertainment", "film", "music"],
+    "Food":        ["food", "restaurant", "chef", "culinary", "catering", "hospitality", "f&b", "food service", "beverage"],
 }
 
 
@@ -212,6 +213,7 @@ CATEGORY_KEYWORDS = {
     "Legal": ["legal", "lawyer", "attorney", "compliance", "gdpr"],
     "Operations": ["operations", "coo", "supply chain", "logistics", "procurement"],
     "Sports": ["sport", "football", "fitness", "athlete", "coach"],
+    "Food": ["food", "restaurant", "chef", "culinary", "catering", "hospitality", "f&b"],
     "Healthcare": ["health", "medical", "doctor", "pharma", "wellness"],
     "Real Estate": ["real estate", "property", "construction", "renovation"],
     "Strategy": ["strategy", "consulting", "advisor", "entrepreneur", "founder", "ceo"],
