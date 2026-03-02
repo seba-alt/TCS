@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { LineChart, Line, ResponsiveContainer, Tooltip } from 'recharts'
-import { useAdminStats, adminFetch, useMarketplaceTrend } from '../hooks/useAdminData'
-import type { DemandResponse, LeadsResponse, SearchesResponse } from '../types'
+import { useAdminStats, adminFetch, useMarketplaceTrend, useAnalyticsSummary } from '../hooks/useAdminData'
+import type { DemandResponse, LeadsResponse, SearchesResponse, RecentSearchEntry, RecentClickEntry } from '../types'
 
 function timeAgo(iso: string): string {
   const seconds = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
@@ -304,9 +304,78 @@ function RecentSearchesCard() {
   )
 }
 
+function RecentExploreSearchesCard({ searches, loading }: { searches: RecentSearchEntry[]; loading: boolean }) {
+  return (
+    <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl p-5">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-sm font-semibold text-white">Recent Explore Searches</h2>
+        <span className="text-xs text-slate-500">from marketplace search bar</span>
+      </div>
+      {loading ? (
+        <p className="text-slate-500 text-sm animate-pulse">Loading...</p>
+      ) : searches.length === 0 ? (
+        <p className="text-slate-500 text-sm">No explore searches tracked yet -- data appears after users search the marketplace</p>
+      ) : (
+        <div className="space-y-2">
+          {searches.map((row, i) => (
+            <div key={i} className="flex items-center justify-between">
+              <span className="text-sm text-slate-300 truncate max-w-[55%]" title={row.query_text}>
+                {row.query_text}
+              </span>
+              <div className="flex items-center gap-3 flex-shrink-0 ml-2">
+                <span className="text-xs px-1.5 py-0.5 rounded bg-emerald-900/50 text-emerald-400 font-medium">
+                  {row.result_count} results
+                </span>
+                <span className="text-xs text-slate-500">{timeAgo(row.created_at)}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function RecentCardClicksCard({ clicks, loading }: { clicks: RecentClickEntry[]; loading: boolean }) {
+  return (
+    <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl p-5">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-sm font-semibold text-white">Recent Card Clicks</h2>
+        <Link to="/admin/marketplace" className="text-xs text-purple-400 hover:text-purple-300 transition-colors">
+          Exposure details -&gt;
+        </Link>
+      </div>
+      {loading ? (
+        <p className="text-slate-500 text-sm animate-pulse">Loading...</p>
+      ) : clicks.length === 0 ? (
+        <p className="text-slate-500 text-sm">No card clicks tracked yet -- data appears after users click expert cards</p>
+      ) : (
+        <div className="space-y-2">
+          {clicks.map((row, i) => (
+            <div key={i} className="flex items-center justify-between">
+              <span className="text-sm text-slate-300 truncate max-w-[55%]" title={row.expert_name ?? row.expert_id}>
+                {row.expert_name ?? row.expert_id}
+              </span>
+              <div className="flex items-center gap-3 flex-shrink-0 ml-2">
+                <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
+                  row.source === 'sage' ? 'bg-cyan-900/50 text-cyan-400' : 'bg-indigo-900/50 text-indigo-400'
+                }`}>
+                  {row.source}
+                </span>
+                <span className="text-xs text-slate-500">{timeAgo(row.created_at)}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function OverviewPage() {
   const { stats, loading, error } = useAdminStats()
   const { status: healthStatus, latency } = useHealthCheck()
+  const { data: analytics, loading: analyticsLoading } = useAnalyticsSummary()
 
   if (loading) {
     return (
@@ -375,6 +444,26 @@ export default function OverviewPage() {
         </div>
       </div>
 
+      {/* Section 1.5: Marketplace Analytics Counters */}
+      <div className="grid grid-cols-2 xl:grid-cols-3 gap-4">
+        <StatCard
+          label="Expert Card Clicks"
+          value={analyticsLoading ? '...' : (analytics?.total_card_clicks ?? 0)}
+          sub="all-time marketplace clicks"
+        />
+        <StatCard
+          label="Explore Searches"
+          value={analyticsLoading ? '...' : (analytics?.total_search_queries ?? 0)}
+          sub="marketplace search queries"
+        />
+        <StatCard
+          label="Lead Clicks"
+          value={analyticsLoading ? '...' : (analytics?.total_lead_clicks ?? 0)}
+          sub="clicks by identified leads"
+          accent
+        />
+      </div>
+
       {/* Section 2: Two-column insight cards */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         <TopZeroResultsCard />
@@ -385,6 +474,18 @@ export default function OverviewPage() {
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         <RecentLeadsCard />
         <RecentSearchesCard />
+      </div>
+
+      {/* Section 2.7: Marketplace analytics — explore searches + card clicks */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <RecentExploreSearchesCard
+          searches={analytics?.recent_searches ?? []}
+          loading={analyticsLoading}
+        />
+        <RecentCardClicksCard
+          clicks={analytics?.recent_clicks ?? []}
+          loading={analyticsLoading}
+        />
       </div>
 
       {/* Section 3: Top Queries + Top Feedback */}
