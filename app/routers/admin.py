@@ -385,8 +385,12 @@ def get_stats(db: Session = Depends(get_db)):
     top_feedback = [{"query": r.query, "vote": r.vote, "count": r.count} for r in top_fb_rows]
 
     # Phase 48: Total leads (distinct emails), expert pool, 7-day trends
+    # Exclude empty/blank emails — some conversations may have email="" from anonymous searches
     total_leads = db.scalar(
-        select(func.count(func.distinct(Conversation.email))).select_from(Conversation)
+        select(func.count(func.distinct(Conversation.email)))
+        .select_from(Conversation)
+        .where(Conversation.email != "")
+        .where(Conversation.email.is_not(None))
     ) or 0
 
     expert_pool = db.scalar(
@@ -399,12 +403,16 @@ def get_stats(db: Session = Depends(get_db)):
     leads_7d = db.scalar(
         select(func.count(func.distinct(Conversation.email)))
         .select_from(Conversation)
+        .where(Conversation.email != "")
+        .where(Conversation.email.is_not(None))
         .where(Conversation.created_at >= seven_days_ago)
     ) or 0
 
     leads_prior_7d = db.scalar(
         select(func.count(func.distinct(Conversation.email)))
         .select_from(Conversation)
+        .where(Conversation.email != "")
+        .where(Conversation.email.is_not(None))
         .where(Conversation.created_at >= fourteen_days_ago)
         .where(Conversation.created_at < seven_days_ago)
     ) or 0
