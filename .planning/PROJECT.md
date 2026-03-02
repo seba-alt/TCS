@@ -97,7 +97,25 @@ A user describes any problem and instantly gets expertly matched professionals t
 
 ### Active
 
-(No active requirements — planning next milestone)
+<!-- v4.1 UX Polish & Mobile Overhaul -->
+- [ ] Fix admin overview stats stuck at zero (matches, searches, leads, lead rate, top searches, gaps)
+- [ ] Admin overview stat cards navigate to detail pages on click
+- [ ] Randomize initial expert display (every page load), prioritize high findability scores
+- [ ] Remove "Sort by" dropdown — always sort by best match
+- [ ] Autofocus search bar on page load
+- [ ] No results → Intercom CTA to explain need or request expert
+- [ ] Fix autocomplete suggestion dropdown
+- [ ] Remove clear button on mobile
+- [ ] Mobile cards: bigger photo, name below centered
+- [ ] Desktop cards: bigger photo, info inline to right
+- [ ] Remove tap-expand on mobile — direct tap
+- [ ] Mobile: remove search-within-tags and industry picker; tag click resets search
+- [ ] Fix mobile tag scroll glitch
+- [ ] Dynamic rate slider max based on current filtered results
+- [ ] Color saved/bookmarked profiles visibly
+- [ ] "Show saved" view ignores active filters/tags
+- [ ] Track all searches including anonymous (no email)
+- [ ] Add Microsoft Clarity analytics (vph5o95n6c)
 
 ### Out of Scope
 
@@ -201,6 +219,19 @@ A user describes any problem and instantly gets expertly matched professionals t
 **Explorer:** Single-page aurora-aesthetic marketplace at `/` with glassmorphic Command Center header, autocomplete search (debounced suggestions), bento cards with photos/monograms in grid or list view, animated tag cloud (18 domain tags + industry tags), inline mobile filters (tag picker, sort, active chips), Sage AI co-pilot; bookmarking; behavior tracking; newsletter gate; API error states with retry
 **Admin panel:** Secured with bcrypt+JWT + rate limiting; streamlined sidebar — Overview (stat cards, recent leads/searches), Marketplace Intelligence (demand/exposure/trends), Intelligence (OTR@K, Index Drift, t-SNE), Experts (bulk CSV import), Leads (CSV export with search/click history)
 **Analytics:** GA4 (G-0T526W3E1Z) tracking all page views with SPA route change support
+## Current Milestone: v4.1 UX Polish & Mobile Overhaul
+
+**Goal:** Fix admin analytics, redesign mobile expert cards, polish Explorer interactions, and add Clarity analytics.
+
+**Target features:**
+- Admin overview bug fixes + clickable stat cards
+- Randomized high-score expert homepage
+- Mobile card redesign (bigger photos, centered names, no tap-expand)
+- Search UX improvements (autofocus, fix autocomplete, dynamic rate cap)
+- Bookmarks UX upgrade (colored saved profiles, filter-independent saved view)
+- Anonymous search tracking + Microsoft Clarity integration
+- No-results Intercom referral
+
 **Next milestone:** Planning
 
 ## Context
@@ -268,4 +299,4 @@ A user describes any problem and instantly gets expertly matched professionals t
 | Single Suspense at RequireAuth | One boundary covers all nested admin children; loading fallback is admin-themed | ✓ Good — minimal Suspense boundaries |
 
 ---
-*Last updated: 2026-02-27 after v4.0 milestone completion*
+*Last updated: 2026-03-02 after v4.1 milestone start*
