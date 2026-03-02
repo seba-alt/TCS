@@ -100,7 +100,7 @@ See `.planning/milestones/v4.0-ROADMAP.md`
 
 **Milestone Goal:** Fix admin analytics, redesign mobile expert cards, polish Explorer interactions, upgrade bookmarks UX, and add Clarity analytics.
 
-- [ ] **Phase 51: Admin Fixes** — Correct broken overview stats, make stat cards clickable, add expert deletion
+- [x] **Phase 51: Admin Fixes** — Correct broken overview stats, make stat cards clickable, add expert deletion (completed 2026-03-02)
 - [ ] **Phase 52: Explorer & Search UX** — Randomize initial display, remove sort-by, autofocus search, Intercom no-results CTA, fix autocomplete, dynamic rate slider
 - [ ] **Phase 53: Card & Mobile Redesign** — Redesign mobile and desktop cards, remove tap-expand, clean up mobile filter controls
 - [ ] **Phase 54: Bookmarks & Analytics** — Color saved profiles, filter-independent saved view, anonymous search tracking, Microsoft Clarity
@@ -115,7 +115,7 @@ See `.planning/milestones/v4.0-ROADMAP.md`
   1. Admin overview page shows non-zero values for matches, searches, leads, lead rate, top searches, and gaps when data exists in the database
   2. Clicking any stat card on the admin overview navigates to the corresponding detail page
   3. Admin can delete an expert from the experts list and the expert is removed immediately
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 Plans:
 - [ ] 51-01-PLAN.md — Fix overview stats + clickable stat card navigation
 - [ ] 51-02-PLAN.md — Expert deletion (single + bulk) with FAISS rebuild
@@ -178,7 +178,7 @@ Plans:
 | 50.1. Lead Click Tracking + Reset | v4.0 | 3/3 | Complete | 2026-02-27 |
 | 50.2. Analytics Fix | v4.0 | 2/2 | Complete | 2026-03-02 |
 | 50.3. Intercom Integration | v4.0 | 3/3 | Complete | 2026-03-02 |
-| 51. Admin Fixes | 1/2 | In Progress|  | - |
+| 51. Admin Fixes | 2/2 | Complete   | 2026-03-02 | - |
 | 52. Explorer & Search UX | v4.1 | 0/TBD | Not started | - |
 | 53. Card & Mobile Redesign | v4.1 | 0/TBD | Not started | - |
 | 54. Bookmarks & Analytics | v4.1 | 0/TBD | Not started | - |
