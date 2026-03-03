@@ -19,8 +19,8 @@ Requirements for v4.1 UX Polish & Mobile Overhaul. Each maps to roadmap phases.
 - [x] **EXPL-02**: Sort-by dropdown removed — experts always sorted by best match
 - [x] **EXPL-03**: Search bar autofocused on page load
 - [x] **EXPL-04**: No-results state shows Intercom referral CTA to explain need or request expert
-- [ ] **EXPL-05**: Autocomplete suggestion dropdown works correctly
-- [ ] **EXPL-06**: Rate slider max dynamically adjusts to max rate in current filtered results
+- [x] **EXPL-05**: Autocomplete suggestion dropdown works correctly
+- [x] **EXPL-06**: Rate slider max dynamically adjusts to max rate in current filtered results
 
 ### Card Redesign (CARD)
 
@@ -71,8 +71,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | EXPL-02 | Phase 52 | Complete |
 | EXPL-03 | Phase 52 | Complete |
 | EXPL-04 | Phase 52 | Complete |
-| EXPL-05 | Phase 52 | Pending |
-| EXPL-06 | Phase 52 | Pending |
+| EXPL-05 | Phase 52 | Complete |
+| EXPL-06 | Phase 52 | Complete |
 | CARD-01 | Phase 53 | Pending |
 | CARD-02 | Phase 53 | Pending |
 | CARD-03 | Phase 53 | Pending |

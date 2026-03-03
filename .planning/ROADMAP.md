@@ -101,7 +101,7 @@ See `.planning/milestones/v4.0-ROADMAP.md`
 **Milestone Goal:** Fix admin analytics, redesign mobile expert cards, polish Explorer interactions, upgrade bookmarks UX, and add Clarity analytics.
 
 - [x] **Phase 51: Admin Fixes** — Correct broken overview stats, make stat cards clickable, add expert deletion (completed 2026-03-02)
-- [ ] **Phase 52: Explorer & Search UX** — Randomize initial display, remove sort-by, autofocus search, Intercom no-results CTA, fix autocomplete, dynamic rate slider
+- [x] **Phase 52: Explorer & Search UX** — Randomize initial display, remove sort-by, autofocus search, Intercom no-results CTA, fix autocomplete, dynamic rate slider (completed 2026-03-03)
 - [ ] **Phase 53: Card & Mobile Redesign** — Redesign mobile and desktop cards, remove tap-expand, clean up mobile filter controls
 - [ ] **Phase 54: Bookmarks & Analytics** — Color saved profiles, filter-independent saved view, anonymous search tracking, Microsoft Clarity
 
@@ -131,7 +131,7 @@ Plans:
   4. When the grid returns no results, a CTA appears that opens Intercom so the user can describe their need or request an expert
   5. Typing in the search bar shows a working autocomplete dropdown with matching suggestions
   6. The rate slider's maximum value reflects the highest rate among currently filtered experts, not a fixed global cap
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 Plans:
 - [ ] 52-01-PLAN.md — Randomized initial display, sort-by removal, autofocus search, Intercom no-results CTA
 - [ ] 52-02-PLAN.md — Autocomplete tag-first ranking, dynamic rate slider
@@ -188,6 +188,6 @@ Plans:
 | 50.2. Analytics Fix | v4.0 | 2/2 | Complete | 2026-03-02 |
 | 50.3. Intercom Integration | v4.0 | 3/3 | Complete | 2026-03-02 |
 | 51. Admin Fixes | 2/2 | Complete    | 2026-03-02 | - |
-| 52. Explorer & Search UX | 1/2 | In Progress|  | - |
+| 52. Explorer & Search UX | 2/2 | Complete   | 2026-03-03 | - |
 | 53. Card & Mobile Redesign | v4.1 | 0/TBD | Not started | - |
 | 54. Bookmarks & Analytics | v4.1 | 0/TBD | Not started | - |
