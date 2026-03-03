@@ -207,3 +207,30 @@
 
 ---
 
+
+## v5.0 Platform Polish & Admin Overhaul (Shipped: 2026-03-03)
+
+**Phases completed:** 6 phases (55-59, including 58.1 insert), 15 plans
+**Timeline:** 1 day (2026-03-03)
+**Files modified:** 105 (+11,346 / -3,901)
+**Commits:** 69
+**Git range:** feat(55-01) → docs(phase-59)
+
+**Key accomplishments:**
+1. Explorer UX bugs fixed — tier-sorted search results (Top Match first), currency symbols on all surfaces, mobile card completeness (company + badge + 2-line name), OG meta tags for rich link previews
+2. Backend performance optimized — embedding cache (60s TTL), settings cache (30s TTL), ExpertTag join table with 55x tag filtering speedup, admin monolith split into 10-module router package
+3. Admin frontend overhauled — URL-based child routes, shared UI components (AdminCard, AdminInput, AdminPagination, AdminPageHeader), pagination with page jump, overview dashboard with period toggle
+4. Audit gaps closed — CORS DELETE for admin expert deletion, currency symbol consistency via currencySymbol() utility, retroactive Phase 56 verification
+5. Admin dashboard enhanced — unified Data page merging Searches and Marketplace with shared date picker, lead click count tracking, active tag chips on Overview, Click Activity table
+6. Tech debt resolved — dead LeadsPage email handoff removed, orphaned AdminMarketplacePage.tsx deleted, GapsTable dead link removed, ADMUI-03 closed as N/A, full ADMUI traceability added
+
+**Tech debt (from audit):**
+- ADMUI-03 (search records on Data page) closed as N/A — underlying Sage data source retired
+
+**Archive:**
+- Roadmap: `.planning/milestones/v5.0-ROADMAP.md`
+- Requirements: `.planning/milestones/v5.0-REQUIREMENTS.md`
+- Audit: `.planning/milestones/v5.0-MILESTONE-AUDIT.md`
+
+---
+

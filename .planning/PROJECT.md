@@ -103,18 +103,20 @@ A user describes any problem and instantly gets expertly matched professionals t
 - ✓ Purple saved card treatment + filter-independent saved view via backend `usernames` param — v4.1
 - ✓ Anonymous search tracking + Microsoft Clarity analytics (vph5o95n6c) — v4.1
 
+- ✓ Search results grouped by match quality tier (Top Match → Good Match → rest) — v5.0
+- ✓ Currency displayed as symbols (€, $, £) instead of text codes (EUR, USD, GBP) — v5.0
+- ✓ Mobile expert cards show company name and match badge when applicable — v5.0
+- ✓ Mobile expert card name wraps to two lines when truncated — v5.0
+- ✓ Mobile clear-all filter button clearly visible — v5.0
+- ✓ Admin experts search by name — v5.0
+- ✓ Backend performance: embedding cache (60s TTL), ExpertTag join table, settings/feedback caching (30s TTL) — v5.0
+- ✓ Admin panel overhauled — URL routing, shared components, pagination with page jump, overview dashboard with period toggle — v5.0
+- ✓ Admin Data page unified — Searches and Marketplace merged with shared date picker — v5.0
+- ✓ Lead click tracking — click_count column on Leads page + Click Activity table — v5.0
+
 ### Active
 
-<!-- v5.0 Platform Polish & Admin Overhaul -->
-
-- [ ] Search results grouped by match quality tier (Top Match → Good Match → rest)
-- [ ] Currency displayed as symbols (€, $, £) instead of text codes (EUR, USD, GBP)
-- [ ] Mobile expert cards show company name and match badge when applicable
-- [ ] Mobile expert card name wraps to two lines when truncated
-- [ ] Mobile clear-all filter button clearly visible
-- [ ] Admin experts search by name
-- [ ] Backend performance: embedding cache, tag filter optimization, settings/feedback caching
-- [ ] Admin panel audit and makeover — modernized UI, consistent patterns, improved navigation
+(No active requirements — start next milestone with `/gsd:new-milestone`)
 
 ### Out of Scope
 
@@ -129,6 +131,16 @@ A user describes any problem and instantly gets expertly matched professionals t
 - Custom analytics dashboard — GA4 dashboard is sufficient for launch
 
 ## Shipped Versions
+
+### v5.0 Platform Polish & Admin Overhaul — Shipped 2026-03-03
+- Explorer UX bugs fixed: tier-sorted search results, currency symbols on all surfaces, mobile card completeness, OG meta tags
+- Backend performance: embedding cache (60s TTL), settings cache (30s TTL), ExpertTag join table (55x speedup), admin monolith split into 10-module router package
+- Admin frontend overhauled: URL child routes, shared components (AdminCard, AdminInput, AdminPagination, AdminPageHeader), pagination with page jump, overview dashboard with period toggle
+- Audit gaps closed: CORS DELETE, currencySymbol() consistency, retroactive Phase 56 verification
+- Admin dashboard enhanced: unified Data page, lead click tracking, active tag chips, Click Activity table
+- Tech debt resolved: dead code removed, orphaned files deleted, ADMUI-03 closed as N/A
+- All 23 requirements verified (22 satisfied + 1 N/A) across 6 phases
+- Archive: `.planning/milestones/v5.0-ROADMAP.md`
 
 ### v4.1 UX Polish & Mobile Overhaul — Shipped 2026-03-03
 - Admin overview stats fixed + clickable stat cards + expert deletion with FAISS rebuild
@@ -221,14 +233,14 @@ A user describes any problem and instantly gets expertly matched professionals t
 
 ## Current State
 
-**Deployed version:** v4.1 (Railway + Vercel, auto-deploys on push to main)
+**Deployed version:** v5.0 (Railway + Vercel, auto-deploys on push to main)
 **Expert pool:** 530 experts (data/metadata.json), all AI-tagged with domain + industry tags; FAISS index at 530 vectors; profile photos via proxy endpoint; expert email PII purged
-**Search intelligence:** Three-stage hybrid pipeline live; HyDE + feedback re-ranking toggled via admin steering panel; FTS5 autocomplete suggestions with tag-first ranking; dynamic rate slider max from API
-**Explorer:** Single-page aurora-aesthetic marketplace at `/` with glassmorphic Command Center header, autofocused search with tag-first autocomplete, responsive cards (mobile photo-centric / desktop photo-left) in grid or list view, animated tag cloud (18 domain tags + industry tags), inline mobile filters (simplified — no clear button, no search-within pickers), seeded random initial ordering, bookmarks with purple visual treatment and filter-independent saved view, Intercom no-results CTA, anonymous search tracking, newsletter gate, API error states with retry
-**Admin panel:** Secured with bcrypt+JWT + rate limiting; streamlined sidebar — Overview (fixed stat cards with navigation, recent leads/searches), Experts (bulk CSV import + deletion with FAISS rebuild), Leads (CSV export with search/click history)
+**Search intelligence:** Three-stage hybrid pipeline live; HyDE + feedback re-ranking toggled via admin steering panel; FTS5 autocomplete suggestions with tag-first ranking; dynamic rate slider max from API; embedding cache (60s TTL) prevents duplicate Google API calls
+**Explorer:** Single-page aurora-aesthetic marketplace at `/` with glassmorphic Command Center header, autofocused search with tag-first autocomplete, responsive cards (mobile photo-centric / desktop photo-left) in grid or list view, animated tag cloud (18 domain tags + industry tags), inline mobile filters (simplified — no clear button, no search-within pickers), seeded random initial ordering, bookmarks with purple visual treatment and filter-independent saved view, Intercom no-results CTA, anonymous search tracking, newsletter gate, API error states with retry. Search results tier-sorted (Top Match → Good Match → rest). Currency symbols on all rate displays.
+**Admin panel:** Secured with bcrypt+JWT + rate limiting; 10-module router package; URL-based routing with shared components (AdminCard, AdminInput, AdminPagination, AdminPageHeader). Overview with period toggle (Today/7d/30d/All) + active tag chips. Unified Data page (merged Searches/Marketplace) with shared date picker. Experts page with name search + deletion. Leads page with click count column + Click Activity table + CSV export. Settings/feedback caching (30s TTL).
 **Analytics:** GA4 (G-0T526W3E1Z) + Microsoft Clarity (vph5o95n6c) tracking all page views with SPA route change support
 
-**Current milestone:** v5.0 Platform Polish & Admin Overhaul — defining requirements
+**Current milestone:** Planning next milestone
 
 ## Context
 
@@ -298,6 +310,12 @@ A user describes any problem and instantly gets expertly matched professionals t
 | toggleTag clears query on add only | Removing a tag preserves text context; adding is a pivot action | ✓ Good — intuitive behavior |
 | Saved view via `usernames` API param | Direct backend lookup by username list — no limit needed, scales to any pool size | ✓ Good — eliminated limit:500 hack |
 | Clarity via index.html IIFE | Early-return for /admin routes, no React component needed | ✓ Good — zero bundle impact |
+| Tier thresholds mirror frontend | Backend >=88 Top, >=75 Good matches findabilityLabel() | ✓ Good — consistent UX |
+| ExpertTag join table | Normalized tags with composite indexes vs LIKE on JSON | ✓ Good — 55x speedup |
+| Admin router 10-module split | Sub-module routers with no prefix, inherit from parent | ✓ Good — maintainable, under 400 LOC each |
+| TTL-only embedding cache | 60s TTL, no invalidation — embeddings are stateless lookups | ✓ Good — simple, effective |
+| Unified Data page | Single page with date picker, no tabs — merged Searches + Marketplace | ✓ Good — cleaner admin UX |
+| ADMUI-03 closed as N/A | Sage data source retired, searches table not applicable | ✓ Good — honest requirement tracking |
 
 ---
-*Last updated: 2026-03-03 after v5.0 milestone start*
+*Last updated: 2026-03-03 after v5.0 milestone*
