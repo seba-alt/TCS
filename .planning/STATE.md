@@ -42,6 +42,7 @@ Progress: [██████░░░░] 60%
 |-------|-------|-------|----------|
 | Phase 55 | 2 | ~16 min | ~8 min |
 | Phase 56 | 3 | ~14 min | ~5 min |
+| Phase 58-audit-gap-closure P02 | 3 | 1 tasks | 1 files |
 
 ## Accumulated Context
 | Phase 55 P01 | 2 | 2 tasks | 3 files |
@@ -66,6 +67,7 @@ Recent decisions affecting current work:
 - [Phase 56]: ExpertTag normalized join table with composite (tag, tag_type) + (expert_id) indexes for EXISTS subquery filtering
 - [Phase 56]: Sub-module routers use plain APIRouter() with no prefix — inherit /api/admin from parent router in _common.py
 - [Phase 56]: experts.py further split into compare.py and imports.py to meet 400-line limit
+- [Phase 58-audit-gap-closure]: All Phase 56 evidence verified from actual source files before writing — no fabricated claims; re_verification: true flag distinguishes retroactive from initial verification
 
 ### Pending Todos
 

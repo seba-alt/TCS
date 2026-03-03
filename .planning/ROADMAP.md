@@ -116,7 +116,7 @@ See `.planning/milestones/v4.1-ROADMAP.md`
 - [x] **Phase 55: Explorer Bug Fixes** - Fix tier sorting, currency symbols, mobile card completeness, clear button, and Open Graph tags (completed 2026-03-03)
 - [x] **Phase 56: Backend Performance & Admin Refactor** - Cache embeddings/feedback/settings, optimize tag filtering, split admin monolith into route modules (completed 2026-03-03)
 - [x] **Phase 57: Admin Frontend Overhaul** - URL routing, pagination, consistent components, overview redesign, experts table, responsive layout, expert search (completed 2026-03-03)
-- [ ] **Phase 58: Audit Gap Closure** - CORS DELETE fix, currency symbol consistency, Phase 56 retroactive verification
+- [x] **Phase 58: Audit Gap Closure** - CORS DELETE fix, currency symbol consistency, Phase 56 retroactive verification (completed 2026-03-03)
 
 ## Phase Details
 
@@ -177,7 +177,7 @@ Plans:
   1. An admin user can delete a single expert from the Experts page without a CORS error
   2. The rate filter slider and filter chips display the correct currency symbol from the currencySymbol() utility
   3. Phase 56 has a VERIFICATION.md confirming all 5 requirements (PERF-01–04, ADM-01) are satisfied
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 Plans:
 - [ ] 58-01-PLAN.md — CORS DELETE fix + currencySymbol adoption in FilterChips and RateSlider
 - [ ] 58-02-PLAN.md — Retroactive Phase 56 VERIFICATION.md
@@ -189,4 +189,4 @@ Plans:
 | 55. Explorer Bug Fixes | 2/2 | Complete    | 2026-03-03 |
 | 56. Backend Performance & Admin Refactor | 3/3 | Complete | 2026-03-03 |
 | 57. Admin Frontend Overhaul | 4/4 | Complete    | 2026-03-03 |
-| 58. Audit Gap Closure | 0/2 | Not started | - |
+| 58. Audit Gap Closure | 2/2 | Complete   | 2026-03-03 |

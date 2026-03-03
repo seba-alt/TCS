@@ -20,14 +20,14 @@ Requirements for Platform Polish & Admin Overhaul. Each maps to roadmap phases.
 
 ### Performance
 
-- [ ] **PERF-01**: Query embeddings cached with TTL to avoid duplicate Google API calls (~500ms saved per cache hit)
-- [ ] **PERF-02**: Tag filtering optimized — no LIKE on JSON substrings (proper indexing or separate tags table)
-- [ ] **PERF-03**: Feedback data cached per request cycle instead of fetched on every explore call
-- [ ] **PERF-04**: Settings cached in-memory with TTL instead of full SELECT on every call
+- [x] **PERF-01**: Query embeddings cached with TTL to avoid duplicate Google API calls (~500ms saved per cache hit)
+- [x] **PERF-02**: Tag filtering optimized — no LIKE on JSON substrings (proper indexing or separate tags table)
+- [x] **PERF-03**: Feedback data cached per request cycle instead of fetched on every explore call
+- [x] **PERF-04**: Settings cached in-memory with TTL instead of full SELECT on every call
 
 ### Admin Makeover
 
-- [ ] **ADM-01**: Admin backend refactored from 2,225-line monolith into logical route modules
+- [x] **ADM-01**: Admin backend refactored from 2,225-line monolith into logical route modules
 - [x] **ADM-02**: Admin Tools and Data pages use URL-based routing instead of hash fragments
 - [x] **ADM-03**: Admin pagination upgraded with page numbers and direct page jump
 - [x] **ADM-04**: Admin pages use consistent card, table, and form component patterns
@@ -71,11 +71,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | BUG-06 | Phase 55 | Complete |
 | BUG-07 | Phase 57 | Complete |
 | BUG-08 | Phase 55 | Complete |
-| PERF-01 | Phase 58 | Pending |
-| PERF-02 | Phase 58 | Pending |
-| PERF-03 | Phase 58 | Pending |
-| PERF-04 | Phase 58 | Pending |
-| ADM-01 | Phase 58 | Pending |
+| PERF-01 | Phase 58 | Complete |
+| PERF-02 | Phase 58 | Complete |
+| PERF-03 | Phase 58 | Complete |
+| PERF-04 | Phase 58 | Complete |
+| ADM-01 | Phase 58 | Complete |
 | ADM-02 | Phase 57 | Complete |
 | ADM-03 | Phase 57 | Complete |
 | ADM-04 | Phase 57 | Complete |
