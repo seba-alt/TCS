@@ -119,7 +119,9 @@ See `.planning/milestones/v5.0-ROADMAP.md`
   1. The clear-all button is not visible on the Explorer when no filters are active (page load with no tags, no query, default rate)
   2. The clear-all button appears as soon as any filter becomes active (tag selected, query entered, or rate changed)
   3. Vercel build completes without TypeScript errors or unused-variable warnings from MobileInlineFilters.tsx
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 60-01-PLAN.md — Fix clear-all button visibility (FIX-01) and remove unused totalTagCount variable (FIX-02)
 
 ### Phase 61: Lead Journey Timeline
 **Goal**: Admin can inspect the full chronological history of any lead's interaction with the marketplace
@@ -147,6 +149,6 @@ See `.planning/milestones/v5.0-ROADMAP.md`
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 60. Bug Fixes | v5.1 | 0/TBD | Not started | - |
+| 60. Bug Fixes | v5.1 | 0/1 | Not started | - |
 | 61. Lead Journey Timeline | v5.1 | 0/TBD | Not started | - |
 | 62. Overview Enhancements | v5.1 | 0/TBD | Not started | - |
