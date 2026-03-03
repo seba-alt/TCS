@@ -95,27 +95,17 @@ A user describes any problem and instantly gets expertly matched professionals t
 - ✓ Industry-level tag taxonomy — data model, Gemini batch-tagging, tag cloud UI, filter integration (DISC-01, DISC-02, DISC-03) — v4.0
 - ✓ Unused admin tools removed, sidebar simplified (ADM-04) — v4.0
 
+- ✓ Admin overview stats fixed + clickable stat cards + expert deletion with FAISS rebuild — v4.1
+- ✓ Seeded findability-weighted random initial display, sort-by removed, search autofocused — v4.1
+- ✓ No-results Intercom CTA + tag-first autocomplete + dynamic rate slider max — v4.1
+- ✓ Responsive ExpertCard redesign (mobile photo-centric, desktop photo-left, tap-expand removed) — v4.1
+- ✓ Mobile filter cleanup (no clear button, no search-within pickers, tag click clears query) — v4.1
+- ✓ Purple saved card treatment + filter-independent saved view via backend `usernames` param — v4.1
+- ✓ Anonymous search tracking + Microsoft Clarity analytics (vph5o95n6c) — v4.1
+
 ### Active
 
-<!-- v4.1 UX Polish & Mobile Overhaul -->
-- [ ] Fix admin overview stats stuck at zero (matches, searches, leads, lead rate, top searches, gaps)
-- [ ] Admin overview stat cards navigate to detail pages on click
-- [ ] Randomize initial expert display (every page load), prioritize high findability scores
-- [ ] Remove "Sort by" dropdown — always sort by best match
-- [ ] Autofocus search bar on page load
-- [ ] No results → Intercom CTA to explain need or request expert
-- [ ] Fix autocomplete suggestion dropdown
-- [ ] Remove clear button on mobile
-- [ ] Mobile cards: bigger photo, name below centered
-- [ ] Desktop cards: bigger photo, info inline to right
-- [ ] Remove tap-expand on mobile — direct tap
-- [ ] Mobile: remove search-within-tags and industry picker; tag click resets search
-- [ ] Fix mobile tag scroll glitch
-- [ ] Dynamic rate slider max based on current filtered results
-- [ ] Color saved/bookmarked profiles visibly
-- [ ] "Show saved" view ignores active filters/tags
-- [ ] Track all searches including anonymous (no email)
-- [ ] Add Microsoft Clarity analytics (vph5o95n6c)
+(None — next milestone not yet planned)
 
 ### Out of Scope
 
@@ -130,6 +120,16 @@ A user describes any problem and instantly gets expertly matched professionals t
 - Custom analytics dashboard — GA4 dashboard is sufficient for launch
 
 ## Shipped Versions
+
+### v4.1 UX Polish & Mobile Overhaul — Shipped 2026-03-03
+- Admin overview stats fixed + clickable stat cards + expert deletion with FAISS rebuild
+- Seeded random initial display, sort-by removed, search autofocused, Intercom no-results CTA
+- Tag-first autocomplete, dynamic rate slider max from API
+- Responsive ExpertCard: mobile photo-centric, desktop photo-left, tap-expand removed
+- Mobile filter cleanup: no clear button, no search-within pickers, tag click clears query, scroll fix
+- Purple saved card treatment + filter-independent saved view (backend `usernames` param) + anonymous search tracking + Microsoft Clarity
+- All 20 requirements verified across 4 phases
+- Archive: `.planning/milestones/v4.1-ROADMAP.md`
 
 ### v4.0 Public Launch — Shipped 2026-02-27
 - Admin auth upgraded to bcrypt+JWT with rate limiting; SQLite WAL mode for concurrent traffic; t-SNE heatmap fixed
@@ -212,25 +212,12 @@ A user describes any problem and instantly gets expertly matched professionals t
 
 ## Current State
 
-**Deployed version:** v4.0 (Railway + Vercel, auto-deploys on push to main)
+**Deployed version:** v4.1 (Railway + Vercel, auto-deploys on push to main)
 **Expert pool:** 530 experts (data/metadata.json), all AI-tagged with domain + industry tags; FAISS index at 530 vectors; profile photos via proxy endpoint; expert email PII purged
-**Search intelligence:** Three-stage hybrid pipeline live; HyDE + feedback re-ranking toggled via admin steering panel; FTS5 autocomplete suggestions; Search Lab aligned with live pipeline
-**Sage AI:** Active search engine — discovers experts via FAISS, injects results directly into grid, "smart funny friend" personality, Dutch auto-detection; mobile Sage bottom sheet (Vaul); single-render on desktop (fixed)
-**Explorer:** Single-page aurora-aesthetic marketplace at `/` with glassmorphic Command Center header, autocomplete search (debounced suggestions), bento cards with photos/monograms in grid or list view, animated tag cloud (18 domain tags + industry tags), inline mobile filters (tag picker, sort, active chips), Sage AI co-pilot; bookmarking; behavior tracking; newsletter gate; API error states with retry
-**Admin panel:** Secured with bcrypt+JWT + rate limiting; streamlined sidebar — Overview (stat cards, recent leads/searches), Marketplace Intelligence (demand/exposure/trends), Intelligence (OTR@K, Index Drift, t-SNE), Experts (bulk CSV import), Leads (CSV export with search/click history)
-**Analytics:** GA4 (G-0T526W3E1Z) tracking all page views with SPA route change support
-## Current Milestone: v4.1 UX Polish & Mobile Overhaul
-
-**Goal:** Fix admin analytics, redesign mobile expert cards, polish Explorer interactions, and add Clarity analytics.
-
-**Target features:**
-- Admin overview bug fixes + clickable stat cards
-- Randomized high-score expert homepage
-- Mobile card redesign (bigger photos, centered names, no tap-expand)
-- Search UX improvements (autofocus, fix autocomplete, dynamic rate cap)
-- Bookmarks UX upgrade (colored saved profiles, filter-independent saved view)
-- Anonymous search tracking + Microsoft Clarity integration
-- No-results Intercom referral
+**Search intelligence:** Three-stage hybrid pipeline live; HyDE + feedback re-ranking toggled via admin steering panel; FTS5 autocomplete suggestions with tag-first ranking; dynamic rate slider max from API
+**Explorer:** Single-page aurora-aesthetic marketplace at `/` with glassmorphic Command Center header, autofocused search with tag-first autocomplete, responsive cards (mobile photo-centric / desktop photo-left) in grid or list view, animated tag cloud (18 domain tags + industry tags), inline mobile filters (simplified — no clear button, no search-within pickers), seeded random initial ordering, bookmarks with purple visual treatment and filter-independent saved view, Intercom no-results CTA, anonymous search tracking, newsletter gate, API error states with retry
+**Admin panel:** Secured with bcrypt+JWT + rate limiting; streamlined sidebar — Overview (fixed stat cards with navigation, recent leads/searches), Experts (bulk CSV import + deletion with FAISS rebuild), Leads (CSV export with search/click history)
+**Analytics:** GA4 (G-0T526W3E1Z) + Microsoft Clarity (vph5o95n6c) tracking all page views with SPA route change support
 
 **Next milestone:** Planning
 
@@ -297,6 +284,11 @@ A user describes any problem and instantly gets expertly matched professionals t
 | Separate industryTags field | `industryTags: string[]` in filterSlice, never shared with domain tags array | ✓ Good — clean separation |
 | Atomic admin page removal | Frontend route + backend endpoint + background task removed together per page | ✓ Good — no orphaned computation |
 | Single Suspense at RequireAuth | One boundary covers all nested admin children; loading fallback is admin-themed | ✓ Good — minimal Suspense boundaries |
+| Spread factor 30 for weighted-random | Shuffles within findability tiers without pushing low-score experts to top | ✓ Good — varied initial display each load |
+| Dual-layout ExpertCard (md:hidden / hidden md:flex) | Two separate JSX blocks for mobile vs desktop — cleaner than per-element breakpoints for different structures | ✓ Good — responsive without complexity |
+| toggleTag clears query on add only | Removing a tag preserves text context; adding is a pivot action | ✓ Good — intuitive behavior |
+| Saved view via `usernames` API param | Direct backend lookup by username list — no limit needed, scales to any pool size | ✓ Good — eliminated limit:500 hack |
+| Clarity via index.html IIFE | Early-return for /admin routes, no React component needed | ✓ Good — zero bundle impact |
 
 ---
-*Last updated: 2026-03-02 after v4.1 milestone start*
+*Last updated: 2026-03-03 after v4.1 milestone completion*

@@ -1,5 +1,30 @@
 # Milestones
 
+## v4.1 UX Polish & Mobile Overhaul (Shipped: 2026-03-03)
+
+**Phases completed:** 4 phases (51-54), 8 plans, 16 tasks
+**Timeline:** 2 days (2026-03-02 → 2026-03-03)
+**Files modified:** 17 (+475 / -474)
+**Git range:** feat(51-01) → fix(saved-view)
+
+**Key accomplishments:**
+1. Admin overview stats fixed (lead count, matches, searches) + clickable stat cards navigating to detail pages + expert deletion with automatic FAISS rebuild
+2. Seeded findability-weighted random ordering on every page load, sort-by dropdown removed, search bar autofocused, Intercom CTA on empty results
+3. Tag-first autocomplete ranking with individual FTS5 tag extraction + dynamic rate slider max derived from API response
+4. Responsive ExpertCard redesign — mobile photo-centric (80px centered photo), desktop photo-left orientation, tap-expand removed for direct navigation
+5. Mobile filter cleanup — clear button removed, search-within pickers removed, tag click clears query, smooth scroll fix
+6. Purple visual treatment on saved cards, filter-independent saved view (backend usernames lookup), anonymous search tracking, Microsoft Clarity analytics
+
+**Tech debt (from audit):**
+- BOOK-02 limit:500 saved-view fetch vs 530 experts (fixed post-audit: backend now accepts `usernames` param for direct lookup)
+
+**Archive:**
+- Roadmap: `.planning/milestones/v4.1-ROADMAP.md`
+- Requirements: `.planning/milestones/v4.1-REQUIREMENTS.md`
+- Audit: `.planning/milestones/v4.1-MILESTONE-AUDIT.md`
+
+---
+
 ## v1.0 MVP (Shipped: 2026-02-20)
 
 **Phases completed:** 7 phases (1–7), 23 plans
