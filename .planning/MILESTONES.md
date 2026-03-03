@@ -234,3 +234,26 @@
 
 ---
 
+
+## v5.1 Lead Insights & Overview (Shipped: 2026-03-03)
+
+**Phases completed:** 3 phases (60-62), 5 plans
+**Timeline:** 1 day (2026-03-03)
+**Files modified:** 8 (+429 / -140)
+**Git range:** fix(60-01) → feat(62-02)
+
+**Key accomplishments:**
+1. Fixed clear-all button visibility — FilterChips returns null when no chips active, preventing phantom clear-all on page load
+2. Removed dead `totalTagCount` variable breaking Vercel CI builds (TS6133 noUnusedLocals)
+3. Lead journey timeline — admin expands any lead row to see chronological search/click history with time gap labels (30min+ dividers, 1-day+ amber emphasis)
+4. Backend lead-timeline endpoint merging Conversation + LeadClick events with batch expert name resolution and offset pagination
+5. Three ranked insight cards on Overview — Top Experts (by clicks), Top Searches (by frequency), Unmet Demand (zero-result queries) in responsive 3-column grid
+6. All new overview cards wired to existing period toggle (Today / 7d / 30d / All) via `days` prop
+
+**Archive:**
+- Roadmap: `.planning/milestones/v5.1-ROADMAP.md`
+- Requirements: `.planning/milestones/v5.1-REQUIREMENTS.md`
+- Audit: `.planning/milestones/v5.1-MILESTONE-AUDIT.md`
+
+---
+

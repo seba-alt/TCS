@@ -116,16 +116,16 @@ A user describes any problem and instantly gets expertly matched professionals t
 - ✓ Sage AI co-pilot removed — all backend endpoints, frontend components, store slices, and admin views deleted — v5.0
 - ✓ Intercom live chat integrated — react-use-intercom provider, IntercomIdentity component, replaces Sage for user support — v5.0
 
+- ✓ Clear-all button only visible when filters are active (not on page load) — v5.1
+- ✓ Build fix: unused totalTagCount removed from MobileInlineFilters.tsx — v5.1
+- ✓ Lead journey timeline — expandable lead rows with chronological search/click history and time gap labels — v5.1
+- ✓ Overview: top experts ranked by card click volume with period toggle — v5.1
+- ✓ Overview: top search queries ranked by frequency with period toggle — v5.1
+- ✓ Overview: zero-result queries as unmet demand signals with period toggle — v5.1
+
 ### Active
 
-<!-- v5.1 Lead Insights & Overview -->
-
-- [ ] Lead journey timeline (full activity per lead — searches, clicks, order)
-- [ ] Overview: top experts (most clicked)
-- [ ] Overview: top searches (most common queries)
-- [ ] Overview: zero-result gaps (unmet demand)
-- [ ] Clear-all button only visible with active filters
-- [ ] Build fix: unused totalTagCount in MobileInlineFilters.tsx
+(None yet — start next milestone to define requirements)
 
 ### Out of Scope
 
@@ -242,15 +242,15 @@ A user describes any problem and instantly gets expertly matched professionals t
 
 ## Current State
 
-**Deployed version:** v5.0 (Railway + Vercel, auto-deploys on push to main)
+**Deployed version:** v5.1 (Railway + Vercel, auto-deploys on push to main)
 **Expert pool:** experts (growing weekly) (data/metadata.json), all AI-tagged with domain + industry tags; FAISS index at vectors (grows with expert pool); profile photos via proxy endpoint; expert email PII purged
 **Search intelligence:** Three-stage hybrid pipeline live; HyDE + feedback re-ranking toggled via admin steering panel; FTS5 autocomplete suggestions with tag-first ranking; dynamic rate slider max from API; embedding cache (60s TTL) prevents duplicate Google API calls
-**Explorer:** Single-page aurora-aesthetic marketplace at `/` with glassmorphic Command Center header, autofocused search with tag-first autocomplete, responsive cards (mobile photo-centric / desktop photo-left) in grid or list view, animated tag cloud (18 domain tags + industry tags), inline mobile filters (simplified — no clear button, no search-within pickers), seeded random initial ordering, bookmarks with purple visual treatment and filter-independent saved view, Intercom no-results CTA, anonymous search tracking, newsletter gate, API error states with retry. Search results tier-sorted (Top Match → Good Match → rest). Currency symbols on all rate displays.
+**Explorer:** Single-page aurora-aesthetic marketplace at `/` with glassmorphic Command Center header, autofocused search with tag-first autocomplete, responsive cards (mobile photo-centric / desktop photo-left) in grid or list view, animated tag cloud (18 domain tags + industry tags), inline mobile filters (simplified — clear-all only when filters active), seeded random initial ordering, bookmarks with purple visual treatment and filter-independent saved view, Intercom no-results CTA, anonymous search tracking, newsletter gate, API error states with retry. Search results tier-sorted (Top Match → Good Match → rest). Currency symbols on all rate displays.
 **Live chat:** Intercom (replaces Sage AI co-pilot, removed in phase 50.3)
-**Admin panel:** Secured with bcrypt+JWT + rate limiting; 10-module router package; URL-based routing with shared components (AdminCard, AdminInput, AdminPagination, AdminPageHeader). Overview with period toggle (Today/7d/30d/All) + active tag chips. Unified Data page (merged Searches/Marketplace) with shared date picker. Experts page with name search + deletion. Leads page with click count column + Click Activity table + CSV export. Settings/feedback caching (30s TTL).
+**Admin panel:** Secured with bcrypt+JWT + rate limiting; 10-module router package; URL-based routing with shared components (AdminCard, AdminInput, AdminPagination, AdminPageHeader). Overview with period toggle (Today/7d/30d/All) + active tag chips + ranked insight cards (Top Experts, Top Searches, Unmet Demand). Unified Data page (merged Searches/Marketplace) with shared date picker. Experts page with name search + deletion. Leads page with expandable timeline (chronological search/click history with time gap labels), click count column + Click Activity table + CSV export. Settings/feedback caching (30s TTL).
 **Analytics:** GA4 (G-0T526W3E1Z) + Microsoft Clarity (vph5o95n6c) tracking all page views with SPA route change support
 
-**Current milestone:** v5.1 Lead Insights & Overview
+**Current milestone:** Completed v5.1 — ready for next milestone
 
 ## Context
 
@@ -327,6 +327,12 @@ A user describes any problem and instantly gets expertly matched professionals t
 | TTL-only embedding cache | 60s TTL, no invalidation — embeddings are stateless lookups | ✓ Good — simple, effective |
 | Unified Data page | Single page with date picker, no tabs — merged Searches + Marketplace | ✓ Good — cleaner admin UX |
 | ADMUI-03 closed as N/A | Sage data source retired, searches table not applicable | ✓ Good — honest requirement tracking |
+| FilterChips null early-return | `if (chips.length === 0) return null` — no outer div, no spacing when inactive | ✓ Good — cleaner than conditional wrapper |
+| In-memory merge-sort for timeline | Pagination after merge-sort — acceptable for per-lead data volumes | ✓ Good — simple, fast |
+| Discriminated union for timeline events | TypeScript `type` field ('search' \| 'click') enables exhaustive narrowing | ✓ Good — type-safe event handling |
+| Expert link to search page | No per-expert detail route exists; link to `/admin/experts` | ✓ Good — uses existing route |
+| Skeleton loaders (not spinners) | Animated placeholder lines match card layout for loading state | ✓ Good — polished UX |
+| Positive empty state for unmet demand | CheckCircle + "All searches returned results" — good news framing | ✓ Good — reduces alarm fatigue |
 
 ---
-*Last updated: 2026-03-03 after v5.1 milestone start*
+*Last updated: 2026-03-03 after v5.1 milestone*

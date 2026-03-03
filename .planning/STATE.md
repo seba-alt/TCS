@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v5.1
 milestone_name: Lead Insights & Overview
 status: completed
-stopped_at: Completed 60-01-PLAN.md (Phase 60 complete — FIX-01 + FIX-02 resolved)
-last_updated: "2026-03-03T17:53:48.928Z"
-last_activity: "2026-03-03 — Executed 60-01: FIX-01 (FilterChips null return) + FIX-02 (unused totalTagCount removed)"
+stopped_at: Milestone v5.1 complete — all 3 phases shipped, 8/8 requirements satisfied
+last_updated: "2026-03-03"
+last_activity: "2026-03-03 — Milestone v5.1 archived. Phases 60-62 complete."
 progress:
   total_phases: 3
   completed_phases: 3
   total_plans: 5
   completed_plans: 5
-  percent: 20
+  percent: 100
 ---
 
 # Project State
@@ -21,42 +21,44 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-03)
 
 **Core value:** A user describes any problem and instantly gets expertly matched professionals they can browse, filter, and contact — no searching, no guesswork.
-**Current focus:** v5.1 Lead Insights & Overview — Phase 60: Bug Fixes
+**Current focus:** Planning next milestone
 
 ## Current Position
 
-Phase: 60 of 62 (Bug Fixes)
-Plan: 1 of 1 complete
-Status: Phase 60 complete
-Last activity: 2026-03-03 — Executed 60-01: FIX-01 (FilterChips null return) + FIX-02 (unused totalTagCount removed)
+Milestone: v5.1 Lead Insights & Overview — COMPLETE
+Phases: 3/3 complete (60, 61, 62)
+Plans: 5/5 complete
+Status: Milestone shipped and archived
+Last activity: 2026-03-03 — Milestone v5.1 complete
 
-Progress: [██░░░░░░░░] 20%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 1 (this milestone)
-- Average duration: 2 min
-- Total execution time: 2 min
+- Total plans completed: 5 (this milestone)
+- Total execution time: ~1 day
 
 **By Phase:**
 
-| Phase | Plans | Total | Avg/Plan |
-|-------|-------|-------|----------|
-| 60. Bug Fixes | 1/1 | 2 min | 2 min |
-| 61. Lead Journey Timeline | TBD | - | - |
-| 62. Overview Enhancements | TBD | - | - |
+| Phase | Plans | Completed |
+|-------|-------|-----------|
+| 60. Bug Fixes | 1/1 | 2026-03-03 |
+| 61. Lead Journey Timeline | 2/2 | 2026-03-03 |
+| 62. Overview Enhancements | 2/2 | 2026-03-03 |
 
 ## Accumulated Context
 
 ### Decisions
 
-Recent decisions affecting current work:
+Recent decisions affecting future work:
 
-- [v5.0 Phase 58.1]: Lead click tracking added — click_count column + Click Activity table now on Leads page (foundation for LEAD-01/02/03 timeline data)
-- [v5.0 Phase 59]: ADMUI-03 closed as N/A — Sage data source retired, user_events table still active for card_click events
-- [Phase 60-bug-fixes]: FilterChips returns null when chips.length === 0 — no filter strip on fresh page load (FIX-01)
-- [Phase 60-bug-fixes]: Removed orphaned totalTagCount variable from MobileInlineFilters — resolves TS6133 noUnusedLocals build error on Vercel (FIX-02)
+- [Phase 60]: FilterChips returns null when chips.length === 0 — no filter strip on fresh page load
+- [Phase 61]: Timeline events use discriminated union on 'type' field ('search' | 'click') for type-safe rendering
+- [Phase 61]: In-memory merge-sort for timeline pagination — acceptable for per-lead data volumes
+- [Phase 62]: Expert names in overview cards link to /admin/experts (no per-expert detail route)
+- [Phase 62]: Skeleton loaders (animated placeholder lines) used for all admin card loading states
+- [Phase 62]: New GET /analytics/top-queries endpoint for search frequency aggregation
 
 ### Pending Todos
 
@@ -69,5 +71,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-03
-Stopped at: Completed 60-01-PLAN.md (Phase 60 complete — FIX-01 + FIX-02 resolved)
-Resume: `/gsd:plan-phase 61`
+Stopped at: Milestone v5.1 complete — archived to .planning/milestones/
+Resume: `/gsd:new-milestone`
