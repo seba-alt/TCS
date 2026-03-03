@@ -35,6 +35,8 @@ export function FilterChips() {
     chips.push({ label: tag, onDismiss: () => toggleIndustryTag(tag) })
   }
 
+  if (chips.length === 0) return null
+
   return (
     <div className="flex items-center gap-2 flex-wrap px-4 py-2 border-b border-gray-100">
       <span className="text-sm text-gray-500 shrink-0">{total} experts found</span>
