@@ -256,6 +256,33 @@ export interface LeadClicksByExpertResponse {
   }[]
 }
 
+// ── Lead Journey Timeline (Phase 61) ─────────────────────────────────────────
+
+export interface TimelineSearchEvent {
+  type: 'search'
+  query: string
+  result_count: number
+  created_at: string  // ISO datetime
+}
+
+export interface TimelineClickEvent {
+  type: 'click'
+  expert_username: string
+  expert_name: string
+  search_query: string
+  created_at: string  // ISO datetime
+}
+
+export type TimelineEvent = TimelineSearchEvent | TimelineClickEvent
+
+export interface LeadTimelineResponse {
+  email: string
+  events: TimelineEvent[]
+  total: number
+  limit: number
+  offset: number
+}
+
 // -- Analytics Summary (Phase 50.2) --
 
 export interface RecentSearchEntry {
