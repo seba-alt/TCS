@@ -5,13 +5,10 @@ This module is imported by all admin sub-modules. It MUST NOT import from
 any sibling sub-module to avoid circular imports.
 """
 import asyncio as _asyncio
-import csv
-import io
 import json
 import os
 import subprocess
 import sys
-import threading
 import time
 from datetime import datetime, timedelta, timezone
 from typing import Optional
@@ -24,7 +21,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel, Field
 from pwdlib import PasswordHash
 from pwdlib.hashers.bcrypt import BcryptHasher
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 import structlog
@@ -33,7 +30,6 @@ from app.config import FAISS_INDEX_PATH, METADATA_PATH
 from app.database import get_db, SessionLocal
 from app.limiter import limiter
 from app.models import AdminUser, Conversation, Expert, LeadClick
-from app.services.tagging import compute_findability_score, tag_expert_sync
 
 log = structlog.get_logger()
 

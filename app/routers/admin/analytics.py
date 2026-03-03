@@ -5,13 +5,13 @@ import json
 from datetime import datetime, timedelta
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy import Integer, func, select, text as _text, update
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import Conversation, Expert, Feedback, LeadClick
+from app.models import Conversation, Expert, Feedback
 from app.routers.admin._common import GAP_THRESHOLD, _is_gap
 
 router = APIRouter()

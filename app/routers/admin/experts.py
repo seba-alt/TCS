@@ -13,7 +13,6 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-import structlog
 
 from app.config import METADATA_PATH
 from app.database import get_db, SessionLocal
