@@ -176,29 +176,48 @@ function RecentExploreSearchesCard({ searches, loading }: { searches: RecentSear
     <AdminCard className="p-5">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-sm font-semibold text-white">Recent Explore Searches</h2>
-        <Link to="/admin/data/searches" className="text-xs text-purple-400 hover:text-purple-300 transition-colors">
+        <Link to="/admin/data" className="text-xs text-purple-400 hover:text-purple-300 transition-colors">
           View all &rarr;
         </Link>
       </div>
       {loading ? (
         <p className="text-slate-500 text-sm animate-pulse">Loading...</p>
       ) : searches.length === 0 ? (
-        <p className="text-slate-500 text-sm">No explore searches tracked yet</p>
+        <p className="text-slate-500 text-sm">No searches in this period</p>
       ) : (
         <div className="space-y-2">
-          {searches.map((row, i) => (
-            <div key={i} className="flex items-center justify-between">
-              <span className="text-sm text-slate-300 truncate max-w-[55%]" title={row.query_text}>
-                {row.query_text}
-              </span>
-              <div className="flex items-center gap-3 flex-shrink-0 ml-2">
-                <span className="text-xs px-1.5 py-0.5 rounded bg-emerald-900/50 text-emerald-400 font-medium">
-                  {row.result_count} results
-                </span>
-                <span className="text-xs text-slate-500">{timeAgo(row.created_at)}</span>
+          {searches.map((row, i) => {
+            const isTagSearch = !row.query_text && (row.active_tags ?? []).length > 0
+            const isBrowse = !row.query_text && (row.active_tags ?? []).length === 0
+            return (
+              <div key={i} className="flex items-center justify-between">
+                <div className="flex items-center gap-2 min-w-0 max-w-[55%]">
+                  {isTagSearch ? (
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-[10px] text-slate-500 uppercase tracking-wider">tags</span>
+                      {(row.active_tags ?? []).map((tag, ti) => (
+                        <span key={ti} className="inline-flex items-center px-2 py-0.5 rounded-full bg-slate-700/80 border border-slate-600/50 text-xs text-slate-300">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  ) : isBrowse ? (
+                    <span className="text-sm text-slate-500 italic">Browse (no filter)</span>
+                  ) : (
+                    <span className="text-sm text-slate-300 truncate" title={row.query_text}>
+                      {row.query_text}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-3 flex-shrink-0 ml-2">
+                  <span className="text-xs px-1.5 py-0.5 rounded bg-emerald-900/50 text-emerald-400 font-medium">
+                    {row.result_count} results
+                  </span>
+                  <span className="text-xs text-slate-500">{timeAgo(row.created_at)}</span>
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </AdminCard>
@@ -210,14 +229,14 @@ function RecentCardClicksCard({ clicks, loading }: { clicks: RecentClickEntry[];
     <AdminCard className="p-5">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-sm font-semibold text-white">Recent Card Clicks</h2>
-        <Link to="/admin/data/marketplace" className="text-xs text-purple-400 hover:text-purple-300 transition-colors">
+        <Link to="/admin/data" className="text-xs text-purple-400 hover:text-purple-300 transition-colors">
           Exposure details &rarr;
         </Link>
       </div>
       {loading ? (
         <p className="text-slate-500 text-sm animate-pulse">Loading...</p>
       ) : clicks.length === 0 ? (
-        <p className="text-slate-500 text-sm">No card clicks tracked yet</p>
+        <p className="text-slate-500 text-sm">No click activity in this period</p>
       ) : (
         <div className="space-y-2">
           {clicks.map((row, i) => (
@@ -312,7 +331,7 @@ export default function OverviewPage() {
         <StatCard
           label="Total Searches"
           value={stats.total_searches}
-          onClick={() => navigate('/admin/data/searches')}
+          onClick={() => navigate('/admin/data')}
         />
         <StatCard
           label="Gaps"
@@ -331,7 +350,7 @@ export default function OverviewPage() {
           label="Expert Card Clicks"
           value={analyticsLoading ? '...' : (analytics?.total_card_clicks ?? 0)}
           sub={`${analyticsLoading ? '...' : (analytics?.total_lead_clicks ?? 0)} lead clicks`}
-          onClick={() => navigate('/admin/data/marketplace')}
+          onClick={() => navigate('/admin/data')}
         />
       </div>
 
@@ -349,67 +368,6 @@ export default function OverviewPage() {
         <RecentLeadsCard />
       </div>
 
-      {/* Bottom section: Top Queries + Top Feedback */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        {/* Top Queries */}
-        <AdminCard className="p-5">
-          <h2 className="text-sm font-semibold text-white mb-4">Top Searched Queries</h2>
-          {stats.top_queries.length === 0 ? (
-            <p className="text-slate-500 text-sm">No data yet</p>
-          ) : (
-            <div className="space-y-3">
-              {stats.top_queries.map((item, i) => (
-                <div key={i}>
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="text-sm text-slate-300 truncate max-w-[75%]" title={item.query}>
-                      {item.query}
-                    </span>
-                    <span className="text-xs text-slate-500 ml-2 flex-shrink-0">{item.count}&times;</span>
-                  </div>
-                  <div className="h-1.5 bg-slate-700 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-purple-500 rounded-full"
-                      style={{ width: `${(item.count / (stats.top_queries[0]?.count ?? 1)) * 100}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </AdminCard>
-
-        {/* Top Feedback */}
-        <AdminCard className="p-5">
-          <h2 className="text-sm font-semibold text-white mb-4">Top Feedback</h2>
-          {stats.top_feedback.length === 0 ? (
-            <p className="text-slate-500 text-sm">No feedback recorded yet</p>
-          ) : (
-            <div className="space-y-2">
-              {stats.top_feedback.map((item, i) => (
-                <div
-                  key={i}
-                  className="flex items-center justify-between py-2 border-b border-slate-700/50 last:border-0"
-                >
-                  <span className="text-sm text-slate-300 truncate max-w-[70%]" title={item.query}>
-                    {item.query}
-                  </span>
-                  <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
-                    <span
-                      className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                        item.vote === 'up'
-                          ? 'bg-emerald-900/50 text-emerald-400'
-                          : 'bg-red-900/50 text-red-400'
-                      }`}
-                    >
-                      {item.vote === 'up' ? '\u{1F44D}' : '\u{1F44E}'} {item.count}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </AdminCard>
-      </div>
     </div>
   )
 }
