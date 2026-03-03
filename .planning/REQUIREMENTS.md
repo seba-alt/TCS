@@ -42,8 +42,8 @@ Requirements for v4.1 UX Polish & Mobile Overhaul. Each maps to roadmap phases.
 
 ### Analytics (ANLT)
 
-- [ ] **ANLT-01**: All searches tracked including anonymous (no email required)
-- [ ] **ANLT-02**: Microsoft Clarity analytics integrated (ID: vph5o95n6c)
+- [x] **ANLT-01**: All searches tracked including anonymous (no email required)
+- [x] **ANLT-02**: Microsoft Clarity analytics integrated (ID: vph5o95n6c)
 
 ## Future Requirements
 
@@ -82,8 +82,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MOBL-04 | Phase 53 | Complete |
 | BOOK-01 | Phase 54 | Pending |
 | BOOK-02 | Phase 54 | Pending |
-| ANLT-01 | Phase 54 | Pending |
-| ANLT-02 | Phase 54 | Pending |
+| ANLT-01 | Phase 54 | Complete |
+| ANLT-02 | Phase 54 | Complete |
 
 **Coverage:**
 - v4.1 requirements: 20 total

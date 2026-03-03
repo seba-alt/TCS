@@ -22,12 +22,12 @@ See: .planning/PROJECT.md (updated 2026-03-02)
 
 ## Current Position
 
-Phase: 53 of 54 (Card & Mobile Redesign) — COMPLETE
+Phase: 54 of 54 (Bookmarks & Analytics) — IN PROGRESS
 Plan: 02 of 02 (complete)
-Status: Phase 53 complete — card redesign + mobile filter polish done (CARD-01, CARD-02, CARD-03, MOBL-01, MOBL-02, MOBL-03, MOBL-04)
-Last activity: 2026-03-03 — Phase 53 Plan 02 executed (MobileInlineFilters simplification + filterSlice query-clearing tag toggle)
+Status: Phase 54 Plan 02 complete — enriched search tracking (tags/rate) + Microsoft Clarity integration (ANLT-01, ANLT-02)
+Last activity: 2026-03-03 — Phase 54 Plan 02 executed (search tracking payload expansion + Clarity analytics)
 
-Progress: [############] 75% (3 of 4 phases with plans complete)
+Progress: [##############] 100% (4 of 4 phases with plans complete)
 
 ## Performance Metrics
 
@@ -47,6 +47,7 @@ Progress: [############] 75% (3 of 4 phases with plans complete)
 | Phase 52-explorer-search-ux P02 | 4 | 2 tasks | 7 files |
 | Phase 53-card-mobile-redesign P01 | 2min | 2 tasks | 3 files |
 | Phase 53-card-mobile-redesign P02 | 2min | 2 tasks | 2 files |
+| Phase 54-bookmarks-analytics P02 | 2 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -67,6 +68,9 @@ Progress: [############] 75% (3 of 4 phases with plans complete)
 - [Phase 53-02]: toggleTag clears query only on add (not remove) — removing a tag preserves user's text context; adding is a pivot action that starts fresh
 - [Phase 53-02]: MobileInlineFilters pickers render full tag lists without search inputs — list length is manageable; search adds friction on mobile
 - [Phase 53-02]: Smooth scroll applied via inline style (WebkitOverflowScrolling:touch + scrollbarWidth:none) — no Tailwind utility available without plugin
+- [Phase 54-02]: Track any active filter (query OR tags OR rate), not just non-empty text queries
+- [Phase 54-02]: Clarity injected via index.html IIFE with early-return for /admin routes — no React component needed
+- [Phase 54-02]: Clarity project ID vph5o95n6c injected directly in script, not in env vars
 
 ### Pending Todos
 
@@ -81,5 +85,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-03
-Stopped at: Completed 53-02-PLAN.md — MobileInlineFilters simplification + filterSlice query-clearing tag toggle
-Resume file: .planning/phases/54-mobile-filter-polish/ (Phase 54)
+Stopped at: Completed 54-02-PLAN.md — enriched search tracking + Microsoft Clarity integration
+Resume file: Phase 54 complete — all plans done
