@@ -30,8 +30,6 @@ export function MobileInlineFilters() {
 
   const savedCount = savedExperts.length
 
-  const totalTagCount = tags.length + industryTags.length
-
   return (
     <div className="md:hidden flex flex-col shrink-0">
       {/* Filter row — overflow-x-auto with iOS smooth scroll and hidden scrollbar */}
