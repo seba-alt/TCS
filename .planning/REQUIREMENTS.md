@@ -9,9 +9,9 @@ Requirements for v4.1 UX Polish & Mobile Overhaul. Each maps to roadmap phases.
 
 ### Admin (ADMN)
 
-- [ ] **ADMN-01**: Admin overview stats (matches, searches, leads, lead rate, top searches, gaps) display correct non-zero data
-- [ ] **ADMN-02**: Admin overview stat cards navigate to their detail pages on click
-- [ ] **ADMN-03**: Admin can delete experts from the admin panel
+- [x] **ADMN-01**: Admin overview stats (matches, searches, leads, lead rate, top searches, gaps) display correct non-zero data
+- [x] **ADMN-02**: Admin overview stat cards navigate to their detail pages on click
+- [x] **ADMN-03**: Admin can delete experts from the admin panel
 
 ### Explorer (EXPL)
 
@@ -64,9 +64,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ADMN-01 | Phase 51 | Pending |
-| ADMN-02 | Phase 51 | Pending |
-| ADMN-03 | Phase 51 | Pending |
+| ADMN-01 | Phase 51 | Complete |
+| ADMN-02 | Phase 51 | Complete |
+| ADMN-03 | Phase 51 | Complete |
 | EXPL-01 | Phase 52 | Complete |
 | EXPL-02 | Phase 52 | Complete |
 | EXPL-03 | Phase 52 | Complete |
