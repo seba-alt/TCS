@@ -82,10 +82,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ADM-05 | Phase 57 | Complete |
 | ADM-06 | Phase 58 | Complete |
 | ADM-07 | Phase 57 | Complete |
+| ADMUI-01 | Phase 58.1 | Complete |
+| ADMUI-02 | Phase 58.1 | Complete |
+| ADMUI-03 | Phase 59 | Pending |
+| ADMUI-04 | Phase 58.1 | Complete |
 
 **Coverage:**
-- v5.0 requirements: 19 total
-- Mapped to phases: 19
+- v5.0 requirements: 23 total
+- Mapped to phases: 23
 - Unmapped: 0
 
 ---

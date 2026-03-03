@@ -12,7 +12,7 @@
 - ✅ **v3.1 Launch Prep** — Phases 41-44 (shipped 2026-02-26)
 - ✅ **v4.0 Public Launch** — Phases 45-50 (shipped 2026-02-27)
 - ✅ **v4.1 UX Polish & Mobile Overhaul** — Phases 51-54 (shipped 2026-03-03)
-- 🚧 **v5.0 Platform Polish & Admin Overhaul** — Phases 55-58 (in progress)
+- 🚧 **v5.0 Platform Polish & Admin Overhaul** — Phases 55-59 (in progress)
 
 ## Phases
 
@@ -117,6 +117,7 @@ See `.planning/milestones/v4.1-ROADMAP.md`
 - [x] **Phase 56: Backend Performance & Admin Refactor** - Cache embeddings/feedback/settings, optimize tag filtering, split admin monolith into route modules (completed 2026-03-03)
 - [x] **Phase 57: Admin Frontend Overhaul** - URL routing, pagination, consistent components, overview redesign, experts table, responsive layout, expert search (completed 2026-03-03)
 - [x] **Phase 58: Audit Gap Closure** - CORS DELETE fix, currency symbol consistency, Phase 56 retroactive verification (completed 2026-03-03)
+- [ ] **Phase 59: Tech Debt Cleanup** - Resolve ADMUI-03, remove dead LeadsPage email handoff, add ADMUI traceability, delete orphaned file
 
 ## Phase Details
 
@@ -191,6 +192,7 @@ Plans:
 | 57. Admin Frontend Overhaul | 4/4 | Complete    | 2026-03-03 |
 | 58. Audit Gap Closure | 2/2 | Complete    | 2026-03-03 |
 | 58.1 Admin Dashboard Improvements | 3/3 | Complete | 2026-03-03 |
+| 59. Tech Debt Cleanup | 0/1 | Pending | — |
 
 ### Phase 58.1: Admin Dashboard Improvements (INSERTED)
 
@@ -203,3 +205,15 @@ Plans:
 - [x] 58.1-01-PLAN.md — Backend endpoint extensions (click_count, active_tags) + Overview page cleanup
 - [x] 58.1-02-PLAN.md — Merge Searches/Marketplace into unified Data page with shared date picker
 - [x] 58.1-03-PLAN.md — Leads page click count column + dedicated Click Activity table
+
+### Phase 59: Tech Debt Cleanup
+**Goal:** All v5.0 tech debt from the re-audit is resolved — the broken LeadsPage email handoff is removed, ADMUI-03 is formally closed, ADMUI requirements are tracked in the traceability table, and orphaned files are deleted.
+**Depends on:** Phase 58.1
+**Requirements:** ADMUI-01, ADMUI-02, ADMUI-03, ADMUI-04
+**Gap Closure:** Closes tech debt gaps from v5.0 re-audit
+**Success Criteria** (what must be TRUE):
+  1. LeadsPage no longer passes email state to DataPage (dead "Searches →" button removed or repurposed)
+  2. ADMUI-01–04 appear in REQUIREMENTS.md traceability table with correct phase and status
+  3. ADMUI-03 requirement status is formally resolved (closed as N/A or updated to reflect actual delivered scope)
+  4. AdminMarketplacePage.tsx no longer exists on disk
+**Plans:** 0/1 plans
