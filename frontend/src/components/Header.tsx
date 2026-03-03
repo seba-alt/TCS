@@ -38,6 +38,13 @@ export default function Header() {
     selectedIndex,
   } = useHeaderSearch()
 
+  // Autofocus search input on mount — imperative ref approach is more reliable than
+  // the autoFocus HTML attribute with animated mount transitions
+  const inputRef = useRef<HTMLInputElement>(null)
+  useEffect(() => {
+    inputRef.current?.focus()
+  }, [])
+
   // Expert count spring
   const rawCount = useMotionValue(total)
   const springCount = useSpring(rawCount, { stiffness: 200, damping: 25 })
@@ -163,6 +170,7 @@ export default function Header() {
           </AnimatePresence>
           {/* Controlled input */}
           <input
+            ref={inputRef}
             type="text"
             value={localValue}
             onChange={handleChange}

@@ -1,4 +1,5 @@
-import { Search } from 'lucide-react'
+import { MessageCircle, Search } from 'lucide-react'
+import { useIntercom } from 'react-use-intercom'
 import { useExplorerStore } from '../../store'
 import { TOP_TAGS } from '../../constants/tags'
 
@@ -6,6 +7,7 @@ export function EmptyState() {
   const tags = useExplorerStore((s) => s.tags)
   const setTags = useExplorerStore((s) => s.setTags)
   const resetFilters = useExplorerStore((s) => s.resetFilters)
+  const { show } = useIntercom()
 
   // Suggest tags not currently active — up to 6 from TOP_TAGS
   const suggestions = TOP_TAGS.filter((t) => !tags.includes(t)).slice(0, 6)
@@ -47,6 +49,18 @@ export function EmptyState() {
           </div>
         </div>
       )}
+
+      {/* Intercom CTA — escape hatch when no experts match */}
+      <div className="flex flex-col items-center gap-2 mt-2">
+        <p className="text-sm text-gray-500">Need help finding the right expert?</p>
+        <button
+          onClick={() => show()}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-brand-purple text-white text-sm font-medium hover:bg-brand-purple/90 transition-colors"
+        >
+          <MessageCircle size={16} />
+          Chat with us
+        </button>
+      </div>
 
       {/* Clear all — escape hatch */}
       <button
