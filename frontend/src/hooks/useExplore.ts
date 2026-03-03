@@ -68,10 +68,19 @@ export function useExplore() {
       .then((data) => {
         setResults(data.experts, data.total, data.cursor, data.max_rate ?? 5000)
         setLoading(false)
-        // Track search query for analytics (only for non-empty queries)
-        if (query.trim().length > 0) {
+        // Track search query for analytics — fires for any active filter (query, tags, or rate)
+        // Anonymous tracking: uses session_id (no email required)
+        const hasActiveFilter =
+          query.trim().length > 0 ||
+          tags.length > 0 ||
+          rateMin > 0 ||
+          rateMax < Infinity
+        if (hasActiveFilter) {
           void trackEvent('search_query', {
             query_text: query,
+            active_tags: tags,
+            rate_min: rateMin,
+            rate_max: rateMax,
             result_count: data.total ?? 0,
           })
         }
