@@ -15,9 +15,9 @@ Requirements for v5.1 Lead Insights & Overview. Each maps to roadmap phases.
 
 ### Overview Enhancements
 
-- [ ] **OVER-01**: Overview page shows top experts by card click volume in the selected period
-- [ ] **OVER-02**: Overview page shows top search queries by frequency in the selected period
-- [ ] **OVER-03**: Overview page shows zero-result queries as unmet demand signals in the selected period
+- [x] **OVER-01**: Overview page shows top experts by card click volume in the selected period
+- [x] **OVER-02**: Overview page shows top search queries by frequency in the selected period
+- [x] **OVER-03**: Overview page shows zero-result queries as unmet demand signals in the selected period
 
 ### Bug Fixes
 
@@ -50,9 +50,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | LEAD-01 | Phase 61 | Complete |
 | LEAD-02 | Phase 61 | Complete |
 | LEAD-03 | Phase 61 | Complete |
-| OVER-01 | Phase 62 | Pending |
-| OVER-02 | Phase 62 | Pending |
-| OVER-03 | Phase 62 | Pending |
+| OVER-01 | Phase 62 | Complete |
+| OVER-02 | Phase 62 | Complete |
+| OVER-03 | Phase 62 | Complete |
 
 **Coverage:**
 - v5.1 requirements: 8 total
