@@ -13,6 +13,7 @@ Output: ExploreResponse — the stable data contract all downstream phases build
 """
 
 import json
+import random
 import re
 import time
 from typing import Optional
@@ -155,6 +156,7 @@ def run_explore(
     db: Session,
     app_state,
     industry_tags: list[str] | None = None,
+    seed: int | None = None,
 ) -> ExploreResponse:
     """
     Three-stage hybrid search pipeline.
@@ -329,12 +331,24 @@ def run_explore(
         ]
 
     else:
-        # --- Pure filter mode: sort by findability_score DESC, skip FAISS/FTS5 ---
-        sorted_experts = sorted(
-            filtered_experts,
-            key=lambda e: (e.findability_score or 0.0),
-            reverse=True,
-        )
+        # --- Pure filter mode: sort by findability_score DESC, or weighted-random if seed given ---
+        if seed is not None and seed > 0:
+            # Weighted-random shuffle: higher findability experts tend to appear near the top
+            # but with variety. Spread factor of 30 shuffles within similar tiers without
+            # pushing low-findability experts to the very top.
+            rng = random.Random(seed)
+            SPREAD_FACTOR = 30
+            sorted_experts = sorted(
+                filtered_experts,
+                key=lambda e: -(e.findability_score or 0.0) + rng.random() * SPREAD_FACTOR,
+            )
+        else:
+            # Backward-compatible: deterministic findability DESC sort
+            sorted_experts = sorted(
+                filtered_experts,
+                key=lambda e: (e.findability_score or 0.0),
+                reverse=True,
+            )
 
         # In pure filter mode, total = all experts that pass rate/tag filters
         total = len(filtered_experts)

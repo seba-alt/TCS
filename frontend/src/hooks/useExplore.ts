@@ -1,10 +1,14 @@
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useExplorerStore } from '../store'
 import { trackEvent } from '../tracking'
 
 const API_BASE = import.meta.env.VITE_API_URL ?? ''
 
 export function useExplore() {
+  // Session-stable seed: generated once per page load, stays stable across filter changes.
+  // Reused when user clears search and returns to pure filter mode (session-stable ordering).
+  const [seed] = useState(() => Math.floor(Math.random() * 1_000_000) + 1)
+
   // Individual selectors — NOT useShallow — to avoid the tags array identity pitfall
   // (Pitfall 4: tags via useShallow returns new object ref each render → infinite loop)
   const query = useExplorerStore((s) => s.query)
@@ -12,7 +16,6 @@ export function useExplore() {
   const rateMax = useExplorerStore((s) => s.rateMax)
   const tags = useExplorerStore((s) => s.tags)
   const industryTags = useExplorerStore((s) => s.industryTags)
-  const sortBy = useExplorerStore((s) => s.sortBy)
   const retryTrigger = useExplorerStore((s) => s.retryTrigger)
 
   // Zustand actions are referentially stable — safe in dep array without useCallback
@@ -49,6 +52,11 @@ export function useExplore() {
       cursor: '0',
     })
 
+    // Only send seed in pure filter mode (no text query) — backend uses relevance ranking for text queries
+    if (!query) {
+      params.set('seed', String(seed))
+    }
+
     setLoading(true)
     setError(null)
 
@@ -82,9 +90,7 @@ export function useExplore() {
     return () => {
       controller.abort()
     }
-    // sortBy is in dep array even though /api/explore doesn't currently use it —
-    // ensures re-fetch when sort is added later; avoids stale-closure bug
-  }, [query, rateMin, rateMax, tags, industryTags, sortBy, retryTrigger, setLoading, setResults, setError, resetResults])
+  }, [query, rateMin, rateMax, tags, industryTags, seed, retryTrigger, setLoading, setResults, setError, resetResults])
 
   // loadNextPage — passed to VirtuosoGrid endReached prop
   // Guard: don't fetch if no more pages (cursor null), already fetching more, or initial load in progress
@@ -99,6 +105,10 @@ export function useExplore() {
       params.set('tags', tags.join(','))
       params.set('industry_tags', industryTags.join(','))
       params.set('cursor', String(cursor))
+      // Pass seed for pure filter mode pagination — preserves ordering across pages
+      if (!query) {
+        params.set('seed', String(seed))
+      }
       const res = await fetch(`${API_BASE}/api/explore?${params}`)
       if (!res.ok) return
       const data = await res.json()
@@ -108,7 +118,7 @@ export function useExplore() {
     } finally {
       setFetchingMore(false)
     }
-  }, [cursor, isFetchingMore, loading, query, rateMin, rateMax, tags, industryTags, appendResults, setFetchingMore])
+  }, [cursor, isFetchingMore, loading, query, rateMin, rateMax, tags, industryTags, seed, appendResults, setFetchingMore])
 
   return { loadNextPage }
 }

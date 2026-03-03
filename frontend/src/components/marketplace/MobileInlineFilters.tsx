@@ -1,31 +1,22 @@
 import { useState } from 'react'
-import { Tag, ArrowUpDown, Bookmark, X, Building2 } from 'lucide-react'
+import { Tag, Bookmark, X, Building2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
 import { useExplorerStore, useFilterSlice, useResultsSlice } from '../../store'
 import { TOP_TAGS } from '../../constants/tags'
 import { INDUSTRY_TAGS } from '../../constants/industryTags'
 
-const SORT_OPTIONS: { label: string; value: 'relevance' | 'rate_asc' | 'rate_desc' }[] = [
-  { label: 'Relevance', value: 'relevance' },
-  { label: 'Rate: Low to High', value: 'rate_asc' },
-  { label: 'Rate: High to Low', value: 'rate_desc' },
-]
-
 export function MobileInlineFilters() {
   const [tagPickerOpen, setTagPickerOpen] = useState(false)
   const [industryPickerOpen, setIndustryPickerOpen] = useState(false)
-  const [sortOpen, setSortOpen] = useState(false)
   const [tagSearch, setTagSearch] = useState('')
 
   const {
     tags,
     industryTags,
-    sortBy,
     savedExperts,
     savedFilter,
     toggleTag,
     toggleIndustryTag,
-    setSortBy,
     setSavedFilter,
     resetFilters,
   } = useFilterSlice()
@@ -43,9 +34,6 @@ export function MobileInlineFilters() {
   const filteredIndustryTags = INDUSTRY_TAGS.filter((t) =>
     tagSearch ? t.toLowerCase().includes(tagSearch.toLowerCase()) : true
   )
-
-  const currentSortLabel =
-    SORT_OPTIONS.find((o) => o.value === sortBy)?.label ?? 'Relevance'
 
   return (
     <div className="md:hidden flex flex-col shrink-0">
@@ -83,16 +71,6 @@ export function MobileInlineFilters() {
         >
           <Tag size={15} />
           {tags.length > 0 ? `Tags (${tags.length})` : 'Tags'}
-        </button>
-
-        {/* Sort button */}
-        <button
-          onClick={() => setSortOpen(true)}
-          className="flex items-center gap-1.5 text-sm border border-gray-300 rounded-md px-2.5 py-1.5 shrink-0 text-gray-700 transition-colors"
-          aria-label="Open sort options"
-        >
-          <ArrowUpDown size={15} />
-          {currentSortLabel}
         </button>
 
         {/* Saved button — only shown when bookmarks exist */}
@@ -314,77 +292,6 @@ export function MobileInlineFilters() {
               </button>
             </div>
           </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Sort Sheet */}
-      <AnimatePresence>
-        {sortOpen && (
-          <>
-            {/* Backdrop */}
-            <motion.div
-              key="sort-backdrop"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="fixed inset-0 z-40 bg-black/30"
-              onClick={() => setSortOpen(false)}
-            />
-
-            {/* Bottom panel */}
-            <motion.div
-              key="sort-sheet"
-              initial={{ y: '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '100%' }}
-              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-2xl shadow-2xl"
-            >
-              {/* Drag handle */}
-              <div className="mx-auto w-10 h-1 rounded-full bg-gray-300 mt-3 mb-2" />
-
-              <div className="px-4 pb-2 border-b border-gray-100">
-                <span className="font-semibold text-gray-900 text-base">Sort by</span>
-              </div>
-
-              <div className="pb-safe">
-                {SORT_OPTIONS.map((option) => (
-                  <button
-                    key={option.value}
-                    onClick={() => {
-                      setSortBy(option.value)
-                      setSortOpen(false)
-                    }}
-                    className={`flex items-center justify-between w-full px-4 py-4 text-sm border-b border-gray-50 transition-colors hover:bg-gray-50 ${
-                      sortBy === option.value
-                        ? 'text-brand-purple font-medium'
-                        : 'text-gray-700'
-                    }`}
-                  >
-                    {option.label}
-                    {sortBy === option.value && (
-                      <svg
-                        width="16"
-                        height="16"
-                        viewBox="0 0 16 16"
-                        fill="none"
-                        aria-hidden="true"
-                      >
-                        <path
-                          d="M3 8L6.5 11.5L13 4.5"
-                          stroke="currentColor"
-                          strokeWidth="1.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    )}
-                  </button>
-                ))}
-              </div>
-            </motion.div>
-          </>
         )}
       </AnimatePresence>
     </div>

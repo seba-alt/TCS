@@ -26,7 +26,7 @@ export const useExplorerStore = create<ExplorerStore>()(
     {
       name: 'explorer-filters',
       storage: createJSONStorage(() => localStorage),
-      version: 2,
+      version: 3,
       // Only persist filter DATA fields — never actions, never results
       partialize: (state) => ({
         query:        state.query,
@@ -34,8 +34,6 @@ export const useExplorerStore = create<ExplorerStore>()(
         rateMax:      state.rateMax,
         tags:         state.tags,
         industryTags: state.industryTags,
-        sortBy:       state.sortBy,
-        sortOrder:    state.sortOrder,
         viewMode:     state.viewMode,
       }),
       migrate: (persisted: unknown, version: number) => {
@@ -43,6 +41,11 @@ export const useExplorerStore = create<ExplorerStore>()(
         if (version < 2) {
           // v1 → v2: add industryTags field (default empty array)
           state.industryTags = []
+        }
+        if (version < 3) {
+          // v2 → v3: remove sortBy and sortOrder (sort-by feature removed)
+          delete state.sortBy
+          delete state.sortOrder
         }
         return state as unknown as ExplorerStore
       },
@@ -61,8 +64,6 @@ export const useFilterSlice = () =>
       rateMax:             state.rateMax,
       tags:                state.tags,
       industryTags:        state.industryTags,
-      sortBy:              state.sortBy,
-      sortOrder:           state.sortOrder,
       viewMode:            state.viewMode,
       savedExperts:        state.savedExperts,
       savedFilter:         state.savedFilter,
@@ -72,7 +73,6 @@ export const useFilterSlice = () =>
       setTags:             state.setTags,
       toggleIndustryTag:   state.toggleIndustryTag,
       resetIndustryTags:   state.resetIndustryTags,
-      setSortBy:           state.setSortBy,
       setViewMode:         state.setViewMode,
       setSavedFilter:      state.setSavedFilter,
       toggleSavedExpert:   state.toggleSavedExpert,

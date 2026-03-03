@@ -28,6 +28,7 @@ async def explore(
     industry_tags: str = Query(default=""),  # comma-separated, e.g. "Finance,Healthcare"
     limit: int = Query(default=20, ge=1, le=100),
     cursor: int = Query(default=0, ge=0),
+    seed: int = Query(default=0, ge=0),  # 0 = deterministic findability sort; >0 = seeded random
 ) -> ExploreResponse:
     """
     Hybrid search: SQLAlchemy pre-filter → FAISS IDSelectorBatch → FTS5 BM25 → fused rank.
@@ -49,5 +50,6 @@ async def explore(
             cursor=cursor,
             db=db,
             app_state=request.app.state,
+            seed=seed if seed > 0 else None,
         ),
     )
