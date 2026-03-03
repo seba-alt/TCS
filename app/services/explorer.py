@@ -78,6 +78,27 @@ def _safe_fts_query(query: str) -> str:
     return " ".join(words) if words else ""
 
 
+# --- Tier key helper ---
+
+def _tier_key(findability_score: float | None) -> int:
+    """
+    Map a findability_score to a sort tier (ascending = better first).
+    Mirrors the findabilityLabel() thresholds in the frontend ExpertCard.
+
+    Returns:
+        0 — Top Match (findability_score >= 88)
+        1 — Good Match (findability_score >= 75)
+        2 — rest (score < 75 or None)
+    """
+    if findability_score is None:
+        return 2
+    if findability_score >= 88:
+        return 0
+    if findability_score >= 75:
+        return 1
+    return 2
+
+
 # --- Scoring helpers ---
 
 def _apply_findability_boost(fused_score: float, findability_score: float | None) -> float:
@@ -335,7 +356,7 @@ def run_explore(
             log.warning("explore.feedback_boost_failed", error=str(exc))
             # scored unchanged — degrade gracefully, never raise
 
-        scored.sort(key=lambda x: x[0], reverse=True)
+        scored.sort(key=lambda x: (_tier_key(x[3].findability_score), -x[0]))
 
         # total = semantically-matched experts (those with FAISS or BM25 signal)
         # This is what the user sees as the result count — reflects actual search quality,
