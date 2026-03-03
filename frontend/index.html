@@ -13,6 +13,16 @@
       gtag('js', new Date());
       gtag('config', 'G-0T526W3E1Z', { send_page_view: false });
     </script>
+    <!-- Microsoft Clarity -->
+    <script>
+      (function(c,l,a,r,i,t,y){
+        // Skip Clarity on admin routes
+        if (window.location.pathname.startsWith('/admin')) return;
+        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+      })(window, document, "clarity", "script", "vph5o95n6c");
+    </script>
   </head>
   <body>
     <div id="root"></div>
