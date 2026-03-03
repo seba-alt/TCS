@@ -2,6 +2,10 @@ import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { useAdminExperts, useAdminDomainMap, useIngestStatus, adminPost, adminFetch, adminDelete } from '../hooks/useAdminData'
 import CsvImportModal from '../components/CsvImportModal'
 import type { ExpertRow, DomainMapEntry, LeadClicksByExpertResponse } from '../types'
+import { AdminInput } from '../components/AdminInput'
+import { AdminCard } from '../components/AdminCard'
+import { AdminPageHeader } from '../components/AdminPageHeader'
+import { AdminPagination } from '../components/AdminPagination'
 
 // ─── Score helpers ────────────────────────────────────────────────────────────
 
@@ -121,6 +125,7 @@ export default function ExpertsPage() {
   // Sort/filter/pagination state
   const [sortCol, setSortCol] = useState<string>('score')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
+  const [nameSearch, setNameSearch] = useState('')
   const [zoneFilter, setZoneFilter] = useState<'red' | 'yellow' | 'green' | null>(null)
   const [tagFilter, setTagFilter] = useState<string | null>(null)
   const [hideNoBio, setHideNoBio] = useState(false)
@@ -294,17 +299,24 @@ export default function ExpertsPage() {
     let result = sorted
     // Always hide experts with no name
     result = result.filter(e => (e.first_name || '').trim() || (e.last_name || '').trim())
+    // Name search filter (primary, applied first)
+    if (nameSearch.trim()) {
+      const q = nameSearch.trim().toLowerCase()
+      result = result.filter(e =>
+        `${e.first_name} ${e.last_name}`.toLowerCase().includes(q)
+      )
+    }
     if (hideNoBio) result = result.filter(e => (e.bio || '').trim())
     if (zoneFilter) result = result.filter(e => scoreZone(e.findability_score) === zoneFilter)
     if (tagFilter) result = result.filter(e => e.tags?.includes(tagFilter))
     return result
-  }, [sorted, hideNoBio, zoneFilter, tagFilter])
+  }, [sorted, nameSearch, hideNoBio, zoneFilter, tagFilter])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / 50))
   const pageData = filtered.slice(pageIdx * 50, (pageIdx + 1) * 50)
 
   // Reset page and clear selection on filter/sort change
-  useEffect(() => { setPageIdx(0); setSelectedUsernames(new Set()) }, [hideNoBio, zoneFilter, tagFilter, sortCol, sortDir])
+  useEffect(() => { setPageIdx(0); setSelectedUsernames(new Set()) }, [nameSearch, hideNoBio, zoneFilter, tagFilter, sortCol, sortDir])
 
   // Update indeterminate state on select-all checkbox
   useEffect(() => {
@@ -320,43 +332,33 @@ export default function ExpertsPage() {
 
   return (
     <div className="p-8 space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-white">Experts</h1>
-        <p className="text-slate-500 text-sm mt-1">
-          Manage expert profiles, classification, and add new experts
-        </p>
-      </div>
-
-      {/* Actions bar */}
-      <div className="flex flex-wrap items-center gap-3">
-        <button
-          onClick={handleAutoClassify}
-          disabled={autoClassifying}
-          className="px-4 py-2 bg-slate-700 hover:bg-slate-600 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors"
-        >
-          {autoClassifying ? 'Classifying…' : 'Auto-classify all'}
-        </button>
-        {autoResult && <span className="text-sm text-slate-400">{autoResult}</span>}
-
-        {/* CSV Import button */}
-        <button
-          onClick={() => setImportModalOpen(true)}
-          className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm font-medium rounded-lg transition-colors"
-        >
-          Import CSV
-        </button>
-
-        {/* Bulk delete button */}
-        {selectedUsernames.size > 0 && (
+      <AdminPageHeader
+        title="Experts"
+        subtitle={`${filtered.length} of ${experts.length} experts`}
+        action={
           <button
-            onClick={() => setDeleteConfirm({ type: 'bulk', count: selectedUsernames.size })}
-            className="px-4 py-2 bg-red-600/20 hover:bg-red-600/30 text-red-400 text-sm font-medium rounded-lg border border-red-500/30 transition-colors"
+            onClick={() => setShowAddForm(!showAddForm)}
+            className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold rounded-lg transition-colors flex items-center gap-2"
           >
-            Delete selected ({selectedUsernames.size})
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+            </svg>
+            Add Expert
           </button>
-        )}
+        }
+      />
 
-        {/* Zone filter */}
+      {/* Name search (primary filter) */}
+      <div className="flex flex-wrap items-center gap-3">
+        <AdminInput
+          type="search"
+          placeholder="Search experts by name..."
+          value={nameSearch}
+          onChange={e => setNameSearch(e.target.value)}
+          className="!w-72"
+        />
+
+        {/* Secondary filters */}
         <div className="flex gap-1">
           {(['red', 'yellow', 'green'] as const).map(zone => (
             <button
@@ -373,9 +375,9 @@ export default function ExpertsPage() {
               {zone.charAt(0).toUpperCase() + zone.slice(1)}
             </button>
           ))}
-          {(zoneFilter || tagFilter) && (
+          {(zoneFilter || tagFilter || nameSearch) && (
             <button
-              onClick={() => { setZoneFilter(null); setTagFilter(null) }}
+              onClick={() => { setZoneFilter(null); setTagFilter(null); setNameSearch('') }}
               className="px-3 py-1.5 text-xs text-slate-500 hover:text-slate-300 transition-colors"
             >
               Clear
@@ -401,16 +403,32 @@ export default function ExpertsPage() {
           </span>
         )}
 
-        <div className="ml-auto">
+        {/* Actions */}
+        <div className="ml-auto flex items-center gap-3">
           <button
-            onClick={() => setShowAddForm(!showAddForm)}
-            className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold rounded-lg transition-colors flex items-center gap-2"
+            onClick={handleAutoClassify}
+            disabled={autoClassifying}
+            className="px-4 py-2 bg-slate-700 hover:bg-slate-600 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors"
           >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-            </svg>
-            Add Expert
+            {autoClassifying ? 'Classifying…' : 'Auto-classify all'}
           </button>
+          {autoResult && <span className="text-sm text-slate-400">{autoResult}</span>}
+
+          <button
+            onClick={() => setImportModalOpen(true)}
+            className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm font-medium rounded-lg transition-colors"
+          >
+            Import CSV
+          </button>
+
+          {selectedUsernames.size > 0 && (
+            <button
+              onClick={() => setDeleteConfirm({ type: 'bulk', count: selectedUsernames.size })}
+              className="px-4 py-2 bg-red-600/20 hover:bg-red-600/30 text-red-400 text-sm font-medium rounded-lg border border-red-500/30 transition-colors"
+            >
+              Delete selected ({selectedUsernames.size})
+            </button>
+          )}
         </div>
       </div>
 
@@ -493,7 +511,7 @@ export default function ExpertsPage() {
       {error && <p className="text-red-400 text-sm">Error: {error}</p>}
 
       {data && (
-        <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl overflow-hidden">
+        <AdminCard className="overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -636,27 +654,14 @@ export default function ExpertsPage() {
           </div>
 
           {/* Pagination */}
-          <div className="flex items-center justify-between px-4 py-3 border-t border-slate-800">
-            <span className="text-sm text-slate-500">{filtered.length} expert{filtered.length !== 1 ? 's' : ''}</span>
-            <div className="flex items-center gap-3 text-sm text-slate-400">
-              <button
-                disabled={pageIdx === 0}
-                onClick={() => setPageIdx(p => p - 1)}
-                className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg transition-colors"
-              >
-                Prev
-              </button>
-              <span>Page {pageIdx + 1} of {totalPages}</span>
-              <button
-                disabled={pageIdx >= totalPages - 1}
-                onClick={() => setPageIdx(p => p + 1)}
-                className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg transition-colors"
-              >
-                Next
-              </button>
-            </div>
+          <div className="px-4 py-3 border-t border-slate-800">
+            <AdminPagination
+              page={pageIdx}
+              totalPages={totalPages}
+              onPageChange={setPageIdx}
+            />
           </div>
-        </div>
+        </AdminCard>
       )}
 
       {/* CSV Import Modal */}
