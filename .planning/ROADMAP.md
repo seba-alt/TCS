@@ -196,7 +196,7 @@ Plans:
 **Goal:** The admin dashboard surfaces actionable data at a glance — tag-only searches render as chips, irrelevant sections are removed, Searches and Marketplace are merged into one Data page with a unified date picker, and lead click activity is immediately visible without expanding rows.
 **Depends on:** Phase 58
 **Requirements:** ADMUI-01, ADMUI-02, ADMUI-03, ADMUI-04
-**Plans:** 3 plans
+**Plans:** 1/3 plans executed
 
 Plans:
 - [ ] 58.1-01-PLAN.md — Backend endpoint extensions (click_count, active_tags) + Overview page cleanup
