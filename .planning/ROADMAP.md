@@ -146,7 +146,10 @@ Plans:
   2. Overview page shows a ranked list of the most frequent search queries for the selected time period
   3. Overview page shows zero-result queries as unmet demand signals for the selected time period
   4. All three new cards respect the existing period toggle (Today / 7d / 30d / All)
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 62-01-PLAN.md — Backend top-queries endpoint + TypeScript types
+- [ ] 62-02-PLAN.md — Frontend overview cards (Top Experts, Top Searches, Unmet Demand)
 
 ## Progress
 
@@ -154,4 +157,4 @@ Plans:
 |-------|-----------|----------------|--------|-----------|
 | 60. Bug Fixes | 1/1 | Complete    | 2026-03-03 | - |
 | 61. Lead Journey Timeline | 2/2 | Complete    | 2026-03-03 | - |
-| 62. Overview Enhancements | v5.1 | 0/TBD | Not started | - |
+| 62. Overview Enhancements | v5.1 | 0/2 | Not started | - |
