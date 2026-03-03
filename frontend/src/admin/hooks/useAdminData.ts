@@ -93,18 +93,19 @@ export async function adminPostFormData<T>(path: string, formData: FormData): Pr
   return res.json() as Promise<T>
 }
 
-export function useAdminStats() {
+export function useAdminStats(days?: number) {
   const [stats, setStats] = useState<AdminStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     setLoading(true)
-    adminFetch<AdminStats>('/stats')
+    const params = days && days > 0 ? { days } : undefined
+    adminFetch<AdminStats>('/stats', params)
       .then(setStats)
       .catch(e => setError(e.message))
       .finally(() => setLoading(false))
-  }, [])
+  }, [days])
 
   return { stats, loading, error }
 }
@@ -328,17 +329,19 @@ export function useMarketplaceTrend() {
   return { data, loading, error, refetch: fetchData }
 }
 
-export function useAnalyticsSummary() {
+export function useAnalyticsSummary(days?: number) {
   const [data, setData] = useState<AnalyticsSummary | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    adminFetch<AnalyticsSummary>('/analytics-summary')
+    setLoading(true)
+    const params = days && days > 0 ? { days } : undefined
+    adminFetch<AnalyticsSummary>('/analytics-summary', params)
       .then(setData)
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false))
-  }, [])
+  }, [days])
 
   return { data, loading, error }
 }

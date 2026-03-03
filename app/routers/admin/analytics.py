@@ -18,39 +18,52 @@ router = APIRouter()
 
 
 @router.get("/stats")
-def get_stats(db: Session = Depends(get_db)):
+def get_stats(days: int = 0, db: Session = Depends(get_db)):
     """
     Return aggregate search metrics plus top queries and feedback.
+    When days > 0, scope aggregate counts to that time window.
     """
-    total = db.scalar(select(func.count()).select_from(Conversation)) or 0
+    date_filter = None
+    if days > 0:
+        date_filter = datetime.utcnow() - timedelta(days=days)
 
-    match_count = db.scalar(
-        select(func.count()).select_from(Conversation).where(
-            Conversation.response_type == "match"
-        )
-    ) or 0
+    total_stmt = select(func.count()).select_from(Conversation)
+    if date_filter:
+        total_stmt = total_stmt.where(Conversation.created_at >= date_filter)
+    total = db.scalar(total_stmt) or 0
 
-    gap_count = db.scalar(
-        select(func.count()).select_from(Conversation).where(
-            (Conversation.top_match_score.is_(None))
-            | (Conversation.top_match_score < GAP_THRESHOLD)
-            | (Conversation.response_type == "clarification")
-        )
-    ) or 0
+    match_stmt = select(func.count()).select_from(Conversation).where(
+        Conversation.response_type == "match"
+    )
+    if date_filter:
+        match_stmt = match_stmt.where(Conversation.created_at >= date_filter)
+    match_count = db.scalar(match_stmt) or 0
+
+    gap_stmt = select(func.count()).select_from(Conversation).where(
+        (Conversation.top_match_score.is_(None))
+        | (Conversation.top_match_score < GAP_THRESHOLD)
+        | (Conversation.response_type == "clarification")
+    )
+    if date_filter:
+        gap_stmt = gap_stmt.where(Conversation.created_at >= date_filter)
+    gap_count = db.scalar(gap_stmt) or 0
 
     match_rate = round(match_count / total, 3) if total else 0.0
 
     # Top 10 most searched queries
-    top_q_rows = db.execute(
+    top_q_stmt = (
         select(Conversation.query, func.count(Conversation.id).label("count"))
         .group_by(Conversation.query)
         .order_by(func.count(Conversation.id).desc())
         .limit(10)
-    ).all()
+    )
+    if date_filter:
+        top_q_stmt = top_q_stmt.where(Conversation.created_at >= date_filter)
+    top_q_rows = db.execute(top_q_stmt).all()
     top_queries = [{"query": r.query, "count": r.count} for r in top_q_rows]
 
     # Top 10 query+vote combos
-    top_fb_rows = db.execute(
+    top_fb_stmt = (
         select(
             Conversation.query,
             Feedback.vote,
@@ -60,16 +73,22 @@ def get_stats(db: Session = Depends(get_db)):
         .group_by(Conversation.query, Feedback.vote)
         .order_by(func.count(Feedback.id).desc())
         .limit(10)
-    ).all()
+    )
+    if date_filter:
+        top_fb_stmt = top_fb_stmt.where(Conversation.created_at >= date_filter)
+    top_fb_rows = db.execute(top_fb_stmt).all()
     top_feedback = [{"query": r.query, "vote": r.vote, "count": r.count} for r in top_fb_rows]
 
     # Phase 48: Total leads (distinct emails), expert pool, 7-day trends
-    total_leads = db.scalar(
+    leads_stmt = (
         select(func.count(func.distinct(Conversation.email)))
         .select_from(Conversation)
         .where(Conversation.email != "")
         .where(Conversation.email.is_not(None))
-    ) or 0
+    )
+    if date_filter:
+        leads_stmt = leads_stmt.where(Conversation.created_at >= date_filter)
+    total_leads = db.scalar(leads_stmt) or 0
 
     expert_pool = db.scalar(
         select(func.count()).select_from(Expert).where(Expert.first_name != "")
@@ -244,20 +263,26 @@ def resolve_gap(
 
 
 @router.get("/analytics-summary")
-def get_analytics_summary(db: Session = Depends(get_db)):
+def get_analytics_summary(days: int = 0, db: Session = Depends(get_db)):
     """
     Return aggregated analytics for the admin overview dashboard.
+    When days > 0, scope aggregate counts to that time window.
     """
+    date_clause = ""
+    if days > 0:
+        cutoff = (datetime.utcnow() - timedelta(days=days)).strftime("%Y-%m-%d %H:%M:%S")
+        date_clause = f" AND created_at >= '{cutoff}'"
+
     total_card_clicks = db.execute(
-        _text("SELECT COUNT(*) FROM user_events WHERE event_type = 'card_click'")
+        _text(f"SELECT COUNT(*) FROM user_events WHERE event_type = 'card_click'{date_clause}")
     ).scalar() or 0
 
     total_search_queries = db.execute(
-        _text("SELECT COUNT(*) FROM user_events WHERE event_type = 'search_query'")
+        _text(f"SELECT COUNT(*) FROM user_events WHERE event_type = 'search_query'{date_clause}")
     ).scalar() or 0
 
     total_lead_clicks = db.execute(
-        _text("SELECT COUNT(*) FROM lead_clicks")
+        _text(f"SELECT COUNT(*) FROM lead_clicks WHERE 1=1{date_clause}")
     ).scalar() or 0
 
     # Recent searches — last 10 search_query events
