@@ -285,7 +285,7 @@ def get_analytics_summary(days: int = 0, db: Session = Depends(get_db)):
         _text(f"SELECT COUNT(*) FROM lead_clicks WHERE 1=1{date_clause}")
     ).scalar() or 0
 
-    # Recent searches — last 10 search_query events
+    # Recent searches — last 10 search_query events (exclude empty browse with no tags)
     recent_search_rows = db.execute(_text("""
         SELECT
             json_extract(payload, '$.query_text') AS query_text,
@@ -294,6 +294,10 @@ def get_analytics_summary(days: int = 0, db: Session = Depends(get_db)):
             created_at
         FROM user_events
         WHERE event_type = 'search_query'
+          AND NOT (
+            (json_extract(payload, '$.query_text') IS NULL OR json_extract(payload, '$.query_text') = '')
+            AND (json_extract(payload, '$.active_tags') IS NULL OR json_extract(payload, '$.active_tags') = '[]')
+          )
         ORDER BY created_at DESC
         LIMIT 10
     """)).all()

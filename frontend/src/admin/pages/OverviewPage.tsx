@@ -73,6 +73,7 @@ function StatCard({
       className={`p-5 ${
         accent ? 'border-purple-500/40 ring-1 ring-purple-500/20' : ''
       }${onClick ? ' cursor-pointer hover:border-purple-500/40 hover:bg-slate-800/80 transition-all' : ''}`}
+      onClick={onClick}
     >
       <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">{label}</p>
       <p className={`text-3xl font-bold ${accent ? 'text-purple-400' : 'text-white'}`}>{value}</p>
@@ -330,7 +331,7 @@ export default function OverviewPage() {
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
         <StatCard
           label="Total Searches"
-          value={stats.total_searches}
+          value={analyticsLoading ? '...' : (analytics?.total_search_queries ?? 0)}
           onClick={() => navigate('/admin/data')}
         />
         <StatCard

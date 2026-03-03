@@ -156,14 +156,14 @@ export default function LeadsPage() {
         }
       />
 
-      {/* Newsletter Subscribers section */}
+      {/* Leads (newsletter signups) section */}
       <AdminCard className="overflow-hidden">
         {/* Header row */}
         <div className="px-5 py-3 bg-slate-900/40 border-b border-slate-700/60 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <span className="text-sm font-semibold text-white">Newsletter Subscribers</span>
+            <span className="text-sm font-semibold text-white">Leads</span>
             <span className="text-xs bg-purple-900/50 text-purple-300 border border-purple-800/50 px-2 py-0.5 rounded-full">
-              {nltrData?.count ?? 0} {(nltrData?.count ?? 0) === 1 ? 'subscriber' : 'subscribers'}
+              {nltrData?.count ?? 0} {(nltrData?.count ?? 0) === 1 ? 'lead' : 'leads'}
             </span>
           </div>
           <button
@@ -174,11 +174,11 @@ export default function LeadsPage() {
           </button>
         </div>
 
-        {/* Subscriber list */}
+        {/* Lead list */}
         {nltrLoading ? (
-          <p className="px-5 py-4 text-slate-500 text-sm animate-pulse">Loading subscribers…</p>
+          <p className="px-5 py-4 text-slate-500 text-sm animate-pulse">Loading leads…</p>
         ) : !nltrData || nltrData.subscribers.length === 0 ? (
-          <p className="px-5 py-4 text-slate-600 text-sm">No subscribers yet.</p>
+          <p className="px-5 py-4 text-slate-600 text-sm">No leads yet.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">

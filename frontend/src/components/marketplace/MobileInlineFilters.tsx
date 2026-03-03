@@ -98,14 +98,14 @@ export function MobileInlineFilters() {
           </button>
         )}
 
-        {/* Clear all filters — visible when any filter is active and not in saved view */}
-        {hasActiveFilters && !savedFilter && (
+        {/* Clear all — shown in filter row when filters are active but no tags selected */}
+        {hasActiveFilters && !savedFilter && totalTagCount === 0 && (
           <button
             onClick={resetFilters}
-            className="flex items-center gap-1 text-xs rounded-md px-2 py-1.5 shrink-0 transition-colors bg-red-50 text-red-600 hover:bg-red-100"
+            className="inline-flex items-center gap-1 text-xs rounded-md px-2.5 py-1.5 shrink-0 transition-colors bg-red-50 text-red-600 hover:bg-red-100"
             aria-label="Clear all filters"
           >
-            <X size={12} />
+            <X size={11} />
             Clear all
           </button>
         )}
@@ -149,6 +149,17 @@ export function MobileInlineFilters() {
               </button>
             </span>
           ))}
+          {/* Clear all filters — inline with tag chips */}
+          {hasActiveFilters && !savedFilter && (
+            <button
+              onClick={resetFilters}
+              className="inline-flex items-center gap-1 text-xs rounded-full px-2.5 py-1 shrink-0 transition-colors bg-red-50 text-red-600 hover:bg-red-100"
+              aria-label="Clear all filters"
+            >
+              <X size={11} />
+              Clear all
+            </button>
+          )}
         </div>
       )}
 
