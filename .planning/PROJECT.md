@@ -2,7 +2,7 @@
 
 ## What This Is
 
-A professional Expert Marketplace for the Tinrate platform. Users discover 530 vetted experts via an immersive aurora-aesthetic Explorer — glassmorphic Command Center header with autocomplete search (debounced suggestions for job titles, companies, and tags), spring expert count, and Sage-in-flight pulse; animated aurora mesh background; bento-style expert cards with profile photos and monogram fallback in grid or list view; animated claymorphic tag cloud with 18 domain tags plus industry-level tags (Finance, Healthcare, Tech, etc.) and proximity-based scaling; and a floating Sage AI co-pilot that actively searches experts via FAISS and injects results directly into the grid. Mobile-optimized with tap-expand cards, inline filter controls (tag picker, sort, active chip row), full-width search bar, and Sage bottom sheet. Expert bookmarking with localStorage persistence. User behavior (card clicks, Sage queries, filter changes) is tracked for marketplace intelligence. GA4 analytics tracks every page view with SPA route change support. Expert email PII has been purged from all data stores. A newsletter gate captures leads on "View Full Profile". Admin panel secured with bcrypt+JWT authentication and rate limiting; streamlined sidebar with overview dashboard (stat cards, recent leads/searches), lead export CSV, bulk expert CSV import, marketplace intelligence, and intelligence metrics. Playful users can trigger barrel rolls and a "tinrate" header tilt easter egg.
+A professional Expert Marketplace for the Tinrate platform. Users discover 530 vetted experts via an immersive aurora-aesthetic Explorer — glassmorphic Command Center header with autocomplete search (debounced suggestions for job titles, companies, and tags) and spring expert count; animated aurora mesh background; bento-style expert cards with profile photos and monogram fallback in grid or list view; animated claymorphic tag cloud with 18 domain tags plus industry-level tags (Finance, Healthcare, Tech, etc.) and proximity-based scaling. Mobile-optimized with inline filter controls (tag picker, sort, active chip row) and full-width search bar. Expert bookmarking with localStorage persistence. User behavior (card clicks, filter changes) is tracked for marketplace intelligence. GA4 analytics + Microsoft Clarity track every page view with SPA route change support. Expert email PII has been purged from all data stores. A newsletter gate captures leads on "View Full Profile". Intercom live chat provides real-time support. Admin panel secured with bcrypt+JWT authentication and rate limiting; streamlined sidebar with overview dashboard (stat cards, recent leads/searches), lead export CSV, bulk expert CSV import, and marketplace intelligence. Playful users can trigger barrel rolls and a "tinrate" header tilt easter egg.
 
 ## Core Value
 
@@ -113,10 +113,19 @@ A user describes any problem and instantly gets expertly matched professionals t
 - ✓ Admin panel overhauled — URL routing, shared components, pagination with page jump, overview dashboard with period toggle — v5.0
 - ✓ Admin Data page unified — Searches and Marketplace merged with shared date picker — v5.0
 - ✓ Lead click tracking — click_count column on Leads page + Click Activity table — v5.0
+- ✓ Sage AI co-pilot removed — all backend endpoints, frontend components, store slices, and admin views deleted — v5.0
+- ✓ Intercom live chat integrated — react-use-intercom provider, IntercomIdentity component, replaces Sage for user support — v5.0
 
 ### Active
 
-(No active requirements — start next milestone with `/gsd:new-milestone`)
+<!-- v5.1 Lead Insights & Overview -->
+
+- [ ] Lead journey timeline (full activity per lead — searches, clicks, order)
+- [ ] Overview: top experts (most clicked)
+- [ ] Overview: top searches (most common queries)
+- [ ] Overview: zero-result gaps (unmet demand)
+- [ ] Clear-all button only visible with active filters
+- [ ] Build fix: unused totalTagCount in MobileInlineFilters.tsx
 
 ### Out of Scope
 
@@ -237,10 +246,11 @@ A user describes any problem and instantly gets expertly matched professionals t
 **Expert pool:** 530 experts (data/metadata.json), all AI-tagged with domain + industry tags; FAISS index at 530 vectors; profile photos via proxy endpoint; expert email PII purged
 **Search intelligence:** Three-stage hybrid pipeline live; HyDE + feedback re-ranking toggled via admin steering panel; FTS5 autocomplete suggestions with tag-first ranking; dynamic rate slider max from API; embedding cache (60s TTL) prevents duplicate Google API calls
 **Explorer:** Single-page aurora-aesthetic marketplace at `/` with glassmorphic Command Center header, autofocused search with tag-first autocomplete, responsive cards (mobile photo-centric / desktop photo-left) in grid or list view, animated tag cloud (18 domain tags + industry tags), inline mobile filters (simplified — no clear button, no search-within pickers), seeded random initial ordering, bookmarks with purple visual treatment and filter-independent saved view, Intercom no-results CTA, anonymous search tracking, newsletter gate, API error states with retry. Search results tier-sorted (Top Match → Good Match → rest). Currency symbols on all rate displays.
+**Live chat:** Intercom (replaces Sage AI co-pilot, removed in phase 50.3)
 **Admin panel:** Secured with bcrypt+JWT + rate limiting; 10-module router package; URL-based routing with shared components (AdminCard, AdminInput, AdminPagination, AdminPageHeader). Overview with period toggle (Today/7d/30d/All) + active tag chips. Unified Data page (merged Searches/Marketplace) with shared date picker. Experts page with name search + deletion. Leads page with click count column + Click Activity table + CSV export. Settings/feedback caching (30s TTL).
 **Analytics:** GA4 (G-0T526W3E1Z) + Microsoft Clarity (vph5o95n6c) tracking all page views with SPA route change support
 
-**Current milestone:** Planning next milestone
+**Current milestone:** v5.1 Lead Insights & Overview
 
 ## Context
 
@@ -318,4 +328,4 @@ A user describes any problem and instantly gets expertly matched professionals t
 | ADMUI-03 closed as N/A | Sage data source retired, searches table not applicable | ✓ Good — honest requirement tracking |
 
 ---
-*Last updated: 2026-03-03 after v5.0 milestone*
+*Last updated: 2026-03-03 after v5.1 milestone start*
