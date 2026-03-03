@@ -10,6 +10,9 @@ export function MobileInlineFilters() {
   const [industryPickerOpen, setIndustryPickerOpen] = useState(false)
 
   const {
+    query,
+    rateMin,
+    rateMax,
     tags,
     industryTags,
     savedExperts,
@@ -17,7 +20,10 @@ export function MobileInlineFilters() {
     toggleTag,
     toggleIndustryTag,
     setSavedFilter,
+    resetFilters,
   } = useFilterSlice()
+
+  const hasActiveFilters = query.trim().length > 0 || tags.length > 0 || industryTags.length > 0 || rateMin > 0 || rateMax < 5000
 
   const { total } = useResultsSlice()
   const loading = useExplorerStore((s) => s.loading)
@@ -89,6 +95,18 @@ export function MobileInlineFilters() {
           >
             <X size={14} />
             Exit
+          </button>
+        )}
+
+        {/* Clear all filters — visible when any filter is active and not in saved view */}
+        {hasActiveFilters && !savedFilter && (
+          <button
+            onClick={resetFilters}
+            className="flex items-center gap-1 text-xs rounded-md px-2 py-1.5 shrink-0 transition-colors bg-red-50 text-red-600 hover:bg-red-100"
+            aria-label="Clear all filters"
+          >
+            <X size={12} />
+            Clear all
           </button>
         )}
 

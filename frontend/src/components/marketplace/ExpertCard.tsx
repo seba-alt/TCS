@@ -106,28 +106,45 @@ export function ExpertCard({ expert, onViewProfile, context = 'grid', rank }: Ex
       </button>
 
       {/* ===== MOBILE LAYOUT (<768px): vertical, photo-centric ===== */}
-      {/* Photo — large centered circle, ~40-50% of card height */}
-      <div className="md:hidden flex flex-col items-center gap-1.5 w-full mt-1">
-        {showPhoto ? (
-          <img
-            src={`${API_BASE}${expert.photo_url!}`}
-            alt=""
-            className="w-20 h-20 rounded-full object-cover shrink-0"
-            loading="lazy"
-            onError={() => setImgError(true)}
-          />
-        ) : (
-          <div className="w-20 h-20 rounded-full bg-brand-purple/10 text-brand-purple font-semibold text-lg flex items-center justify-center shrink-0">
-            {initials}
-          </div>
+      <div className="md:hidden flex flex-col items-center w-full h-full">
+        {/* Match badge — top-left corner ribbon (only when search/tag active) */}
+        {hasSemanticFilter && badgeLabel && (
+          <span className="absolute top-1.5 left-1.5 text-[10px] font-semibold bg-green-50 text-green-700 rounded-full px-1.5 py-0.5 z-10">
+            {badgeLabel}
+          </span>
         )}
 
-        {/* Name, title, rate — centered below photo */}
-        <h3 className="font-semibold text-gray-900 text-sm leading-snug text-center line-clamp-1 px-4 w-full">
+        {/* Photo — large centered circle */}
+        <div className="mt-3 mb-1.5">
+          {showPhoto ? (
+            <img
+              src={`${API_BASE}${expert.photo_url!}`}
+              alt=""
+              className="w-20 h-20 rounded-full object-cover shrink-0"
+              loading="lazy"
+              onError={() => setImgError(true)}
+            />
+          ) : (
+            <div className="w-20 h-20 rounded-full bg-brand-purple/10 text-brand-purple font-semibold text-lg flex items-center justify-center shrink-0">
+              {initials}
+            </div>
+          )}
+        </div>
+
+        {/* Name — 2 lines max */}
+        <h3 className="font-semibold text-gray-900 text-sm leading-snug text-center line-clamp-2 px-3 w-full">
           {expert.first_name} {expert.last_name}
         </h3>
-        <p className="text-xs text-gray-500 text-center line-clamp-1 px-3 w-full">{expert.job_title}</p>
-        <span className="text-xs font-semibold text-brand-purple whitespace-nowrap">
+
+        {/* Company name */}
+        {expert.company && (
+          <p className="text-[11px] text-gray-400 text-center line-clamp-1 px-3 w-full mt-0.5">
+            {expert.company}
+          </p>
+        )}
+
+        {/* Rate — pushed to bottom with mt-auto */}
+        <span className="text-xs font-semibold text-brand-purple whitespace-nowrap mt-auto mb-2">
           {currencySymbol(expert.currency)}{expert.hourly_rate}/hr
         </span>
       </div>
