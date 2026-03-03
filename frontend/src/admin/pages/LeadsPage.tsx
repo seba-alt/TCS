@@ -1,5 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useState, useEffect, useMemo } from 'react'
 import { useAdminLeads, useNewsletterSubscribers, adminFetch } from '../hooks/useAdminData'
 import type { LeadRow, LeadClicksResponse, LeadClickEntry } from '../types'
 import { AdminCard } from '../components/AdminCard'
@@ -21,12 +20,8 @@ function timeAgo(isoString: string): string {
 export default function LeadsPage() {
   const { data, loading, error } = useAdminLeads()
   const { data: nltrData, loading: nltrLoading } = useNewsletterSubscribers()
-  const navigate = useNavigate()
-  const location = useLocation()
-  const highlightEmail: string = location.state?.email ?? ''
 
-  const [expandedEmail, setExpandedEmail] = useState<string | null>(highlightEmail || null)
-  const highlightRef = useRef<HTMLTableRowElement | null>(null)
+  const [expandedEmail, setExpandedEmail] = useState<string | null>(null)
 
   // Sort state for click_count column
   const [sortField, setSortField] = useState<string | null>(null)
@@ -72,12 +67,6 @@ export default function LeadsPage() {
   const [leadClicks, setLeadClicks] = useState<Record<string, LeadClickEntry[]>>({})
   const [clicksLoading, setClicksLoading] = useState<Record<string, boolean>>({})
 
-  useEffect(() => {
-    if (highlightEmail && highlightRef.current) {
-      highlightRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    }
-  }, [highlightEmail, data])
-
   async function handleRowExpand(email: string) {
     const isExpanding = expandedEmail !== email
     setExpandedEmail(isExpanding ? email : null)
@@ -98,7 +87,7 @@ export default function LeadsPage() {
   }
 
   function formatDate(iso: string | null) {
-    if (!iso) return '—'
+    if (!iso) return '\u2014'
     return new Date(iso).toLocaleString(undefined, {
       dateStyle: 'medium',
       timeStyle: 'short',
@@ -176,7 +165,7 @@ export default function LeadsPage() {
 
         {/* Lead list */}
         {nltrLoading ? (
-          <p className="px-5 py-4 text-slate-500 text-sm animate-pulse">Loading leads…</p>
+          <p className="px-5 py-4 text-slate-500 text-sm animate-pulse">Loading leads...</p>
         ) : !nltrData || nltrData.subscribers.length === 0 ? (
           <p className="px-5 py-4 text-slate-600 text-sm">No leads yet.</p>
         ) : (
@@ -210,7 +199,7 @@ export default function LeadsPage() {
       </AdminCard>
 
       {/* Existing leads section */}
-      {loading && <p className="text-slate-500 text-sm animate-pulse">Loading leads…</p>}
+      {loading && <p className="text-slate-500 text-sm animate-pulse">Loading leads...</p>}
       {error && <p className="text-red-400 text-sm">Error: {error}</p>}
 
       {data && (
@@ -246,32 +235,25 @@ export default function LeadsPage() {
                   >
                     Clicks {sortField === 'click_count' && (sortDir === 'desc' ? '\u2193' : '\u2191')}
                   </th>
-                  <th className="px-5 py-3" />
                 </tr>
               </thead>
               <tbody>
                 {sortedLeads.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="px-5 py-8 text-center text-slate-500">
+                    <td colSpan={5} className="px-5 py-8 text-center text-slate-500">
                       No leads yet
                     </td>
                   </tr>
                 )}
                 {sortedLeads.map((lead: LeadRow) => {
-                  const isHighlighted = lead.email === highlightEmail
                   const clicks = leadClicks[lead.email] ?? []
                   const isLoadingClicks = clicksLoading[lead.email] ?? false
                   return (
                     <>
                       <tr
                         key={lead.email}
-                        ref={isHighlighted ? highlightRef : null}
                         onClick={() => handleRowExpand(lead.email)}
-                        className={`border-b border-slate-700/40 cursor-pointer transition-colors ${
-                          isHighlighted
-                            ? 'bg-purple-900/20 hover:bg-purple-900/30'
-                            : 'hover:bg-slate-700/20'
-                        }`}
+                        className="border-b border-slate-700/40 cursor-pointer transition-colors hover:bg-slate-700/20"
                       >
                         <td className="px-5 py-3 text-white font-medium">
                           <div className="flex items-center gap-2">
@@ -287,11 +269,6 @@ export default function LeadsPage() {
                               <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                             </svg>
                             {lead.email}
-                            {isHighlighted && (
-                              <span className="text-xs bg-purple-900/50 text-purple-400 border border-purple-800/50 px-1.5 py-0.5 rounded">
-                                from search
-                              </span>
-                            )}
                           </div>
                         </td>
                         <td className="px-5 py-3 text-right text-slate-300">{lead.total_searches}</td>
@@ -312,23 +289,12 @@ export default function LeadsPage() {
                             <span className="text-slate-500">0</span>
                           )}
                         </td>
-                        <td className="px-5 py-3 text-right">
-                          <button
-                            onClick={e => {
-                              e.stopPropagation()
-                              navigate('/admin/data', { state: { email: lead.email } })
-                            }}
-                            className="text-xs text-blue-400 hover:text-blue-300 hover:underline whitespace-nowrap"
-                          >
-                            Searches →
-                          </button>
-                        </td>
                       </tr>
 
                       {/* Expanded row */}
                       {expandedEmail === lead.email && (
                         <tr key={`${lead.email}-expanded`} className="border-b border-slate-700/40">
-                          <td colSpan={6} className="px-5 py-3 bg-slate-900/30">
+                          <td colSpan={5} className="px-5 py-3 bg-slate-900/30">
                             <div className="space-y-4">
                               {/* Recent queries section */}
                               <div>
@@ -355,7 +321,7 @@ export default function LeadsPage() {
                                   Expert Clicks
                                 </h4>
                                 {isLoadingClicks ? (
-                                  <p className="text-sm text-slate-500 animate-pulse">Loading clicks…</p>
+                                  <p className="text-sm text-slate-500 animate-pulse">Loading clicks...</p>
                                 ) : clicks.length === 0 ? (
                                   <p className="text-sm text-slate-600">No expert clicks recorded</p>
                                 ) : (
