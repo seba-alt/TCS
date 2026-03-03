@@ -10,11 +10,11 @@ Requirements for Platform Polish & Admin Overhaul. Each maps to roadmap phases.
 ### Bug Fixes
 
 - [x] **BUG-01**: Search results sorted by match tier — Top Match first, then Good Match, then rest — when a search query is active
-- [ ] **BUG-02**: Currency displayed as symbol (€, $, £) instead of text code (EUR, USD, GBP) across all surfaces
-- [ ] **BUG-03**: Mobile expert cards show company name
-- [ ] **BUG-04**: Mobile expert cards show match badge (Top/Good Match) when applicable
-- [ ] **BUG-05**: Mobile expert card name wraps to two lines when truncated
-- [ ] **BUG-06**: Clear-all filter button visible and accessible on mobile
+- [x] **BUG-02**: Currency displayed as symbol (€, $, £) instead of text code (EUR, USD, GBP) across all surfaces
+- [x] **BUG-03**: Mobile expert cards show company name
+- [x] **BUG-04**: Mobile expert cards show match badge (Top/Good Match) when applicable
+- [x] **BUG-05**: Mobile expert card name wraps to two lines when truncated
+- [x] **BUG-06**: Clear-all filter button visible and accessible on mobile
 - [ ] **BUG-07**: Admin experts page has text search filtering by name
 - [x] **BUG-08**: Open Graph meta tags with preview image so shared links show a rich card (title, description, image)
 
@@ -64,11 +64,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | BUG-01 | Phase 55 | Complete |
-| BUG-02 | Phase 55 | Pending |
-| BUG-03 | Phase 55 | Pending |
-| BUG-04 | Phase 55 | Pending |
-| BUG-05 | Phase 55 | Pending |
-| BUG-06 | Phase 55 | Pending |
+| BUG-02 | Phase 55 | Complete |
+| BUG-03 | Phase 55 | Complete |
+| BUG-04 | Phase 55 | Complete |
+| BUG-05 | Phase 55 | Complete |
+| BUG-06 | Phase 55 | Complete |
 | BUG-07 | Phase 57 | Pending |
 | BUG-08 | Phase 55 | Complete |
 | PERF-01 | Phase 56 | Pending |
