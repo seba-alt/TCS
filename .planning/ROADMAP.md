@@ -115,7 +115,7 @@ See `.planning/milestones/v4.1-ROADMAP.md`
 
 - [x] **Phase 55: Explorer Bug Fixes** - Fix tier sorting, currency symbols, mobile card completeness, clear button, and Open Graph tags (completed 2026-03-03)
 - [x] **Phase 56: Backend Performance & Admin Refactor** - Cache embeddings/feedback/settings, optimize tag filtering, split admin monolith into route modules (completed 2026-03-03)
-- [ ] **Phase 57: Admin Frontend Overhaul** - URL routing, pagination, consistent components, overview redesign, experts table, responsive layout, expert search
+- [x] **Phase 57: Admin Frontend Overhaul** - URL routing, pagination, consistent components, overview redesign, experts table, responsive layout, expert search (completed 2026-03-03)
 
 ## Phase Details
 
@@ -160,7 +160,7 @@ Plans:
   4. All admin pages use the same card, table header, and form input visual patterns — no pages look like they were built by a different team
   5. The admin Overview page surfaces the metrics an operator actually needs to act on (lead growth, search volume, zero-result rate) with clear navigation to detail views
   6. The admin panel is fully usable at tablet width (768px+) without broken layouts or hidden controls
-**Plans:** 2/4 plans executed
+**Plans:** 4/4 plans complete
 Plans:
 - [ ] 57-01-PLAN.md — URL child routes for Tools and Data sub-pages
 - [ ] 57-02-PLAN.md — Shared components (AdminCard, AdminInput, AdminPagination, AdminPageHeader) + pagination upgrade
@@ -173,4 +173,4 @@ Plans:
 |-------|----------------|--------|-----------|
 | 55. Explorer Bug Fixes | 2/2 | Complete    | 2026-03-03 |
 | 56. Backend Performance & Admin Refactor | 3/3 | Complete | 2026-03-03 |
-| 57. Admin Frontend Overhaul | 2/4 | In Progress|  |
+| 57. Admin Frontend Overhaul | 4/4 | Complete   | 2026-03-03 |
