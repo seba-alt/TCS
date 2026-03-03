@@ -84,10 +84,11 @@ export function ExpertCard({ expert, onViewProfile, context = 'grid', rank }: Ex
 
   return (
     <div
-      className="expert-card bg-white/90 rounded-xl border border-gray-100 cursor-pointer transition-all duration-150 relative overflow-hidden
+      className={`expert-card rounded-xl border cursor-pointer transition-all duration-150 relative overflow-hidden
         flex flex-col items-center p-3 h-[200px]
         md:flex-row md:items-start md:p-3 md:h-[180px] md:gap-3
-        hover:shadow-lg hover:shadow-brand-purple/10 hover:-translate-y-0.5"
+        hover:shadow-lg hover:shadow-brand-purple/10 hover:-translate-y-0.5
+        ${isSaved ? 'bg-purple-50 border-purple-200' : 'bg-white/90 border-gray-100'}`}
       onClick={handleCardClick}
       tabIndex={0}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleCardClick() }}
@@ -97,7 +98,7 @@ export function ExpertCard({ expert, onViewProfile, context = 'grid', rank }: Ex
       {/* Bookmark icon — absolute top-right corner on both layouts */}
       <button
         onClick={handleBookmark}
-        className="absolute top-2 right-2 p-0.5 text-gray-300 hover:text-brand-purple transition-colors z-10"
+        className="absolute top-2 right-2 p-0.5 text-gray-400 hover:text-brand-purple transition-colors z-10"
         aria-label={isSaved ? 'Remove bookmark' : 'Bookmark expert'}
       >
         <Bookmark size={16} className={isSaved ? 'fill-current text-brand-purple' : ''} />
