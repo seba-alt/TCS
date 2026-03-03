@@ -189,5 +189,5 @@ Plans:
 | 50.3. Intercom Integration | v4.0 | 3/3 | Complete | 2026-03-02 |
 | 51. Admin Fixes | 2/2 | Complete    | 2026-03-02 | - |
 | 52. Explorer & Search UX | 2/2 | Complete    | 2026-03-03 | - |
-| 53. Card & Mobile Redesign | 2/2 | Complete   | 2026-03-03 | - |
+| 53. Card & Mobile Redesign | 2/2 | Complete    | 2026-03-03 | - |
 | 54. Bookmarks & Analytics | v4.1 | 0/TBD | Not started | - |
