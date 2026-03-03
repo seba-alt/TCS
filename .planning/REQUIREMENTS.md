@@ -15,25 +15,25 @@ Requirements for Platform Polish & Admin Overhaul. Each maps to roadmap phases.
 - [x] **BUG-04**: Mobile expert cards show match badge (Top/Good Match) when applicable
 - [x] **BUG-05**: Mobile expert card name wraps to two lines when truncated
 - [x] **BUG-06**: Clear-all filter button visible and accessible on mobile
-- [ ] **BUG-07**: Admin experts page has text search filtering by name
+- [x] **BUG-07**: Admin experts page has text search filtering by name
 - [x] **BUG-08**: Open Graph meta tags with preview image so shared links show a rich card (title, description, image)
 
 ### Performance
 
-- [ ] **PERF-01**: Query embeddings cached with TTL to avoid duplicate Google API calls (~500ms saved per cache hit)
-- [ ] **PERF-02**: Tag filtering optimized — no LIKE on JSON substrings (proper indexing or separate tags table)
-- [ ] **PERF-03**: Feedback data cached per request cycle instead of fetched on every explore call
-- [ ] **PERF-04**: Settings cached in-memory with TTL instead of full SELECT on every call
+- [x] **PERF-01**: Query embeddings cached with TTL to avoid duplicate Google API calls (~500ms saved per cache hit)
+- [x] **PERF-02**: Tag filtering optimized — no LIKE on JSON substrings (proper indexing or separate tags table)
+- [x] **PERF-03**: Feedback data cached per request cycle instead of fetched on every explore call
+- [x] **PERF-04**: Settings cached in-memory with TTL instead of full SELECT on every call
 
 ### Admin Makeover
 
-- [ ] **ADM-01**: Admin backend refactored from 2,225-line monolith into logical route modules
-- [ ] **ADM-02**: Admin Tools and Data pages use URL-based routing instead of hash fragments
-- [ ] **ADM-03**: Admin pagination upgraded with page numbers and direct page jump
-- [ ] **ADM-04**: Admin pages use consistent card, table, and form component patterns
-- [ ] **ADM-05**: Admin Overview dashboard redesigned with actionable metrics and clear navigation
-- [ ] **ADM-06**: Admin Experts page table layout modernized
-- [ ] **ADM-07**: Admin responsive layout works on tablet-width screens
+- [x] **ADM-01**: Admin backend refactored from 2,225-line monolith into logical route modules
+- [x] **ADM-02**: Admin Tools and Data pages use URL-based routing instead of hash fragments
+- [x] **ADM-03**: Admin pagination upgraded with page numbers and direct page jump
+- [x] **ADM-04**: Admin pages use consistent card, table, and form component patterns
+- [x] **ADM-05**: Admin Overview dashboard redesigned with actionable metrics and clear navigation
+- [x] **ADM-06**: Admin Experts page table layout modernized
+- [x] **ADM-07**: Admin responsive layout works on tablet-width screens
 
 ## Future Requirements
 
@@ -69,19 +69,19 @@ Which phases cover which requirements. Updated during roadmap creation.
 | BUG-04 | Phase 55 | Complete |
 | BUG-05 | Phase 55 | Complete |
 | BUG-06 | Phase 55 | Complete |
-| BUG-07 | Phase 57 | Pending |
+| BUG-07 | Phase 57 | Complete |
 | BUG-08 | Phase 55 | Complete |
-| PERF-01 | Phase 56 | Pending |
-| PERF-02 | Phase 56 | Pending |
-| PERF-03 | Phase 56 | Pending |
-| PERF-04 | Phase 56 | Pending |
-| ADM-01 | Phase 56 | Pending |
-| ADM-02 | Phase 57 | Pending |
-| ADM-03 | Phase 57 | Pending |
-| ADM-04 | Phase 57 | Pending |
-| ADM-05 | Phase 57 | Pending |
-| ADM-06 | Phase 57 | Pending |
-| ADM-07 | Phase 57 | Pending |
+| PERF-01 | Phase 56 | Complete |
+| PERF-02 | Phase 56 | Complete |
+| PERF-03 | Phase 56 | Complete |
+| PERF-04 | Phase 56 | Complete |
+| ADM-01 | Phase 56 | Complete |
+| ADM-02 | Phase 57 | Complete |
+| ADM-03 | Phase 57 | Complete |
+| ADM-04 | Phase 57 | Complete |
+| ADM-05 | Phase 57 | Complete |
+| ADM-06 | Phase 57 | Complete |
+| ADM-07 | Phase 57 | Complete |
 
 **Coverage:**
 - v5.0 requirements: 19 total
@@ -90,4 +90,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-03-03*
-*Last updated: 2026-03-03 after roadmap creation*
+*Last updated: 2026-03-03 after phase 57 completion*
