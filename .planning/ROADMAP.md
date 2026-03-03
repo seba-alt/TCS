@@ -12,6 +12,7 @@
 - ✅ **v3.1 Launch Prep** — Phases 41-44 (shipped 2026-02-26)
 - ✅ **v4.0 Public Launch** — Phases 45-50 (shipped 2026-02-27)
 - ✅ **v4.1 UX Polish & Mobile Overhaul** — Phases 51-54 (shipped 2026-03-03)
+- 🚧 **v5.0 Platform Polish & Admin Overhaul** — Phases 55-57 (in progress)
 
 ## Phases
 
@@ -107,3 +108,57 @@ See `.planning/milestones/v4.1-ROADMAP.md`
 - [x] Phase 54: Bookmarks & Analytics (2/2 plans) — completed 2026-03-03
 
 </details>
+
+### 🚧 v5.0 Platform Polish & Admin Overhaul (In Progress)
+
+**Milestone Goal:** Fix lingering Explorer UX bugs, eliminate backend performance bottlenecks, and overhaul the admin panel into a modern, consistent interface.
+
+- [ ] **Phase 55: Explorer Bug Fixes** - Fix tier sorting, currency symbols, mobile card completeness, clear button, and Open Graph tags
+- [ ] **Phase 56: Backend Performance & Admin Refactor** - Cache embeddings/feedback/settings, optimize tag filtering, split admin monolith into route modules
+- [ ] **Phase 57: Admin Frontend Overhaul** - URL routing, pagination, consistent components, overview redesign, experts table, responsive layout, expert search
+
+## Phase Details
+
+### Phase 55: Explorer Bug Fixes
+**Goal**: The Explorer surface is visually complete and correct — search results respect match quality tiers, currencies show as symbols, mobile cards show all key fields, filters are accessible, and shared links generate rich previews.
+**Depends on**: Phase 54 (v4.1 complete)
+**Requirements**: BUG-01, BUG-02, BUG-03, BUG-04, BUG-05, BUG-06, BUG-08
+**Success Criteria** (what must be TRUE):
+  1. A user running a search sees Top Match results before Good Match results before unscored results in the grid
+  2. Every expert card displaying a rate shows a currency symbol (€, $, £) rather than a text code (EUR, USD, GBP)
+  3. A mobile user viewing any expert card can see the company name, a match badge (when applicable), and the expert's name without it being cut off
+  4. A mobile user can tap a visible, clearly accessible clear-all button to reset all active filters
+  5. Sharing the site URL on Slack, iMessage, or social platforms renders a rich link card with the Tinrate title, description, and preview image
+**Plans**: TBD
+
+### Phase 56: Backend Performance & Admin Refactor
+**Goal**: The backend handles repeated requests without redundant external API calls, tag filtering runs against a proper index, and the admin router code is organized into logical modules that are maintainable.
+**Depends on**: Phase 55
+**Requirements**: PERF-01, PERF-02, PERF-03, PERF-04, ADM-01
+**Success Criteria** (what must be TRUE):
+  1. Repeated identical search queries hit a cache and do not trigger a new Google embedding API call (verified by absence of duplicate API calls in logs)
+  2. Tag filtering in the explore endpoint does not use LIKE on a JSON string — it queries a proper index or normalized table
+  3. Feedback and settings data are fetched once per request cycle, not on every individual explore call
+  4. The admin router file no longer contains the full 2,225-line monolith — routes are split into logical sub-modules that can be read and edited independently
+**Plans**: TBD
+
+### Phase 57: Admin Frontend Overhaul
+**Goal**: The admin panel is a modern, consistent, and usable interface — pages navigate via real URLs, tables paginate clearly, visual patterns are uniform across pages, the overview communicates actionable information, and the layout works on tablet screens.
+**Depends on**: Phase 56
+**Requirements**: ADM-02, ADM-03, ADM-04, ADM-05, ADM-06, ADM-07, BUG-07
+**Success Criteria** (what must be TRUE):
+  1. An admin user can navigate directly to any Tools or Data sub-page via its own URL and use the browser back button to return
+  2. An admin user on the Experts page can type a name into a search field and see the table filtered to matching experts
+  3. An admin user can jump to a specific page number in any paginated table without clicking through every page
+  4. All admin pages use the same card, table header, and form input visual patterns — no pages look like they were built by a different team
+  5. The admin Overview page surfaces the metrics an operator actually needs to act on (lead growth, search volume, zero-result rate) with clear navigation to detail views
+  6. The admin panel is fully usable at tablet width (768px+) without broken layouts or hidden controls
+**Plans**: TBD
+
+## Progress
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 55. Explorer Bug Fixes | 0/TBD | Not started | - |
+| 56. Backend Performance & Admin Refactor | 0/TBD | Not started | - |
+| 57. Admin Frontend Overhaul | 0/TBD | Not started | - |
