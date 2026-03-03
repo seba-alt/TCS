@@ -8,7 +8,6 @@ import { INDUSTRY_TAGS } from '../../constants/industryTags'
 export function MobileInlineFilters() {
   const [tagPickerOpen, setTagPickerOpen] = useState(false)
   const [industryPickerOpen, setIndustryPickerOpen] = useState(false)
-  const [tagSearch, setTagSearch] = useState('')
 
   const {
     tags,
@@ -18,7 +17,6 @@ export function MobileInlineFilters() {
     toggleTag,
     toggleIndustryTag,
     setSavedFilter,
-    resetFilters,
   } = useFilterSlice()
 
   const { total } = useResultsSlice()
@@ -28,23 +26,16 @@ export function MobileInlineFilters() {
 
   const totalTagCount = tags.length + industryTags.length
 
-  const filteredDomainTags = TOP_TAGS.filter((t) =>
-    tagSearch ? t.toLowerCase().includes(tagSearch.toLowerCase()) : true
-  )
-  const filteredIndustryTags = INDUSTRY_TAGS.filter((t) =>
-    tagSearch ? t.toLowerCase().includes(tagSearch.toLowerCase()) : true
-  )
-
   return (
     <div className="md:hidden flex flex-col shrink-0">
-      {/* Filter row */}
-      <div className="flex items-center gap-2 px-4 py-2.5 border-b border-gray-100 overflow-x-auto shrink-0">
+      {/* Filter row — overflow-x-auto with iOS smooth scroll and hidden scrollbar */}
+      <div
+        className="flex items-center gap-2 px-4 py-2.5 border-b border-gray-100 overflow-x-auto shrink-0 flex-nowrap"
+        style={{ WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' }}
+      >
         {/* Industry button */}
         <button
-          onClick={() => {
-            setTagSearch('')
-            setIndustryPickerOpen(true)
-          }}
+          onClick={() => setIndustryPickerOpen(true)}
           className={`flex items-center gap-1.5 text-sm rounded-md px-2.5 py-1.5 shrink-0 transition-colors ${
             industryTags.length > 0
               ? 'bg-brand-purple text-white'
@@ -58,10 +49,7 @@ export function MobileInlineFilters() {
 
         {/* Tags button (domain only) */}
         <button
-          onClick={() => {
-            setTagSearch('')
-            setTagPickerOpen(true)
-          }}
+          onClick={() => setTagPickerOpen(true)}
           className={`flex items-center gap-1.5 text-sm rounded-md px-2.5 py-1.5 shrink-0 transition-colors ${
             tags.length > 0
               ? 'bg-brand-purple text-white'
@@ -128,12 +116,6 @@ export function MobileInlineFilters() {
               </button>
             </span>
           ))}
-          <button
-            onClick={resetFilters}
-            className="bg-brand-purple text-white font-medium text-xs rounded-full px-3 py-1 shadow-sm"
-          >
-            Clear all
-          </button>
         </div>
       )}
 
@@ -160,21 +142,9 @@ export function MobileInlineFilters() {
               </button>
             </div>
 
-            {/* Tag search input */}
-            <div className="px-4 py-2.5 border-b border-gray-100 shrink-0">
-              <input
-                type="text"
-                value={tagSearch}
-                onChange={(e) => setTagSearch(e.target.value)}
-                placeholder="Search tags..."
-                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-purple/20 focus:border-brand-purple/40"
-                autoFocus
-              />
-            </div>
-
             {/* Scrollable tag list */}
             <div className="flex-1 overflow-y-auto">
-              {filteredDomainTags.map((tag) => {
+              {TOP_TAGS.map((tag) => {
                 const isSelected = tags.includes(tag)
                 return (
                   <button
@@ -239,21 +209,9 @@ export function MobileInlineFilters() {
               </button>
             </div>
 
-            {/* Tag search input */}
-            <div className="px-4 py-2.5 border-b border-gray-100 shrink-0">
-              <input
-                type="text"
-                value={tagSearch}
-                onChange={(e) => setTagSearch(e.target.value)}
-                placeholder="Search industries..."
-                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-purple/20 focus:border-brand-purple/40"
-                autoFocus
-              />
-            </div>
-
             {/* Scrollable industry list */}
             <div className="flex-1 overflow-y-auto">
-              {filteredIndustryTags.map((tag) => {
+              {INDUSTRY_TAGS.map((tag) => {
                 const isSelected = industryTags.includes(tag)
                 return (
                   <button
