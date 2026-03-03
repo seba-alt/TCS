@@ -117,7 +117,7 @@ See `.planning/milestones/v4.1-ROADMAP.md`
 - [x] **Phase 56: Backend Performance & Admin Refactor** - Cache embeddings/feedback/settings, optimize tag filtering, split admin monolith into route modules (completed 2026-03-03)
 - [x] **Phase 57: Admin Frontend Overhaul** - URL routing, pagination, consistent components, overview redesign, experts table, responsive layout, expert search (completed 2026-03-03)
 - [x] **Phase 58: Audit Gap Closure** - CORS DELETE fix, currency symbol consistency, Phase 56 retroactive verification (completed 2026-03-03)
-- [ ] **Phase 59: Tech Debt Cleanup** - Resolve ADMUI-03, remove dead LeadsPage email handoff, add ADMUI traceability, delete orphaned file
+- [x] **Phase 59: Tech Debt Cleanup** - Resolve ADMUI-03, remove dead LeadsPage email handoff, add ADMUI traceability, delete orphaned file (completed 2026-03-03)
 
 ## Phase Details
 
@@ -192,7 +192,7 @@ Plans:
 | 57. Admin Frontend Overhaul | 4/4 | Complete    | 2026-03-03 |
 | 58. Audit Gap Closure | 2/2 | Complete    | 2026-03-03 |
 | 58.1 Admin Dashboard Improvements | 3/3 | Complete | 2026-03-03 |
-| 59. Tech Debt Cleanup | 0/1 | Pending | — |
+| 59. Tech Debt Cleanup | 1/1 | Complete   | 2026-03-03 |
 
 ### Phase 58.1: Admin Dashboard Improvements (INSERTED)
 
@@ -216,6 +216,6 @@ Plans:
   2. ADMUI-01–04 appear in REQUIREMENTS.md traceability table with correct phase and status
   3. ADMUI-03 requirement status is formally resolved (closed as N/A or updated to reflect actual delivered scope)
   4. AdminMarketplacePage.tsx no longer exists on disk
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 Plans:
 - [ ] 59-01-PLAN.md — Remove dead code paths, delete orphaned file, fix traceability

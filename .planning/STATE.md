@@ -5,10 +5,10 @@ milestone_name: Platform Polish & Admin Overhaul
 status: active
 last_updated: "2026-03-03"
 progress:
-  total_phases: 4
-  completed_phases: 3
-  total_plans: 7
-  completed_plans: 7
+  total_phases: 5
+  completed_phases: 4
+  total_plans: 8
+  completed_plans: 8
 ---
 
 # Project State
@@ -18,23 +18,23 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-03)
 
 **Core value:** A user describes any problem and instantly gets expertly matched professionals they can browse, filter, and contact — no searching, no guesswork.
-**Current focus:** Phase 58.1 complete — All 3 plans executed (backend extensions, Data page merge, Leads click visibility)
+**Current focus:** Phase 59 complete — Tech debt cleanup (dead code removal, orphan deletion, traceability update)
 
 ## Current Position
 
-Phase: 58.1 of 58.1 (Admin Dashboard Improvements)
-Plan: 03 of 3
+Phase: 59 of 59 (Tech Debt Cleanup)
+Plan: 01 of 1
 Status: Complete
-Last activity: 2026-03-03 — Completed 58.1-03 (Leads click count column + Click Activity table)
+Last activity: 2026-03-03 — Completed 59-01 (Dead code removal, orphan deletion, ADMUI traceability)
 
 Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 7 (this milestone)
+- Total plans completed: 8 (this milestone)
 - Average duration: ~6 min
-- Total execution time: ~42 min
+- Total execution time: ~44 min
 
 **By Phase:**
 
@@ -44,6 +44,7 @@ Progress: [██████████] 100%
 | Phase 56 | 3 | ~14 min | ~5 min |
 | Phase 58 | 1 | ~5 min | ~5 min |
 | Phase 58.1 | 3 | ~10 min | ~3 min |
+| Phase 59 | 1 | ~2 min | ~2 min |
 
 ## Accumulated Context
 | Phase 55 P01 | 2 | 2 tasks | 3 files |
@@ -54,10 +55,12 @@ Progress: [██████████] 100%
 | Phase 58 P01 | 5 | 2 tasks | 4 files |
 | Phase 58.1 P02 | 3 | 2 tasks | 3 files |
 | Phase 58.1 P03 | 2 | 2 tasks | 1 files |
+| Phase 59 P01 | 3 | 3 tasks | 4 files |
 
 ### Roadmap Evolution
 
 - Phase 58.1 inserted after Phase 58: Admin Dashboard Improvements (URGENT)
+- Phase 59 added for v5.0 tech debt cleanup (gap closure from re-audit)
 
 ### Decisions
 
@@ -84,6 +87,8 @@ Recent decisions affecting current work:
 - [Phase 58.1]: Manual useMemo sort on raw <tr> table for click_count — avoids TanStack Table migration for single-column sort
 - [Phase 58.1]: Page-level /lead-clicks fetch flattened client-side for Click Activity table — no new backend endpoint needed
 - [Phase 58.1]: Source column omitted from Click Activity table — LeadClick model has no source field
+- [Phase 59]: ADMUI-03 closed as N/A — Sage data source retired, searches table no longer applicable
+- [Phase 59]: GapsTable "View Searches" button removed — pointed to non-existent /admin/searches route
 
 ### Pending Todos
 
@@ -98,5 +103,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-03
-Stopped at: Completed 58.1-03-PLAN.md (Leads click count + Click Activity table)
-Resume: Phase 58.1 complete — all 3 plans executed; milestone v5.0 ready for review
+Stopped at: Completed 59-01-PLAN.md (Tech debt cleanup — dead code removal, orphan deletion, traceability)
+Resume: Phase 59 complete — all v5.0 tech debt resolved; milestone v5.0 fully complete
