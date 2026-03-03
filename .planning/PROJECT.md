@@ -105,7 +105,16 @@ A user describes any problem and instantly gets expertly matched professionals t
 
 ### Active
 
-(None — next milestone not yet planned)
+<!-- v5.0 Platform Polish & Admin Overhaul -->
+
+- [ ] Search results grouped by match quality tier (Top Match → Good Match → rest)
+- [ ] Currency displayed as symbols (€, $, £) instead of text codes (EUR, USD, GBP)
+- [ ] Mobile expert cards show company name and match badge when applicable
+- [ ] Mobile expert card name wraps to two lines when truncated
+- [ ] Mobile clear-all filter button clearly visible
+- [ ] Admin experts search by name
+- [ ] Backend performance: embedding cache, tag filter optimization, settings/feedback caching
+- [ ] Admin panel audit and makeover — modernized UI, consistent patterns, improved navigation
 
 ### Out of Scope
 
@@ -219,7 +228,7 @@ A user describes any problem and instantly gets expertly matched professionals t
 **Admin panel:** Secured with bcrypt+JWT + rate limiting; streamlined sidebar — Overview (fixed stat cards with navigation, recent leads/searches), Experts (bulk CSV import + deletion with FAISS rebuild), Leads (CSV export with search/click history)
 **Analytics:** GA4 (G-0T526W3E1Z) + Microsoft Clarity (vph5o95n6c) tracking all page views with SPA route change support
 
-**Next milestone:** Planning
+**Current milestone:** v5.0 Platform Polish & Admin Overhaul — defining requirements
 
 ## Context
 
@@ -291,4 +300,4 @@ A user describes any problem and instantly gets expertly matched professionals t
 | Clarity via index.html IIFE | Early-return for /admin routes, no React component needed | ✓ Good — zero bundle impact |
 
 ---
-*Last updated: 2026-03-03 after v4.1 milestone completion*
+*Last updated: 2026-03-03 after v5.0 milestone start*

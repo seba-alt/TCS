@@ -1,14 +1,14 @@
 ---
 gsd_state_version: 1.0
-milestone: v4.1
-milestone_name: UX Polish & Mobile Overhaul
-status: completed
+milestone: v5.0
+milestone_name: Platform Polish & Admin Overhaul
+status: active
 last_updated: "2026-03-03"
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 8
-  completed_plans: 8
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # Project State
@@ -18,12 +18,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-03)
 
 **Core value:** A user describes any problem and instantly gets expertly matched professionals they can browse, filter, and contact — no searching, no guesswork.
-**Current focus:** Milestone v4.1 complete — planning next milestone
+**Current focus:** Milestone v5.0 — Platform Polish & Admin Overhaul
 
 ## Current Position
 
-Milestone: v4.1 UX Polish & Mobile Overhaul — COMPLETE (shipped 2026-03-03)
-All 4 phases (51-54) complete, 8 plans, 20/20 requirements satisfied.
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-03 — Milestone v5.0 started
 
 ## Accumulated Context
 
@@ -40,5 +42,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-03
-Stopped at: Milestone v4.1 complete
-Resume: `/gsd:new-milestone` to start next milestone
+Stopped at: Defining requirements for v5.0
+Resume: Continue requirements definition
