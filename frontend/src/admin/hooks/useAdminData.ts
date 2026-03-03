@@ -311,18 +311,18 @@ export function useMarketplaceExposure(days: number) {
   return { data, loading, error, refetch: fetchData }
 }
 
-export function useMarketplaceTrend() {
+export function useMarketplaceTrend(days: number = 14) {
   const [data, setData] = useState<MarketplaceTrendResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   const fetchData = useCallback(() => {
     setLoading(true)
-    adminFetch<MarketplaceTrendResponse>('/events/trend')
+    adminFetch<MarketplaceTrendResponse>('/events/trend', { days })
       .then(setData)
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false))
-  }, [])
+  }, [days])
 
   useEffect(() => { fetchData() }, [fetchData])
 

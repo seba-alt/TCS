@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { useLocation } from 'react-router-dom'
 import {
   BarChart,
   Bar,
@@ -10,13 +9,9 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from 'recharts'
-import { useAdminSearches, useMarketplaceDemand, useMarketplaceExposure, useMarketplaceTrend } from '../hooks/useAdminData'
-import { useAdminExport } from '../hooks/useAdminExport'
+import { useMarketplaceDemand, useMarketplaceExposure, useMarketplaceTrend } from '../hooks/useAdminData'
 import { AdminPageHeader } from '../components/AdminPageHeader'
 import { AdminCard } from '../components/AdminCard'
-import SearchesTable from '../components/SearchesTable'
-import ExportDialog from '../components/ExportDialog'
-import type { SearchFilters } from '../types'
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
 const getAdminToken = () => sessionStorage.getItem('admin_token') ?? ''
@@ -81,8 +76,8 @@ async function downloadMarketplaceCsv(section: 'demand' | 'exposure', days: numb
 
 // -- Trend Section --
 
-function TrendSection() {
-  const { data, loading } = useMarketplaceTrend()
+function TrendSection({ days }: { days: number }) {
+  const { data, loading } = useMarketplaceTrend(days)
 
   if (loading) {
     return (
@@ -111,14 +106,14 @@ function TrendSection() {
       ? 'N/A'
       : `${((totalQueries - priorTotal) / priorTotal * 100).toFixed(1)}%`
   const changeLabel = priorTotal === 0
-    ? 'N/A vs prior 14d'
-    : `${Number(changePct) >= 0 ? '+' : ''}${changePct} vs prior 14d`
+    ? 'N/A vs prior period'
+    : `${Number(changePct) >= 0 ? '+' : ''}${changePct} vs prior ${days}d`
 
   return (
     <AdminCard className="p-5 space-y-4">
       <div>
         <h2 className="text-sm font-semibold text-white">Search Query Volume</h2>
-        <p className="text-xs text-slate-500 mt-1">Last 14 days — stacked by outcome</p>
+        <p className="text-xs text-slate-500 mt-1">Last {days} days — stacked by outcome</p>
       </div>
 
       {/* KPI pills */}
@@ -324,7 +319,7 @@ function ExposureSection({ days }: { days: number }) {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-sm font-semibold text-white">Expert Exposure</h2>
-          <p className="text-xs text-slate-500 mt-0.5">Click activity by expert, breakdown by context</p>
+          <p className="text-xs text-slate-500 mt-0.5">Click activity by expert</p>
         </div>
         <button
           onClick={handleExport}
@@ -352,7 +347,7 @@ function ExposureSection({ days }: { days: number }) {
               <tr className="border-b border-slate-700/60">
                 <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Expert</th>
                 <th className="text-right px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Clicks</th>
-                <th className="text-right px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Context Breakdown</th>
+                <th className="text-right px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Grid Clicks</th>
               </tr>
             </thead>
             <tbody>
@@ -363,9 +358,7 @@ function ExposureSection({ days }: { days: number }) {
                 >
                   <td className="px-5 py-3 text-slate-200 text-sm">{row.expert_name ?? row.expert_id}</td>
                   <td className="px-5 py-3 text-right font-mono text-slate-300">{row.total_clicks}</td>
-                  <td className="px-5 py-3 text-right text-slate-400 text-xs">
-                    Grid: {row.grid_clicks} / Chat: {row.sage_clicks}
-                  </td>
+                  <td className="px-5 py-3 text-right font-mono text-slate-400">{row.grid_clicks}</td>
                 </tr>
               ))}
             </tbody>
@@ -379,45 +372,12 @@ function ExposureSection({ days }: { days: number }) {
 // -- Main DataPage --
 
 export default function DataPage() {
-  const location = useLocation()
-  const navEmail: string = location.state?.email ?? ''
-
   // Unified date state
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
 
-  // Search-specific filters
-  const [emailFilter, setEmailFilter] = useState(navEmail)
-  const [gapFilter, setGapFilter] = useState<'' | 'true' | 'false'>('')
-  const [pageSize, setPageSize] = useState(25)
-  const [showExport, setShowExport] = useState(false)
-
-  const [filters, setFilters] = useState<SearchFilters>({
-    page: 0, page_size: 25,
-    email: navEmail || undefined,
-  })
-
-  const { data: searchData, loading: searchLoading, error: searchError } = useAdminSearches(filters)
-  const { downloadCsv, exporting } = useAdminExport()
-
   // Derive marketplace days from date range
   const marketplaceDays = dateFrom || dateTo ? datesToDays(dateFrom, dateTo) : 30
-
-  function applyFilters() {
-    setFilters({
-      email: emailFilter || undefined,
-      gap_flag: gapFilter !== '' ? gapFilter === 'true' : undefined,
-      date_from: dateFrom || undefined,
-      date_to: dateTo || undefined,
-      page: 0,
-      page_size: pageSize,
-    })
-  }
-
-  function clearFilters() {
-    setEmailFilter(''); setGapFilter(''); setDateFrom(''); setDateTo('')
-    setFilters({ page: 0, page_size: pageSize })
-  }
 
   function setPresetRange(rangeDays: number) {
     if (rangeDays === 0) {
@@ -429,160 +389,68 @@ export default function DataPage() {
     }
   }
 
-  const hasFilters = !!(emailFilter || gapFilter || dateFrom || dateTo)
-
   return (
     <div className="flex-1 overflow-auto p-4 lg:p-8 space-y-6">
       <AdminPageHeader
         title="Data"
-        subtitle="Search records, marketplace trends, and demand signals"
-        action={
-          <button
-            onClick={() => setShowExport(true)}
-            disabled={exporting}
-            className="px-4 py-2 text-sm font-semibold text-white bg-purple-600 hover:bg-purple-700 disabled:opacity-50 rounded-lg transition-colors"
-          >
-            {exporting ? 'Exporting...' : 'Export CSV'}
-          </button>
-        }
+        subtitle="Marketplace trends, demand signals, and expert exposure"
       />
 
-      {/* Unified date range picker + preset buttons */}
+      {/* Date range picker + preset buttons */}
       <AdminCard className="p-5">
-        <div className="flex flex-col gap-4">
-          <div className="flex items-center gap-3 flex-wrap">
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Date Range</span>
-            <div className="flex bg-slate-800 rounded-lg p-1 gap-1">
-              {[
-                { label: '7d', days: 7 },
-                { label: '30d', days: 30 },
-                { label: '90d', days: 90 },
-                { label: 'All', days: 0 },
-              ].map(p => {
-                const isActive = p.days === 0
-                  ? (!dateFrom && !dateTo)
-                  : (dateFrom === daysAgo(p.days) && dateTo === new Date().toISOString().slice(0, 10))
-                return (
-                  <button
-                    key={p.days}
-                    onClick={() => setPresetRange(p.days)}
-                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                      isActive
-                        ? 'bg-purple-600 text-white'
-                        : 'text-slate-400 hover:text-white hover:bg-slate-700'
-                    }`}
-                  >
-                    {p.label}
-                  </button>
-                )
-              })}
-            </div>
-            <div className="flex items-center gap-2">
-              <input
-                type="date"
-                value={dateFrom}
-                onChange={e => setDateFrom(e.target.value)}
-                className="bg-slate-900 border border-slate-600 text-white text-sm rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-purple-500"
-              />
-              <span className="text-slate-500 text-xs">to</span>
-              <input
-                type="date"
-                value={dateTo}
-                onChange={e => setDateTo(e.target.value)}
-                className="bg-slate-900 border border-slate-600 text-white text-sm rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-purple-500"
-              />
-            </div>
+        <div className="flex items-center gap-3 flex-wrap">
+          <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Date Range</span>
+          <div className="flex bg-slate-800 rounded-lg p-1 gap-1">
+            {[
+              { label: '7d', days: 7 },
+              { label: '30d', days: 30 },
+              { label: '90d', days: 90 },
+              { label: 'All', days: 0 },
+            ].map(p => {
+              const isActive = p.days === 0
+                ? (!dateFrom && !dateTo)
+                : (dateFrom === daysAgo(p.days) && dateTo === new Date().toISOString().slice(0, 10))
+              return (
+                <button
+                  key={p.days}
+                  onClick={() => setPresetRange(p.days)}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                    isActive
+                      ? 'bg-purple-600 text-white'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-700'
+                  }`}
+                >
+                  {p.label}
+                </button>
+              )
+            })}
           </div>
-
-          {/* Search-specific filters */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1.5">User email</label>
-              <input
-                type="text"
-                value={emailFilter}
-                onChange={e => setEmailFilter(e.target.value)}
-                placeholder="user@example.com"
-                className="w-full bg-slate-900 border border-slate-600 text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 placeholder-slate-600"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1.5">Gap flag</label>
-              <select
-                value={gapFilter}
-                onChange={e => setGapFilter(e.target.value as '' | 'true' | 'false')}
-                className="w-full bg-slate-900 border border-slate-600 text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
-              >
-                <option value="">All</option>
-                <option value="true">Gaps only</option>
-                <option value="false">Non-gaps only</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="flex gap-2">
-            <button
-              onClick={applyFilters}
-              className="px-4 py-2 text-sm font-medium text-white bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors"
-            >
-              Apply Filters
-            </button>
-            {hasFilters && (
-              <button
-                onClick={clearFilters}
-                className="px-4 py-2 text-sm font-medium text-slate-400 border border-slate-600 hover:bg-slate-800 rounded-lg transition-colors"
-              >
-                Clear
-              </button>
-            )}
+          <div className="flex items-center gap-2">
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={e => setDateFrom(e.target.value)}
+              className="bg-slate-900 border border-slate-600 text-white text-sm rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-purple-500"
+            />
+            <span className="text-slate-500 text-xs">to</span>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={e => setDateTo(e.target.value)}
+              className="bg-slate-900 border border-slate-600 text-white text-sm rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-purple-500"
+            />
           </div>
         </div>
       </AdminCard>
 
-      {/* Search Records Table */}
-      <div>
-        <h2 className="text-sm font-semibold text-white mb-3">Search Records</h2>
-        {searchLoading && <p className="text-slate-500 text-sm animate-pulse">Loading searches...</p>}
-        {searchError && <p className="text-red-400 text-sm">Error: {searchError}</p>}
-        {searchData && (
-          <>
-            <div className="text-xs text-slate-600 mb-2">{searchData.total} total results</div>
-            {searchData.rows.length === 0 ? (
-              <AdminCard className="p-8 text-center">
-                <p className="text-slate-500 text-sm">No searches found in this period</p>
-              </AdminCard>
-            ) : (
-              <SearchesTable
-                data={searchData.rows}
-                pageSize={pageSize}
-                onPageSizeChange={size => { setPageSize(size); setFilters(f => ({ ...f, page_size: size })) }}
-              />
-            )}
-          </>
-        )}
-      </div>
-
-      {/* Divider */}
-      <div className="border-t border-slate-700/60" />
-
       {/* Trend Chart */}
-      <TrendSection />
+      <TrendSection days={marketplaceDays} />
 
       {/* Demand + Exposure side by side */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <DemandSection days={marketplaceDays} />
         <ExposureSection days={marketplaceDays} />
       </div>
-
-      {/* Export dialog */}
-      {showExport && (
-        <ExportDialog
-          section="searches"
-          hasFilters={hasFilters}
-          onExport={filtered => downloadCsv('searches', filtered, filters)}
-          onClose={() => setShowExport(false)}
-        />
-      )}
     </div>
   )
 }

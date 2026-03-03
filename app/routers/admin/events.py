@@ -14,6 +14,51 @@ from app.models import Expert, LeadClick
 router = APIRouter()
 
 
+@router.get("/events/trend")
+def get_trend(days: int = 14, db: Session = Depends(get_db)):
+    earliest = db.execute(_text("SELECT MIN(created_at) FROM user_events")).scalar()
+    data_since = earliest
+
+    cutoff = (datetime.utcnow() - timedelta(days=days)).strftime("%Y-%m-%d")
+    prior_cutoff = (datetime.utcnow() - timedelta(days=days * 2)).strftime("%Y-%m-%d")
+
+    # Daily breakdown
+    rows = db.execute(_text("""
+        SELECT
+            date(created_at) AS day,
+            COUNT(*) AS total,
+            SUM(CASE WHEN CAST(json_extract(payload, '$.result_count') AS INTEGER) > 0 THEN 1 ELSE 0 END) AS hits,
+            SUM(CASE WHEN CAST(json_extract(payload, '$.result_count') AS INTEGER) = 0 THEN 1 ELSE 0 END) AS zero_results
+        FROM user_events
+        WHERE event_type = 'search_query'
+          AND date(created_at) >= :cutoff
+        GROUP BY date(created_at)
+        ORDER BY day
+    """), {"cutoff": cutoff}).all()
+
+    total_queries = sum(r.total for r in rows)
+    total_zero = sum(r.zero_results for r in rows)
+    zero_result_rate = (total_zero / total_queries * 100) if total_queries > 0 else 0.0
+
+    # Prior period total for comparison
+    prior_total = db.execute(_text("""
+        SELECT COUNT(*) FROM user_events
+        WHERE event_type = 'search_query'
+          AND date(created_at) >= :prior_cutoff
+          AND date(created_at) < :cutoff
+    """), {"prior_cutoff": prior_cutoff, "cutoff": cutoff}).scalar() or 0
+
+    return {
+        "data_since": data_since,
+        "daily": [{"day": r.day, "total": r.total, "hits": r.hits, "zero_results": r.zero_results} for r in rows],
+        "kpis": {
+            "total_queries": total_queries,
+            "zero_result_rate": zero_result_rate,
+            "prior_period_total": prior_total,
+        },
+    }
+
+
 @router.get("/events/demand")
 def get_demand(days: int = 30, page: int = 0, page_size: int = 25, db: Session = Depends(get_db)):
     # Cold-start check
@@ -25,8 +70,8 @@ def get_demand(days: int = 30, page: int = 0, page_size: int = 25, db: Session =
     total_row = db.execute(_text("""
         SELECT COUNT(DISTINCT json_extract(payload, '$.query_text')) AS cnt
         FROM user_events
-        WHERE event_type = 'sage_query'
-          AND json_extract(payload, '$.zero_results') = 1
+        WHERE event_type = 'search_query'
+          AND CAST(json_extract(payload, '$.result_count') AS INTEGER) = 0
           AND date(created_at) >= :cutoff
     """), {"cutoff": cutoff}).scalar()
     total = total_row or 0
@@ -38,8 +83,8 @@ def get_demand(days: int = 30, page: int = 0, page_size: int = 25, db: Session =
             MAX(created_at) AS last_seen,
             COUNT(DISTINCT session_id) AS unique_users
         FROM user_events
-        WHERE event_type = 'sage_query'
-          AND json_extract(payload, '$.zero_results') = 1
+        WHERE event_type = 'search_query'
+          AND CAST(json_extract(payload, '$.result_count') AS INTEGER) = 0
           AND date(created_at) >= :cutoff
         GROUP BY json_extract(payload, '$.query_text')
         ORDER BY frequency DESC

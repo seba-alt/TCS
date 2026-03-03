@@ -140,6 +140,41 @@ def export_gaps_csv(db: Session = Depends(get_db)):
     )
 
 
+@router.get("/export/demand.csv")
+def export_demand_csv(days: int = 30, db: Session = Depends(get_db)):
+    """Download zero-result search queries as CSV."""
+    cutoff = (datetime.utcnow() - timedelta(days=days)).strftime("%Y-%m-%d") if days > 0 else "2000-01-01"
+    rows = db.execute(_text("""
+        SELECT
+            json_extract(payload, '$.query_text') AS query_text,
+            COUNT(*) AS frequency,
+            MAX(created_at) AS last_seen,
+            COUNT(DISTINCT session_id) AS unique_users
+        FROM user_events
+        WHERE event_type = 'search_query'
+          AND CAST(json_extract(payload, '$.result_count') AS INTEGER) = 0
+          AND date(created_at) >= :cutoff
+        GROUP BY json_extract(payload, '$.query_text')
+        ORDER BY frequency DESC
+    """), {"cutoff": cutoff}).all()
+
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(["# Export date", date.today().isoformat()])
+    writer.writerow(["# Days window", days])
+    writer.writerow([])
+    writer.writerow(["query_text", "frequency", "last_seen", "unique_users"])
+    for r in rows:
+        writer.writerow([r.query_text or "", r.frequency, r.last_seen or "", r.unique_users])
+
+    filename = f"demand-{date.today().isoformat()}.csv"
+    return StreamingResponse(
+        iter([buf.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+
 @router.get("/export/exposure.csv")
 def export_exposure_csv(days: int = 30, db: Session = Depends(get_db)):
     """Download expert exposure data as CSV."""
