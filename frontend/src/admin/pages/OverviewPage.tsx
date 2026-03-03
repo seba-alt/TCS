@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { TrendingUp, Search, AlertCircle, CheckCircle } from 'lucide-react'
 import { useAdminStats, adminFetch, useAnalyticsSummary } from '../hooks/useAdminData'
 import { AdminCard } from '../components/AdminCard'
-import type { DemandResponse, LeadsResponse, RecentSearchEntry, RecentClickEntry } from '../types'
+import type { DemandResponse, ExposureResponse, TopQueriesResponse, LeadsResponse, RecentSearchEntry, RecentClickEntry } from '../types'
 
 function timeAgo(iso: string): string {
   const seconds = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
@@ -261,6 +262,146 @@ function RecentCardClicksCard({ clicks, loading }: { clicks: RecentClickEntry[];
   )
 }
 
+// ─── Ranked insight cards (Phase 62) ────────────────────────────────────────
+
+function TopExpertsCard({ days }: { days: number }) {
+  const [data, setData] = useState<ExposureResponse | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    setLoading(true)
+    adminFetch<ExposureResponse>('/events/exposure', { days })
+      .then(setData)
+      .catch(() => setData(null))
+      .finally(() => setLoading(false))
+  }, [days])
+
+  const rows = (data?.exposure ?? []).slice(0, 5)
+
+  return (
+    <AdminCard className="p-5">
+      <div className="flex items-center gap-2 mb-4">
+        <TrendingUp className="w-4 h-4 text-purple-400" />
+        <h2 className="text-sm font-semibold text-white">Top Experts</h2>
+      </div>
+      {loading ? (
+        <div className="space-y-2">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="h-5 bg-slate-700/50 rounded animate-pulse" />
+          ))}
+        </div>
+      ) : rows.length === 0 ? (
+        <p className="text-sm text-slate-500">No click activity yet</p>
+      ) : (
+        <div className="space-y-2">
+          {rows.map((row, i) => (
+            <div key={row.expert_id} className="flex items-center gap-2">
+              <span className="text-xs text-slate-500 w-4 flex-shrink-0">{i + 1}.</span>
+              <Link
+                to={`/admin/experts`}
+                className="text-sm text-slate-300 hover:text-purple-400 transition-colors truncate flex-1"
+                title={row.expert_name ?? row.expert_id}
+              >
+                {row.expert_name ?? row.expert_id}
+              </Link>
+              <span className="text-xs text-slate-500 font-mono flex-shrink-0">{row.total_clicks} clicks</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </AdminCard>
+  )
+}
+
+function TopQueriesCard({ days }: { days: number }) {
+  const [data, setData] = useState<TopQueriesResponse | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    setLoading(true)
+    adminFetch<TopQueriesResponse>('/analytics/top-queries', { days, limit: 5 })
+      .then(setData)
+      .catch(() => setData(null))
+      .finally(() => setLoading(false))
+  }, [days])
+
+  const rows = data?.queries ?? []
+
+  return (
+    <AdminCard className="p-5">
+      <div className="flex items-center gap-2 mb-4">
+        <Search className="w-4 h-4 text-blue-400" />
+        <h2 className="text-sm font-semibold text-white">Top Searches</h2>
+      </div>
+      {loading ? (
+        <div className="space-y-2">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="h-5 bg-slate-700/50 rounded animate-pulse" />
+          ))}
+        </div>
+      ) : rows.length === 0 ? (
+        <p className="text-sm text-slate-500">No search activity yet</p>
+      ) : (
+        <div className="space-y-2">
+          {rows.map((row, i) => (
+            <div key={row.query_text} className="flex items-center gap-2">
+              <span className="text-xs text-slate-500 w-4 flex-shrink-0">{i + 1}.</span>
+              <span className="text-sm text-slate-300 truncate flex-1" title={row.query_text}>{row.query_text}</span>
+              <span className="text-xs text-slate-500 font-mono flex-shrink-0">{row.frequency} searches</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </AdminCard>
+  )
+}
+
+function UnmetDemandCard({ days }: { days: number }) {
+  const [data, setData] = useState<DemandResponse | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    setLoading(true)
+    adminFetch<DemandResponse>('/events/demand', { days, page: 0, page_size: 5 })
+      .then(setData)
+      .catch(() => setData(null))
+      .finally(() => setLoading(false))
+  }, [days])
+
+  const rows = data?.demand ?? []
+
+  return (
+    <AdminCard className="p-5">
+      <div className="flex items-center gap-2 mb-4">
+        <AlertCircle className="w-4 h-4 text-amber-400" />
+        <h2 className="text-sm font-semibold text-white">Unmet Demand</h2>
+      </div>
+      {loading ? (
+        <div className="space-y-2">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="h-5 bg-slate-700/50 rounded animate-pulse" />
+          ))}
+        </div>
+      ) : rows.length === 0 ? (
+        <div className="flex items-center gap-2 text-sm text-emerald-400">
+          <CheckCircle className="w-4 h-4" />
+          <span>All searches returned results</span>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {rows.map((row, i) => (
+            <div key={row.query_text} className="flex items-center gap-2">
+              <span className="text-xs text-slate-500 w-4 flex-shrink-0">{i + 1}.</span>
+              <span className="text-sm text-slate-300 truncate flex-1" title={row.query_text}>{row.query_text}</span>
+              <span className="text-xs text-slate-500 font-mono flex-shrink-0">{row.frequency} searches</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </AdminCard>
+  )
+}
+
 // ─── Main page ──────────────────────────────────────────────────────────────
 
 export default function OverviewPage() {
@@ -367,6 +508,13 @@ export default function OverviewPage() {
         />
         <TopZeroResultsCard />
         <RecentLeadsCard />
+      </div>
+
+      {/* Ranked insights row */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        <TopExpertsCard days={days} />
+        <TopQueriesCard days={days} />
+        <UnmetDemandCard days={days} />
       </div>
 
     </div>
