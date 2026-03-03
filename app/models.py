@@ -179,6 +179,25 @@ class LeadClick(Base):
     )
 
 
+class ExpertTag(Base):
+    """
+    Normalized tag index for efficient tag filtering (PERF-02).
+    Replaces LIKE '%"tag"%' queries on Expert.tags JSON column.
+    Populated at startup and synced on every expert tag write.
+    tag_type discriminator: "skill" for Expert.tags, "industry" for Expert.industry_tags.
+    """
+    __tablename__ = "expert_tags"
+    __table_args__ = (
+        Index("ix_expert_tags_tag_type", "tag", "tag_type"),
+        Index("ix_expert_tags_expert_id", "expert_id"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    expert_id: Mapped[int] = mapped_column(nullable=False)
+    tag: Mapped[str] = mapped_column(String(200), nullable=False)
+    tag_type: Mapped[str] = mapped_column(String(20), nullable=False, default="skill")
+
+
 class AppSetting(Base):
     """
     Runtime configuration overrides for search intelligence.
