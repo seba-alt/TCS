@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Bookmark, LayoutGrid, List } from 'lucide-react'
 import { useExplorerStore, useFilterSlice } from '../store'
 import { useExplore } from '../hooks/useExplore'
@@ -29,8 +29,17 @@ export default function MarketplacePage() {
   const isFetchingMore = useExplorerStore((s) => s.isFetchingMore)
 
   // Filter summary for Saved button
-  const { savedExperts, savedFilter, setSavedFilter, viewMode, setViewMode } = useFilterSlice()
+  const { query, tags, rateMin, rateMax, savedExperts, savedFilter, setSavedFilter, viewMode, setViewMode } = useFilterSlice()
   const savedCount = savedExperts.length
+
+  // Auto-exit saved view when user interacts with any filter — saved view is a
+  // temporary lens, not a permanent mode. Any filter change signals "I want to browse".
+  useEffect(() => {
+    if (savedFilter) {
+      setSavedFilter(false)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, tags, rateMin, rateMax])
 
   // Newsletter gate state — NLTR-01/03
   const { subscribed, setSubscribed } = useNltrStore()
@@ -87,8 +96,10 @@ export default function MarketplacePage() {
 
       {/* Body row — sidebar + main */}
       <div className="flex flex-1 min-h-0">
-        {/* Desktop sidebar — hidden on mobile, fills body row height */}
-        <FilterSidebar />
+        {/* Desktop sidebar — grayed out when in saved view to signal filters are inactive */}
+        <div className={savedFilter ? 'opacity-40 pointer-events-none' : ''}>
+          <FilterSidebar />
+        </div>
 
         {/* Main content area */}
         <main className="flex-1 flex flex-col min-h-0">
@@ -144,26 +155,35 @@ export default function MarketplacePage() {
             </div>
           </div>
 
-          {/* Results area — extra top padding so first row breathes below header */}
-          <div className="flex-1 min-h-0 pt-2">
-            {viewMode === 'grid' ? (
-              <ExpertGrid
-                experts={experts}
-                loading={loading}
-                isFetchingMore={isFetchingMore}
-                onEndReached={loadNextPage}
-                onViewProfile={handleViewProfile}
-              />
-            ) : (
-              <ExpertList
-                experts={experts}
-                loading={loading}
-                isFetchingMore={isFetchingMore}
-                onEndReached={loadNextPage}
-                onViewProfile={handleViewProfile}
-              />
-            )}
-          </div>
+          {/* Saved view empty state — shown when in saved mode with no bookmarks */}
+          {savedFilter && savedCount === 0 ? (
+            <div className="flex-1 flex flex-col items-center justify-center gap-3 text-center px-6">
+              <Bookmark size={36} className="text-gray-300" />
+              <p className="text-gray-500 font-medium">No saved experts yet</p>
+              <p className="text-sm text-gray-400">Bookmark experts to see them here</p>
+            </div>
+          ) : (
+            /* Results area — extra top padding so first row breathes below header */
+            <div className="flex-1 min-h-0 pt-2">
+              {viewMode === 'grid' ? (
+                <ExpertGrid
+                  experts={experts}
+                  loading={loading}
+                  isFetchingMore={isFetchingMore}
+                  onEndReached={loadNextPage}
+                  onViewProfile={handleViewProfile}
+                />
+              ) : (
+                <ExpertList
+                  experts={experts}
+                  loading={loading}
+                  isFetchingMore={isFetchingMore}
+                  onEndReached={loadNextPage}
+                  onViewProfile={handleViewProfile}
+                />
+              )}
+            </div>
+          )}
         </main>
       </div>
 

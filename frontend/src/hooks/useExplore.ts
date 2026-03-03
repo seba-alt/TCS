@@ -18,6 +18,9 @@ export function useExplore() {
   const industryTags = useExplorerStore((s) => s.industryTags)
   const retryTrigger = useExplorerStore((s) => s.retryTrigger)
 
+  // Saved filter — when active, fetch without filters to get all experts
+  const savedFilter = useExplorerStore((s) => s.savedFilter)
+
   // Zustand actions are referentially stable — safe in dep array without useCallback
   const setLoading = useExplorerStore((s) => s.setLoading)
   const setResults = useExplorerStore((s) => s.setResults)
@@ -42,18 +45,31 @@ export function useExplore() {
     const controller = new AbortController()
     controllerRef.current = controller
 
-    const params = new URLSearchParams({
-      query,
-      rate_min: String(rateMin),
-      rate_max: String(rateMax),
-      tags: tags.join(','),
-      industry_tags: industryTags.join(','),
-      limit: '20',
-      cursor: '0',
-    })
+    // When savedFilter is active, fetch with no filters — get all experts so saved ones
+    // are guaranteed to be present regardless of active query/tags/rate filters
+    const params = savedFilter
+      ? new URLSearchParams({
+          query: '',
+          rate_min: '0',
+          rate_max: '5000',
+          tags: '',
+          industry_tags: '',
+          limit: '500',
+          cursor: '0',
+          seed: String(seed),
+        })
+      : new URLSearchParams({
+          query,
+          rate_min: String(rateMin),
+          rate_max: String(rateMax),
+          tags: tags.join(','),
+          industry_tags: industryTags.join(','),
+          limit: '20',
+          cursor: '0',
+        })
 
     // Only send seed in pure filter mode (no text query) — backend uses relevance ranking for text queries
-    if (!query) {
+    if (!savedFilter && !query) {
       params.set('seed', String(seed))
     }
 
@@ -99,12 +115,13 @@ export function useExplore() {
     return () => {
       controller.abort()
     }
-  }, [query, rateMin, rateMax, tags, industryTags, seed, retryTrigger, setLoading, setResults, setError, resetResults])
+  }, [query, rateMin, rateMax, tags, industryTags, savedFilter, seed, retryTrigger, setLoading, setResults, setError, resetResults])
 
   // loadNextPage — passed to VirtuosoGrid endReached prop
   // Guard: don't fetch if no more pages (cursor null), already fetching more, or initial load in progress
+  // In saved mode, we fetch limit:500 on first load so pagination is not meaningful
   const loadNextPage = useCallback(async () => {
-    if (cursor === null || isFetchingMore || loading) return
+    if (cursor === null || isFetchingMore || loading || savedFilter) return
     setFetchingMore(true)
     try {
       const params = new URLSearchParams()
@@ -127,7 +144,7 @@ export function useExplore() {
     } finally {
       setFetchingMore(false)
     }
-  }, [cursor, isFetchingMore, loading, query, rateMin, rateMax, tags, industryTags, seed, appendResults, setFetchingMore])
+  }, [cursor, isFetchingMore, loading, savedFilter, query, rateMin, rateMax, tags, industryTags, seed, appendResults, setFetchingMore])
 
   return { loadNextPage }
 }

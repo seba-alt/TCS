@@ -33,33 +33,36 @@ export function MobileInlineFilters() {
         className="flex items-center gap-2 px-4 py-2.5 border-b border-gray-100 overflow-x-auto shrink-0 flex-nowrap"
         style={{ WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' }}
       >
-        {/* Industry button */}
-        <button
-          onClick={() => setIndustryPickerOpen(true)}
-          className={`flex items-center gap-1.5 text-sm rounded-md px-2.5 py-1.5 shrink-0 transition-colors ${
-            industryTags.length > 0
-              ? 'bg-brand-purple text-white'
-              : 'border border-gray-300 text-gray-700'
-          }`}
-          aria-label="Open industry picker"
-        >
-          <Building2 size={15} />
-          {industryTags.length > 0 ? `Industry (${industryTags.length})` : 'Industry'}
-        </button>
+        {/* Filter controls — grayed out when in saved view to signal they are inactive */}
+        <div className={`flex items-center gap-2 flex-nowrap ${savedFilter ? 'opacity-40 pointer-events-none' : ''}`}>
+          {/* Industry button */}
+          <button
+            onClick={() => setIndustryPickerOpen(true)}
+            className={`flex items-center gap-1.5 text-sm rounded-md px-2.5 py-1.5 shrink-0 transition-colors ${
+              industryTags.length > 0
+                ? 'bg-brand-purple text-white'
+                : 'border border-gray-300 text-gray-700'
+            }`}
+            aria-label="Open industry picker"
+          >
+            <Building2 size={15} />
+            {industryTags.length > 0 ? `Industry (${industryTags.length})` : 'Industry'}
+          </button>
 
-        {/* Tags button (domain only) */}
-        <button
-          onClick={() => setTagPickerOpen(true)}
-          className={`flex items-center gap-1.5 text-sm rounded-md px-2.5 py-1.5 shrink-0 transition-colors ${
-            tags.length > 0
-              ? 'bg-brand-purple text-white'
-              : 'border border-gray-300 text-gray-700'
-          }`}
-          aria-label="Open tag picker"
-        >
-          <Tag size={15} />
-          {tags.length > 0 ? `Tags (${tags.length})` : 'Tags'}
-        </button>
+          {/* Tags button (domain only) */}
+          <button
+            onClick={() => setTagPickerOpen(true)}
+            className={`flex items-center gap-1.5 text-sm rounded-md px-2.5 py-1.5 shrink-0 transition-colors ${
+              tags.length > 0
+                ? 'bg-brand-purple text-white'
+                : 'border border-gray-300 text-gray-700'
+            }`}
+            aria-label="Open tag picker"
+          >
+            <Tag size={15} />
+            {tags.length > 0 ? `Tags (${tags.length})` : 'Tags'}
+          </button>
+        </div>
 
         {/* Saved button — only shown when bookmarks exist */}
         {savedCount > 0 && (
@@ -74,6 +77,18 @@ export function MobileInlineFilters() {
           >
             <Bookmark size={15} className={savedFilter ? 'fill-current' : ''} />
             {savedCount}
+          </button>
+        )}
+
+        {/* Exit saved view button — shown only when in saved mode */}
+        {savedFilter && (
+          <button
+            onClick={() => setSavedFilter(false)}
+            className="flex items-center gap-1 text-sm rounded-md px-2.5 py-1.5 shrink-0 transition-colors border border-gray-300 text-gray-700"
+            aria-label="Exit saved view"
+          >
+            <X size={14} />
+            Exit
           </button>
         )}
 
