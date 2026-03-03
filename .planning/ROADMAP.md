@@ -177,7 +177,10 @@ Plans:
   1. An admin user can delete a single expert from the Experts page without a CORS error
   2. The rate filter slider and filter chips display the correct currency symbol from the currencySymbol() utility
   3. Phase 56 has a VERIFICATION.md confirming all 5 requirements (PERF-01–04, ADM-01) are satisfied
-**Plans:** TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 58-01-PLAN.md — CORS DELETE fix + currencySymbol adoption in FilterChips and RateSlider
+- [ ] 58-02-PLAN.md — Retroactive Phase 56 VERIFICATION.md
 
 ## Progress
 
@@ -186,4 +189,4 @@ Plans:
 | 55. Explorer Bug Fixes | 2/2 | Complete    | 2026-03-03 |
 | 56. Backend Performance & Admin Refactor | 3/3 | Complete | 2026-03-03 |
 | 57. Admin Frontend Overhaul | 4/4 | Complete    | 2026-03-03 |
-| 58. Audit Gap Closure | 0/TBD | Not started | - |
+| 58. Audit Gap Closure | 0/2 | Not started | - |
