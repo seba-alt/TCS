@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest'
+import { currencySymbol } from '../../utils/currency'
 
 // Mirror the post-fix logic from FilterChips.tsx
 const DEFAULT_RATE_MIN = 0
@@ -34,5 +35,17 @@ describe('FilterChips rate chip visibility', () => {
     expect(wouldShowWithBug).toBe(true)
     // And with the fix, it correctly returns false:
     expect(shouldShowRateChip(0, 5000)).toBe(false)
+  })
+})
+
+describe('FilterChips rate chip currency symbol', () => {
+  it('uses currencySymbol utility, not hardcoded €', () => {
+    const sym = currencySymbol('EUR')
+    expect(sym).toBe('€')
+  })
+
+  it('supports other currency codes via the utility', () => {
+    expect(currencySymbol('USD')).toBe('$')
+    expect(currencySymbol('GBP')).toBe('£')
   })
 })
