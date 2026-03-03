@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import * as Slider from '@radix-ui/react-slider'
 import { useFilterSlice, useExplorerStore } from '../../store'
 import { trackEvent } from '../../tracking'
+import { currencySymbol } from '../../utils/currency'
 
 export function RateSlider() {
   const { rateMin, rateMax, setRateRange } = useFilterSlice()
@@ -12,6 +13,7 @@ export function RateSlider() {
   // Round up to the nearest 10 for clean step alignment.
   const sliderMax = Math.max(maxRate, 10)
   const roundedMax = Math.ceil(sliderMax / 10) * 10
+  const sym = currencySymbol('EUR')
 
   // Local display state — updated continuously during drag (does NOT trigger fetch)
   const [localValue, setLocalValue] = useState<[number, number]>([rateMin, rateMax])
@@ -47,8 +49,8 @@ export function RateSlider() {
     <div className="px-1 relative">
       {/* Display labels — show local values during drag for immediate feedback */}
       <div className="flex justify-between text-xs text-gray-500 mb-2">
-        <span>€{localValue[0]}</span>
-        <span>€{localValue[1]}</span>
+        <span>{sym}{localValue[0]}</span>
+        <span>{sym}{localValue[1]}</span>
       </div>
 
       <div className="transition-all duration-300">
@@ -78,7 +80,7 @@ export function RateSlider() {
 
       {/* Dynamic max rate label — updates when filtered results change */}
       <p className="text-xs text-gray-400 mt-1.5 text-right">
-        €{roundedMax}/hr max
+        {sym}{roundedMax}/hr max
       </p>
     </div>
   )

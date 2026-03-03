@@ -1,3 +1,4 @@
+import { currencySymbol } from '../../utils/currency'
 import { useFilterSlice, useResultsSlice } from '../../store'
 
 const DEFAULT_RATE_MIN = 0
@@ -21,7 +22,7 @@ export function FilterChips() {
 
   if (rateMin !== DEFAULT_RATE_MIN || rateMax !== DEFAULT_RATE_MAX) {
     chips.push({
-      label: `€${rateMin}–€${rateMax}`,
+      label: `${currencySymbol('EUR')}${rateMin}–${currencySymbol('EUR')}${rateMax}`,
       onDismiss: () => setRateRange(DEFAULT_RATE_MIN, DEFAULT_RATE_MAX),
     })
   }
