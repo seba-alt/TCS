@@ -16,8 +16,8 @@ const API_BASE = import.meta.env.VITE_API_URL ?? ''
 
 function SkeletonListRow() {
   return (
-    <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 animate-pulse">
-      <div className="w-8 h-8 rounded-full bg-gray-200 shrink-0" />
+    <div className="flex items-center gap-4 px-4 py-3 border-b border-gray-100 animate-pulse">
+      <div className="w-12 h-12 rounded-full bg-gray-200 shrink-0" />
       <div className="flex-1 min-w-0 space-y-1.5">
         <div className="h-3.5 bg-gray-200 rounded w-32" />
         <div className="h-3 bg-gray-100 rounded w-48" />
@@ -81,19 +81,19 @@ export function ExpertList({ experts, loading, isFetchingMore, onEndReached, onV
           const initials = `${expert.first_name?.[0] ?? ''}${expert.last_name?.[0] ?? ''}`
           return (
             <div
-              className="flex items-center gap-3 px-4 py-3 border-b border-gray-50 hover:bg-gray-50 cursor-pointer transition-colors"
+              className="flex items-center gap-4 px-4 py-3 border-b border-gray-50 hover:bg-gray-50 cursor-pointer transition-colors"
               onClick={() => onViewProfile(expert.profile_url)}
               role="button"
               tabIndex={0}
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onViewProfile(expert.profile_url) }}
             >
-              {/* Photo with fallback initials */}
+              {/* Photo with fallback initials — 48px (w-12 h-12) for visual prominence */}
               {expert.photo_url ? (
-                <div className="w-8 h-8 rounded-full shrink-0 relative">
+                <div className="w-12 h-12 rounded-full shrink-0 relative">
                   <img
                     src={`${API_BASE}${expert.photo_url}`}
                     alt=""
-                    className="w-8 h-8 rounded-full object-cover"
+                    className="w-12 h-12 rounded-full object-cover"
                     loading="lazy"
                     onError={(e) => {
                       e.currentTarget.style.display = 'none'
@@ -101,12 +101,12 @@ export function ExpertList({ experts, loading, isFetchingMore, onEndReached, onV
                       if (fallback) fallback.style.display = 'flex'
                     }}
                   />
-                  <div className="w-8 h-8 rounded-full bg-brand-purple/10 text-brand-purple text-xs font-semibold items-center justify-center absolute inset-0 hidden">
+                  <div className="w-12 h-12 rounded-full bg-brand-purple/10 text-brand-purple text-sm font-semibold items-center justify-center absolute inset-0 hidden">
                     {initials}
                   </div>
                 </div>
               ) : (
-                <div className="w-8 h-8 rounded-full bg-brand-purple/10 text-brand-purple text-xs font-semibold flex items-center justify-center shrink-0">
+                <div className="w-12 h-12 rounded-full bg-brand-purple/10 text-brand-purple text-sm font-semibold flex items-center justify-center shrink-0">
                   {initials}
                 </div>
               )}
