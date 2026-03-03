@@ -157,4 +157,4 @@ Plans:
 |-------|-----------|----------------|--------|-----------|
 | 60. Bug Fixes | 1/1 | Complete    | 2026-03-03 | - |
 | 61. Lead Journey Timeline | 2/2 | Complete    | 2026-03-03 | - |
-| 62. Overview Enhancements | v5.1 | 0/2 | Not started | - |
+| 62. Overview Enhancements | 1/2 | In Progress|  | - |
