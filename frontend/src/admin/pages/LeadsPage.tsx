@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo } from 'react'
-import { useAdminLeads, useNewsletterSubscribers, adminFetch } from '../hooks/useAdminData'
-import type { LeadRow, LeadClicksResponse, LeadClickEntry } from '../types'
+import { useState, useMemo } from 'react'
+import { useAdminLeads, useNewsletterSubscribers, useLeadTimeline } from '../hooks/useAdminData'
+import type { LeadRow } from '../types'
 import { AdminCard } from '../components/AdminCard'
 import { AdminPageHeader } from '../components/AdminPageHeader'
 
@@ -17,11 +17,21 @@ function timeAgo(isoString: string): string {
   return `${days}d ago`
 }
 
+function formatGap(ms: number): string {
+  const mins = Math.floor(ms / 60000)
+  if (mins < 60) return `${mins} minutes later`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return `${hrs} ${hrs === 1 ? 'hour' : 'hours'} later`
+  const days = Math.floor(hrs / 24)
+  return `${days} ${days === 1 ? 'day' : 'days'} later`
+}
+
 export default function LeadsPage() {
   const { data, loading, error } = useAdminLeads()
   const { data: nltrData, loading: nltrLoading } = useNewsletterSubscribers()
 
   const [expandedEmail, setExpandedEmail] = useState<string | null>(null)
+  const timeline = useLeadTimeline(expandedEmail)
 
   // Sort state for click_count column
   const [sortField, setSortField] = useState<string | null>(null)
@@ -44,46 +54,8 @@ export default function LeadsPage() {
     )
   }, [data?.leads, sortField, sortDir])
 
-  // All clicks data for the flat Click Activity table
-  const [allClicksData, setAllClicksData] = useState<LeadClicksResponse | null>(null)
-  const [allClicksLoading, setAllClicksLoading] = useState(true)
-
-  useEffect(() => {
-    setAllClicksLoading(true)
-    adminFetch<LeadClicksResponse>('/lead-clicks')
-      .then(setAllClicksData)
-      .catch(() => setAllClicksData(null))
-      .finally(() => setAllClicksLoading(false))
-  }, [])
-
-  const flatClicks = useMemo(() => {
-    if (!allClicksData) return []
-    return allClicksData.leads
-      .flatMap(l => l.clicks.map(c => ({ ...c, email: l.email })))
-      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-  }, [allClicksData])
-
-  // Lead clicks cache: email -> clicks array
-  const [leadClicks, setLeadClicks] = useState<Record<string, LeadClickEntry[]>>({})
-  const [clicksLoading, setClicksLoading] = useState<Record<string, boolean>>({})
-
-  async function handleRowExpand(email: string) {
-    const isExpanding = expandedEmail !== email
-    setExpandedEmail(isExpanding ? email : null)
-
-    // Lazy-load clicks on expand if not cached
-    if (isExpanding && !(email in leadClicks)) {
-      setClicksLoading(prev => ({ ...prev, [email]: true }))
-      try {
-        const clickData = await adminFetch<LeadClicksResponse>('/lead-clicks')
-        const match = clickData.leads.find(l => l.email === email)
-        setLeadClicks(prev => ({ ...prev, [email]: match?.clicks ?? [] }))
-      } catch {
-        setLeadClicks(prev => ({ ...prev, [email]: [] }))
-      } finally {
-        setClicksLoading(prev => ({ ...prev, [email]: false }))
-      }
-    }
+  function handleRowExpand(email: string) {
+    setExpandedEmail(prev => prev === email ? null : email)
   }
 
   function formatDate(iso: string | null) {
@@ -209,7 +181,7 @@ export default function LeadsPage() {
             <span className="text-sm text-slate-400">
               {data.leads.length} unique {data.leads.length === 1 ? 'user' : 'users'}
             </span>
-            <span className="text-xs text-slate-600">Click a row to expand queries and clicks</span>
+            <span className="text-xs text-slate-600">Click a row to expand journey timeline</span>
           </div>
 
           {/* Table */}
@@ -245,10 +217,7 @@ export default function LeadsPage() {
                     </td>
                   </tr>
                 )}
-                {sortedLeads.map((lead: LeadRow) => {
-                  const clicks = leadClicks[lead.email] ?? []
-                  const isLoadingClicks = clicksLoading[lead.email] ?? false
-                  return (
+                {sortedLeads.map((lead: LeadRow) => (
                     <>
                       <tr
                         key={lead.email}
@@ -291,110 +260,122 @@ export default function LeadsPage() {
                         </td>
                       </tr>
 
-                      {/* Expanded row */}
+                      {/* Expanded row — chronological timeline */}
                       {expandedEmail === lead.email && (
                         <tr key={`${lead.email}-expanded`} className="border-b border-slate-700/40">
-                          <td colSpan={5} className="px-5 py-3 bg-slate-900/30">
-                            <div className="space-y-4">
-                              {/* Recent queries section */}
-                              <div>
-                                <p className="text-xs text-slate-500 mb-2">Recent queries</p>
-                                {lead.recent_queries.length === 0 ? (
-                                  <p className="text-slate-600 text-xs">No queries recorded</p>
-                                ) : (
-                                  <div className="flex flex-wrap gap-2">
-                                    {lead.recent_queries.map((q, i) => (
-                                      <span
-                                        key={i}
-                                        className="inline-block bg-slate-800 border border-slate-700 text-slate-300 text-xs px-3 py-1 rounded-full"
-                                      >
-                                        {q}
-                                      </span>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
+                          <td colSpan={5} className="px-5 py-4 bg-slate-900/30">
+                            {timeline.loading && !timeline.data ? (
+                              <p className="text-sm text-slate-500 animate-pulse">Loading timeline...</p>
+                            ) : timeline.error ? (
+                              <p className="text-sm text-red-400">Error loading timeline</p>
+                            ) : !timeline.data || timeline.data.events.length === 0 ? (
+                              <p className="text-sm text-slate-600">No activity recorded</p>
+                            ) : (
+                              <div className="space-y-0">
+                                {/* Timeline header */}
+                                <p className="text-xs text-slate-500 mb-3">
+                                  Journey timeline — {timeline.data.total} events
+                                </p>
 
-                              {/* Expert Clicks section */}
-                              <div>
-                                <h4 className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">
-                                  Expert Clicks
-                                </h4>
-                                {isLoadingClicks ? (
-                                  <p className="text-sm text-slate-500 animate-pulse">Loading clicks...</p>
-                                ) : clicks.length === 0 ? (
-                                  <p className="text-sm text-slate-600">No expert clicks recorded</p>
-                                ) : (
-                                  <div className="space-y-2">
-                                    {clicks.map((click, i) => (
-                                      <div key={i} className="flex items-center gap-3 text-sm">
-                                        <span className="font-medium text-slate-200">{click.expert_name}</span>
-                                        {click.search_query && (
-                                          <span className="px-2 py-0.5 bg-slate-800 border border-slate-700 rounded text-xs text-slate-400">
-                                            {click.search_query}
-                                          </span>
+                                {/* Timeline events */}
+                                <div className="relative pl-6 border-l-2 border-slate-700/60 space-y-0">
+                                  {timeline.data.events.map((event, i, arr) => {
+                                    // Time gap calculation — compare with PREVIOUS event (above = newer)
+                                    const prevEvent = i > 0 ? arr[i - 1] : null
+                                    const gapMs = prevEvent
+                                      ? new Date(prevEvent.created_at).getTime() - new Date(event.created_at).getTime()
+                                      : 0
+                                    const showGap = gapMs >= 30 * 60 * 1000 // 30+ minutes
+                                    const isLongGap = gapMs >= 24 * 60 * 60 * 1000 // 1+ day
+
+                                    return (
+                                      <div key={i}>
+                                        {/* Gap label between events */}
+                                        {showGap && (
+                                          <div className={`flex items-center gap-2 py-2 -ml-6 pl-6 ${isLongGap ? 'border-t border-b border-slate-600/40 bg-slate-800/30 my-1' : 'my-1'}`}>
+                                            <span className={`text-xs ${isLongGap ? 'text-amber-400/80 font-medium' : 'text-slate-500'}`}>
+                                              {formatGap(gapMs)}
+                                            </span>
+                                          </div>
                                         )}
-                                        <span className="text-slate-500 text-xs ml-auto">{timeAgo(click.created_at)}</span>
+
+                                        {/* Event node */}
+                                        <div className="relative flex items-start gap-3 py-2">
+                                          {/* Timeline dot */}
+                                          <div className={`absolute -left-[25px] top-3 w-2.5 h-2.5 rounded-full border-2 ${
+                                            event.type === 'search'
+                                              ? 'bg-blue-500/80 border-blue-400'
+                                              : 'bg-purple-500/80 border-purple-400'
+                                          }`} />
+
+                                          {/* Event content */}
+                                          <div className="flex-1 min-w-0">
+                                            {event.type === 'search' ? (
+                                              <div className="flex items-center gap-2 flex-wrap">
+                                                {/* Search icon */}
+                                                <svg className="w-3.5 h-3.5 text-blue-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                                </svg>
+                                                <span className="text-sm text-slate-200">{event.query}</span>
+                                                <span className="text-xs bg-slate-800 border border-slate-700 text-slate-400 px-2 py-0.5 rounded">
+                                                  {event.result_count} {event.result_count === 1 ? 'result' : 'results'}
+                                                </span>
+                                              </div>
+                                            ) : (
+                                              <div className="flex items-center gap-2 flex-wrap">
+                                                {/* Click/cursor icon */}
+                                                <svg className="w-3.5 h-3.5 text-purple-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
+                                                </svg>
+                                                <a
+                                                  href={`/admin/experts?search=${encodeURIComponent(event.expert_username)}`}
+                                                  onClick={(e) => e.stopPropagation()}
+                                                  className="text-sm font-medium text-purple-300 hover:text-purple-200 hover:underline"
+                                                >{event.expert_name}</a>
+                                                {event.search_query && (
+                                                  <span className="text-xs bg-slate-800 border border-slate-700 text-slate-500 px-2 py-0.5 rounded truncate max-w-[200px]">
+                                                    from: {event.search_query}
+                                                  </span>
+                                                )}
+                                              </div>
+                                            )}
+                                          </div>
+
+                                          {/* Timestamp — relative with exact on hover */}
+                                          <span
+                                            className="text-xs text-slate-500 flex-shrink-0 whitespace-nowrap"
+                                            title={new Date(event.created_at).toLocaleString()}
+                                          >
+                                            {timeAgo(event.created_at)}
+                                          </span>
+                                        </div>
                                       </div>
-                                    ))}
-                                  </div>
+                                    )
+                                  })}
+                                </div>
+
+                                {/* Load earlier events button */}
+                                {timeline.hasMore && (
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); timeline.loadMore() }}
+                                    className="mt-3 text-xs text-purple-400 hover:text-purple-300 transition-colors"
+                                  >
+                                    {timeline.loading ? 'Loading...' : `Load earlier events (${timeline.data.total - timeline.data.events.length} more)`}
+                                  </button>
                                 )}
                               </div>
-                            </div>
+                            )}
                           </td>
                         </tr>
                       )}
                     </>
-                  )
-                })}
+                  ))}
               </tbody>
             </table>
           </div>
         </AdminCard>
       )}
 
-      {/* Click Activity table */}
-      <AdminCard className="p-5">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-sm font-semibold text-white">Click Activity</h2>
-          <span className="text-xs text-slate-500">
-            {allClicksLoading ? '...' : `${flatClicks.length} events`}
-          </span>
-        </div>
-        {allClicksLoading ? (
-          <p className="text-slate-500 text-sm animate-pulse">Loading click activity...</p>
-        ) : flatClicks.length === 0 ? (
-          <p className="text-slate-500 text-sm">No click activity yet</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-xs text-slate-400 border-b border-slate-700/60">
-                  <th className="pb-2 pr-4">Email</th>
-                  <th className="pb-2 pr-4">Expert</th>
-                  <th className="pb-2 pr-4">Search Query</th>
-                  <th className="pb-2">When</th>
-                </tr>
-              </thead>
-              <tbody>
-                {flatClicks.slice(0, 50).map((click, i) => (
-                  <tr key={i} className="border-b border-slate-800/40">
-                    <td className="py-2 pr-4 text-slate-300">{click.email}</td>
-                    <td className="py-2 pr-4 text-white">{click.expert_name}</td>
-                    <td className="py-2 pr-4 text-slate-400 max-w-[200px] truncate">
-                      {click.search_query || '\u2014'}
-                    </td>
-                    <td className="py-2 text-slate-500">{timeAgo(click.created_at)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {flatClicks.length > 50 && (
-              <p className="text-xs text-slate-600 mt-2">Showing latest 50 of {flatClicks.length} events</p>
-            )}
-          </div>
-        )}
-      </AdminCard>
     </div>
   )
 }
