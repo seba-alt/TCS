@@ -190,6 +190,7 @@ Plans:
 | 56. Backend Performance & Admin Refactor | 3/3 | Complete | 2026-03-03 |
 | 57. Admin Frontend Overhaul | 4/4 | Complete    | 2026-03-03 |
 | 58. Audit Gap Closure | 2/2 | Complete    | 2026-03-03 |
+| 58.1 Admin Dashboard Improvements | 3/3 | Complete | 2026-03-03 |
 
 ### Phase 58.1: Admin Dashboard Improvements (INSERTED)
 
@@ -201,4 +202,4 @@ Plans:
 Plans:
 - [x] 58.1-01-PLAN.md — Backend endpoint extensions (click_count, active_tags) + Overview page cleanup
 - [x] 58.1-02-PLAN.md — Merge Searches/Marketplace into unified Data page with shared date picker
-- [ ] 58.1-03-PLAN.md — Leads page click count column + dedicated Click Activity table
+- [x] 58.1-03-PLAN.md — Leads page click count column + dedicated Click Activity table
