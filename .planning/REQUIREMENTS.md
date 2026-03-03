@@ -30,10 +30,10 @@ Requirements for v4.1 UX Polish & Mobile Overhaul. Each maps to roadmap phases.
 
 ### Mobile (MOBL)
 
-- [ ] **MOBL-01**: Clear button removed on mobile
-- [ ] **MOBL-02**: Search-within-tags and industry picker removed on mobile
-- [ ] **MOBL-03**: Clicking a tag resets the active search query
-- [ ] **MOBL-04**: Tag scroll glitch fixed on mobile
+- [x] **MOBL-01**: Clear button removed on mobile
+- [x] **MOBL-02**: Search-within-tags and industry picker removed on mobile
+- [x] **MOBL-03**: Clicking a tag resets the active search query
+- [x] **MOBL-04**: Tag scroll glitch fixed on mobile
 
 ### Bookmarks (BOOK)
 
@@ -76,10 +76,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CARD-01 | Phase 53 | Complete |
 | CARD-02 | Phase 53 | Complete |
 | CARD-03 | Phase 53 | Complete |
-| MOBL-01 | Phase 53 | Pending |
-| MOBL-02 | Phase 53 | Pending |
-| MOBL-03 | Phase 53 | Pending |
-| MOBL-04 | Phase 53 | Pending |
+| MOBL-01 | Phase 53 | Complete |
+| MOBL-02 | Phase 53 | Complete |
+| MOBL-03 | Phase 53 | Complete |
+| MOBL-04 | Phase 53 | Complete |
 | BOOK-01 | Phase 54 | Pending |
 | BOOK-02 | Phase 54 | Pending |
 | ANLT-01 | Phase 54 | Pending |

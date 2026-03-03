@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-02)
 
 **Core value:** A user describes any problem and instantly gets expertly matched professionals they can browse, filter, and contact — no searching, no guesswork.
-**Current focus:** Phase 53 — Card & Mobile Redesign (in progress)
+**Current focus:** Phase 54 — Mobile Filter Polish (up next)
 
 ## Current Position
 
-Phase: 53 of 54 (Card & Mobile Redesign)
-Plan: 01 of 02 (complete)
-Status: Phase 53 Plan 01 complete — card redesign done (CARD-01, CARD-02, CARD-03)
-Last activity: 2026-03-03 — Phase 53 Plan 01 executed (responsive ExpertCard + ExpertGrid/ExpertList updates)
+Phase: 53 of 54 (Card & Mobile Redesign) — COMPLETE
+Plan: 02 of 02 (complete)
+Status: Phase 53 complete — card redesign + mobile filter polish done (CARD-01, CARD-02, CARD-03, MOBL-01, MOBL-02, MOBL-03, MOBL-04)
+Last activity: 2026-03-03 — Phase 53 Plan 02 executed (MobileInlineFilters simplification + filterSlice query-clearing tag toggle)
 
-Progress: [##########] 50% (2 of 4 phases with plans complete)
+Progress: [############] 75% (3 of 4 phases with plans complete)
 
 ## Performance Metrics
 
@@ -46,6 +46,7 @@ Progress: [##########] 50% (2 of 4 phases with plans complete)
 | Phase 52-explorer-search-ux P01 | 4 | 2 tasks | 9 files |
 | Phase 52-explorer-search-ux P02 | 4 | 2 tasks | 7 files |
 | Phase 53-card-mobile-redesign P01 | 2min | 2 tasks | 3 files |
+| Phase 53-card-mobile-redesign P02 | 2min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -63,6 +64,9 @@ Progress: [##########] 50% (2 of 4 phases with plans complete)
 - [Phase 53-01]: ExpertCard uses two separate JSX blocks (md:hidden / hidden md:flex) for mobile vs desktop layouts — cleaner than per-element breakpoint class merging for fundamentally different structures
 - [Phase 53-01]: handleCardClick always calls onViewProfile directly with no viewport check or expand state — isExpanded and onExpand props removed entirely
 - [Phase 53-01]: Mobile card 200px fixed height (80px photo); desktop 180px in photo-left orientation; list view photos enlarged to 48px (w-12)
+- [Phase 53-02]: toggleTag clears query only on add (not remove) — removing a tag preserves user's text context; adding is a pivot action that starts fresh
+- [Phase 53-02]: MobileInlineFilters pickers render full tag lists without search inputs — list length is manageable; search adds friction on mobile
+- [Phase 53-02]: Smooth scroll applied via inline style (WebkitOverflowScrolling:touch + scrollbarWidth:none) — no Tailwind utility available without plugin
 
 ### Pending Todos
 
@@ -77,5 +81,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-03
-Stopped at: Completed 53-01-PLAN.md — ExpertCard mobile redesign + ExpertGrid/ExpertList updates
-Resume file: .planning/phases/53-card-mobile-redesign/53-02-PLAN.md
+Stopped at: Completed 53-02-PLAN.md — MobileInlineFilters simplification + filterSlice query-clearing tag toggle
+Resume file: .planning/phases/54-mobile-filter-polish/ (Phase 54)
