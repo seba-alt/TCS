@@ -290,6 +290,7 @@ def get_analytics_summary(days: int = 0, db: Session = Depends(get_db)):
         SELECT
             json_extract(payload, '$.query_text') AS query_text,
             json_extract(payload, '$.result_count') AS result_count,
+            json_extract(payload, '$.active_tags') AS active_tags,
             created_at
         FROM user_events
         WHERE event_type = 'search_query'
@@ -301,6 +302,7 @@ def get_analytics_summary(days: int = 0, db: Session = Depends(get_db)):
         {
             "query_text": r.query_text or "",
             "result_count": int(r.result_count) if r.result_count is not None else 0,
+            "active_tags": json.loads(r.active_tags) if r.active_tags else [],
             "created_at": r.created_at or "",
         }
         for r in recent_search_rows

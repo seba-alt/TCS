@@ -8,11 +8,11 @@ from datetime import date, datetime
 
 from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import Conversation, NewsletterSubscriber
+from app.models import Conversation, LeadClick, NewsletterSubscriber
 from app.routers.admin._common import _is_gap
 
 router = APIRouter()
@@ -21,6 +21,13 @@ router = APIRouter()
 @router.get("/leads")
 def get_leads(db: Session = Depends(get_db)):
     """Return email-grouped lead analytics."""
+    # Batch-count clicks per email for click_count field
+    click_counts_rows = db.execute(
+        select(LeadClick.email, func.count(LeadClick.id).label("click_count"))
+        .group_by(LeadClick.email)
+    ).all()
+    click_map = {r.email: r.click_count for r in click_counts_rows}
+
     rows = db.scalars(
         select(Conversation).order_by(Conversation.created_at.desc())
     ).all()
@@ -58,6 +65,7 @@ def get_leads(db: Session = Depends(get_db)):
             "last_search_at": ts.isoformat() if ts else None,
             "gap_count": lead["gap_count"],
             "recent_queries": seen,
+            "click_count": click_map.get(lead["email"], 0),
         })
 
     return {"leads": result}

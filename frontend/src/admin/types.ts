@@ -67,6 +67,7 @@ export interface LeadRow {
   last_search_at: string | null
   gap_count: number
   recent_queries: string[]
+  click_count: number
 }
 
 export interface LeadsResponse {
@@ -260,6 +261,7 @@ export interface LeadClicksByExpertResponse {
 export interface RecentSearchEntry {
   query_text: string
   result_count: number
+  active_tags?: string[]
   created_at: string
 }
 
