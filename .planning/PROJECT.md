@@ -2,7 +2,7 @@
 
 ## What This Is
 
-A professional Expert Marketplace for the Tinrate platform. Users discover 530 vetted experts via an immersive aurora-aesthetic Explorer — glassmorphic Command Center header with autocomplete search (debounced suggestions for job titles, companies, and tags) and spring expert count; animated aurora mesh background; bento-style expert cards with profile photos and monogram fallback in grid or list view; animated claymorphic tag cloud with 18 domain tags plus industry-level tags (Finance, Healthcare, Tech, etc.) and proximity-based scaling. Mobile-optimized with inline filter controls (tag picker, sort, active chip row) and full-width search bar. Expert bookmarking with localStorage persistence. User behavior (card clicks, filter changes) is tracked for marketplace intelligence. GA4 analytics + Microsoft Clarity track every page view with SPA route change support. Expert email PII has been purged from all data stores. A newsletter gate captures leads on "View Full Profile". Intercom live chat provides real-time support. Admin panel secured with bcrypt+JWT authentication and rate limiting; streamlined sidebar with overview dashboard (stat cards, recent leads/searches), lead export CSV, bulk expert CSV import, and marketplace intelligence. Playful users can trigger barrel rolls and a "tinrate" header tilt easter egg.
+A professional Expert Marketplace for the Tinrate platform. Users discover vetted experts via an immersive aurora-aesthetic Explorer — glassmorphic Command Center header with autocomplete search (debounced suggestions for job titles, companies, and tags) and spring expert count; animated aurora mesh background; bento-style expert cards with profile photos and monogram fallback in grid or list view; animated claymorphic tag cloud with 18 domain tags plus industry-level tags (Finance, Healthcare, Tech, etc.) and proximity-based scaling. Mobile-optimized with inline filter controls (tag picker, sort, active chip row) and full-width search bar. Expert bookmarking with localStorage persistence. User behavior (card clicks, filter changes) is tracked for marketplace intelligence. GA4 analytics + Microsoft Clarity track every page view with SPA route change support. Expert email PII has been purged from all data stores. A newsletter gate captures leads on "View Full Profile". Intercom live chat provides real-time support. Admin panel secured with bcrypt+JWT authentication and rate limiting; streamlined sidebar with overview dashboard (stat cards, recent leads/searches), lead export CSV, bulk expert CSV import, and marketplace intelligence. Playful users can trigger barrel rolls and a "tinrate" header tilt easter egg.
 
 ## Core Value
 
@@ -243,7 +243,7 @@ A user describes any problem and instantly gets expertly matched professionals t
 ## Current State
 
 **Deployed version:** v5.0 (Railway + Vercel, auto-deploys on push to main)
-**Expert pool:** 530 experts (data/metadata.json), all AI-tagged with domain + industry tags; FAISS index at 530 vectors; profile photos via proxy endpoint; expert email PII purged
+**Expert pool:** experts (growing weekly) (data/metadata.json), all AI-tagged with domain + industry tags; FAISS index at vectors (grows with expert pool); profile photos via proxy endpoint; expert email PII purged
 **Search intelligence:** Three-stage hybrid pipeline live; HyDE + feedback re-ranking toggled via admin steering panel; FTS5 autocomplete suggestions with tag-first ranking; dynamic rate slider max from API; embedding cache (60s TTL) prevents duplicate Google API calls
 **Explorer:** Single-page aurora-aesthetic marketplace at `/` with glassmorphic Command Center header, autofocused search with tag-first autocomplete, responsive cards (mobile photo-centric / desktop photo-left) in grid or list view, animated tag cloud (18 domain tags + industry tags), inline mobile filters (simplified — no clear button, no search-within pickers), seeded random initial ordering, bookmarks with purple visual treatment and filter-independent saved view, Intercom no-results CTA, anonymous search tracking, newsletter gate, API error states with retry. Search results tier-sorted (Top Match → Good Match → rest). Currency symbols on all rate displays.
 **Live chat:** Intercom (replaces Sage AI co-pilot, removed in phase 50.3)
@@ -254,7 +254,7 @@ A user describes any problem and instantly gets expertly matched professionals t
 
 ## Context
 
-- **Expert data:** SQLite table with 530 profiles (email PII purged); FAISS index at 530 tag-enriched vectors; all experts AI-tagged with 3–8 domain tags + findability scores
+- **Expert data:** SQLite table with profiles (growing weekly) (email PII purged); FAISS index at 530 tag-enriched vectors; all experts AI-tagged with 3–8 domain tags + findability scores
 - **AI stack:** Google GenAI (gemini-embedding-001) for embeddings, Gemini 2.5 Flash for generation + Sage function calling, Gemini 2.5-flash-lite for Dutch detection
 - **Codebase:** ~15,910 LOC TypeScript/TSX + Python
 - **Deployed:** Railway (FastAPI + SQLite + FAISS) + Vercel (React/Vite/Tailwind v3)
@@ -269,13 +269,14 @@ A user describes any problem and instantly gets expertly matched professionals t
 - **Hosting:** Vercel (frontend) + Railway (backend)
 - **AI provider:** Google GenAI (embeddings) + Gemini (generation) — no switching to OpenAI
 - **Output format:** Always exactly 3 expert recommendations per chat response (unless clarification needed)
+- **Expert pool:** Growing weekly — all features must handle dynamic pool sizes (no hardcoded counts)
 
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
 | RAG over fine-tuning | CSV data changes; retrieval is more maintainable than a fine-tuned model | ✓ Good — live in production, retrieval quality sufficient |
-| FAISS in-memory | 530 profiles is small enough; no vector DB needed | ✓ Good — fast retrieval, zero ops |
+| FAISS in-memory | profiles (growing weekly) is small enough; no vector DB needed | ✓ Good — fast retrieval, zero ops |
 | Standalone site | Decoupled from main Tinrate app — faster to ship, easier to iterate | ✓ Good — shipped same day |
 | Exactly 3 recommendations (chat) | Clear, decisive UX — avoids overwhelming users with choice | ✓ Good — user-verified in production |
 | SQLite for v1 | Zero-config; Railway persistent volume; replace URL with Postgres for scale | ✓ Good — works on Railway, zero ops |
