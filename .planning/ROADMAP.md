@@ -105,7 +105,7 @@ See `.planning/milestones/v5.0-ROADMAP.md`
 
 **Milestone Goal:** Surface lead journey data and enriched overview signals so admins can understand engagement patterns and demand gaps at a glance.
 
-- [ ] **Phase 60: Bug Fixes** - Fix clear-all button visibility and remove unused build-breaking variable
+- [x] **Phase 60: Bug Fixes** - Fix clear-all button visibility and remove unused build-breaking variable (completed 2026-03-03)
 - [ ] **Phase 61: Lead Journey Timeline** - Expandable lead rows with chronological search and click history
 - [ ] **Phase 62: Overview Enhancements** - Add top experts, top searches, and zero-result gap cards to Overview
 
@@ -149,6 +149,6 @@ Plans:
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 60. Bug Fixes | v5.1 | 0/1 | Not started | - |
+| 60. Bug Fixes | 1/1 | Complete   | 2026-03-03 | - |
 | 61. Lead Journey Timeline | v5.1 | 0/TBD | Not started | - |
 | 62. Overview Enhancements | v5.1 | 0/TBD | Not started | - |

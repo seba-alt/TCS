@@ -21,8 +21,8 @@ Requirements for v5.1 Lead Insights & Overview. Each maps to roadmap phases.
 
 ### Bug Fixes
 
-- [ ] **FIX-01**: Clear-all button only appears when user has active tags, search query, or non-default filters (not on page load)
-- [ ] **FIX-02**: Remove unused `totalTagCount` variable from MobileInlineFilters.tsx to fix Vercel build
+- [x] **FIX-01**: Clear-all button only appears when user has active tags, search query, or non-default filters (not on page load)
+- [x] **FIX-02**: Remove unused `totalTagCount` variable from MobileInlineFilters.tsx to fix Vercel build
 
 ## Future Requirements
 
@@ -45,8 +45,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FIX-01 | Phase 60 | Pending |
-| FIX-02 | Phase 60 | Pending |
+| FIX-01 | Phase 60 | Complete |
+| FIX-02 | Phase 60 | Complete |
 | LEAD-01 | Phase 61 | Pending |
 | LEAD-02 | Phase 61 | Pending |
 | LEAD-03 | Phase 61 | Pending |
