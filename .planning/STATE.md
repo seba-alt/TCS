@@ -7,8 +7,8 @@ last_updated: "2026-03-03"
 progress:
   total_phases: 4
   completed_phases: 3
-  total_plans: 6
-  completed_plans: 6
+  total_plans: 7
+  completed_plans: 7
 ---
 
 # Project State
@@ -18,23 +18,23 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-03)
 
 **Core value:** A user describes any problem and instantly gets expertly matched professionals they can browse, filter, and contact — no searching, no guesswork.
-**Current focus:** Phase 58.1 Plan 02 complete — Merged Searches/Marketplace into unified Data page
+**Current focus:** Phase 58.1 complete — All 3 plans executed (backend extensions, Data page merge, Leads click visibility)
 
 ## Current Position
 
 Phase: 58.1 of 58.1 (Admin Dashboard Improvements)
-Plan: 02 of 3
-Status: Active
-Last activity: 2026-03-03 — Completed 58.1-02 (Merge Searches/Marketplace into unified Data page with shared date picker)
+Plan: 03 of 3
+Status: Complete
+Last activity: 2026-03-03 — Completed 58.1-03 (Leads click count column + Click Activity table)
 
-Progress: [██████░░░░] 66%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 6 (this milestone)
+- Total plans completed: 7 (this milestone)
 - Average duration: ~6 min
-- Total execution time: ~40 min
+- Total execution time: ~42 min
 
 **By Phase:**
 
@@ -43,6 +43,7 @@ Progress: [██████░░░░] 66%
 | Phase 55 | 2 | ~16 min | ~8 min |
 | Phase 56 | 3 | ~14 min | ~5 min |
 | Phase 58 | 1 | ~5 min | ~5 min |
+| Phase 58.1 | 3 | ~10 min | ~3 min |
 
 ## Accumulated Context
 | Phase 55 P01 | 2 | 2 tasks | 3 files |
@@ -52,6 +53,7 @@ Progress: [██████░░░░] 66%
 | Phase 56 P03 | 8 | 2 tasks | 11 files |
 | Phase 58 P01 | 5 | 2 tasks | 4 files |
 | Phase 58.1 P02 | 3 | 2 tasks | 3 files |
+| Phase 58.1 P03 | 2 | 2 tasks | 1 files |
 
 ### Roadmap Evolution
 
@@ -79,6 +81,9 @@ Recent decisions affecting current work:
 - [Phase 58.1]: DataPage is a full single-page component (no tabs, no Outlet) — search records above, marketplace sections below, unified date picker at top
 - [Phase 58.1]: TrendSection kept with hardcoded 14d period — backend /events/trend endpoint does not accept date params
 - [Phase 58.1]: Date range preset buttons match OverviewPage pill-button aesthetic (bg-purple-600 active, slate-400 inactive)
+- [Phase 58.1]: Manual useMemo sort on raw <tr> table for click_count — avoids TanStack Table migration for single-column sort
+- [Phase 58.1]: Page-level /lead-clicks fetch flattened client-side for Click Activity table — no new backend endpoint needed
+- [Phase 58.1]: Source column omitted from Click Activity table — LeadClick model has no source field
 
 ### Pending Todos
 
@@ -93,5 +98,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-03
-Stopped at: Completed Phase 58.1 Plan 02 (Merge Searches/Marketplace into unified Data page)
-Resume: Phase 58.1 Plan 02 complete — unified Data page with shared date picker; next is 58.1-03 (Leads click count + Click Activity table)
+Stopped at: Completed 58.1-03-PLAN.md (Leads click count + Click Activity table)
+Resume: Phase 58.1 complete — all 3 plans executed; milestone v5.0 ready for review
