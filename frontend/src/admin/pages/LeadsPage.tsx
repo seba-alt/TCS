@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAdminLeads, useNewsletterSubscribers, adminFetch } from '../hooks/useAdminData'
 import type { LeadRow, LeadClicksResponse, LeadClickEntry } from '../types'
+import { AdminCard } from '../components/AdminCard'
+import { AdminPageHeader } from '../components/AdminPageHeader'
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
 
@@ -101,23 +103,21 @@ export default function LeadsPage() {
 
   return (
     <div className="p-8 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-white">Leads</h1>
-          <p className="text-slate-500 text-sm mt-1">
-            All users grouped by email with search history and gap activity
-          </p>
-        </div>
-        <button
-          onClick={downloadLeadsCsv}
-          className="bg-purple-600 hover:bg-purple-500 text-white text-sm px-4 py-2 rounded-lg transition-colors"
-        >
-          Export CSV
-        </button>
-      </div>
+      <AdminPageHeader
+        title="Leads"
+        subtitle="All users grouped by email with search history and gap activity"
+        action={
+          <button
+            onClick={downloadLeadsCsv}
+            className="bg-purple-600 hover:bg-purple-500 text-white text-sm px-4 py-2 rounded-lg transition-colors"
+          >
+            Export CSV
+          </button>
+        }
+      />
 
       {/* Newsletter Subscribers section */}
-      <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl overflow-hidden">
+      <AdminCard className="overflow-hidden">
         {/* Header row */}
         <div className="px-5 py-3 bg-slate-900/40 border-b border-slate-700/60 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -167,14 +167,14 @@ export default function LeadsPage() {
             </table>
           </div>
         )}
-      </div>
+      </AdminCard>
 
       {/* Existing leads section */}
       {loading && <p className="text-slate-500 text-sm animate-pulse">Loading leads…</p>}
       {error && <p className="text-red-400 text-sm">Error: {error}</p>}
 
       {data && (
-        <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl overflow-hidden">
+        <AdminCard className="overflow-hidden">
           {/* Summary row */}
           <div className="px-5 py-3 bg-slate-900/40 border-b border-slate-700/60 flex items-center justify-between">
             <span className="text-sm text-slate-400">
@@ -329,7 +329,7 @@ export default function LeadsPage() {
               </tbody>
             </table>
           </div>
-        </div>
+        </AdminCard>
       )}
     </div>
   )

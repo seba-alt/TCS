@@ -10,6 +10,7 @@ import {
 } from '@tanstack/react-table'
 import type { SearchRow } from '../types'
 import ExpandedExpertRow from './ExpandedExpertRow'
+import { AdminPagination } from './AdminPagination'
 
 interface SearchesTableProps {
   data: SearchRow[]
@@ -186,23 +187,11 @@ export default function SearchesTable({ data, pageSize, onPageSizeChange }: Sear
             <option value={50}>50</option>
           </select>
         </div>
-        <div className="flex items-center gap-2">
-          <span>Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}</span>
-          <button
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
-            className="px-3 py-1 rounded-lg border border-slate-600 disabled:opacity-30 hover:bg-slate-700 transition-colors"
-          >
-            ←
-          </button>
-          <button
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
-            className="px-3 py-1 rounded-lg border border-slate-600 disabled:opacity-30 hover:bg-slate-700 transition-colors"
-          >
-            →
-          </button>
-        </div>
+        <AdminPagination
+          page={table.getState().pagination.pageIndex}
+          totalPages={table.getPageCount()}
+          onPageChange={(p) => table.setPageIndex(p)}
+        />
       </div>
     </div>
   )
