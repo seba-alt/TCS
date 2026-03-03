@@ -283,6 +283,17 @@ export interface LeadTimelineResponse {
   offset: number
 }
 
+// -- Top Queries (Phase 62) --
+
+export interface TopQueryRow {
+  query_text: string
+  frequency: number
+}
+
+export interface TopQueriesResponse {
+  queries: TopQueryRow[]
+}
+
 // -- Analytics Summary (Phase 50.2) --
 
 export interface RecentSearchEntry {

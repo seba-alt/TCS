@@ -348,3 +348,23 @@ def get_analytics_summary(days: int = 0, db: Session = Depends(get_db)):
         "recent_searches": recent_searches,
         "recent_clicks": recent_clicks,
     }
+
+
+@router.get("/analytics/top-queries")
+def get_top_queries(days: int = 0, limit: int = 5, db: Session = Depends(get_db)):
+    """Return top search queries ranked by frequency for the given time window."""
+    cutoff = (datetime.utcnow() - timedelta(days=days)).strftime("%Y-%m-%d %H:%M:%S") if days > 0 else "2000-01-01"
+    rows = db.execute(_text("""
+        SELECT
+            json_extract(payload, '$.query_text') AS query_text,
+            COUNT(*) AS frequency
+        FROM user_events
+        WHERE event_type = 'search_query'
+          AND json_extract(payload, '$.query_text') IS NOT NULL
+          AND json_extract(payload, '$.query_text') != ''
+          AND created_at >= :cutoff
+        GROUP BY json_extract(payload, '$.query_text')
+        ORDER BY frequency DESC
+        LIMIT :limit
+    """), {"cutoff": cutoff, "limit": limit}).all()
+    return {"queries": [{"query_text": r.query_text, "frequency": r.frequency} for r in rows]}
