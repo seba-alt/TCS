@@ -90,7 +90,7 @@ export default function MarketplacePage() {
 
   return (
     <AuroraBackground>
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col h-screen overflow-x-hidden">
       {/* Desktop top header — Command Center glassmorphic header */}
       <Header />
 

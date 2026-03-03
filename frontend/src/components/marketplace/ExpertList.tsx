@@ -82,7 +82,7 @@ export function ExpertList({ experts, loading, isFetchingMore, onEndReached, onV
           const initials = `${expert.first_name?.[0] ?? ''}${expert.last_name?.[0] ?? ''}`
           return (
             <div
-              className="flex items-center gap-4 px-4 py-3 border-b border-gray-50 hover:bg-gray-50 cursor-pointer transition-colors"
+              className="flex items-center gap-4 px-4 py-3 border-b border-gray-50 hover:bg-gray-50 cursor-pointer transition-colors overflow-hidden"
               onClick={() => onViewProfile(expert.profile_url)}
               role="button"
               tabIndex={0}
