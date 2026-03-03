@@ -6,8 +6,8 @@ Both features are gated by settings read from the DB on every request:
     FEEDBACK_LEARNING_ENABLED — enables feedback-weighted re-ranking
 
 Settings are read via get_settings(db) on every retrieve_with_intelligence() call.
-This ensures a POST /api/admin/settings change takes effect on the very next chat
-request with no Railway redeploy required.
+Settings are cached in-memory for 30 seconds (PERF-04). The POST /api/admin/settings
+endpoint calls invalidate_settings_cache() to force an immediate re-read.
 
 retrieve_with_intelligence() is SYNCHRONOUS. It MUST NOT be async because it
 calls synchronous genai.Client() and embed_query(). Call it from chat.py via
@@ -19,6 +19,9 @@ All 5 settings fall back to env vars (or hardcoded defaults) when no DB row exis
 """
 import os
 import json
+import threading
+import time
+
 import numpy as np
 import faiss
 import structlog
@@ -41,6 +44,24 @@ log = structlog.get_logger()
 # This is a hang-protection guard, NOT a tuneable setting — keep hardcoded.
 HYDE_TIMEOUT_SECONDS = 5.0
 
+# ── Settings TTL cache (PERF-04) ─────────────────────────────────────────────
+# Caches the 5 intelligence settings dict for 30 seconds to avoid a DB round-trip
+# on every chat message. Invalidated immediately by invalidate_settings_cache().
+_settings_cache: dict | None = None
+_settings_cache_ts: float = 0.0
+_settings_lock = threading.Lock()
+SETTINGS_CACHE_TTL = 30.0  # seconds
+
+
+def invalidate_settings_cache() -> None:
+    """
+    Force the next get_settings() call to re-read from the database.
+    Call this from POST /api/admin/settings after db.commit().
+    """
+    global _settings_cache_ts
+    with _settings_lock:
+        _settings_cache_ts = 0.0
+
 # ── DB-backed settings ────────────────────────────────────────────────────────
 
 
@@ -48,9 +69,9 @@ def get_settings(db: Session) -> dict:
     """
     Read all 5 intelligence settings from the DB, falling back to env vars.
 
-    Called on every retrieve_with_intelligence() invocation — never cached.
-    This ensures a POST /api/admin/settings change takes effect on the next request
-    with no Railway redeploy required.
+    Cached in-memory for 30 seconds (PERF-04). invalidate_settings_cache()
+    zeroes the timestamp so the next call re-reads from the database — ensuring
+    POST /api/admin/settings changes take effect immediately.
 
     Returns a dict with native Python types (bool, float, int) ready to use directly.
 
@@ -61,6 +82,14 @@ def get_settings(db: Session) -> dict:
         STRONG_RESULT_MIN         — int,   default: "3"
         FEEDBACK_BOOST_CAP        — float, default: "0.20"
     """
+    global _settings_cache, _settings_cache_ts
+
+    now = time.time()
+    with _settings_lock:
+        if _settings_cache is not None and (now - _settings_cache_ts) < SETTINGS_CACHE_TTL:
+            return _settings_cache
+
+    # Cache miss or stale — fetch from DB outside the lock
     from app.models import AppSetting  # deferred import — avoids circular import at module load
 
     rows = {row.key: row.value for row in db.scalars(select(AppSetting)).all()}
@@ -83,13 +112,20 @@ def get_settings(db: Session) -> dict:
         except (ValueError, TypeError):
             return int(default)
 
-    return {
+    fresh = {
         "QUERY_EXPANSION_ENABLED": _bool("QUERY_EXPANSION_ENABLED", "false"),
         "FEEDBACK_LEARNING_ENABLED": _bool("FEEDBACK_LEARNING_ENABLED", "false"),
         "SIMILARITY_THRESHOLD": _float("SIMILARITY_THRESHOLD", "0.60"),
         "STRONG_RESULT_MIN": _int("STRONG_RESULT_MIN", "3"),
         "FEEDBACK_BOOST_CAP": _float("FEEDBACK_BOOST_CAP", "0.20"),
     }
+
+    # Store in cache
+    with _settings_lock:
+        _settings_cache = fresh
+        _settings_cache_ts = time.time()
+
+    return fresh
 
 # ── HyDE — lazy singleton client ──────────────────────────────────────────────
 
