@@ -1,4 +1,3 @@
-import { useNavigate } from 'react-router-dom'
 import type { GapRow } from '../types'
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
@@ -10,8 +9,6 @@ interface GapsTableProps {
 }
 
 export default function GapsTable({ data, onResolved }: GapsTableProps) {
-  const navigate = useNavigate()
-
   async function handleResolve(gap: GapRow) {
     try {
       await fetch(`${API_URL}/api/admin/gaps/${encodeURIComponent(gap.query)}/resolve`, {
@@ -72,22 +69,14 @@ export default function GapsTable({ data, onResolved }: GapsTableProps) {
                     )}
                   </td>
                   <td className="px-5 py-3">
-                    <div className="flex items-center gap-4">
+                    {!gap.resolved && (
                       <button
-                        onClick={() => navigate('/admin/searches', { state: { query: gap.query } })}
-                        className="text-xs text-blue-400 hover:text-blue-300 hover:underline whitespace-nowrap"
+                        onClick={() => handleResolve(gap)}
+                        className="text-xs text-purple-400 hover:text-purple-300 hover:underline whitespace-nowrap"
                       >
-                        View Searches →
+                        Mark Resolved
                       </button>
-                      {!gap.resolved && (
-                        <button
-                          onClick={() => handleResolve(gap)}
-                          className="text-xs text-purple-400 hover:text-purple-300 hover:underline whitespace-nowrap"
-                        >
-                          Mark Resolved
-                        </button>
-                      )}
-                    </div>
+                    )}
                   </td>
                 </tr>
               ))
