@@ -49,6 +49,25 @@ export default function LeadsPage() {
     )
   }, [data?.leads, sortField, sortDir])
 
+  // All clicks data for the flat Click Activity table
+  const [allClicksData, setAllClicksData] = useState<LeadClicksResponse | null>(null)
+  const [allClicksLoading, setAllClicksLoading] = useState(true)
+
+  useEffect(() => {
+    setAllClicksLoading(true)
+    adminFetch<LeadClicksResponse>('/lead-clicks')
+      .then(setAllClicksData)
+      .catch(() => setAllClicksData(null))
+      .finally(() => setAllClicksLoading(false))
+  }, [])
+
+  const flatClicks = useMemo(() => {
+    if (!allClicksData) return []
+    return allClicksData.leads
+      .flatMap(l => l.clicks.map(c => ({ ...c, email: l.email })))
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+  }, [allClicksData])
+
   // Lead clicks cache: email -> clicks array
   const [leadClicks, setLeadClicks] = useState<Record<string, LeadClickEntry[]>>({})
   const [clicksLoading, setClicksLoading] = useState<Record<string, boolean>>({})
@@ -367,6 +386,49 @@ export default function LeadsPage() {
           </div>
         </AdminCard>
       )}
+
+      {/* Click Activity table */}
+      <AdminCard className="p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-sm font-semibold text-white">Click Activity</h2>
+          <span className="text-xs text-slate-500">
+            {allClicksLoading ? '...' : `${flatClicks.length} events`}
+          </span>
+        </div>
+        {allClicksLoading ? (
+          <p className="text-slate-500 text-sm animate-pulse">Loading click activity...</p>
+        ) : flatClicks.length === 0 ? (
+          <p className="text-slate-500 text-sm">No click activity yet</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-xs text-slate-400 border-b border-slate-700/60">
+                  <th className="pb-2 pr-4">Email</th>
+                  <th className="pb-2 pr-4">Expert</th>
+                  <th className="pb-2 pr-4">Search Query</th>
+                  <th className="pb-2">When</th>
+                </tr>
+              </thead>
+              <tbody>
+                {flatClicks.slice(0, 50).map((click, i) => (
+                  <tr key={i} className="border-b border-slate-800/40">
+                    <td className="py-2 pr-4 text-slate-300">{click.email}</td>
+                    <td className="py-2 pr-4 text-white">{click.expert_name}</td>
+                    <td className="py-2 pr-4 text-slate-400 max-w-[200px] truncate">
+                      {click.search_query || '\u2014'}
+                    </td>
+                    <td className="py-2 text-slate-500">{timeAgo(click.created_at)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {flatClicks.length > 50 && (
+              <p className="text-xs text-slate-600 mt-2">Showing latest 50 of {flatClicks.length} events</p>
+            )}
+          </div>
+        )}
+      </AdminCard>
     </div>
   )
 }
