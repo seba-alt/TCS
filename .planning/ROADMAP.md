@@ -107,7 +107,7 @@ See `.planning/milestones/v5.0-ROADMAP.md`
 
 - [x] **Phase 60: Bug Fixes** - Fix clear-all button visibility and remove unused build-breaking variable (completed 2026-03-03)
 - [x] **Phase 61: Lead Journey Timeline** - Expandable lead rows with chronological search and click history (completed 2026-03-03)
-- [ ] **Phase 62: Overview Enhancements** - Add top experts, top searches, and zero-result gap cards to Overview
+- [x] **Phase 62: Overview Enhancements** - Add top experts, top searches, and zero-result gap cards to Overview (completed 2026-03-03)
 
 ## Phase Details
 
@@ -157,4 +157,4 @@ Plans:
 |-------|-----------|----------------|--------|-----------|
 | 60. Bug Fixes | 1/1 | Complete    | 2026-03-03 | - |
 | 61. Lead Journey Timeline | 2/2 | Complete    | 2026-03-03 | - |
-| 62. Overview Enhancements | 1/2 | In Progress|  | - |
+| 62. Overview Enhancements | 2/2 | Complete   | 2026-03-03 | - |
