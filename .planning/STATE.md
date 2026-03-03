@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-03)
 
 **Core value:** A user describes any problem and instantly gets expertly matched professionals they can browse, filter, and contact — no searching, no guesswork.
-**Current focus:** Phase 58 Plan 01 complete — v5.0 audit gap closure (CORS DELETE + currencySymbol)
+**Current focus:** Phase 58.1 Plan 02 complete — Merged Searches/Marketplace into unified Data page
 
 ## Current Position
 
-Phase: 58 of 58 (Audit Gap Closure)
-Plan: 01 of 1 complete
-Status: Complete
-Last activity: 2026-03-03 — Completed 58-01 (CORS DELETE fix + currencySymbol adoption in FilterChips and RateSlider)
+Phase: 58.1 of 58.1 (Admin Dashboard Improvements)
+Plan: 02 of 3
+Status: Active
+Last activity: 2026-03-03 — Completed 58.1-02 (Merge Searches/Marketplace into unified Data page with shared date picker)
 
-Progress: [██████████] 100%
+Progress: [██████░░░░] 66%
 
 ## Performance Metrics
 
@@ -51,6 +51,11 @@ Progress: [██████████] 100%
 | Phase 56 P02 | 5 | 2 tasks | 4 files |
 | Phase 56 P03 | 8 | 2 tasks | 11 files |
 | Phase 58 P01 | 5 | 2 tasks | 4 files |
+| Phase 58.1 P02 | 3 | 2 tasks | 3 files |
+
+### Roadmap Evolution
+
+- Phase 58.1 inserted after Phase 58: Admin Dashboard Improvements (URGENT)
 
 ### Decisions
 
@@ -71,6 +76,9 @@ Recent decisions affecting current work:
 - [Phase 58]: CORS only adds DELETE, not PATCH or wildcard — scoped to exact method needed by admin expert deletion
 - [Phase 58]: sym const derived once per render in RateSlider from currencySymbol('EUR') — cleaner than three inline calls
 - [Phase 58]: All currency display uses currencySymbol() utility — no hardcoded currency literals in components
+- [Phase 58.1]: DataPage is a full single-page component (no tabs, no Outlet) — search records above, marketplace sections below, unified date picker at top
+- [Phase 58.1]: TrendSection kept with hardcoded 14d period — backend /events/trend endpoint does not accept date params
+- [Phase 58.1]: Date range preset buttons match OverviewPage pill-button aesthetic (bg-purple-600 active, slate-400 inactive)
 
 ### Pending Todos
 
@@ -85,5 +93,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-03
-Stopped at: Completed Phase 58 Plan 01 (CORS DELETE fix + currencySymbol adoption — v5.0 audit gap closure)
-Resume: Phase 58 Plan 01 complete — v5.0 audit gaps BUG-02 and ADM-06 closed; milestone v5.0 complete
+Stopped at: Completed Phase 58.1 Plan 02 (Merge Searches/Marketplace into unified Data page)
+Resume: Phase 58.1 Plan 02 complete — unified Data page with shared date picker; next is 58.1-03 (Leads click count + Click Activity table)
