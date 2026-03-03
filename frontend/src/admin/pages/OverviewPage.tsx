@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAdminStats, adminFetch, useAnalyticsSummary } from '../hooks/useAdminData'
-import type { DemandResponse, LeadsResponse, SearchesResponse, RecentSearchEntry, RecentClickEntry } from '../types'
+import { AdminCard } from '../components/AdminCard'
+import type { DemandResponse, LeadsResponse, RecentSearchEntry, RecentClickEntry } from '../types'
 
 function timeAgo(iso: string): string {
   const seconds = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
@@ -43,104 +44,44 @@ function useHealthCheck() {
   return { status, latency }
 }
 
-function Speedometer({ status, latency }: { status: HealthStatus; latency: number | null }) {
-  // SVG semicircle gauge: r=36, cx=50, cy=50
-  const r = 36
-  const arc = Math.PI * r  // half-circle length ≈ 113.1
-  const fill = status === 'up' ? arc : status === 'down' ? 0 : arc * 0.5
-  const color = status === 'up' ? '#22c55e' : status === 'down' ? '#ef4444' : '#6366f1'
-  const label = status === 'up' ? 'Operational' : status === 'down' ? 'Offline' : 'Checking…'
+// ─── Period toggle ──────────────────────────────────────────────────────────
 
-  return (
-    <div className="flex flex-col items-center gap-1">
-      <svg viewBox="0 0 100 56" className="w-28 h-16">
-        {/* Track */}
-        <path
-          d="M 14 50 A 36 36 0 0 1 86 50"
-          fill="none" stroke="#1e293b" strokeWidth="9" strokeLinecap="round"
-        />
-        {/* Fill */}
-        <path
-          d="M 14 50 A 36 36 0 0 1 86 50"
-          fill="none" stroke={color} strokeWidth="9" strokeLinecap="round"
-          strokeDasharray={`${arc}`}
-          strokeDashoffset={`${arc - fill}`}
-          style={{ transition: 'stroke-dashoffset 0.8s ease, stroke 0.4s ease' }}
-        />
-        {/* Center dot */}
-        <circle cx="50" cy="50" r="4" fill={color} style={{ transition: 'fill 0.4s ease' }} />
-      </svg>
-      <p className={`text-sm font-semibold ${
-        status === 'up' ? 'text-emerald-400' : status === 'down' ? 'text-red-400' : 'text-indigo-400'
-      }`}>
-        {label}
-      </p>
-      {latency !== null && status === 'up' && (
-        <p className="text-xs text-slate-500">{latency} ms</p>
-      )}
-    </div>
-  )
-}
+const PERIODS = [
+  { label: 'Today', days: 1 },
+  { label: '7d', days: 7 },
+  { label: '30d', days: 30 },
+  { label: 'All', days: 0 },
+]
 
-function TrendStatCard({ label, value, delta, deltaLabel, to, onClick }: {
-  label: string; value: number | string; delta: number; deltaLabel: string; to?: string; onClick?: () => void
-}) {
-  const isUp = delta > 0
-  return (
-    <div
-      className={`bg-slate-800/60 border border-slate-700/60 rounded-xl p-5${
-        to || onClick ? ' cursor-pointer hover:border-purple-500/40 hover:bg-slate-800/80 transition-all' : ''
-      }`}
-      onClick={onClick}
-      role={to || onClick ? 'button' : undefined}
-      tabIndex={to || onClick ? 0 : undefined}
-    >
-      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">{label}</p>
-      <p className="text-3xl font-bold text-white">{typeof value === 'string' && value.length > 20 ? <span className="text-lg">{value}</span> : value}</p>
-      <div className="flex items-center gap-1 mt-1">
-        {delta !== 0 && (
-          <span className={`text-xs font-medium ${isUp ? 'text-emerald-400' : 'text-red-400'}`}>
-            {isUp ? '\u2191' : '\u2193'} {Math.abs(delta)}
-          </span>
-        )}
-        <span className="text-xs text-slate-500">{deltaLabel}</span>
-      </div>
-    </div>
-  )
-}
+// ─── Compact stat card ──────────────────────────────────────────────────────
 
 function StatCard({
   label,
   value,
   sub,
   accent = false,
-  to,
   onClick,
 }: {
   label: string
   value: string | number
   sub?: string
   accent?: boolean
-  to?: string
   onClick?: () => void
 }) {
   return (
-    <div
-      className={`bg-slate-800/60 border rounded-xl p-5 ${
-        accent
-          ? 'border-purple-500/40 ring-1 ring-purple-500/20'
-          : 'border-slate-700/60'
-      }${to || onClick ? ' cursor-pointer hover:border-purple-500/40 hover:bg-slate-800/80 transition-all' : ''}`}
-      onClick={onClick}
-      role={to || onClick ? 'button' : undefined}
-      tabIndex={to || onClick ? 0 : undefined}
+    <AdminCard
+      className={`p-5 ${
+        accent ? 'border-purple-500/40 ring-1 ring-purple-500/20' : ''
+      }${onClick ? ' cursor-pointer hover:border-purple-500/40 hover:bg-slate-800/80 transition-all' : ''}`}
     >
       <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">{label}</p>
       <p className={`text-3xl font-bold ${accent ? 'text-purple-400' : 'text-white'}`}>{value}</p>
       {sub && <p className="text-xs text-slate-500 mt-1">{sub}</p>}
-    </div>
+    </AdminCard>
   )
 }
+
+// ─── Section cards ──────────────────────────────────────────────────────────
 
 function TopZeroResultsCard() {
   const [data, setData] = useState<DemandResponse | null>(null)
@@ -156,17 +97,17 @@ function TopZeroResultsCard() {
   const rows = data?.demand ?? []
 
   return (
-    <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl p-5">
+    <AdminCard className="p-5">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-sm font-semibold text-white">Top Zero-Result Queries</h2>
         <Link to="/admin/gaps" className="text-xs text-purple-400 hover:text-purple-300 transition-colors">
-          See all →
+          See all &rarr;
         </Link>
       </div>
       {loading ? (
-        <p className="text-slate-500 text-sm animate-pulse">Loading…</p>
+        <p className="text-slate-500 text-sm animate-pulse">Loading...</p>
       ) : data?.data_since === null ? (
-        <p className="text-slate-500 text-sm">No tracking data yet — insights appear after ~50 page views</p>
+        <p className="text-slate-500 text-sm">No tracking data yet</p>
       ) : rows.length === 0 ? (
         <p className="text-slate-500 text-sm">No zero-result queries in the last 30 days</p>
       ) : (
@@ -176,12 +117,12 @@ function TopZeroResultsCard() {
               <span className="text-sm text-slate-300 truncate max-w-[75%]" title={row.query_text}>
                 {row.query_text}
               </span>
-              <span className="text-xs text-red-400 font-mono ml-2 flex-shrink-0">{row.frequency}×</span>
+              <span className="text-xs text-red-400 font-mono ml-2 flex-shrink-0">{row.frequency}&times;</span>
             </div>
           ))}
         </div>
       )}
-    </div>
+    </AdminCard>
   )
 }
 
@@ -202,15 +143,15 @@ function RecentLeadsCard() {
     .slice(0, 5)
 
   return (
-    <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl p-5">
+    <AdminCard className="p-5">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-sm font-semibold text-white">Recent Leads</h2>
         <Link to="/admin/leads" className="text-xs text-purple-400 hover:text-purple-300 transition-colors">
-          View all →
+          View all &rarr;
         </Link>
       </div>
       {loading ? (
-        <p className="text-slate-500 text-sm animate-pulse">Loading…</p>
+        <p className="text-slate-500 text-sm animate-pulse">Loading...</p>
       ) : rows.length === 0 ? (
         <p className="text-slate-500 text-sm">No leads yet</p>
       ) : (
@@ -226,65 +167,23 @@ function RecentLeadsCard() {
           ))}
         </div>
       )}
-    </div>
-  )
-}
-
-function RecentSearchesCard() {
-  const [data, setData] = useState<SearchesResponse | null>(null)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    adminFetch<SearchesResponse>('/searches', { page: 0, page_size: 5 })
-      .then(setData)
-      .catch(() => setData(null))
-      .finally(() => setLoading(false))
-  }, [])
-
-  const rows = data?.rows ?? []
-
-  return (
-    <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl p-5">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-sm font-semibold text-white">Recent Searches</h2>
-        <Link to="/admin/data" className="text-xs text-purple-400 hover:text-purple-300 transition-colors">
-          View all →
-        </Link>
-      </div>
-      {loading ? (
-        <p className="text-slate-500 text-sm animate-pulse">Loading…</p>
-      ) : rows.length === 0 ? (
-        <p className="text-slate-500 text-sm">No searches yet</p>
-      ) : (
-        <div className="space-y-2">
-          {rows.map((row) => (
-            <div key={row.id} className="flex items-center justify-between">
-              <span className="text-sm text-slate-300 truncate max-w-[60%]" title={row.query}>{row.query}</span>
-              <div className="flex items-center gap-3 flex-shrink-0 ml-2">
-                <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
-                  row.source === 'sage' ? 'bg-cyan-900/50 text-cyan-400' : 'bg-indigo-900/50 text-indigo-400'
-                }`}>{row.source}</span>
-                <span className="text-xs text-slate-500">{timeAgo(row.created_at)}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
+    </AdminCard>
   )
 }
 
 function RecentExploreSearchesCard({ searches, loading }: { searches: RecentSearchEntry[]; loading: boolean }) {
   return (
-    <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl p-5">
+    <AdminCard className="p-5">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-sm font-semibold text-white">Recent Explore Searches</h2>
-        <span className="text-xs text-slate-500">from marketplace search bar</span>
+        <Link to="/admin/data/searches" className="text-xs text-purple-400 hover:text-purple-300 transition-colors">
+          View all &rarr;
+        </Link>
       </div>
       {loading ? (
         <p className="text-slate-500 text-sm animate-pulse">Loading...</p>
       ) : searches.length === 0 ? (
-        <p className="text-slate-500 text-sm">No explore searches tracked yet -- data appears after users search the marketplace</p>
+        <p className="text-slate-500 text-sm">No explore searches tracked yet</p>
       ) : (
         <div className="space-y-2">
           {searches.map((row, i) => (
@@ -302,23 +201,23 @@ function RecentExploreSearchesCard({ searches, loading }: { searches: RecentSear
           ))}
         </div>
       )}
-    </div>
+    </AdminCard>
   )
 }
 
 function RecentCardClicksCard({ clicks, loading }: { clicks: RecentClickEntry[]; loading: boolean }) {
   return (
-    <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl p-5">
+    <AdminCard className="p-5">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-sm font-semibold text-white">Recent Card Clicks</h2>
-        <Link to="/admin/marketplace" className="text-xs text-purple-400 hover:text-purple-300 transition-colors">
-          Exposure details -&gt;
+        <Link to="/admin/data/marketplace" className="text-xs text-purple-400 hover:text-purple-300 transition-colors">
+          Exposure details &rarr;
         </Link>
       </div>
       {loading ? (
         <p className="text-slate-500 text-sm animate-pulse">Loading...</p>
       ) : clicks.length === 0 ? (
-        <p className="text-slate-500 text-sm">No card clicks tracked yet -- data appears after users click expert cards</p>
+        <p className="text-slate-500 text-sm">No card clicks tracked yet</p>
       ) : (
         <div className="space-y-2">
           {clicks.map((row, i) => (
@@ -338,131 +237,105 @@ function RecentCardClicksCard({ clicks, loading }: { clicks: RecentClickEntry[];
           ))}
         </div>
       )}
-    </div>
+    </AdminCard>
   )
 }
 
+// ─── Main page ──────────────────────────────────────────────────────────────
+
 export default function OverviewPage() {
-  const { stats, loading, error } = useAdminStats()
+  const [days, setDays] = useState(7)
+  const { stats, loading, error } = useAdminStats(days)
   const { status: healthStatus, latency } = useHealthCheck()
-  const { data: analytics, loading: analyticsLoading } = useAnalyticsSummary()
+  const { data: analytics, loading: analyticsLoading } = useAnalyticsSummary(days)
   const navigate = useNavigate()
 
   if (loading) {
     return (
-      <div className="p-8">
-        <div className="text-slate-500 text-sm animate-pulse">Loading stats…</div>
+      <div className="p-4 lg:p-8">
+        <div className="text-slate-500 text-sm animate-pulse">Loading stats...</div>
       </div>
     )
   }
   if (error) {
     return (
-      <div className="p-8">
+      <div className="p-4 lg:p-8">
         <div className="text-red-400 text-sm">Error: {error}</div>
       </div>
     )
   }
   if (!stats) return null
 
-  const maxQueryCount = stats.top_queries[0]?.count ?? 1
-
   return (
-    <div className="p-8 space-y-6">
-      {/* Section 0: Key overview stat cards with 7-day trends */}
+    <div className="p-4 lg:p-8 space-y-6">
+      {/* Header with period toggle and health indicator */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-white">Overview</h1>
+            <p className="text-slate-500 text-sm mt-1">Dashboard</p>
+          </div>
+          {/* Health indicator */}
+          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium ${
+            healthStatus === 'up'
+              ? 'bg-emerald-900/30 text-emerald-400 border border-emerald-500/30'
+              : healthStatus === 'down'
+              ? 'bg-red-900/30 text-red-400 border border-red-500/30'
+              : 'bg-slate-800 text-slate-400 border border-slate-700'
+          }`}>
+            <span className={`w-2 h-2 rounded-full ${
+              healthStatus === 'up' ? 'bg-emerald-400' : healthStatus === 'down' ? 'bg-red-400' : 'bg-slate-400 animate-pulse'
+            }`} />
+            {healthStatus === 'up' ? `${latency}ms` : healthStatus === 'down' ? 'Offline' : 'Checking'}
+          </div>
+        </div>
+        {/* Period toggle */}
+        <div className="flex bg-slate-800 rounded-lg p-1 gap-1">
+          {PERIODS.map(p => (
+            <button
+              key={p.days}
+              onClick={() => setDays(p.days)}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                days === p.days
+                  ? 'bg-purple-600 text-white'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-700'
+              }`}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Top stat cards */}
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-        <TrendStatCard
-          label="Total Leads"
+        <StatCard
+          label="Total Searches"
+          value={stats.total_searches}
+          onClick={() => navigate('/admin/data/searches')}
+        />
+        <StatCard
+          label="Gaps"
+          value={stats.gap_count}
+          sub="queries needing improvement"
+          onClick={() => navigate('/admin/gaps')}
+        />
+        <StatCard
+          label="New Leads"
           value={stats.total_leads ?? 0}
-          delta={(stats.leads_7d ?? 0) - (stats.leads_prior_7d ?? 0)}
-          deltaLabel="vs prev 7d"
-          to="/admin/leads"
+          sub={`${((stats.lead_rate ?? 0) * 100).toFixed(1)}% conversion`}
+          accent
           onClick={() => navigate('/admin/leads')}
         />
-        <TrendStatCard
-          label="Expert Pool"
-          value={stats.expert_pool ?? 0}
-          delta={stats.expert_pool_7d ?? 0}
-          deltaLabel="new this week"
-          to="/admin/experts"
-          onClick={() => navigate('/admin/experts')}
-        />
-        <TrendStatCard
-          label="Top Searches"
-          value={stats.top_queries?.slice(0, 3).map(q => q.query).join(', ') || 'None yet'}
-          delta={0}
-          deltaLabel=""
-          to="/admin/marketplace"
-          onClick={() => navigate('/admin/marketplace')}
-        />
-        <TrendStatCard
-          label="Lead Rate"
-          value={`${((stats.lead_rate ?? 0) * 100).toFixed(1)}%`}
-          delta={0}
-          deltaLabel="searches \u2192 leads"
-          to="/admin/marketplace"
-          onClick={() => navigate('/admin/marketplace')}
-        />
-      </div>
-
-      {/* Section 1: Health strip — Speedometer left-aligned, KPI cards right */}
-      <div className="flex items-start gap-6">
-        <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl px-6 py-4 flex flex-col items-center gap-1 flex-shrink-0">
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">System</p>
-          <Speedometer status={healthStatus} latency={latency} />
-        </div>
-        <div className="flex-1 grid grid-cols-2 xl:grid-cols-4 gap-4">
-          <StatCard label="Total Searches" value={stats.total_searches} to="/admin/marketplace" onClick={() => navigate('/admin/marketplace')} />
-          <StatCard
-            label="Matches"
-            value={stats.match_count}
-            sub={`${(stats.match_rate * 100).toFixed(1)}% match rate`}
-            accent
-            to="/admin/marketplace"
-            onClick={() => navigate('/admin/marketplace')}
-          />
-          <StatCard label="Match Rate" value={`${(stats.match_rate * 100).toFixed(1)}%`} to="/admin/marketplace" onClick={() => navigate('/admin/marketplace')} />
-          <StatCard label="Gaps" value={stats.gap_count} sub="queries needing improvement" to="/admin/marketplace" onClick={() => navigate('/admin/marketplace')} />
-        </div>
-      </div>
-
-      {/* Section 1.5: Marketplace Analytics Counters */}
-      <div className="grid grid-cols-2 xl:grid-cols-3 gap-4">
         <StatCard
           label="Expert Card Clicks"
           value={analyticsLoading ? '...' : (analytics?.total_card_clicks ?? 0)}
-          sub="all-time marketplace clicks"
-          to="/admin/marketplace"
-          onClick={() => navigate('/admin/marketplace')}
-        />
-        <StatCard
-          label="Explore Searches"
-          value={analyticsLoading ? '...' : (analytics?.total_search_queries ?? 0)}
-          sub="marketplace search queries"
-          to="/admin/marketplace"
-          onClick={() => navigate('/admin/marketplace')}
-        />
-        <StatCard
-          label="Lead Clicks"
-          value={analyticsLoading ? '...' : (analytics?.total_lead_clicks ?? 0)}
-          sub="clicks by identified leads"
-          accent
-          to="/admin/leads"
-          onClick={() => navigate('/admin/leads')}
+          sub={`${analyticsLoading ? '...' : (analytics?.total_lead_clicks ?? 0)} lead clicks`}
+          onClick={() => navigate('/admin/data/marketplace')}
         />
       </div>
 
-      {/* Section 2: Insight cards */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        <TopZeroResultsCard />
-      </div>
-
-      {/* Section 2.5: Recent activity — leads + searches */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        <RecentLeadsCard />
-        <RecentSearchesCard />
-      </div>
-
-      {/* Section 2.7: Marketplace analytics — explore searches + card clicks */}
+      {/* Detail sections — 2x2 grid */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         <RecentExploreSearchesCard
           searches={analytics?.recent_searches ?? []}
@@ -472,12 +345,14 @@ export default function OverviewPage() {
           clicks={analytics?.recent_clicks ?? []}
           loading={analyticsLoading}
         />
+        <TopZeroResultsCard />
+        <RecentLeadsCard />
       </div>
 
-      {/* Section 3: Top Queries + Top Feedback */}
+      {/* Bottom section: Top Queries + Top Feedback */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         {/* Top Queries */}
-        <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl p-5">
+        <AdminCard className="p-5">
           <h2 className="text-sm font-semibold text-white mb-4">Top Searched Queries</h2>
           {stats.top_queries.length === 0 ? (
             <p className="text-slate-500 text-sm">No data yet</p>
@@ -489,22 +364,22 @@ export default function OverviewPage() {
                     <span className="text-sm text-slate-300 truncate max-w-[75%]" title={item.query}>
                       {item.query}
                     </span>
-                    <span className="text-xs text-slate-500 ml-2 flex-shrink-0">{item.count}×</span>
+                    <span className="text-xs text-slate-500 ml-2 flex-shrink-0">{item.count}&times;</span>
                   </div>
                   <div className="h-1.5 bg-slate-700 rounded-full overflow-hidden">
                     <div
                       className="h-full bg-purple-500 rounded-full"
-                      style={{ width: `${(item.count / maxQueryCount) * 100}%` }}
+                      style={{ width: `${(item.count / (stats.top_queries[0]?.count ?? 1)) * 100}%` }}
                     />
                   </div>
                 </div>
               ))}
             </div>
           )}
-        </div>
+        </AdminCard>
 
         {/* Top Feedback */}
-        <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl p-5">
+        <AdminCard className="p-5">
           <h2 className="text-sm font-semibold text-white mb-4">Top Feedback</h2>
           {stats.top_feedback.length === 0 ? (
             <p className="text-slate-500 text-sm">No feedback recorded yet</p>
@@ -526,14 +401,14 @@ export default function OverviewPage() {
                           : 'bg-red-900/50 text-red-400'
                       }`}
                     >
-                      {item.vote === 'up' ? '👍' : '👎'} {item.count}
+                      {item.vote === 'up' ? '\u{1F44D}' : '\u{1F44E}'} {item.count}
                     </span>
                   </div>
                 </div>
               ))}
             </div>
           )}
-        </div>
+        </AdminCard>
       </div>
     </div>
   )

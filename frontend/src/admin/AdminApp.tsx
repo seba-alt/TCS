@@ -12,7 +12,7 @@ export default function AdminApp() {
   return (
     <div className="flex h-screen bg-slate-950">
       <AdminSidebar onLogout={handleLogout} />
-      <main className="flex-1 overflow-y-auto bg-slate-950">
+      <main className="flex-1 overflow-y-auto bg-slate-950 min-w-0">
         <Outlet />
       </main>
     </div>
