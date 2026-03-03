@@ -261,7 +261,7 @@ export default function LeadsPage() {
                           <button
                             onClick={e => {
                               e.stopPropagation()
-                              navigate('/admin/data/searches', { state: { email: lead.email } })
+                              navigate('/admin/data', { state: { email: lead.email } })
                             }}
                             className="text-xs text-blue-400 hover:text-blue-300 hover:underline whitespace-nowrap"
                           >

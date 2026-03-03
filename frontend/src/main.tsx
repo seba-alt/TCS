@@ -23,8 +23,7 @@ const DataPage = lazy(() => import('./admin/pages/DataPage'))
 const ScoreExplainerPage = lazy(() => import('./admin/pages/ScoreExplainerPage'))
 const SearchLabPage = lazy(() => import('./admin/pages/SearchLabPage'))
 const IndexManagementPanel = lazy(() => import('./admin/components/IndexManagementPanel'))
-const SearchesPage = lazy(() => import('./admin/pages/SearchesPage'))
-const AdminMarketplacePage = lazy(() => import('./admin/pages/AdminMarketplacePage'))
+// SearchesPage and AdminMarketplacePage removed — content merged into DataPage
 
 /**
  * Generic redirect component preserving query params.
@@ -119,15 +118,10 @@ const router = createBrowserRouter([
               { path: 'index', element: <div className="p-8"><IndexManagementPanel /></div> },
             ],
           },
-          {
-            path: 'data',
-            element: <DataPage />,
-            children: [
-              { index: true, element: <Navigate to="searches" replace /> },
-              { path: 'searches', element: <SearchesPage /> },
-              { path: 'marketplace', element: <AdminMarketplacePage /> },
-            ],
-          },
+          // Data page — unified (no child routes), with redirects for old URLs
+          { path: 'data', element: <DataPage /> },
+          { path: 'data/searches', element: <Navigate to="/admin/data" replace /> },
+          { path: 'data/marketplace', element: <Navigate to="/admin/data" replace /> },
           // Catch-all: redirect unknown admin paths to overview
           { path: '*', element: <Navigate to="/admin" replace /> },
         ],
