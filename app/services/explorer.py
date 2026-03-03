@@ -21,10 +21,10 @@ from typing import Optional
 import numpy as np
 import structlog
 from pydantic import BaseModel
-from sqlalchemy import and_, select, text
+from sqlalchemy import and_, exists, select, text
 from sqlalchemy.orm import Session
 
-from app.models import Expert, Feedback
+from app.models import Expert, ExpertTag, Feedback
 from app.services.embedder import embed_query
 
 log = structlog.get_logger()
@@ -216,13 +216,25 @@ def run_explore(
             Expert.hourly_rate <= rate_max,
         )
     )
-    # AND logic: expert must have ALL selected tags; normalize to lowercase
+    # AND logic: expert must have ALL selected tags — uses indexed ExpertTag join table (PERF-02)
     for tag in tags:
-        stmt = stmt.where(Expert.tags.like(f'%"{tag.lower()}"%'))
+        stmt = stmt.where(
+            exists().where(
+                ExpertTag.expert_id == Expert.id,
+                ExpertTag.tag == tag.lower(),
+                ExpertTag.tag_type == "skill",
+            )
+        )
 
     # Industry tag AND logic: expert must have ALL selected industry tags
     for itag in (industry_tags or []):
-        stmt = stmt.where(Expert.industry_tags.like(f'%"{itag}"%'))
+        stmt = stmt.where(
+            exists().where(
+                ExpertTag.expert_id == Expert.id,
+                ExpertTag.tag == itag,
+                ExpertTag.tag_type == "industry",
+            )
+        )
 
     filtered_experts: list[Expert] = list(db.scalars(stmt).all())
 
@@ -239,6 +251,17 @@ def run_explore(
     actual_max_rate = max((e.hourly_rate for e in filtered_experts), default=0.0)
 
     is_text_query = bool(query.strip())
+
+    # --- Pre-fetch feedback once per request (PERF-03) ---
+    # Moved from inside the scoring loop to the top — single DB read per explore request.
+    feedback_rows = []
+    if is_text_query:
+        try:
+            feedback_rows = db.scalars(
+                select(Feedback).where(Feedback.vote.in_(["up", "down"]))
+            ).all()
+        except Exception as exc:
+            log.warning("explore.feedback_prefetch_failed", error=str(exc))
 
     if is_text_query:
         # --- Stage 2: FAISS search + post-filter to pre-filtered experts ---
@@ -303,20 +326,17 @@ def run_explore(
             final = _apply_findability_boost(fused, expert.findability_score)
             scored.append((final, fs, bs, expert))
 
-        # --- Feedback boost (inline — type-compatible with scored list) ---
+        # --- Feedback boost (using pre-fetched feedback_rows — PERF-03) ---
         # Mirrors the formula in search_intelligence._apply_feedback_boost().
-        # Graceful degradation: any DB error logs a warning and returns scored unchanged.
+        # Uses feedback_rows pre-fetched at the top of run_explore() instead of re-querying.
+        # Graceful degradation: any error logs a warning and returns scored unchanged.
         try:
             url_set = {
                 e.profile_url_utm or e.profile_url
                 for _, _, _, e in scored
                 if e.profile_url_utm or e.profile_url
             }
-            if url_set:
-                feedback_rows = db.scalars(
-                    select(Feedback).where(Feedback.vote.in_(["up", "down"]))
-                ).all()
-
+            if url_set and feedback_rows:
                 counts: dict[str, dict[str, int]] = {u: {"up": 0, "down": 0} for u in url_set}
                 for row in feedback_rows:
                     expert_ids = json.loads(row.expert_ids or "[]")

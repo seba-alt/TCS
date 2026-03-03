@@ -209,6 +209,12 @@ async def lifespan(app: FastAPI):
         _conn.commit()
     log.info("startup: FTS5 insert trigger created/verified")
 
+    # Phase 56: expert_tags normalized table for indexed tag filtering (PERF-02)
+    from app.services.tag_sync import sync_all_expert_tags  # noqa: PLC0415
+    with SessionLocal() as _db:
+        sync_all_expert_tags(_db)
+    log.info("startup: expert_tags table populated")
+
     # Phase 11: settings table — created by Base.metadata.create_all() above on fresh DBs;
     # on existing DBs create_all() adds missing tables idempotently without modifying existing ones.
     log.info("startup: settings table created/verified")
