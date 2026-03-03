@@ -65,19 +65,29 @@ export const createFilterSlice: StateCreator<
 
   setRateRange: (min, max) => set({ rateMin: min, rateMax: max }),
 
-  toggleTag: (tag) => set((state) => ({
-    tags: state.tags.includes(tag)
-      ? state.tags.filter((t) => t !== tag)
-      : [...state.tags, tag],
-  })),
+  toggleTag: (tag) => set((state) => {
+    const isRemoving = state.tags.includes(tag)
+    return {
+      tags: isRemoving
+        ? state.tags.filter((t) => t !== tag)
+        : [...state.tags, tag],
+      // Clear search query when adding a tag (clicking a tag resets search)
+      ...(isRemoving ? {} : { query: '' }),
+    }
+  }),
 
   setTags: (tags) => set({ tags }),
 
-  toggleIndustryTag: (tag) => set((state) => ({
-    industryTags: state.industryTags.includes(tag)
-      ? state.industryTags.filter((t) => t !== tag)
-      : [...state.industryTags, tag],
-  })),
+  toggleIndustryTag: (tag) => set((state) => {
+    const isRemoving = state.industryTags.includes(tag)
+    return {
+      industryTags: isRemoving
+        ? state.industryTags.filter((t) => t !== tag)
+        : [...state.industryTags, tag],
+      // Clear search query when adding an industry tag
+      ...(isRemoving ? {} : { query: '' }),
+    }
+  }),
 
   resetIndustryTags: () => set({ industryTags: [] }),
 
