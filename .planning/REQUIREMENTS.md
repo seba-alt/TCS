@@ -9,9 +9,9 @@ Requirements for v5.1 Lead Insights & Overview. Each maps to roadmap phases.
 
 ### Lead Journey
 
-- [ ] **LEAD-01**: Admin can expand a lead row to see a chronological timeline of all their searches and expert clicks interleaved by timestamp
-- [ ] **LEAD-02**: Each timeline event shows context — searches show query text and result count; clicks show expert name and which search led to the click
-- [ ] **LEAD-03**: Timeline shows time gaps between events (e.g., "2 hours later") to reveal engagement patterns
+- [x] **LEAD-01**: Admin can expand a lead row to see a chronological timeline of all their searches and expert clicks interleaved by timestamp
+- [x] **LEAD-02**: Each timeline event shows context — searches show query text and result count; clicks show expert name and which search led to the click
+- [x] **LEAD-03**: Timeline shows time gaps between events (e.g., "2 hours later") to reveal engagement patterns
 
 ### Overview Enhancements
 
@@ -47,9 +47,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | FIX-01 | Phase 60 | Complete |
 | FIX-02 | Phase 60 | Complete |
-| LEAD-01 | Phase 61 | Pending |
-| LEAD-02 | Phase 61 | Pending |
-| LEAD-03 | Phase 61 | Pending |
+| LEAD-01 | Phase 61 | Complete |
+| LEAD-02 | Phase 61 | Complete |
+| LEAD-03 | Phase 61 | Complete |
 | OVER-01 | Phase 62 | Pending |
 | OVER-02 | Phase 62 | Pending |
 | OVER-03 | Phase 62 | Pending |
