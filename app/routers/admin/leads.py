@@ -1,9 +1,10 @@
 """
 Admin leads and newsletter endpoints: /leads, /newsletter-subscribers,
-/export/leads.csv, /export/newsletter.csv.
+/lead-timeline/{email}, /export/leads.csv, /export/newsletter.csv.
 """
 import csv
 import io
+import json
 from datetime import date, datetime
 
 from fastapi import APIRouter, Depends
@@ -12,7 +13,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import Conversation, LeadClick, NewsletterSubscriber
+from app.models import Conversation, Expert, LeadClick, NewsletterSubscriber
 from app.routers.admin._common import _is_gap
 
 router = APIRouter()
@@ -69,6 +70,64 @@ def get_leads(db: Session = Depends(get_db)):
         })
 
     return {"leads": result}
+
+
+@router.get("/lead-timeline/{email}")
+def get_lead_timeline(email: str, limit: int = 10, offset: int = 0, db: Session = Depends(get_db)):
+    """Return chronological timeline of a lead's searches and expert clicks."""
+    # 1. Fetch all conversations (searches) for this email
+    conv_rows = db.scalars(
+        select(Conversation).where(Conversation.email == email)
+    ).all()
+
+    search_events = []
+    for row in conv_rows:
+        result_count = len(json.loads(row.response_experts or "[]"))
+        search_events.append({
+            "type": "search",
+            "query": row.query,
+            "result_count": result_count,
+            "created_at": row.created_at.isoformat(),
+        })
+
+    # 2. Fetch all lead clicks for this email
+    click_rows = db.scalars(
+        select(LeadClick).where(LeadClick.email == email)
+    ).all()
+
+    # Batch-resolve expert usernames to full names
+    all_usernames = {row.expert_username for row in click_rows}
+    experts_map = {
+        e.username: f"{e.first_name} {e.last_name}"
+        for e in db.scalars(select(Expert).where(Expert.username.in_(all_usernames))).all()
+    } if all_usernames else {}
+
+    click_events = []
+    for row in click_rows:
+        expert_name = experts_map.get(row.expert_username, row.expert_username)
+        click_events.append({
+            "type": "click",
+            "expert_username": row.expert_username,
+            "expert_name": expert_name,
+            "search_query": row.search_query,
+            "created_at": row.created_at.isoformat(),
+        })
+
+    # 3. Merge and sort newest-first
+    all_events = search_events + click_events
+    all_events.sort(key=lambda e: e["created_at"], reverse=True)
+
+    # 4. Paginate
+    total = len(all_events)
+    paginated = all_events[offset:offset + limit]
+
+    return {
+        "email": email,
+        "events": paginated,
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+    }
 
 
 @router.get("/newsletter-subscribers")
