@@ -14,6 +14,7 @@ import type {
   ExposureResponse,
   MarketplaceTrendResponse,
   AnalyticsSummary,
+  LeadTimelineResponse,
 } from '../types'
 
 const getAdminToken = () => sessionStorage.getItem('admin_token') ?? ''
@@ -344,4 +345,46 @@ export function useAnalyticsSummary(days?: number) {
   }, [days])
 
   return { data, loading, error }
+}
+
+export function useLeadTimeline(email: string | null) {
+  const [data, setData] = useState<LeadTimelineResponse | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [offset, setOffset] = useState(0)
+  const LIMIT = 10
+
+  // Reset when email changes
+  useEffect(() => {
+    setData(null)
+    setOffset(0)
+    setError(null)
+  }, [email])
+
+  // Fetch when email or offset changes
+  useEffect(() => {
+    if (!email) return
+    setLoading(true)
+    adminFetch<LeadTimelineResponse>(`/lead-timeline/${encodeURIComponent(email)}`, { limit: LIMIT, offset })
+      .then(newData => {
+        if (offset === 0) {
+          setData(newData)
+        } else {
+          // Append older events to existing
+          setData(prev => prev ? { ...newData, events: [...prev.events, ...newData.events] } : newData)
+        }
+      })
+      .catch(e => setError(e.message))
+      .finally(() => setLoading(false))
+  }, [email, offset])
+
+  const loadMore = useCallback(() => {
+    if (data && data.events.length < data.total) {
+      setOffset(prev => prev + LIMIT)
+    }
+  }, [data])
+
+  const hasMore = data ? data.events.length < data.total : false
+
+  return { data, loading, error, loadMore, hasMore }
 }
