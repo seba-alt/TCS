@@ -15,10 +15,10 @@ Requirements for v4.1 UX Polish & Mobile Overhaul. Each maps to roadmap phases.
 
 ### Explorer (EXPL)
 
-- [ ] **EXPL-01**: Initial expert display randomized every page load, prioritizing high findability scores
-- [ ] **EXPL-02**: Sort-by dropdown removed — experts always sorted by best match
-- [ ] **EXPL-03**: Search bar autofocused on page load
-- [ ] **EXPL-04**: No-results state shows Intercom referral CTA to explain need or request expert
+- [x] **EXPL-01**: Initial expert display randomized every page load, prioritizing high findability scores
+- [x] **EXPL-02**: Sort-by dropdown removed — experts always sorted by best match
+- [x] **EXPL-03**: Search bar autofocused on page load
+- [x] **EXPL-04**: No-results state shows Intercom referral CTA to explain need or request expert
 - [ ] **EXPL-05**: Autocomplete suggestion dropdown works correctly
 - [ ] **EXPL-06**: Rate slider max dynamically adjusts to max rate in current filtered results
 
@@ -67,10 +67,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ADMN-01 | Phase 51 | Pending |
 | ADMN-02 | Phase 51 | Pending |
 | ADMN-03 | Phase 51 | Pending |
-| EXPL-01 | Phase 52 | Pending |
-| EXPL-02 | Phase 52 | Pending |
-| EXPL-03 | Phase 52 | Pending |
-| EXPL-04 | Phase 52 | Pending |
+| EXPL-01 | Phase 52 | Complete |
+| EXPL-02 | Phase 52 | Complete |
+| EXPL-03 | Phase 52 | Complete |
+| EXPL-04 | Phase 52 | Complete |
 | EXPL-05 | Phase 52 | Pending |
 | EXPL-06 | Phase 52 | Pending |
 | CARD-01 | Phase 53 | Pending |

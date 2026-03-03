@@ -131,7 +131,7 @@ Plans:
   4. When the grid returns no results, a CTA appears that opens Intercom so the user can describe their need or request an expert
   5. Typing in the search bar shows a working autocomplete dropdown with matching suggestions
   6. The rate slider's maximum value reflects the highest rate among currently filtered experts, not a fixed global cap
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 Plans:
 - [ ] 52-01-PLAN.md — Randomized initial display, sort-by removal, autofocus search, Intercom no-results CTA
 - [ ] 52-02-PLAN.md — Autocomplete tag-first ranking, dynamic rate slider
@@ -188,6 +188,6 @@ Plans:
 | 50.2. Analytics Fix | v4.0 | 2/2 | Complete | 2026-03-02 |
 | 50.3. Intercom Integration | v4.0 | 3/3 | Complete | 2026-03-02 |
 | 51. Admin Fixes | 2/2 | Complete    | 2026-03-02 | - |
-| 52. Explorer & Search UX | v4.1 | 0/TBD | Not started | - |
+| 52. Explorer & Search UX | 1/2 | In Progress|  | - |
 | 53. Card & Mobile Redesign | v4.1 | 0/TBD | Not started | - |
 | 54. Bookmarks & Analytics | v4.1 | 0/TBD | Not started | - |

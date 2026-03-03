@@ -43,6 +43,7 @@ Progress: [░░░░░░░░░░] 0%
 | - | - | - | - |
 
 *Updated after each plan completion*
+| Phase 52-explorer-search-ux P01 | 4 | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -51,6 +52,9 @@ Progress: [░░░░░░░░░░] 0%
 - v4.0: Sage removed, Intercom added for user support (phase 50.3)
 - v4.0: bcrypt+JWT admin auth replacing shared key
 - v4.0: React.lazy for all 11 admin routes (public bundle halved)
+- [Phase 52-01]: Spread factor 30 for weighted-random sort gives variety within findability tiers without disrupting low-findability ordering
+- [Phase 52-01]: Sort-by UI and store fields fully removed; persist version bumped 2→3 with localStorage migration
+- [Phase 52-01]: Imperative ref autofocus in Header (useRef + useEffect) preferred over autoFocus HTML attr for animated mount compatibility
 
 ### Pending Todos
 
