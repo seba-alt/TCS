@@ -129,7 +129,10 @@ See `.planning/milestones/v4.1-ROADMAP.md`
   3. A mobile user viewing any expert card can see the company name, a match badge (when applicable), and the expert's name without it being cut off
   4. A mobile user can tap a visible, clearly accessible clear-all button to reset all active filters
   5. Sharing the site URL on Slack, iMessage, or social platforms renders a rich link card with the Tinrate title, description, and preview image
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 55-01-PLAN.md — Backend tier sorting + Open Graph meta tags
+- [ ] 55-02-PLAN.md — Currency symbols, mobile card fixes, mobile clear-all button
 
 ### Phase 56: Backend Performance & Admin Refactor
 **Goal**: The backend handles repeated requests without redundant external API calls, tag filtering runs against a proper index, and the admin router code is organized into logical modules that are maintainable.
@@ -159,6 +162,6 @@ See `.planning/milestones/v4.1-ROADMAP.md`
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 55. Explorer Bug Fixes | 0/TBD | Not started | - |
+| 55. Explorer Bug Fixes | 0/2 | Planned | - |
 | 56. Backend Performance & Admin Refactor | 0/TBD | Not started | - |
 | 57. Admin Frontend Overhaul | 0/TBD | Not started | - |
