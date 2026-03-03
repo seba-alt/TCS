@@ -10,7 +10,7 @@ Requirements for Platform Polish & Admin Overhaul. Each maps to roadmap phases.
 ### Bug Fixes
 
 - [x] **BUG-01**: Search results sorted by match tier — Top Match first, then Good Match, then rest — when a search query is active
-- [ ] **BUG-02**: Currency displayed as symbol (€, $, £) instead of text code (EUR, USD, GBP) across all surfaces
+- [x] **BUG-02**: Currency displayed as symbol (€, $, £) instead of text code (EUR, USD, GBP) across all surfaces
 - [x] **BUG-03**: Mobile expert cards show company name
 - [x] **BUG-04**: Mobile expert cards show match badge (Top/Good Match) when applicable
 - [x] **BUG-05**: Mobile expert card name wraps to two lines when truncated
@@ -32,7 +32,7 @@ Requirements for Platform Polish & Admin Overhaul. Each maps to roadmap phases.
 - [x] **ADM-03**: Admin pagination upgraded with page numbers and direct page jump
 - [x] **ADM-04**: Admin pages use consistent card, table, and form component patterns
 - [x] **ADM-05**: Admin Overview dashboard redesigned with actionable metrics and clear navigation
-- [ ] **ADM-06**: Admin Experts page table layout modernized
+- [x] **ADM-06**: Admin Experts page table layout modernized
 - [x] **ADM-07**: Admin responsive layout works on tablet-width screens
 
 ## Future Requirements
@@ -64,7 +64,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | BUG-01 | Phase 55 | Complete |
-| BUG-02 | Phase 58 | Pending |
+| BUG-02 | Phase 58 | Complete |
 | BUG-03 | Phase 55 | Complete |
 | BUG-04 | Phase 55 | Complete |
 | BUG-05 | Phase 55 | Complete |
@@ -80,7 +80,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ADM-03 | Phase 57 | Complete |
 | ADM-04 | Phase 57 | Complete |
 | ADM-05 | Phase 57 | Complete |
-| ADM-06 | Phase 58 | Pending |
+| ADM-06 | Phase 58 | Complete |
 | ADM-07 | Phase 57 | Complete |
 
 **Coverage:**

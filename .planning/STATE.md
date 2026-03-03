@@ -5,10 +5,10 @@ milestone_name: Platform Polish & Admin Overhaul
 status: active
 last_updated: "2026-03-03"
 progress:
-  total_phases: 3
-  completed_phases: 2
-  total_plans: 5
-  completed_plans: 5
+  total_phases: 4
+  completed_phases: 3
+  total_plans: 6
+  completed_plans: 6
 ---
 
 # Project State
@@ -18,23 +18,23 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-03)
 
 **Core value:** A user describes any problem and instantly gets expertly matched professionals they can browse, filter, and contact — no searching, no guesswork.
-**Current focus:** Phase 56 complete — ready for Phase 57 (Admin Frontend Overhaul)
+**Current focus:** Phase 58 Plan 01 complete — v5.0 audit gap closure (CORS DELETE + currencySymbol)
 
 ## Current Position
 
-Phase: 56 of 57 (Backend Performance & Admin Refactor)
-Plan: 03 of 3 complete
+Phase: 58 of 58 (Audit Gap Closure)
+Plan: 01 of 1 complete
 Status: Complete
-Last activity: 2026-03-03 — Completed 56-03 (admin router split into sub-modules)
+Last activity: 2026-03-03 — Completed 58-01 (CORS DELETE fix + currencySymbol adoption in FilterChips and RateSlider)
 
-Progress: [██████░░░░] 60%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 5 (this milestone)
-- Average duration: ~7 min
-- Total execution time: ~35 min
+- Total plans completed: 6 (this milestone)
+- Average duration: ~6 min
+- Total execution time: ~40 min
 
 **By Phase:**
 
@@ -42,7 +42,7 @@ Progress: [██████░░░░] 60%
 |-------|-------|-------|----------|
 | Phase 55 | 2 | ~16 min | ~8 min |
 | Phase 56 | 3 | ~14 min | ~5 min |
-| Phase 58-audit-gap-closure P02 | 3 | 1 tasks | 1 files |
+| Phase 58 | 1 | ~5 min | ~5 min |
 
 ## Accumulated Context
 | Phase 55 P01 | 2 | 2 tasks | 3 files |
@@ -50,6 +50,7 @@ Progress: [██████░░░░] 60%
 | Phase 56 P01 | 3 | 2 tasks | 2 files |
 | Phase 56 P02 | 5 | 2 tasks | 4 files |
 | Phase 56 P03 | 8 | 2 tasks | 11 files |
+| Phase 58 P01 | 5 | 2 tasks | 4 files |
 
 ### Decisions
 
@@ -67,7 +68,9 @@ Recent decisions affecting current work:
 - [Phase 56]: ExpertTag normalized join table with composite (tag, tag_type) + (expert_id) indexes for EXISTS subquery filtering
 - [Phase 56]: Sub-module routers use plain APIRouter() with no prefix — inherit /api/admin from parent router in _common.py
 - [Phase 56]: experts.py further split into compare.py and imports.py to meet 400-line limit
-- [Phase 58-audit-gap-closure]: All Phase 56 evidence verified from actual source files before writing — no fabricated claims; re_verification: true flag distinguishes retroactive from initial verification
+- [Phase 58]: CORS only adds DELETE, not PATCH or wildcard — scoped to exact method needed by admin expert deletion
+- [Phase 58]: sym const derived once per render in RateSlider from currencySymbol('EUR') — cleaner than three inline calls
+- [Phase 58]: All currency display uses currencySymbol() utility — no hardcoded currency literals in components
 
 ### Pending Todos
 
@@ -82,5 +85,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-03
-Stopped at: Completed Phase 56 (Backend Performance & Admin Refactor) — all 3 plans executed
-Resume: Phase 56 complete — run /gsd:execute-phase 57 to start Admin Frontend Overhaul
+Stopped at: Completed Phase 58 Plan 01 (CORS DELETE fix + currencySymbol adoption — v5.0 audit gap closure)
+Resume: Phase 58 Plan 01 complete — v5.0 audit gaps BUG-02 and ADM-06 closed; milestone v5.0 complete
