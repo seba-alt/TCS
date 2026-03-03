@@ -143,7 +143,11 @@ Plans:
   2. Tag filtering in the explore endpoint does not use LIKE on a JSON string — it queries a proper index or normalized table
   3. Feedback and settings data are fetched once per request cycle, not on every individual explore call
   4. The admin router file no longer contains the full 2,225-line monolith — routes are split into logical sub-modules that can be read and edited independently
-**Plans**: TBD
+**Plans:** 3 plans
+Plans:
+- [ ] 56-01-PLAN.md — Embedding cache (60s TTL) + settings cache (30s TTL)
+- [ ] 56-02-PLAN.md — ExpertTag join table for tag filtering + feedback prefetch
+- [ ] 56-03-PLAN.md — Admin router split into 6 sub-modules
 
 ### Phase 57: Admin Frontend Overhaul
 **Goal**: The admin panel is a modern, consistent, and usable interface — pages navigate via real URLs, tables paginate clearly, visual patterns are uniform across pages, the overview communicates actionable information, and the layout works on tablet screens.
@@ -163,5 +167,5 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 55. Explorer Bug Fixes | 2/2 | Complete    | 2026-03-03 |
-| 56. Backend Performance & Admin Refactor | 0/TBD | Not started | - |
+| 56. Backend Performance & Admin Refactor | 0/3 | Not started | - |
 | 57. Admin Frontend Overhaul | 0/TBD | Not started | - |
