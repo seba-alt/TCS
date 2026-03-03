@@ -4,6 +4,7 @@ import type { Expert } from '../../store/resultsSlice'
 import { useExplorerStore, useFilterSlice } from '../../store'
 import { useNltrStore } from '../../store/nltrStore'
 import { trackEvent } from '../../tracking'
+import { currencySymbol } from '../../utils/currency'
 
 const API_BASE = import.meta.env.VITE_API_URL ?? ''
 
@@ -127,7 +128,7 @@ export function ExpertCard({ expert, onViewProfile, context = 'grid', rank }: Ex
         </h3>
         <p className="text-xs text-gray-500 text-center line-clamp-1 px-3 w-full">{expert.job_title}</p>
         <span className="text-xs font-semibold text-brand-purple whitespace-nowrap">
-          {expert.currency} {expert.hourly_rate}/hr
+          {currencySymbol(expert.currency)}{expert.hourly_rate}/hr
         </span>
       </div>
 
@@ -165,7 +166,7 @@ export function ExpertCard({ expert, onViewProfile, context = 'grid', rank }: Ex
         {/* Rate + findability badge */}
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-xs font-semibold text-brand-purple whitespace-nowrap">
-            {expert.currency} {expert.hourly_rate}/hr
+            {currencySymbol(expert.currency)}{expert.hourly_rate}/hr
           </span>
           {hasSemanticFilter && badgeLabel && (
             <span className="text-xs bg-green-50 text-green-700 rounded-full px-2 py-0.5 whitespace-nowrap">

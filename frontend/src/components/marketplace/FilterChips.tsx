@@ -21,7 +21,7 @@ export function FilterChips() {
 
   if (rateMin !== DEFAULT_RATE_MIN || rateMax !== DEFAULT_RATE_MAX) {
     chips.push({
-      label: `EUR ${rateMin}–${rateMax}`,
+      label: `€${rateMin}–€${rateMax}`,
       onDismiss: () => setRateRange(DEFAULT_RATE_MIN, DEFAULT_RATE_MAX),
     })
   }

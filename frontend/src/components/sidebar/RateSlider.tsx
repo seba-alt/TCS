@@ -47,8 +47,8 @@ export function RateSlider() {
     <div className="px-1 relative">
       {/* Display labels — show local values during drag for immediate feedback */}
       <div className="flex justify-between text-xs text-gray-500 mb-2">
-        <span>EUR {localValue[0]}</span>
-        <span>EUR {localValue[1]}</span>
+        <span>€{localValue[0]}</span>
+        <span>€{localValue[1]}</span>
       </div>
 
       <div className="transition-all duration-300">
@@ -78,7 +78,7 @@ export function RateSlider() {
 
       {/* Dynamic max rate label — updates when filtered results change */}
       <p className="text-xs text-gray-400 mt-1.5 text-right">
-        EUR {roundedMax}/hr max
+        €{roundedMax}/hr max
       </p>
     </div>
   )

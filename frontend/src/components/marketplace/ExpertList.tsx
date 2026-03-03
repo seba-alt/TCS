@@ -3,6 +3,7 @@ import { Virtuoso } from 'react-virtuoso'
 import type { Expert } from '../../store/resultsSlice'
 import { useExplorerStore, useFilterSlice } from '../../store'
 import { EmptyState } from './EmptyState'
+import { currencySymbol } from '../../utils/currency'
 
 interface ExpertListProps {
   experts: Expert[]
@@ -121,7 +122,7 @@ export function ExpertList({ experts, loading, isFetchingMore, onEndReached, onV
 
               {/* Rate */}
               <span className="text-xs font-semibold text-brand-purple whitespace-nowrap shrink-0">
-                {expert.currency} {expert.hourly_rate}/hr
+                {currencySymbol(expert.currency)}{expert.hourly_rate}/hr
               </span>
 
               {/* Domain tags — first 3 */}
