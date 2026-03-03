@@ -216,4 +216,6 @@ Plans:
   2. ADMUI-01–04 appear in REQUIREMENTS.md traceability table with correct phase and status
   3. ADMUI-03 requirement status is formally resolved (closed as N/A or updated to reflect actual delivered scope)
   4. AdminMarketplacePage.tsx no longer exists on disk
-**Plans:** 0/1 plans
+**Plans:** 1 plan
+Plans:
+- [ ] 59-01-PLAN.md — Remove dead code paths, delete orphaned file, fix traceability
