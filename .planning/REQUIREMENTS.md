@@ -37,8 +37,8 @@ Requirements for v4.1 UX Polish & Mobile Overhaul. Each maps to roadmap phases.
 
 ### Bookmarks (BOOK)
 
-- [ ] **BOOK-01**: Saved/bookmarked profiles visually distinguished with color
-- [ ] **BOOK-02**: "Show saved" view shows all saved profiles regardless of active filters/tags
+- [x] **BOOK-01**: Saved/bookmarked profiles visually distinguished with color
+- [x] **BOOK-02**: "Show saved" view shows all saved profiles regardless of active filters/tags
 
 ### Analytics (ANLT)
 
@@ -80,8 +80,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MOBL-02 | Phase 53 | Complete |
 | MOBL-03 | Phase 53 | Complete |
 | MOBL-04 | Phase 53 | Complete |
-| BOOK-01 | Phase 54 | Pending |
-| BOOK-02 | Phase 54 | Pending |
+| BOOK-01 | Phase 54 | Complete |
+| BOOK-02 | Phase 54 | Complete |
 | ANLT-01 | Phase 54 | Complete |
 | ANLT-02 | Phase 54 | Complete |
 
