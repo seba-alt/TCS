@@ -20,6 +20,11 @@ const ExpertsPage = lazy(() => import('./admin/pages/ExpertsPage'))
 const SettingsPage = lazy(() => import('./admin/pages/SettingsPage'))
 const ToolsPage = lazy(() => import('./admin/pages/ToolsPage'))
 const DataPage = lazy(() => import('./admin/pages/DataPage'))
+const ScoreExplainerPage = lazy(() => import('./admin/pages/ScoreExplainerPage'))
+const SearchLabPage = lazy(() => import('./admin/pages/SearchLabPage'))
+const IndexManagementPanel = lazy(() => import('./admin/components/IndexManagementPanel'))
+const SearchesPage = lazy(() => import('./admin/pages/SearchesPage'))
+const AdminMarketplacePage = lazy(() => import('./admin/pages/AdminMarketplacePage'))
 
 /**
  * Generic redirect component preserving query params.
@@ -103,9 +108,26 @@ const router = createBrowserRouter([
           { path: 'leads', element: <LeadsPage /> },
           { path: 'experts', element: <ExpertsPage /> },
           { path: 'settings', element: <SettingsPage /> },
-          // New consolidated pages
-          { path: 'tools', element: <ToolsPage /> },
-          { path: 'data',  element: <DataPage /> },
+          // New consolidated pages — nested child routes for tab navigation
+          {
+            path: 'tools',
+            element: <ToolsPage />,
+            children: [
+              { index: true, element: <Navigate to="score-explainer" replace /> },
+              { path: 'score-explainer', element: <ScoreExplainerPage /> },
+              { path: 'search-lab', element: <SearchLabPage /> },
+              { path: 'index', element: <div className="p-8"><IndexManagementPanel /></div> },
+            ],
+          },
+          {
+            path: 'data',
+            element: <DataPage />,
+            children: [
+              { index: true, element: <Navigate to="searches" replace /> },
+              { path: 'searches', element: <SearchesPage /> },
+              { path: 'marketplace', element: <AdminMarketplacePage /> },
+            ],
+          },
           // Catch-all: redirect unknown admin paths to overview
           { path: '*', element: <Navigate to="/admin" replace /> },
         ],
