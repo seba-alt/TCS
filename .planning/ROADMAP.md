@@ -12,7 +12,7 @@
 - ✅ **v3.1 Launch Prep** — Phases 41-44 (shipped 2026-02-26)
 - ✅ **v4.0 Public Launch** — Phases 45-50 (shipped 2026-02-27)
 - ✅ **v4.1 UX Polish & Mobile Overhaul** — Phases 51-54 (shipped 2026-03-03)
-- 🚧 **v5.0 Platform Polish & Admin Overhaul** — Phases 55-57 (in progress)
+- 🚧 **v5.0 Platform Polish & Admin Overhaul** — Phases 55-58 (in progress)
 
 ## Phases
 
@@ -116,6 +116,7 @@ See `.planning/milestones/v4.1-ROADMAP.md`
 - [x] **Phase 55: Explorer Bug Fixes** - Fix tier sorting, currency symbols, mobile card completeness, clear button, and Open Graph tags (completed 2026-03-03)
 - [x] **Phase 56: Backend Performance & Admin Refactor** - Cache embeddings/feedback/settings, optimize tag filtering, split admin monolith into route modules (completed 2026-03-03)
 - [x] **Phase 57: Admin Frontend Overhaul** - URL routing, pagination, consistent components, overview redesign, experts table, responsive layout, expert search (completed 2026-03-03)
+- [ ] **Phase 58: Audit Gap Closure** - CORS DELETE fix, currency symbol consistency, Phase 56 retroactive verification
 
 ## Phase Details
 
@@ -167,6 +168,17 @@ Plans:
 - [ ] 57-03-PLAN.md — Experts page name search + visual refresh
 - [ ] 57-04-PLAN.md — Overview dashboard redesign with period toggle + responsive layout
 
+### Phase 58: Audit Gap Closure
+**Goal**: All v5.0 audit gaps are closed — CORS permits DELETE for admin actions, currency symbols use the shared utility on all surfaces, and Phase 56 has a retroactive verification document.
+**Depends on**: Phase 57
+**Requirements**: BUG-02, ADM-06, PERF-01, PERF-02, PERF-03, PERF-04, ADM-01
+**Gap Closure**: Closes gaps from v5.0 milestone audit
+**Success Criteria** (what must be TRUE):
+  1. An admin user can delete a single expert from the Experts page without a CORS error
+  2. The rate filter slider and filter chips display the correct currency symbol from the currencySymbol() utility
+  3. Phase 56 has a VERIFICATION.md confirming all 5 requirements (PERF-01–04, ADM-01) are satisfied
+**Plans:** TBD
+
 ## Progress
 
 | Phase | Plans Complete | Status | Completed |
@@ -174,3 +186,4 @@ Plans:
 | 55. Explorer Bug Fixes | 2/2 | Complete    | 2026-03-03 |
 | 56. Backend Performance & Admin Refactor | 3/3 | Complete | 2026-03-03 |
 | 57. Admin Frontend Overhaul | 4/4 | Complete    | 2026-03-03 |
+| 58. Audit Gap Closure | 0/TBD | Not started | - |
