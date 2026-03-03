@@ -57,10 +57,14 @@ export function useHeaderSearch() {
       return
     }
 
-    // Client-side tag matches
-    const tagMatches = TOP_TAGS.filter((t) =>
-      t.includes(value.toLowerCase())
-    ).slice(0, 3)
+    // Client-side tag matches — tags that start with the query rank above
+    // tags that merely contain it, for more relevant ordering
+    const valueLower = value.toLowerCase()
+    const startsWithMatches = TOP_TAGS.filter((t) => t.startsWith(valueLower))
+    const containsMatches = TOP_TAGS.filter(
+      (t) => t.includes(valueLower) && !t.startsWith(valueLower)
+    )
+    const tagMatches = [...startsWithMatches, ...containsMatches].slice(0, 3)
 
     let backendResults: string[] = []
     try {
@@ -72,10 +76,10 @@ export function useHeaderSearch() {
       // Fall back to local tag matches only on fetch error
     }
 
-    // Merge: backend first, then tag matches, deduplicate, limit to 5
+    // Merge: client-side tag matches first, then backend results, deduplicate, limit to 5
     const merged: string[] = []
     const seen = new Set<string>()
-    for (const item of [...backendResults, ...tagMatches]) {
+    for (const item of [...tagMatches, ...backendResults]) {
       if (!seen.has(item)) {
         seen.add(item)
         merged.push(item)
