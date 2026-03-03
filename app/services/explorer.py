@@ -61,6 +61,7 @@ class ExploreResponse(BaseModel):
     total: int          # pre-filter count (before pagination) — for "N experts found" display
     cursor: int | None  # next offset; None = no more pages
     took_ms: int
+    max_rate: float     # highest hourly_rate among all pre-filtered experts (before pagination)
 
 
 # --- FTS5 query sanitizer ---
@@ -192,7 +193,11 @@ def run_explore(
             total=0,
             cursor=None,
             took_ms=int((time.time() - start) * 1000),
+            max_rate=0.0,
         )
+
+    # Compute max_rate once from the full pre-filtered set (all stages, before pagination)
+    actual_max_rate = max((e.hourly_rate for e in filtered_experts), default=0.0)
 
     is_text_query = bool(query.strip())
 
@@ -376,4 +381,5 @@ def run_explore(
         total=total,
         cursor=next_cursor,
         took_ms=int((time.time() - start) * 1000),
+        max_rate=actual_max_rate,
     )

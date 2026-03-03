@@ -25,12 +25,13 @@ export interface ResultsSlice {
   loading: boolean
   error: string | null
   isFetchingMore: boolean
+  maxRate: number  // highest hourly_rate in current filtered results (from API max_rate)
 
   // Retry mechanism — counter incremented by retry() triggers re-fetch in useExplore
   retryTrigger: number
 
   // Results actions
-  setResults: (experts: Expert[], total: number, cursor: number | null) => void
+  setResults: (experts: Expert[], total: number, cursor: number | null, maxRate: number) => void
   setLoading: (loading: boolean) => void
   setError: (error: string | null) => void
   resetResults: () => void
@@ -51,16 +52,17 @@ export const createResultsSlice: StateCreator<
   loading: false,
   error: null,
   isFetchingMore: false,
+  maxRate: 5000,
   retryTrigger: 0,
 
-  setResults: (experts, total, cursor) => set({ experts, total, cursor }),
+  setResults: (experts, total, cursor, maxRate) => set({ experts, total, cursor, maxRate }),
 
   setLoading: (loading) => set({ loading }),
 
   setError: (error) => set({ error }),
 
   resetResults: () =>
-    set({ experts: [], total: 0, cursor: null, loading: false, error: null }),
+    set({ experts: [], total: 0, cursor: null, loading: false, error: null, maxRate: 5000 }),
 
   appendResults: (newExperts, cursor) =>
     set((state) => ({ experts: [...state.experts, ...newExperts], cursor })),

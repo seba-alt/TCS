@@ -89,6 +89,7 @@ export const useResultsSlice = () =>
       loading:          state.loading,
       error:            state.error,
       isFetchingMore:   state.isFetchingMore,
+      maxRate:          state.maxRate,
       retryTrigger:     state.retryTrigger,
       setResults:       state.setResults,
       setLoading:       state.setLoading,

@@ -66,7 +66,7 @@ export function useExplore() {
         return res.json()
       })
       .then((data) => {
-        setResults(data.experts, data.total, data.cursor)
+        setResults(data.experts, data.total, data.cursor, data.max_rate ?? 5000)
         setLoading(false)
         // Track search query for analytics (only for non-empty queries)
         if (query.trim().length > 0) {
