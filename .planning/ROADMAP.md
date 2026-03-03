@@ -132,7 +132,10 @@ Plans:
   2. Each search event in the timeline shows the query text and how many results were returned
   3. Each click event in the timeline shows the expert name and which search query preceded that click
   4. Time gaps between consecutive events are shown as labels (e.g., "2 hours later") so engagement pacing is visible
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 61-01-PLAN.md — Backend lead-timeline endpoint + TypeScript types
+- [ ] 61-02-PLAN.md — Frontend timeline UI in LeadsPage expanded rows
 
 ### Phase 62: Overview Enhancements
 **Goal**: The Overview page gives admins immediate signal on what experts are popular, what users search for, and where demand goes unmet
