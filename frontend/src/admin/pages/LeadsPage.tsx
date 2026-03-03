@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAdminLeads, useNewsletterSubscribers, adminFetch } from '../hooks/useAdminData'
 import type { LeadRow, LeadClicksResponse, LeadClickEntry } from '../types'
@@ -27,6 +27,27 @@ export default function LeadsPage() {
 
   const [expandedEmail, setExpandedEmail] = useState<string | null>(highlightEmail || null)
   const highlightRef = useRef<HTMLTableRowElement | null>(null)
+
+  // Sort state for click_count column
+  const [sortField, setSortField] = useState<string | null>(null)
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
+
+  function toggleSort(field: string) {
+    if (sortField === field) {
+      setSortDir(prev => (prev === 'desc' ? 'asc' : 'desc'))
+    } else {
+      setSortField(field)
+      setSortDir('desc')
+    }
+  }
+
+  const sortedLeads = useMemo(() => {
+    if (!data?.leads) return []
+    if (sortField !== 'click_count') return data.leads
+    return [...data.leads].sort((a, b) =>
+      sortDir === 'desc' ? b.click_count - a.click_count : a.click_count - b.click_count
+    )
+  }, [data?.leads, sortField, sortDir])
 
   // Lead clicks cache: email -> clicks array
   const [leadClicks, setLeadClicks] = useState<Record<string, LeadClickEntry[]>>({})
@@ -200,18 +221,24 @@ export default function LeadsPage() {
                   <th className="text-right px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                     Gaps
                   </th>
+                  <th
+                    className="text-right px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer select-none hover:text-slate-300 transition-colors"
+                    onClick={() => toggleSort('click_count')}
+                  >
+                    Clicks {sortField === 'click_count' && (sortDir === 'desc' ? '\u2193' : '\u2191')}
+                  </th>
                   <th className="px-5 py-3" />
                 </tr>
               </thead>
               <tbody>
-                {data.leads.length === 0 && (
+                {sortedLeads.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="px-5 py-8 text-center text-slate-500">
+                    <td colSpan={6} className="px-5 py-8 text-center text-slate-500">
                       No leads yet
                     </td>
                   </tr>
                 )}
-                {data.leads.map((lead: LeadRow) => {
+                {sortedLeads.map((lead: LeadRow) => {
                   const isHighlighted = lead.email === highlightEmail
                   const clicks = leadClicks[lead.email] ?? []
                   const isLoadingClicks = clicksLoading[lead.email] ?? false
@@ -258,6 +285,15 @@ export default function LeadsPage() {
                           )}
                         </td>
                         <td className="px-5 py-3 text-right">
+                          {lead.click_count > 0 ? (
+                            <span className="bg-purple-900/30 text-purple-400 font-medium px-2 py-0.5 rounded text-xs">
+                              {lead.click_count}
+                            </span>
+                          ) : (
+                            <span className="text-slate-500">0</span>
+                          )}
+                        </td>
+                        <td className="px-5 py-3 text-right">
                           <button
                             onClick={e => {
                               e.stopPropagation()
@@ -273,7 +309,7 @@ export default function LeadsPage() {
                       {/* Expanded row */}
                       {expandedEmail === lead.email && (
                         <tr key={`${lead.email}-expanded`} className="border-b border-slate-700/40">
-                          <td colSpan={5} className="px-5 py-3 bg-slate-900/30">
+                          <td colSpan={6} className="px-5 py-3 bg-slate-900/30">
                             <div className="space-y-4">
                               {/* Recent queries section */}
                               <div>
