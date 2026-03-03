@@ -98,26 +98,14 @@ export function MobileInlineFilters() {
           </button>
         )}
 
-        {/* Clear all — shown in filter row when filters are active but no tags selected */}
-        {hasActiveFilters && !savedFilter && totalTagCount === 0 && (
-          <button
-            onClick={resetFilters}
-            className="inline-flex items-center gap-1 text-xs rounded-md px-2.5 py-1.5 shrink-0 transition-colors bg-red-50 text-red-600 hover:bg-red-100"
-            aria-label="Clear all filters"
-          >
-            <X size={11} />
-            Clear all
-          </button>
-        )}
-
         {/* Result count — right-aligned spacer */}
         <span className="ml-auto text-xs text-gray-500 shrink-0">
           {loading ? '…' : `${total} experts`}
         </span>
       </div>
 
-      {/* Active tag chips row — only shown when tags are selected */}
-      {totalTagCount > 0 && (
+      {/* Active filters row — shown when any filters are active (tag chips + clear all) */}
+      {hasActiveFilters && !savedFilter && (
         <div className="flex gap-1.5 flex-wrap px-4 py-2 border-b border-gray-100">
           {tags.map((tag) => (
             <span
@@ -149,17 +137,15 @@ export function MobileInlineFilters() {
               </button>
             </span>
           ))}
-          {/* Clear all filters — inline with tag chips */}
-          {hasActiveFilters && !savedFilter && (
-            <button
-              onClick={resetFilters}
-              className="inline-flex items-center gap-1 text-xs rounded-full px-2.5 py-1 shrink-0 transition-colors bg-red-50 text-red-600 hover:bg-red-100"
-              aria-label="Clear all filters"
-            >
-              <X size={11} />
-              Clear all
-            </button>
-          )}
+          {/* Clear all filters */}
+          <button
+            onClick={resetFilters}
+            className="inline-flex items-center gap-1 text-xs rounded-full px-2.5 py-1 shrink-0 transition-colors bg-red-50 text-red-600 hover:bg-red-100"
+            aria-label="Clear all filters"
+          >
+            <X size={11} />
+            Clear all
+          </button>
         </div>
       )}
 
