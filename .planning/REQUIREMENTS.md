@@ -84,7 +84,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ADM-07 | Phase 57 | Complete |
 | ADMUI-01 | Phase 58.1 | Complete |
 | ADMUI-02 | Phase 58.1 | Complete |
-| ADMUI-03 | Phase 59 | Pending |
+| ADMUI-03 | Phase 58.1 | N/A -- Sage data source retired |
 | ADMUI-04 | Phase 58.1 | Complete |
 
 **Coverage:**
@@ -94,4 +94,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-03-03*
-*Last updated: 2026-03-03 after gap closure phase 58 creation*
+*Last updated: 2026-03-03 after phase 59 tech debt cleanup*
