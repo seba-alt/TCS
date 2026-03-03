@@ -190,3 +190,15 @@ Plans:
 | 56. Backend Performance & Admin Refactor | 3/3 | Complete | 2026-03-03 |
 | 57. Admin Frontend Overhaul | 4/4 | Complete    | 2026-03-03 |
 | 58. Audit Gap Closure | 2/2 | Complete    | 2026-03-03 |
+
+### Phase 58.1: Admin Dashboard Improvements (INSERTED)
+
+**Goal:** The admin dashboard surfaces actionable data at a glance — tag-only searches render as chips, irrelevant sections are removed, Searches and Marketplace are merged into one Data page with a unified date picker, and lead click activity is immediately visible without expanding rows.
+**Depends on:** Phase 58
+**Requirements:** ADMUI-01, ADMUI-02, ADMUI-03, ADMUI-04
+**Plans:** 3 plans
+
+Plans:
+- [ ] 58.1-01-PLAN.md — Backend endpoint extensions (click_count, active_tags) + Overview page cleanup
+- [ ] 58.1-02-PLAN.md — Merge Searches/Marketplace into unified Data page with shared date picker
+- [ ] 58.1-03-PLAN.md — Leads page click count column + dedicated Click Activity table
