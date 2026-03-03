@@ -27,6 +27,7 @@ async def explore(
     tags: str = Query(default=""),    # comma-separated, e.g. "seo,blockchain"
     industry_tags: str = Query(default=""),  # comma-separated, e.g. "Finance,Healthcare"
     limit: int = Query(default=20, ge=1, le=100),
+    usernames: str = Query(default=""),  # comma-separated; returns only these experts (saved view)
     cursor: int = Query(default=0, ge=0),
     seed: int = Query(default=0, ge=0),  # 0 = deterministic findability sort; >0 = seeded random
 ) -> ExploreResponse:
@@ -37,6 +38,7 @@ async def explore(
     """
     tag_list = [t.strip() for t in tags.split(",") if t.strip()]
     industry_tag_list = [t.strip() for t in industry_tags.split(",") if t.strip()]
+    username_list = [u.strip() for u in usernames.split(",") if u.strip()]
     loop = asyncio.get_event_loop()
     return await loop.run_in_executor(
         None,
@@ -51,5 +53,6 @@ async def explore(
             db=db,
             app_state=request.app.state,
             seed=seed if seed > 0 else None,
+            usernames=username_list if username_list else None,
         ),
     )

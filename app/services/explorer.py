@@ -158,6 +158,7 @@ def run_explore(
     app_state,
     industry_tags: list[str] | None = None,
     seed: int | None = None,
+    usernames: list[str] | None = None,
 ) -> ExploreResponse:
     """
     Three-stage hybrid search pipeline.
@@ -169,6 +170,23 @@ def run_explore(
     Pure filter mode: sorted by findability_score DESC, skips FAISS and FTS5.
     """
     start = time.time()
+
+    # --- Saved-view shortcut: fetch only specified usernames, skip all filters/search ---
+    if usernames:
+        experts = list(db.scalars(
+            select(Expert).where(Expert.username.in_(usernames))
+        ).all())
+        cards = [
+            _build_card(e, None, None, e.findability_score or 0.0, "")
+            for e in experts
+        ]
+        return ExploreResponse(
+            experts=cards,
+            total=len(cards),
+            cursor=None,
+            took_ms=int((time.time() - start) * 1000),
+            max_rate=max((e.hourly_rate for e in experts), default=0.0),
+        )
 
     # --- Stage 1: SQLAlchemy pre-filter (always runs) ---
     stmt = select(Expert).where(

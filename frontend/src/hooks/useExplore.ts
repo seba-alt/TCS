@@ -18,8 +18,9 @@ export function useExplore() {
   const industryTags = useExplorerStore((s) => s.industryTags)
   const retryTrigger = useExplorerStore((s) => s.retryTrigger)
 
-  // Saved filter — when active, fetch without filters to get all experts
+  // Saved filter — when active, send saved usernames to API for direct lookup
   const savedFilter = useExplorerStore((s) => s.savedFilter)
+  const savedExperts = useExplorerStore((s) => s.savedExperts)
 
   // Zustand actions are referentially stable — safe in dep array without useCallback
   const setLoading = useExplorerStore((s) => s.setLoading)
@@ -45,18 +46,11 @@ export function useExplore() {
     const controller = new AbortController()
     controllerRef.current = controller
 
-    // When savedFilter is active, fetch with no filters — get all experts so saved ones
-    // are guaranteed to be present regardless of active query/tags/rate filters
+    // When savedFilter is active, send saved usernames to API for direct lookup —
+    // no limit needed, works at any pool size
     const params = savedFilter
       ? new URLSearchParams({
-          query: '',
-          rate_min: '0',
-          rate_max: '5000',
-          tags: '',
-          industry_tags: '',
-          limit: '500',
-          cursor: '0',
-          seed: String(seed),
+          usernames: savedExperts.join(','),
         })
       : new URLSearchParams({
           query,
@@ -115,11 +109,11 @@ export function useExplore() {
     return () => {
       controller.abort()
     }
-  }, [query, rateMin, rateMax, tags, industryTags, savedFilter, seed, retryTrigger, setLoading, setResults, setError, resetResults])
+  }, [query, rateMin, rateMax, tags, industryTags, savedFilter, savedExperts, seed, retryTrigger, setLoading, setResults, setError, resetResults])
 
   // loadNextPage — passed to VirtuosoGrid endReached prop
   // Guard: don't fetch if no more pages (cursor null), already fetching more, or initial load in progress
-  // In saved mode, we fetch limit:500 on first load so pagination is not meaningful
+  // In saved mode, API returns all saved experts in one shot — no pagination needed
   const loadNextPage = useCallback(async () => {
     if (cursor === null || isFetchingMore || loading || savedFilter) return
     setFetchingMore(true)

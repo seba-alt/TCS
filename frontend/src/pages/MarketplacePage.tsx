@@ -107,22 +107,22 @@ export default function MarketplacePage() {
           <MobileInlineFilters />
 
           {/* Desktop Saved button — above filter chips strip, right-aligned, only on desktop */}
-          {savedCount > 0 && (
-            <div className="hidden md:flex items-center justify-end px-4 py-2">
-              <button
-                onClick={() => setSavedFilter(!savedFilter)}
-                className={`flex items-center gap-1.5 text-sm rounded-full px-3 py-1.5 transition-colors ${
-                  savedFilter
-                    ? 'bg-brand-purple text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-                aria-label={savedFilter ? 'Show all experts' : 'Show saved experts'}
-              >
-                <Bookmark size={16} className={savedFilter ? 'fill-current' : ''} />
-                Saved ({savedCount})
-              </button>
-            </div>
-          )}
+          <div className="hidden md:flex items-center justify-end px-4 py-2">
+            <button
+              onClick={() => savedCount > 0 && setSavedFilter(!savedFilter)}
+              className={`flex items-center gap-1.5 text-sm rounded-full px-3 py-1.5 transition-colors ${
+                savedFilter
+                  ? 'bg-brand-purple text-white'
+                  : savedCount > 0
+                    ? 'bg-brand-purple/10 text-brand-purple hover:bg-brand-purple/20'
+                    : 'bg-gray-100 text-gray-400 cursor-default'
+              }`}
+              aria-label={savedFilter ? 'Show all experts' : 'Show saved experts'}
+            >
+              <Bookmark size={16} className={savedFilter || savedCount > 0 ? 'fill-current' : ''} />
+              Saved{savedCount > 0 ? ` (${savedCount})` : ''}
+            </button>
+          </div>
 
           {/* Active filter chips strip — hidden on mobile (MobileInlineFilters has its own chips) */}
           <div className="hidden md:block">

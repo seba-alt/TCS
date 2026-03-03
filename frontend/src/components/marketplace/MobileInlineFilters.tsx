@@ -64,21 +64,21 @@ export function MobileInlineFilters() {
           </button>
         </div>
 
-        {/* Saved button — only shown when bookmarks exist */}
-        {savedCount > 0 && (
-          <button
-            onClick={() => setSavedFilter(!savedFilter)}
-            className={`flex items-center gap-1 text-sm rounded-md px-2.5 py-1.5 shrink-0 transition-colors ${
-              savedFilter
-                ? 'bg-brand-purple text-white'
-                : 'border border-gray-300 text-gray-700'
-            }`}
-            aria-label={savedFilter ? 'Show all experts' : 'Show saved experts'}
-          >
-            <Bookmark size={15} className={savedFilter ? 'fill-current' : ''} />
-            {savedCount}
-          </button>
-        )}
+        {/* Saved button — always visible, colored when bookmarks exist */}
+        <button
+          onClick={() => savedCount > 0 && setSavedFilter(!savedFilter)}
+          className={`flex items-center gap-1 text-sm rounded-md px-2.5 py-1.5 shrink-0 transition-colors ${
+            savedFilter
+              ? 'bg-brand-purple text-white'
+              : savedCount > 0
+                ? 'bg-brand-purple/10 text-brand-purple'
+                : 'border border-gray-300 text-gray-400'
+          }`}
+          aria-label={savedFilter ? 'Show all experts' : 'Show saved experts'}
+        >
+          <Bookmark size={15} className={savedFilter || savedCount > 0 ? 'fill-current' : ''} />
+          Saved{savedCount > 0 ? ` (${savedCount})` : ''}
+        </button>
 
         {/* Exit saved view button — shown only when in saved mode */}
         {savedFilter && (
