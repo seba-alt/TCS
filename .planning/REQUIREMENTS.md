@@ -45,20 +45,20 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| LEAD-01 | — | Pending |
-| LEAD-02 | — | Pending |
-| LEAD-03 | — | Pending |
-| OVER-01 | — | Pending |
-| OVER-02 | — | Pending |
-| OVER-03 | — | Pending |
-| FIX-01 | — | Pending |
-| FIX-02 | — | Pending |
+| FIX-01 | Phase 60 | Pending |
+| FIX-02 | Phase 60 | Pending |
+| LEAD-01 | Phase 61 | Pending |
+| LEAD-02 | Phase 61 | Pending |
+| LEAD-03 | Phase 61 | Pending |
+| OVER-01 | Phase 62 | Pending |
+| OVER-02 | Phase 62 | Pending |
+| OVER-03 | Phase 62 | Pending |
 
 **Coverage:**
 - v5.1 requirements: 8 total
-- Mapped to phases: 0
-- Unmapped: 8
+- Mapped to phases: 8
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-03*
-*Last updated: 2026-03-03 after initial definition*
+*Last updated: 2026-03-03 — traceability populated after roadmap creation*

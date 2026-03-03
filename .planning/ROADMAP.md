@@ -13,6 +13,7 @@
 - ✅ **v4.0 Public Launch** — Phases 45-50 (shipped 2026-02-27)
 - ✅ **v4.1 UX Polish & Mobile Overhaul** — Phases 51-54 (shipped 2026-03-03)
 - ✅ **v5.0 Platform Polish & Admin Overhaul** — Phases 55-59 (shipped 2026-03-03)
+- 🚧 **v5.1 Lead Insights & Overview** — Phases 60-62 (in progress)
 
 ## Phases
 
@@ -99,3 +100,53 @@ See `.planning/milestones/v5.0-ROADMAP.md`
 - [x] Phase 59: Tech Debt Cleanup (1/1 plan) — completed 2026-03-03
 
 </details>
+
+### 🚧 v5.1 Lead Insights & Overview (In Progress)
+
+**Milestone Goal:** Surface lead journey data and enriched overview signals so admins can understand engagement patterns and demand gaps at a glance.
+
+- [ ] **Phase 60: Bug Fixes** - Fix clear-all button visibility and remove unused build-breaking variable
+- [ ] **Phase 61: Lead Journey Timeline** - Expandable lead rows with chronological search and click history
+- [ ] **Phase 62: Overview Enhancements** - Add top experts, top searches, and zero-result gap cards to Overview
+
+## Phase Details
+
+### Phase 60: Bug Fixes
+**Goal**: Users see a clean, correctly-behaving Explorer and Vercel builds pass without warnings
+**Depends on**: Nothing (first phase of v5.1)
+**Requirements**: FIX-01, FIX-02
+**Success Criteria** (what must be TRUE):
+  1. The clear-all button is not visible on the Explorer when no filters are active (page load with no tags, no query, default rate)
+  2. The clear-all button appears as soon as any filter becomes active (tag selected, query entered, or rate changed)
+  3. Vercel build completes without TypeScript errors or unused-variable warnings from MobileInlineFilters.tsx
+**Plans**: TBD
+
+### Phase 61: Lead Journey Timeline
+**Goal**: Admin can inspect the full chronological history of any lead's interaction with the marketplace
+**Depends on**: Phase 60
+**Requirements**: LEAD-01, LEAD-02, LEAD-03
+**Success Criteria** (what must be TRUE):
+  1. Admin can click to expand any lead row and see a timeline of that lead's searches and expert clicks in chronological order
+  2. Each search event in the timeline shows the query text and how many results were returned
+  3. Each click event in the timeline shows the expert name and which search query preceded that click
+  4. Time gaps between consecutive events are shown as labels (e.g., "2 hours later") so engagement pacing is visible
+**Plans**: TBD
+
+### Phase 62: Overview Enhancements
+**Goal**: The Overview page gives admins immediate signal on what experts are popular, what users search for, and where demand goes unmet
+**Depends on**: Phase 61
+**Requirements**: OVER-01, OVER-02, OVER-03
+**Success Criteria** (what must be TRUE):
+  1. Overview page shows a ranked list of experts by card click volume for the selected time period
+  2. Overview page shows a ranked list of the most frequent search queries for the selected time period
+  3. Overview page shows zero-result queries as unmet demand signals for the selected time period
+  4. All three new cards respect the existing period toggle (Today / 7d / 30d / All)
+**Plans**: TBD
+
+## Progress
+
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 60. Bug Fixes | v5.1 | 0/TBD | Not started | - |
+| 61. Lead Journey Timeline | v5.1 | 0/TBD | Not started | - |
+| 62. Overview Enhancements | v5.1 | 0/TBD | Not started | - |
