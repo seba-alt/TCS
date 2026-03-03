@@ -24,9 +24,9 @@ Requirements for v4.1 UX Polish & Mobile Overhaul. Each maps to roadmap phases.
 
 ### Card Redesign (CARD)
 
-- [ ] **CARD-01**: Mobile cards show bigger profile photo with name below, centered
-- [ ] **CARD-02**: Desktop cards show bigger profile photo with info inline to the right
-- [ ] **CARD-03**: Mobile cards respond to single tap (no tap-expand behavior)
+- [x] **CARD-01**: Mobile cards show bigger profile photo with name below, centered
+- [x] **CARD-02**: Desktop cards show bigger profile photo with info inline to the right
+- [x] **CARD-03**: Mobile cards respond to single tap (no tap-expand behavior)
 
 ### Mobile (MOBL)
 
@@ -73,9 +73,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | EXPL-04 | Phase 52 | Complete |
 | EXPL-05 | Phase 52 | Complete |
 | EXPL-06 | Phase 52 | Complete |
-| CARD-01 | Phase 53 | Pending |
-| CARD-02 | Phase 53 | Pending |
-| CARD-03 | Phase 53 | Pending |
+| CARD-01 | Phase 53 | Complete |
+| CARD-02 | Phase 53 | Complete |
+| CARD-03 | Phase 53 | Complete |
 | MOBL-01 | Phase 53 | Pending |
 | MOBL-02 | Phase 53 | Pending |
 | MOBL-03 | Phase 53 | Pending |

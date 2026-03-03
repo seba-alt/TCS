@@ -147,7 +147,7 @@ Plans:
   4. Mobile filter controls have no clear button and no search-within-tags or industry picker
   5. Tapping a tag on mobile resets the active search query and applies the tag as the sole filter
   6. The tag row on mobile scrolls smoothly without visual glitching
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 Plans:
 - [ ] 53-01-PLAN.md — Card layout redesign (mobile photo-centric + desktop photo-left) and tap-expand removal
 - [ ] 53-02-PLAN.md — Mobile filter simplification (remove clear, search inputs, sort) + tag-click clears query + scroll fix
@@ -189,5 +189,5 @@ Plans:
 | 50.3. Intercom Integration | v4.0 | 3/3 | Complete | 2026-03-02 |
 | 51. Admin Fixes | 2/2 | Complete    | 2026-03-02 | - |
 | 52. Explorer & Search UX | 2/2 | Complete    | 2026-03-03 | - |
-| 53. Card & Mobile Redesign | v4.1 | 0/TBD | Not started | - |
+| 53. Card & Mobile Redesign | 1/2 | In Progress|  | - |
 | 54. Bookmarks & Analytics | v4.1 | 0/TBD | Not started | - |

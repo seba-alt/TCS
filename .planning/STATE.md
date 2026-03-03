@@ -18,14 +18,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-02)
 
 **Core value:** A user describes any problem and instantly gets expertly matched professionals they can browse, filter, and contact — no searching, no guesswork.
-**Current focus:** Phase 52 — Explorer Search UX (complete)
+**Current focus:** Phase 53 — Card & Mobile Redesign (in progress)
 
 ## Current Position
 
-Phase: 52 of 54 (Explorer Search UX)
-Plan: 02 of 02 (complete)
-Status: Phase 52 complete — all 4 requirements (EXPL-01 through EXPL-06) done
-Last activity: 2026-03-03 — Phase 52 Plan 02 executed (autocomplete tag-first + dynamic rate slider)
+Phase: 53 of 54 (Card & Mobile Redesign)
+Plan: 01 of 02 (complete)
+Status: Phase 53 Plan 01 complete — card redesign done (CARD-01, CARD-02, CARD-03)
+Last activity: 2026-03-03 — Phase 53 Plan 01 executed (responsive ExpertCard + ExpertGrid/ExpertList updates)
 
 Progress: [##########] 50% (2 of 4 phases with plans complete)
 
@@ -45,6 +45,7 @@ Progress: [##########] 50% (2 of 4 phases with plans complete)
 *Updated after each plan completion*
 | Phase 52-explorer-search-ux P01 | 4 | 2 tasks | 9 files |
 | Phase 52-explorer-search-ux P02 | 4 | 2 tasks | 7 files |
+| Phase 53-card-mobile-redesign P01 | 2min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -59,6 +60,9 @@ Progress: [##########] 50% (2 of 4 phases with plans complete)
 - [Phase 52-02]: Tags queried first in FTS5 suggest loop (limit 5) with JSON array parsing for individual tag extraction
 - [Phase 52-02]: Frontend autocomplete merges client-side tag matches before backend results; starts-with ranked above contains-only
 - [Phase 52-02]: ExploreResponse max_rate field computed from full filtered_experts before pagination; RateSlider uses roundedMax = ceil(max(maxRate,10)/10)*10 with auto-adjust useEffect
+- [Phase 53-01]: ExpertCard uses two separate JSX blocks (md:hidden / hidden md:flex) for mobile vs desktop layouts — cleaner than per-element breakpoint class merging for fundamentally different structures
+- [Phase 53-01]: handleCardClick always calls onViewProfile directly with no viewport check or expand state — isExpanded and onExpand props removed entirely
+- [Phase 53-01]: Mobile card 200px fixed height (80px photo); desktop 180px in photo-left orientation; list view photos enlarged to 48px (w-12)
 
 ### Pending Todos
 
@@ -73,5 +77,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-03
-Stopped at: Completed 52-02-PLAN.md — phase 52 fully done
-Resume file: .planning/phases/53-expert-detail-page/53-CONTEXT.md (or next unplanned phase)
+Stopped at: Completed 53-01-PLAN.md — ExpertCard mobile redesign + ExpertGrid/ExpertList updates
+Resume file: .planning/phases/53-card-mobile-redesign/53-02-PLAN.md
