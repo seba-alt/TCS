@@ -289,7 +289,21 @@ export interface TimelineExplorerClickEvent {
   created_at: string  // ISO datetime
 }
 
-export type TimelineEvent = TimelineSearchEvent | TimelineClickEvent | TimelineExplorerSearchEvent | TimelineExplorerClickEvent
+export interface TimelineSaveEvent {
+  type: 'save'
+  expert_username: string
+  expert_name: string
+  created_at: string
+}
+
+export interface TimelineUnsaveEvent {
+  type: 'unsave'
+  expert_username: string
+  expert_name: string
+  created_at: string
+}
+
+export type TimelineEvent = TimelineSearchEvent | TimelineClickEvent | TimelineExplorerSearchEvent | TimelineExplorerClickEvent | TimelineSaveEvent | TimelineUnsaveEvent
 
 export interface LeadTimelineResponse {
   email: string
@@ -332,4 +346,17 @@ export interface AnalyticsSummary {
   total_lead_clicks: number
   recent_searches: RecentSearchEntry[]
   recent_clicks: RecentClickEntry[]
+}
+
+// -- Top Saved Experts (Phase 69) --
+
+export interface TopSavedRow {
+  expert_id: string
+  expert_name: string | null
+  total_saves: number
+}
+
+export interface TopSavedResponse {
+  data_since: string | null
+  top_saved: TopSavedRow[]
 }

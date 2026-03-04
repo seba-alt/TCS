@@ -1,5 +1,5 @@
 """
-Admin event analytics endpoints: /events/demand, /events/exposure,
+Admin event analytics endpoints: /events/demand, /events/exposure, /events/top-saved,
 /lead-clicks, /lead-clicks/by-expert/{username}.
 """
 from datetime import datetime, timedelta
@@ -137,6 +137,47 @@ def get_exposure(days: int = 30, db: Session = Depends(get_db)):
                 "total_clicks": r.total_clicks,
                 "grid_clicks": r.grid_clicks,
                 "sage_clicks": r.sage_clicks,
+            }
+            for r in rows
+        ],
+    }
+
+
+@router.get("/events/top-saved")
+def get_top_saved(days: int = 30, db: Session = Depends(get_db)):
+    """Return experts ranked by total save event count for the given time window."""
+    earliest = db.execute(_text("SELECT MIN(created_at) FROM user_events")).scalar()
+    data_since = earliest
+
+    cutoff = (datetime.utcnow() - timedelta(days=days)).strftime("%Y-%m-%d") if days > 0 else "2000-01-01"
+
+    rows = db.execute(_text("""
+        SELECT
+            json_extract(payload, '$.expert_id') AS expert_id,
+            COUNT(*) AS total_saves
+        FROM user_events
+        WHERE event_type = 'save'
+          AND json_extract(payload, '$.action') = 'save'
+          AND date(created_at) >= :cutoff
+        GROUP BY json_extract(payload, '$.expert_id')
+        HAVING total_saves > 0
+        ORDER BY total_saves DESC
+    """), {"cutoff": cutoff}).all()
+
+    # Batch-resolve expert full names
+    all_ids = {r.expert_id for r in rows if r.expert_id}
+    name_map = {
+        e.username: f"{e.first_name} {e.last_name}"
+        for e in db.scalars(select(Expert).where(Expert.username.in_(all_ids))).all()
+    } if all_ids else {}
+
+    return {
+        "data_since": data_since,
+        "top_saved": [
+            {
+                "expert_id": r.expert_id,
+                "expert_name": name_map.get(r.expert_id),
+                "total_saves": r.total_saves,
             }
             for r in rows
         ],

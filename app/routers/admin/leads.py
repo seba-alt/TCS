@@ -165,8 +165,38 @@ def get_lead_timeline(email: str, limit: int = 10, offset: int = 0, db: Session 
                 "created_at": row.created_at.isoformat(),
             })
 
+    # 3.6. Fetch save/unsave events attributed to this email
+    save_ue_rows = db.scalars(
+        select(UserEvent).where(
+            UserEvent.email == email,
+            UserEvent.event_type == "save",
+        )
+    ).all()
+
+    # Batch-resolve expert names for save events
+    save_expert_ids = {json.loads(row.payload or "{}").get("expert_id", "") for row in save_ue_rows}
+    save_expert_ids.discard("")
+    save_name_map = {
+        e.username: f"{e.first_name} {e.last_name}"
+        for e in db.scalars(select(Expert).where(Expert.username.in_(save_expert_ids))).all()
+    } if save_expert_ids else {}
+
+    save_events = []
+    for row in save_ue_rows:
+        if row.id in session_event_ids:
+            continue  # Avoid duplicates
+        payload_data = json.loads(row.payload or "{}")
+        action = payload_data.get("action", "save")  # "save" or "unsave"
+        expert_id = payload_data.get("expert_id", "")
+        save_events.append({
+            "type": action,  # "save" or "unsave"
+            "expert_username": expert_id,
+            "expert_name": save_name_map.get(expert_id, expert_id),
+            "created_at": row.created_at.isoformat(),
+        })
+
     # 4. Merge and sort newest-first
-    all_events = search_events + click_events
+    all_events = search_events + click_events + save_events
     all_events.sort(key=lambda e: e["created_at"], reverse=True)
 
     # 5. Paginate
