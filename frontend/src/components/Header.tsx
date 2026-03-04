@@ -195,8 +195,13 @@ const Header = forwardRef<HeaderHandle>(function Header(_props, ref) {
               setIsFocused(false)
               handleBlur()
             }}
+            disabled={!subscribed}
             tabIndex={subscribed ? 0 : -1}
-            className="w-full pl-9 pr-8 py-2.5 rounded-xl text-sm bg-white border-2 border-slate-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-purple/20 focus:border-brand-purple/40 transition-colors"
+            className={`w-full pl-9 pr-8 py-2.5 rounded-xl text-sm border-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-purple/20 focus:border-brand-purple/40 transition-colors ${
+              subscribed
+                ? 'bg-white border-slate-300'
+                : 'bg-slate-100 border-slate-200 opacity-50 cursor-not-allowed'
+            }`}
             aria-label="Search experts"
             aria-autocomplete="list"
             aria-expanded={showDropdown}
