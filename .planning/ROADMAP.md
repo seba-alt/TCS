@@ -167,7 +167,9 @@ Plans:
   1. Bookmarking an expert fires a trackEvent() call with expert_id and action: "save"
   2. Unbookmarking an expert fires a trackEvent() call with expert_id and action: "unsave"
   3. Events appear in the user_events table and are attributed to the visitor's email when known
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 68-01-PLAN.md — Backend save event type + frontend trackEvent on bookmark toggle
 
 ### Phase 69: Admin Saved Insights
 **Goal**: Admin can see which experts are most saved and see save events in lead timelines
