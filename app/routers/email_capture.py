@@ -11,12 +11,13 @@ Import note: must use sqlalchemy.dialects.sqlite.insert (NOT sqlalchemy.insert)
 for on_conflict_do_nothing support. When migrating to Postgres, switch to
 sqlalchemy.dialects.postgresql.insert — API is identical.
 """
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, BackgroundTasks, Depends
 from pydantic import BaseModel, EmailStr
 from sqlalchemy.dialects.sqlite import insert
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.loops import sync_contact_to_loops
 from app.models import EmailLead
 
 router = APIRouter()
@@ -24,10 +25,15 @@ router = APIRouter()
 
 class EmailCaptureRequest(BaseModel):
     email: EmailStr
+    query: str | None = None
 
 
 @router.post("/api/email-capture", status_code=200)
-def capture_email(body: EmailCaptureRequest, db: Session = Depends(get_db)):
+def capture_email(
+    body: EmailCaptureRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
     """
     Store email for lead capture. Silently ignores duplicate emails.
     Returns {"status": "ok"} on success (including duplicates).
@@ -39,4 +45,11 @@ def capture_email(body: EmailCaptureRequest, db: Session = Depends(get_db)):
     )
     db.execute(stmt)
     db.commit()
+
+    background_tasks.add_task(
+        sync_contact_to_loops,
+        email=str(body.email),
+        source="email_gate",
+        first_query=body.query,
+    )
     return {"status": "ok"}

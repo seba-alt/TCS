@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Header from './components/Header'
 import ChatInput from './components/ChatInput'
 import ChatMessage from './components/ChatMessage'
 import EmptyState from './components/EmptyState'
 import { useChat } from './hooks/useChat'
 import { useEmailGate } from './hooks/useEmailGate'
+import { SpeedInsights } from '@vercel/speed-insights/react'
 
 const PLACEHOLDER_EMAIL = 'user@tinrate.com'
 
@@ -26,6 +27,14 @@ export default function App() {
   })
   const bottomRef = useRef<HTMLDivElement>(null)
   const isLoading = status === 'thinking' || status === 'streaming'
+
+  const handleSubmitEmail = useCallback(
+    async (emailAddr: string) => {
+      const firstQuery = messages.find((m) => m.role === 'user')?.content
+      await submitEmail(emailAddr, firstQuery)
+    },
+    [messages, submitEmail],
+  )
   const [quoteIndex, setQuoteIndex] = useState(0)
 
   useEffect(() => {
@@ -75,7 +84,7 @@ export default function App() {
                         : undefined
                     }
                     isUnlocked={isUnlocked}
-                    onSubmitEmail={submitEmail}
+                    onSubmitEmail={handleSubmitEmail}
                     isLastExpertMessage={isLastExpertMessage}
                     email={email}
                   />
@@ -99,6 +108,7 @@ export default function App() {
       </main>
 
       <ChatInput onSubmit={sendMessage} disabled={isLoading} />
+      <SpeedInsights />
     </div>
   )
 }

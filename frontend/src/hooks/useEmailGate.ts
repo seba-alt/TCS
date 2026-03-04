@@ -16,7 +16,7 @@ const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
 export interface UseEmailGateReturn {
   isUnlocked: boolean
   email: string | null
-  submitEmail: (email: string) => Promise<void>
+  submitEmail: (email: string, query?: string) => Promise<void>
 }
 
 export function useEmailGate(): UseEmailGateReturn {
@@ -27,7 +27,7 @@ export function useEmailGate(): UseEmailGateReturn {
 
   const isUnlocked = email !== null
 
-  const submitEmail = useCallback(async (submittedEmail: string) => {
+  const submitEmail = useCallback(async (submittedEmail: string, query?: string) => {
     // Write localStorage FIRST — this is the source of truth for unlock.
     // UI is unlocked immediately regardless of backend outcome.
     localStorage.setItem(STORAGE_KEY, submittedEmail)
@@ -35,10 +35,13 @@ export function useEmailGate(): UseEmailGateReturn {
 
     // Fire-and-forget: backend failure does NOT re-lock the gate.
     try {
+      const payload: Record<string, string> = { email: submittedEmail }
+      if (query) payload.query = query
+
       await fetch(`${API_URL}/api/email-capture`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: submittedEmail }),
+        body: JSON.stringify(payload),
       })
     } catch {
       // Intentional: backend failure is silent. User is already unlocked via localStorage.
