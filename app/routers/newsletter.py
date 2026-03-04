@@ -11,12 +11,13 @@ Import note: must use sqlalchemy.dialects.sqlite.insert (NOT sqlalchemy.insert)
 for on_conflict_do_nothing support. When migrating to Postgres, switch to
 sqlalchemy.dialects.postgresql.insert — API is identical.
 """
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, BackgroundTasks, Depends
 from pydantic import BaseModel, EmailStr
 from sqlalchemy.dialects.sqlite import insert
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.loops import sync_contact_to_loops
 from app.models import NewsletterSubscriber
 
 router = APIRouter()
@@ -28,7 +29,7 @@ class NewsletterSubscribeRequest(BaseModel):
 
 
 @router.post("/api/newsletter/subscribe", status_code=200)
-def subscribe(body: NewsletterSubscribeRequest, db: Session = Depends(get_db)):
+def subscribe(body: NewsletterSubscribeRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     """
     Store newsletter subscriber email. Silently ignores duplicate emails.
     Returns {"status": "ok"} on success (including duplicates).
@@ -40,4 +41,5 @@ def subscribe(body: NewsletterSubscribeRequest, db: Session = Depends(get_db)):
     )
     db.execute(stmt)
     db.commit()
+    background_tasks.add_task(sync_contact_to_loops, email=str(body.email), source=body.source)
     return {"status": "ok"}

@@ -27,6 +27,7 @@ def sync_contact_to_loops(
     payload: dict = {
         "email": email,
         "source": source,
+        "userGroup": "search",
     }
     if first_query:
         payload["firstSearchQuery"] = first_query
