@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Compass, Eye } from 'lucide-react'
+import { Compass, Eye, Bookmark } from 'lucide-react'
 import { useNewsletterSubscribers, useLeadTimeline } from '../hooks/useAdminData'
 import { AdminCard } from '../components/AdminCard'
 import { AdminPageHeader } from '../components/AdminPageHeader'
@@ -164,6 +164,8 @@ export default function LeadsPage() {
                                             : event.type === 'click' ? 'bg-purple-500/80 border-purple-400'
                                             : event.type === 'explorer_search' ? 'bg-emerald-500/80 border-emerald-400'
                                             : event.type === 'explorer_click' ? 'bg-amber-500/80 border-amber-400'
+                                            : event.type === 'save' ? 'bg-amber-500/80 border-amber-400'
+                                            : event.type === 'unsave' ? 'bg-slate-500/80 border-slate-400'
                                             : 'bg-slate-500/80 border-slate-400'
                                         }`} />
                                         <div className="flex-1 min-w-0">
@@ -201,6 +203,18 @@ export default function LeadsPage() {
                                             <div className="flex items-center gap-2 flex-wrap">
                                               <Eye className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
                                               <span className="text-sm font-medium text-amber-300">{event.expert_name}</span>
+                                            </div>
+                                          ) : event.type === 'save' ? (
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                              <Bookmark className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" fill="currentColor" />
+                                              <span className="text-sm font-medium text-amber-300">{event.expert_name}</span>
+                                              <span className="text-xs bg-amber-900/30 border border-amber-800/50 text-amber-400 px-2 py-0.5 rounded">saved</span>
+                                            </div>
+                                          ) : event.type === 'unsave' ? (
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                              <Bookmark className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                                              <span className="text-sm text-slate-400">{event.expert_name}</span>
+                                              <span className="text-xs bg-slate-800 border border-slate-700 text-slate-500 px-2 py-0.5 rounded">unsaved</span>
                                             </div>
                                           ) : null}
                                         </div>

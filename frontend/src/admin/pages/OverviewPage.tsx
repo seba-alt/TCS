@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { TrendingUp, Search, AlertCircle, CheckCircle } from 'lucide-react'
+import { TrendingUp, Search, AlertCircle, CheckCircle, Bookmark } from 'lucide-react'
 import { useAdminStats, adminFetch, useAnalyticsSummary } from '../hooks/useAdminData'
 import { AdminCard } from '../components/AdminCard'
-import type { DemandResponse, ExposureResponse, TopQueriesResponse, NewsletterSubscribersResponse, RecentSearchEntry, RecentClickEntry } from '../types'
+import type { DemandResponse, ExposureResponse, TopQueriesResponse, TopSavedResponse, NewsletterSubscribersResponse, RecentSearchEntry, RecentClickEntry } from '../types'
 
 function timeAgo(iso: string): string {
   const seconds = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
@@ -384,17 +384,79 @@ function TopQueriesCard({ days, isExpanded, onToggle }: { days: number; isExpand
   )
 }
 
+function TopSavedCard({ days, isExpanded, onToggle }: { days: number; isExpanded: boolean; onToggle: () => void }) {
+  const [data, setData] = useState<TopSavedResponse | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    setLoading(true)
+    adminFetch<TopSavedResponse>('/events/top-saved', { days })
+      .then(setData)
+      .catch(() => setData(null))
+      .finally(() => setLoading(false))
+  }, [days])
+
+  const allRows = data?.top_saved ?? []
+  const rows = isExpanded ? allRows : allRows.slice(0, 5)
+
+  return (
+    <AdminCard className="p-5">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <Bookmark className="w-4 h-4 text-amber-400" />
+          <h2 className="text-sm font-semibold text-white">Top Saved Experts</h2>
+        </div>
+        {allRows.length > 5 && (
+          <button
+            onClick={onToggle}
+            className="text-xs text-purple-400 hover:text-purple-300 transition-colors"
+          >
+            {isExpanded ? 'Show less' : 'See All'}
+          </button>
+        )}
+      </div>
+      {loading ? (
+        <div className="space-y-2">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="h-5 bg-slate-700/50 rounded animate-pulse" />
+          ))}
+        </div>
+      ) : rows.length === 0 ? (
+        <p className="text-sm text-slate-500">No save activity yet</p>
+      ) : (
+        <div className={isExpanded ? 'overflow-y-auto max-h-[360px]' : ''}>
+          <div className="space-y-2">
+            {rows.map((row, i) => (
+              <div key={row.expert_id} className="flex items-center gap-2">
+                <span className="text-xs text-slate-500 w-4 flex-shrink-0">{i + 1}.</span>
+                <Link
+                  to={`/admin/experts`}
+                  className="text-sm text-slate-300 hover:text-purple-400 transition-colors truncate flex-1"
+                  title={row.expert_name ?? row.expert_id}
+                >
+                  {row.expert_name ?? row.expert_id}
+                </Link>
+                <span className="text-xs text-slate-500 font-mono flex-shrink-0">{row.total_saves} saves</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </AdminCard>
+  )
+}
+
 // ─── Main page ──────────────────────────────────────────────────────────────
 
 export default function OverviewPage() {
   const [days, setDays] = useState(7)
-  const [expandedCard, setExpandedCard] = useState<'experts' | 'queries' | null>(null)
+  const [expandedCard, setExpandedCard] = useState<'experts' | 'queries' | 'saved' | null>(null)
   const { stats, loading, error } = useAdminStats(days)
   const { status: healthStatus, latency } = useHealthCheck()
   const { data: analytics, loading: analyticsLoading } = useAnalyticsSummary(days)
   const navigate = useNavigate()
 
-  function toggleCard(card: 'experts' | 'queries') {
+  function toggleCard(card: 'experts' | 'queries' | 'saved') {
     setExpandedCard(prev => (prev === card ? null : card))
   }
 
@@ -486,6 +548,7 @@ export default function OverviewPage() {
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         <TopExpertsCard days={days} isExpanded={expandedCard === 'experts'} onToggle={() => toggleCard('experts')} />
         <TopQueriesCard days={days} isExpanded={expandedCard === 'queries'} onToggle={() => toggleCard('queries')} />
+        <TopSavedCard days={days} isExpanded={expandedCard === 'saved'} onToggle={() => toggleCard('saved')} />
         <ZeroResultQueriesCard days={days} />
         <RecentExploreSearchesCard
           searches={analytics?.recent_searches ?? []}
