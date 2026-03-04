@@ -266,7 +266,7 @@ function RecentCardClicksCard({ clicks, loading }: { clicks: RecentClickEntry[];
 
 // ─── Ranked insight cards (Phase 62) ────────────────────────────────────────
 
-function TopExpertsCard({ days }: { days: number }) {
+function TopExpertsCard({ days, isExpanded, onToggle }: { days: number; isExpanded: boolean; onToggle: () => void }) {
   const [data, setData] = useState<ExposureResponse | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -278,13 +278,24 @@ function TopExpertsCard({ days }: { days: number }) {
       .finally(() => setLoading(false))
   }, [days])
 
-  const rows = (data?.exposure ?? []).slice(0, 5)
+  const allRows = data?.exposure ?? []
+  const rows = isExpanded ? allRows : allRows.slice(0, 5)
 
   return (
     <AdminCard className="p-5">
-      <div className="flex items-center gap-2 mb-4">
-        <TrendingUp className="w-4 h-4 text-purple-400" />
-        <h2 className="text-sm font-semibold text-white">Top Clicks</h2>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <TrendingUp className="w-4 h-4 text-purple-400" />
+          <h2 className="text-sm font-semibold text-white">Top Clicks</h2>
+        </div>
+        {allRows.length > 5 && (
+          <button
+            onClick={onToggle}
+            className="text-xs text-purple-400 hover:text-purple-300 transition-colors"
+          >
+            {isExpanded ? 'Show less' : 'See All'}
+          </button>
+        )}
       </div>
       {loading ? (
         <div className="space-y-2">
@@ -295,45 +306,58 @@ function TopExpertsCard({ days }: { days: number }) {
       ) : rows.length === 0 ? (
         <p className="text-sm text-slate-500">No click activity yet</p>
       ) : (
-        <div className="space-y-2">
-          {rows.map((row, i) => (
-            <div key={row.expert_id} className="flex items-center gap-2">
-              <span className="text-xs text-slate-500 w-4 flex-shrink-0">{i + 1}.</span>
-              <Link
-                to={`/admin/experts`}
-                className="text-sm text-slate-300 hover:text-purple-400 transition-colors truncate flex-1"
-                title={row.expert_name ?? row.expert_id}
-              >
-                {row.expert_name ?? row.expert_id}
-              </Link>
-              <span className="text-xs text-slate-500 font-mono flex-shrink-0">{row.total_clicks} clicks</span>
-            </div>
-          ))}
+        <div className={isExpanded ? 'overflow-y-auto max-h-[360px]' : ''}>
+          <div className="space-y-2">
+            {rows.map((row, i) => (
+              <div key={row.expert_id} className="flex items-center gap-2">
+                <span className="text-xs text-slate-500 w-4 flex-shrink-0">{i + 1}.</span>
+                <Link
+                  to={`/admin/experts`}
+                  className="text-sm text-slate-300 hover:text-purple-400 transition-colors truncate flex-1"
+                  title={row.expert_name ?? row.expert_id}
+                >
+                  {row.expert_name ?? row.expert_id}
+                </Link>
+                <span className="text-xs text-slate-500 font-mono flex-shrink-0">{row.total_clicks} clicks</span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </AdminCard>
   )
 }
 
-function TopQueriesCard({ days }: { days: number }) {
+function TopQueriesCard({ days, isExpanded, onToggle }: { days: number; isExpanded: boolean; onToggle: () => void }) {
   const [data, setData] = useState<TopQueriesResponse | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     setLoading(true)
-    adminFetch<TopQueriesResponse>('/analytics/top-queries', { days, limit: 5 })
+    adminFetch<TopQueriesResponse>('/analytics/top-queries', { days, limit: 50 })
       .then(setData)
       .catch(() => setData(null))
       .finally(() => setLoading(false))
   }, [days])
 
-  const rows = data?.queries ?? []
+  const allRows = data?.queries ?? []
+  const rows = isExpanded ? allRows : allRows.slice(0, 5)
 
   return (
     <AdminCard className="p-5">
-      <div className="flex items-center gap-2 mb-4">
-        <Search className="w-4 h-4 text-blue-400" />
-        <h2 className="text-sm font-semibold text-white">Top Searches</h2>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <Search className="w-4 h-4 text-blue-400" />
+          <h2 className="text-sm font-semibold text-white">Top Searches</h2>
+        </div>
+        {allRows.length > 5 && (
+          <button
+            onClick={onToggle}
+            className="text-xs text-purple-400 hover:text-purple-300 transition-colors"
+          >
+            {isExpanded ? 'Show less' : 'See All'}
+          </button>
+        )}
       </div>
       {loading ? (
         <div className="space-y-2">
@@ -344,14 +368,16 @@ function TopQueriesCard({ days }: { days: number }) {
       ) : rows.length === 0 ? (
         <p className="text-sm text-slate-500">No search activity yet</p>
       ) : (
-        <div className="space-y-2">
-          {rows.map((row, i) => (
-            <div key={row.query_text} className="flex items-center gap-2">
-              <span className="text-xs text-slate-500 w-4 flex-shrink-0">{i + 1}.</span>
-              <span className="text-sm text-slate-300 truncate flex-1" title={row.query_text}>{row.query_text}</span>
-              <span className="text-xs text-slate-500 font-mono flex-shrink-0">{row.frequency} searches</span>
-            </div>
-          ))}
+        <div className={isExpanded ? 'overflow-y-auto max-h-[360px]' : ''}>
+          <div className="space-y-2">
+            {rows.map((row, i) => (
+              <div key={row.query_text} className="flex items-center gap-2">
+                <span className="text-xs text-slate-500 w-4 flex-shrink-0">{i + 1}.</span>
+                <span className="text-sm text-slate-300 truncate flex-1" title={row.query_text}>{row.query_text}</span>
+                <span className="text-xs text-slate-500 font-mono flex-shrink-0">{row.frequency} searches</span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </AdminCard>
@@ -362,10 +388,15 @@ function TopQueriesCard({ days }: { days: number }) {
 
 export default function OverviewPage() {
   const [days, setDays] = useState(7)
+  const [expandedCard, setExpandedCard] = useState<'experts' | 'queries' | null>(null)
   const { stats, loading, error } = useAdminStats(days)
   const { status: healthStatus, latency } = useHealthCheck()
   const { data: analytics, loading: analyticsLoading } = useAnalyticsSummary(days)
   const navigate = useNavigate()
+
+  function toggleCard(card: 'experts' | 'queries') {
+    setExpandedCard(prev => (prev === card ? null : card))
+  }
 
   if (loading) {
     return (
@@ -453,8 +484,8 @@ export default function OverviewPage() {
 
       {/* All detail cards — single unified grid, ordered by visibility */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        <TopExpertsCard days={days} />
-        <TopQueriesCard days={days} />
+        <TopExpertsCard days={days} isExpanded={expandedCard === 'experts'} onToggle={() => toggleCard('experts')} />
+        <TopQueriesCard days={days} isExpanded={expandedCard === 'queries'} onToggle={() => toggleCard('queries')} />
         <ZeroResultQueriesCard days={days} />
         <RecentExploreSearchesCard
           searches={analytics?.recent_searches ?? []}
