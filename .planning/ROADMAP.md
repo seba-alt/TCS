@@ -154,7 +154,10 @@ See `.planning/milestones/v5.2-ROADMAP.md`
   2. Email input is auto-focused when gate is active; search bar cannot be interacted with
   3. After gate submission, search bar receives focus automatically
   4. List view expert cards each render a save/bookmark button matching grid view behavior
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 67-01-PLAN.md — Email gate dark overlay polish + auto-focus behaviors
+- [ ] 67-02-PLAN.md — List view bookmark button parity fix
 
 ### Phase 68: Save Event Tracking
 **Goal**: Save and unsave actions are recorded as backend events for analytics
@@ -180,6 +183,6 @@ See `.planning/milestones/v5.2-ROADMAP.md`
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 67. Email Gate Polish & List View Fix | 0/TBD | Not started | - |
+| 67. Email Gate Polish & List View Fix | 0/2 | Planned | - |
 | 68. Save Event Tracking | 0/TBD | Not started | - |
 | 69. Admin Saved Insights | 0/TBD | Not started | - |
