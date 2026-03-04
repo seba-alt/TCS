@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.3
 milestone_name: UX Polish & Admin Saved Insights
 status: completed
-stopped_at: Completed 69.1-01-PLAN.md
-last_updated: "2026-03-04T18:37:34.340Z"
+stopped_at: Completed 69.1-02-PLAN.md
+last_updated: "2026-03-04T18:42:20.182Z"
 last_activity: 2026-03-04 — Phase 69 complete (Top Saved Experts card + timeline save events)
 progress:
   total_phases: 4
   completed_phases: 3
   total_plans: 7
-  completed_plans: 5
+  completed_plans: 6
   percent: 100
 ---
 
@@ -52,6 +52,8 @@ Recent decisions affecting current work:
 - [Phase 69.1]: Soft-delete over hard-delete for Expert records: is_active=False preserves historical data while hiding from public
 - [Phase 69.1]: server_default='1' used alongside default=True for SQLite compatibility — no migration script needed for existing rows
 - [Phase 69.1]: Removed metadata.json and experts.csv cleanup from delete endpoints — FAISS rebuild handles exclusion via is_active filter in ingest.py
+- [Phase 69.1]: Conversation archiving skipped in sync-apply: expert data embedded in JSON blobs; soft-delete on Expert sufficient for data preservation
+- [Phase 69.1]: sync-preview excludes already-inactive experts from to_delete to prevent idempotency issues on repeated CSV uploads
 
 ### Pending Todos
 
@@ -67,6 +69,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-04T18:37:34.336Z
-Stopped at: Completed 69.1-01-PLAN.md
+Last session: 2026-03-04T18:42:20.177Z
+Stopped at: Completed 69.1-02-PLAN.md
 Resume: Run milestone completion
