@@ -49,6 +49,10 @@ Progress: [██████████] 100%
 
 ## Accumulated Context
 
+### Roadmap Evolution
+
+- Phase 62.1 inserted after Phase 62: Admin Bugs (URGENT)
+
 ### Decisions
 
 Recent decisions affecting future work:
