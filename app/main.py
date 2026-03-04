@@ -179,6 +179,24 @@ async def lifespan(app: FastAPI):
                 pass  # column already exists
     log.info("startup: newsletter_subscribers session_id column migrated/verified")
 
+    # Phase 63: email column on user_events for lead attribution
+    with engine.connect() as _conn:
+        for _col_ddl in [
+            "ALTER TABLE user_events ADD COLUMN email VARCHAR(320)",
+        ]:
+            try:
+                _conn.execute(_text(_col_ddl))
+                _conn.commit()
+            except Exception:
+                pass  # column already exists
+        # Index must be separate statement for SQLite
+        try:
+            _conn.execute(_text("CREATE INDEX IF NOT EXISTS ix_user_events_email ON user_events (email)"))
+            _conn.commit()
+        except Exception:
+            pass
+    log.info("startup: user_events email column migrated/verified")
+
     # Phase 41: Expert email purge — blank all Expert.email values (PII removal)
     with engine.connect() as _conn:
         _conn.execute(_text("UPDATE experts SET email = ''"))

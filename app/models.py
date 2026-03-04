@@ -157,6 +157,8 @@ class UserEvent(Base):
     event_type: Mapped[str] = mapped_column(String(50), nullable=False)
     # payload: JSON blob — shape varies by event_type (see events.py for schema)
     payload: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
+    # Phase 63: email for lead attribution — nullable (pre-gate events have no email)
+    email: Mapped[str | None] = mapped_column(String(320), nullable=True, index=True)
     created_at: Mapped[datetime.datetime] = mapped_column(
         DateTime, default=datetime.datetime.utcnow, nullable=False
     )
