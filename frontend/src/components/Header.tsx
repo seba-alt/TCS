@@ -58,7 +58,7 @@ const Header = forwardRef<HeaderHandle>(function Header(_props, ref) {
     if (subscribed) {
       inputRef.current?.focus()
     }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [subscribed])
 
   // Expert count spring
   const rawCount = useMotionValue(total)
@@ -195,6 +195,7 @@ const Header = forwardRef<HeaderHandle>(function Header(_props, ref) {
               setIsFocused(false)
               handleBlur()
             }}
+            tabIndex={subscribed ? 0 : -1}
             className="w-full pl-9 pr-8 py-2.5 rounded-xl text-sm bg-white border-2 border-slate-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-purple/20 focus:border-brand-purple/40 transition-colors"
             aria-label="Search experts"
             aria-autocomplete="list"
