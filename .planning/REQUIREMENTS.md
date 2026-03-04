@@ -22,8 +22,8 @@ Requirements for milestone v5.2 Email-First Gate & Admin See-All. Each maps to r
 
 ### Email Tracking
 
-- [ ] **TRACK-01**: Backend stores email on `user_events` table (nullable indexed column, idempotent startup migration)
-- [ ] **TRACK-02**: Frontend `trackEvent()` includes user's email in every event after gate submission
+- [x] **TRACK-01**: Backend stores email on `user_events` table (nullable indexed column, idempotent startup migration)
+- [x] **TRACK-02**: Frontend `trackEvent()` includes user's email in every event after gate submission
 - [ ] **TRACK-03**: Admin lead journey timeline includes Explorer search queries attributed to the lead's email
 
 ### Analytics
@@ -57,8 +57,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| TRACK-01 | Phase 63 | Pending |
-| TRACK-02 | Phase 63 | Pending |
+| TRACK-01 | Phase 63 | Done |
+| TRACK-02 | Phase 63 | Done |
 | GATE-01 | Phase 64 | Pending |
 | GATE-02 | Phase 64 | Pending |
 | GATE-03 | Phase 64 | Pending |
