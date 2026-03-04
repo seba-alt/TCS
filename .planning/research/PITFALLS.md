@@ -1,248 +1,207 @@
 # Pitfalls Research
 
-**Domain:** Adding production-hardening features to a live React + FastAPI expert marketplace (v3.1 → v4.0 Public Launch)
-**Researched:** 2026-02-27
-**Confidence:** HIGH — based on direct codebase analysis of `RootLayout.tsx`, `LoginPage.tsx`, `RequireAuth.tsx`, `admin.py`, `ExpertGrid.tsx`, `MarketplacePage.tsx`, `ExpertCard.tsx`, `filterSlice.ts`, `store/index.ts`, `vite.config.ts`, `package.json` plus targeted web research on each specific failure class.
+**Domain:** Adding email-first gate, admin "See All" expansion, and direct email-based tracking to a live React + FastAPI expert marketplace (v5.1 → v5.2)
+**Researched:** 2026-03-04
+**Confidence:** HIGH — based on direct codebase analysis of `MarketplacePage.tsx`, `useEmailGate.ts`, `nltrStore.ts`, `NewsletterGateModal.tsx`, `tracking.ts`, `OverviewPage.tsx`, `AdminCard.tsx`, `newsletter.py`, `email_capture.py`, `events.py`, `models.py`, `leads.py`, `analytics.py`, `events.py` (admin), plus targeted analysis of the three-way data model split between `newsletter_subscribers`, `email_leads`, and `user_events`.
 
-The seven change areas in v4.0 each carry distinct, non-obvious failure modes:
-1. Auth migration — replacing single-key login with username+password+hashed credentials
-2. Grid/list view toggle — switching between VirtuosoGrid and Virtuoso in a live virtualized list
-3. Tag taxonomy — adding industry tags alongside existing AI-generated domain tags
-4. Admin simplification — removing tools from a live admin panel without breaking hidden dependencies
-5. Performance optimization — lazy loading and code splitting on a Framer Motion + Virtuoso app
-6. SQLite under public traffic — going live with a single-file database on Railway
-7. Admin security exposure — a sessionStorage-based single-key admin on the same public domain
+The three change areas in v5.2 each carry distinct, non-obvious failure modes:
+1. Email-first gate — moving gate from lazy (on "View Full Profile") to eager (on page entry) with two localStorage keys and two unlock paths already in the codebase
+2. Admin "See All" expansion — adding full-list views to cards that currently call paginated endpoints with `limit: 5`
+3. Email-based tracking — attaching email to search and click events currently stored anonymously via `session_id`
 
 ---
 
 ## Critical Pitfalls
 
-Mistakes that cause lockouts, rewrites, or production crashes.
+Mistakes that cause data loss, broken gates, or admin views that silently show incomplete data.
 
 ---
 
-### Pitfall 1: Auth Migration Locks Out the Admin Before New Credentials Work
+### Pitfall 1: Dual-Key localStorage Creates a Split-Brain Unlock State
 
 **What goes wrong:**
-The current auth flow stores the raw `ADMIN_SECRET` value in `sessionStorage` as `admin_key`, and every admin endpoint reads `X-Admin-Key` and compares it to `ADMIN_SECRET` directly. When migrating to username + hashed password, there is a deployment window where the backend expects hashed credential verification but the frontend still sends the raw key (or vice versa). If the backend is deployed first, the existing `sessionStorage` token no longer passes validation and the admin is immediately locked out. If the frontend is deployed first, the new login form submits a password hash that the old backend cannot verify.
+The codebase currently has two parallel unlock mechanisms:
+1. `useEmailGate` hook writes `tcs_gate_email` (used in the legacy email gate flow)
+2. `useNltrStore` (Zustand persisted) writes to `tinrate-newsletter-v1` with a `subscribed` boolean and `email` field
+3. `MarketplacePage.tsx` already checks BOTH: `legacyUnlocked = localStorage.getItem('tcs_gate_email') !== null || localStorage.getItem('tcs_email_unlocked') !== null`
 
-Additionally, `RequireAuth.tsx` only checks `sessionStorage.getItem('admin_key')` — a string existence check. If the migration changes the key name or format (e.g., to a JWT stored under a different key), `RequireAuth` passes even when the stored token is expired or malformed, because it never validates the token's content client-side.
+The email-first gate will add a third entry point to this unlock surface. If the implementation writes to `useNltrStore.setSubscribed()` but the check logic at page load reads `tcs_gate_email`, returning users who subscribed via the newsletter gate are gated again. Conversely, if the gate writes to `tcs_gate_email` but the downstream "View Full Profile" flow still reads from `nltrStore.subscribed`, a user who submitted the page-entry gate can still be blocked by the profile modal.
+
+The specific two-key check in `MarketplacePage.tsx` (line 48–52) is the single canonical unlock check for the profile flow — any new gate submission path that does not write to BOTH keys, or update the canonical check, creates a case where a user submits their email and still sees the gate again on next visit.
 
 **Why it happens:**
-Auth is touched in three places simultaneously: the `/api/admin/auth` backend endpoint, the `LoginPage.tsx` form, and `RequireAuth.tsx` guard. Developers often migrate the backend and frontend in the same commit but deploy to Railway and Vercel at different times (Railway deploys first, Vercel can take 30–90 seconds longer). The gap creates a broken state.
+The codebase has accumulated two separate gate implementations over multiple milestones (v1.0 email gate → v2.2 newsletter gate). The `legacyUnlocked` check exists specifically to bridge returning v2.0 users. Adding a third gate without auditing which key it writes to breaks this bridge.
 
 **How to avoid:**
-- Keep the existing `/api/admin/auth` endpoint functioning with the old single-key path until the new credentials are confirmed working in production. Add the new username+password path alongside, not as a replacement.
-- Deploy backend first with the new `/api/admin/auth` accepting EITHER the old raw key OR the new credentials (dual-mode for one deploy cycle). After verifying new login works, remove the old path.
-- Store a backup of `ADMIN_SECRET` in Railway env vars even after switching to hashed credentials — needed for rollback.
-- Test the full login → dashboard → API call cycle in a Railway preview environment before merging to main.
-- Never rename the `sessionStorage` key without clearing the old one first: `sessionStorage.removeItem('admin_key')` before setting the new key name.
+Decide on a single unlock source of truth before implementation: `useNltrStore` is the right choice (it's Zustand-persisted, has richer state, and is what `MarketplacePage.tsx` already treats as primary). The email-first gate should call `setSubscribed(email)` from `useNltrStore` on submission — not create a new localStorage key. The `legacyUnlocked` check should remain as-is for backward compatibility with pre-newsletter users.
 
 **Warning signs:**
-- Railway logs show `401 Unauthorized` on `/api/admin/auth` immediately after deploy
-- Admin dashboard shows blank page or redirects to `/admin/login` in a loop
-- `RequireAuth` passes but all subsequent admin API calls return 401 (token format changed but guard didn't update)
+- Users who submit the page-entry gate are still shown the gate on next page visit
+- Users who submitted the old email gate (`tcs_gate_email`) are shown the new page-entry gate on first visit after deploy
+- In dev tools, localStorage shows multiple gate-related keys with conflicting state (one shows subscribed=true, another shows no key)
 
-**Phase to address:** Admin auth migration phase — implement dual-mode auth endpoint, test before removing old path.
+**Phase to address:** Email-first gate phase — audit all unlock paths before adding a new entry point; write to `useNltrStore.setSubscribed()` exclusively.
 
 ---
 
-### Pitfall 2: VirtuosoGrid → Virtuoso List Toggle Causes Scroll Jumps, Height Breakage, and Remount Storms
+### Pitfall 2: Page-Entry Gate Blocks the Explorer on Every Cold-Start for Returning Users if State Check Fires Too Late
 
 **What goes wrong:**
-`ExpertGrid.tsx` uses `VirtuosoGrid` with fixed-height cards (`h-[180px]`) in a CSS grid layout. Adding a list view requires switching to `Virtuoso` (variable-height list component). Three concrete failure modes emerge:
+The current gate in `MarketplacePage.tsx` is lazy — it only shows when the user clicks "View Full Profile". The `isUnlocked` check runs synchronously from `nltrStore.subscribed || legacyUnlocked`, which reads localStorage synchronously before first render (Zustand persist rehydration).
 
-**A — Height container breakage:** Both `VirtuosoGrid` and `Virtuoso` require the parent container to have an explicit, non-zero height. The current container is `style={{ height: '100%' }}` inside a flexbox chain from `MarketplacePage`. If the toggle conditionally renders `<VirtuosoGrid>` or `<Virtuoso>` without forcing the parent to re-measure, the list component may inherit `height: 0` on initial render and show nothing, or render all items un-virtualized (defeating the purpose).
+The email-first gate shows a full-page modal on load. If the gate is implemented as a `useState(false)` initialized to `false` and then set to `true` in a `useEffect` only when the user is NOT unlocked, there is a flash: the gate modal briefly renders as open, then immediately closes when the `useEffect` fires and discovers the user is already subscribed. On slow devices or cold cache loads, this flash is visible as a jarring overlay that disappears within 100–200ms.
 
-**B — Remount storm from inline component definitions:** `VirtuosoGrid` and `Virtuoso` accept `components` and `itemContent` props. If `components.Header`, `components.Footer`, or `itemContent` are defined as arrow functions inside the `ExpertGrid` render function, React treats them as new component types on every render. Switching the toggle causes the entire list to unmount and remount — Virtuoso re-initializes, all cards re-render, and scroll position is lost. This is a documented react-virtuoso issue that surfaces under conditional rendering.
-
-**C — Scroll position loss on toggle:** When the user scrolls down 200 experts in grid view and toggles to list view, the VirtuosoGrid scroll position (measured in pixels from a CSS grid layout) does not translate to Virtuoso's scroll position (measured by item index). The list resets to index 0. Using `getState()`/`restoreStateFrom` on VirtuosoGrid does not work with Virtuoso — they are different components with different state shapes.
+The existing `useEmailGate` hook deliberately avoids this with a synchronous lazy `useState` initializer (`() => localStorage.getItem(STORAGE_KEY)`). If the page-entry gate does not use the same pattern, it will produce a flash of the gate overlay for all returning users on every page load.
 
 **Why it happens:**
-`VirtuosoGrid` and `Virtuoso` are not interchangeable siblings — they have different internal measurement models. Developers assume that toggling between them is like toggling a CSS class, but each component bootstraps its own ResizeObserver, scroll event listener, and item measurement loop on mount.
+Developers default to `useState(false)` + `useEffect` for "should I show this?" UI patterns. The flash-of-incorrect-content problem is subtle — it works correctly in localhost (no network latency, instant hydration) but is noticeable on production Vercel with slower devices.
 
 **How to avoid:**
-- Define all `components` objects (`Header`, `Footer`, `ItemWrapper`) as `const` outside the `ExpertGrid` render function, or use `useMemo` with a stable dependency array. This prevents remount storms on re-render.
-- Use a `key` prop to explicitly control remounting: when the view mode changes, set `key={viewMode}` on the Virtuoso component to signal intentional remount rather than letting React diff the old VirtuosoGrid against the new Virtuoso (which would cause subtle internal state bugs).
-- Accept scroll position loss on toggle — this is the correct UX behavior for a view switch. Do not attempt to preserve scroll position across incompatible component types.
-- Test height at all viewport breakpoints with Chrome DevTools before merging: the flexbox chain that feeds `height: '100%'` into the Virtuoso container must resolve to a non-zero pixel value on every breakpoint.
-- Keep `itemClassName="min-h-0"` from the current grid on the list wrapper too — `min-h-0` prevents grid/flex row blowout that can cause height calculation loops in Virtuoso.
+The gate `isOpen` state must be initialized synchronously:
+```typescript
+// Correct: synchronous check, no flash
+const [showGate, setShowGate] = useState(() => {
+  const subscribed = useNltrStore.getState().subscribed
+  const legacy = localStorage.getItem('tcs_gate_email') !== null || localStorage.getItem('tcs_email_unlocked') !== null
+  return !subscribed && !legacy
+})
+```
+Alternatively, read directly from `useNltrStore` via the hook (which reads from the Zustand store that is already hydrated from localStorage before first render). Do not use `useEffect` to determine whether to show the gate — it always fires after paint.
 
 **Warning signs:**
-- Expert grid renders 0 items but no empty state (height is 0, Virtuoso renders nothing)
-- Console shows `ResizeObserver loop limit exceeded` — Virtuoso remounting rapidly
-- Every filter change remounts all cards (visible as card images reloading) — inline component definitions are the cause
-- Network tab shows `GET /api/explore` firing twice on toggle (filter change + component remount both trigger useExplore)
+- Returning users briefly see the gate overlay flash on every page load before it disappears
+- Gate overlay appears for ~100ms on mobile devices even for subscribed users
+- In React DevTools, the gate component mounts as `isOpen=true` and immediately re-renders to `isOpen=false` for subscribed users
 
-**Phase to address:** Grid/list toggle phase — define component types outside render before wiring the toggle.
+**Phase to address:** Email-first gate phase — implement with synchronous state initialization, test on a throttled mobile connection in Chrome DevTools before shipping.
 
 ---
 
-### Pitfall 3: Industry Tags and Domain Tags Collide in the Filter Store and Tag Cloud
+### Pitfall 3: Email-First Gate Breaks the Loops Integration for the "Source" Field
 
 **What goes wrong:**
-The current `tags` array in `filterSlice.ts` is a flat string array with no type distinction. Domain tags (AI-generated, e.g., "Machine Learning", "B2B Sales") and industry tags (manually categorized, e.g., "Finance", "Healthcare") will be stored in the same array. The `/api/explore` backend receives `tags` as a query parameter and performs FTS5 or FAISS filtering without knowing which tags are domain tags vs. industry tags.
+The newsletter gate currently calls `POST /api/newsletter/subscribe` with `source: "gate"` (hardcoded in the frontend) and the `sync_contact_to_loops` background task uses this source field to set the Loops userGroup. The `loops.py` contact sync sends `userGroup: "search"` regardless of source — the source field is stored in the DB but not currently forwarded to Loops as a group discriminator.
 
-Three failure modes:
+When the email-first gate is added, there will be two distinct lead acquisition moments:
+1. Page entry (before any searching) — user has not yet shown search intent
+2. "View Full Profile" click (after searching) — user has shown high purchase intent
 
-**A — Filter collision:** A user who selects industry tag "Finance" and domain tag "Financial Modeling" sends both to the backend. The backend's `CATEGORY_KEYWORDS` dict in `admin.py` maps "Finance" as an industry category, while the FAISS search uses "Finance" as a semantic tag. The two interpretations can conflict — the backend may filter to `category = 'Finance'` AND search for experts tagged with "Finance", double-filtering and dramatically reducing results.
+If both paths call the same `POST /api/newsletter/subscribe` endpoint with the same `source: "gate"`, it becomes impossible to distinguish in Loops (or in the admin dashboard) which leads were captured pre-search vs. post-search. The admin will see a homogeneous leads list when the business distinction between these two cohorts is commercially significant.
 
-**B — Tag cloud visual mixing:** The `TagCloud.tsx` component renders all 18 tags from the expert data without type distinction. If industry tags ("Finance", "Tech") appear alongside domain tags ("LLM Engineering", "Growth Hacking") in the same cloud, users cannot distinguish their function. Clicking "Finance" with the expectation of filtering by industry but actually filtering by FAISS semantic tag (or vice versa) produces confusing results.
-
-**C — Zustand persist schema conflict:** The `explorer-filters` localStorage persist key (version 1) stores `tags: string[]`. If the tag taxonomy change adds a new shape (e.g., `tags: { domain: string[], industry: string[] }`) and a user visits with old persisted state, Zustand's `onRehydrateStorage` merges the old flat array into the new structure, corrupting state. The persist `version` must be bumped and a `migrate` function provided.
+Additionally, `newsletter.py` uses `on_conflict_do_nothing(index_elements=["email"])` — if a user submits the page-entry gate and then later clicks "View Full Profile", the second subscribe call is silently ignored. The source field is never updated to reflect the higher-intent action.
 
 **Why it happens:**
-The filter store was designed for a single tag namespace. Adding a second namespace without updating the backend filter logic, the persist schema, and the tag cloud rendering in a coordinated way creates three independent failure points that are easy to miss in code review.
+The `source` field in `newsletter_subscribers` was designed for a single capture point. Adding a second capture point without adding a distinct source value makes the data ambiguous. The idempotency design (INSERT OR IGNORE) compounds this by making first-write-wins the rule, which means early low-intent captures shadow later high-intent captures.
 
 **How to avoid:**
-- Decide the filter model before writing code: either (a) keep one flat `tags` array and let the backend distinguish by value (risky — requires the backend to know all industry tag names), or (b) add a separate `industryTags: string[]` field to the filter store and send it as a separate query param to the backend.
-- Option (b) is safer. Add `industry_tags` as an optional query param to `/api/explore`, have the backend apply it as a `WHERE category IN (...)` pre-filter before FAISS, and keep domain `tags` as the existing semantic search input.
-- Bump the Zustand persist `version` from `1` to `2` and add a `migrate` function that converts old `{tags: [...]}` to `{tags: [...], industryTags: []}` — this prevents stale localStorage from breaking state for returning users.
-- Visually distinguish the two tag types in `TagCloud.tsx` with color or section headers so users understand their different functions.
-- Add industry tags to `FilterChips.tsx` render logic — if a user selects an industry tag, it must appear as an active chip and clearing it must work the same way as domain tag chips.
+- Add a new source value for page-entry capture, e.g., `source: "page_entry"` vs. the existing `source: "gate"` (profile unlock trigger).
+- Update `loops.py` to forward the source field to Loops as a custom contact property (`contactSource`) so the Loops contact record shows which acquisition point captured the lead.
+- Accept that the idempotency behavior (first write wins for the same email) is correct for the DB but make the source meaningful on first capture. The "View Full Profile" gate should still work even if the email is already in the DB — the user is already unlocked at that point.
 
 **Warning signs:**
-- Users report "Finance" filter returns 0 results (double-filter collision)
-- Tag cloud shows 30+ tags after adding industry tags — cloud overflows or wraps beyond the proximity-scale animation's design capacity
-- Returning users see a blank grid on page load (Zustand rehydration failure from schema mismatch — corrupted `tags` field)
-- `resetFilters()` in filterSlice only resets `tags: []` but not `industryTags: []` (missing from `filterDefaults`)
+- All leads in admin dashboard show `source: "gate"` with no distinction between page-entry captures and profile-unlock captures
+- Loops contact list shows uniform userGroup with no way to segment pre-search vs post-search leads
+- A user who submits the page-entry gate and then clicks "View Full Profile" is NOT redirected to their profile (the subscribe call is silently ignored but the redirect logic may depend on the subscribe response)
 
-**Phase to address:** Tag taxonomy phase — define the backend query param contract and Zustand schema before touching the UI.
+**Phase to address:** Email-first gate phase — define source values before building the gate UI; test the duplicate email flow explicitly.
 
 ---
 
-### Pitfall 4: Admin Panel Cleanup Removes Functionality That Other Parts Depend On
+### Pitfall 4: "See All" Links Navigate Away Instead of Expanding In-Place, Breaking Admin UX Flow
 
 **What goes wrong:**
-The admin panel has inter-page dependencies that are not obvious from the navigation structure alone. Removing a page or tool can break a page that remains. Three specific risks:
+The existing "See All" pattern on `OverviewPage.tsx` uses React Router `Link` to navigate away:
+- `ZeroResultQueriesCard` links to `/admin/gaps`
+- `RecentLeadsCard` links to `/admin/leads`
+- `RecentExploreSearchesCard` links to `/admin/data`
 
-**A — `SearchLabPage` depends on the `compare` endpoint also used by hidden features:** `POST /api/admin/compare` in `admin.py` is called by `SearchLabPage.tsx` for A/B pipeline testing. If `SearchLabPage` is removed as "unused", the endpoint itself may be left in the backend but the frontend fetch hook (`useAdminData.ts`) may still reference it. Conversely, if `SearchLabPage` is kept but the `ToolsPage` hash navigation to `#search-lab` is removed, users cannot reach it but the page component remains in the bundle.
+The v5.2 milestone wants "See All" expansion buttons on `TopExpertsCard` and `TopQueriesCard`. There are two interpretations:
+1. **Navigate away** — `Link to="/admin/data"` (consistent with existing pattern, but loses the period toggle context)
+2. **Expand in-place** — show more rows within the same card (richer UX, but requires local state + API call changes)
 
-**B — `IntelligenceDashboardPage` (t-SNE) and the embedding heatmap are broken (always loading) but the t-SNE background task is still running at startup:** Removing the dashboard page would stop the broken UI from being visible, but `_compute_tsne_background` still runs on every Railway startup (async task in `main.py` line 105–140), consuming CPU for data nobody sees. The fix is removing both the UI page AND the startup task together.
+The risk is in-place expansion: `TopExpertsCard` fetches `/events/exposure` with `days` from the parent, and `TopQueriesCard` fetches `/analytics/top-queries` with `days` and `limit: 5`. The endpoints already support larger limits. But the card layout (AdminCard with `p-5`) is fixed-height in the current design — expanding to 20+ rows will overflow and either clip (if `overflow: hidden` is inherited) or expand the card to push all content below it down the page unexpectedly.
 
-**C — `SettingsPage` writes to the `settings` table; the steering panel toggles (HyDE, feedback boost) are read at runtime by `search_intelligence.py`:** If `SettingsPage` is removed but the `settings` table keeps being read by the backend, the settings become permanently frozen at their last written values. This is acceptable but must be a conscious decision — the page removal should be documented as "settings are now fixed at [current values]".
+If "See All" navigates away to `/admin/data`, the period toggle selection (Today/7d/30d/All) is lost because `days` is local state in `OverviewPage` that is not persisted to the URL or to any shared store.
 
 **Why it happens:**
-Admin pages look independent but share backend endpoints, background tasks, and runtime state. Cleanup that focuses on the frontend routing (removing route entries from `AdminApp.tsx` or the sidebar links) leaves the backend machinery running. The inverse — removing backend endpoints without removing their frontend callers — causes 404 errors on the pages that remain.
+The Overview page's period toggle controls all insight cards via a shared `days` prop, but this context is not propagated to other admin pages. "See All" navigation discards the current context.
 
 **How to avoid:**
-- For each admin page to be removed, audit: (1) which backend endpoint it calls, (2) whether that endpoint is called anywhere else, (3) whether removing the page also means removing a background task or scheduled job.
-- Create a dependency map before cutting: list every `adminFetch()` or `adminPost()` call in the page being removed and trace each to its backend route.
-- Remove frontend route + sidebar link + backend endpoint + background task in the same PR when they are exclusive to the removed page. Separate PRs for backend and frontend removals create a window where 404s appear in the admin.
-- For `IntelligenceDashboardPage` (t-SNE): remove the page, the hash tab entry in `ToolsPage`, AND the `asyncio.create_task(_compute_tsne_background(app))` call in `main.py` lifespan. Keep the `tsne_cache` attribute on `app.state` as an empty list (other code may reference it) but remove the computation.
-- After cleanup, run a grep for every deleted route string across the frontend — `grep -r "tsne\|intelligence\|score-explainer"` — to catch dangling references in test files, type definitions, or hooks.
+- For in-place expansion: add a `showAll: boolean` toggle to each card component with a local `useState`. When true, remove the `slice(0, 5)` from the data and switch the card to a scrollable container with `max-h-96 overflow-y-auto`. This avoids layout shift for the full page.
+- For navigation: pass `days` as a query param in the Link URL (`to={/admin/data?days=${days}}`). The destination page can read it from `useSearchParams()` to restore context.
+- Do not add a "See All" that fetches the full unfiltered dataset in a single API call without the `days` filter — this can return hundreds of rows and slow the admin panel.
+- The simplest correct implementation: in-place expansion with a `max-h` scrollable container, no additional API calls (the current endpoints already return all results — the `slice(0, 5)` is client-side).
 
 **Warning signs:**
-- Railway logs show `asyncio.Task exception was never retrieved` from removed background task
-- Admin sidebar shows links to pages that return 404 (route removed but link not removed)
-- `useAdminData.ts` fetch hooks call deleted endpoints — React Query / SWR / manual fetch shows 404 in network tab on pages that remain visible
+- "See All" click navigates to the Data page with Today filter selected (default) rather than the period the admin was viewing on Overview
+- In-place expansion causes the entire Overview page to jump as the card expands and pushes content below it down
+- Expanded card is taller than the viewport on mobile, with no scroll affordance
+- "See All" fetch hits the same endpoint but without a `limit` param — returns 500+ rows and the card hangs
 
-**Phase to address:** Admin cleanup phase — build the dependency map first, remove all three layers (frontend route, backend endpoint, background task) atomically.
+**Phase to address:** Admin See-All phase — decide navigate vs. in-place before implementation; if in-place, cap with `max-h` + overflow scroll.
 
 ---
 
-### Pitfall 5: Lazy Loading Framer Motion or Vite Code Splitting Cause Performance Regressions
+### Pitfall 5: Direct Email-Based Tracking Creates a Dual Data Model Without Retroactive Backfill
 
 **What goes wrong:**
-Two specific regressions can occur when adding code splitting or lazy loading to this specific stack:
+The current tracking architecture is:
+- Anonymous: `user_events` table uses `session_id` (UUID in localStorage)
+- Identified: `lead_clicks` table uses `email` (written by frontend when email is known)
+- Bridge: `newsletter_subscribers.session_id` column links the two — but only for users who subscribed via the newsletter gate (not all users have this link)
 
-**A — LazyMotion vendor chunk bypass:** The current app imports `motion` from `motion/react` (Framer Motion v12 equivalent, ~34kb gzipped). Adding `LazyMotion` and swapping to the `m` component reduces initial bundle but requires Vite's `manualChunks` to not place the full motion library in the vendor chunk. Vite's default behavior eagerly bundles all `node_modules` into a single vendor chunk, making `LazyMotion`'s deferred loading ineffective — the 34kb is still loaded immediately. This is a documented Vite + Framer Motion compatibility issue.
+The v5.2 goal is "direct email-based tracking" — attaching email to searches and clicks. The data model implication is:
 
-**B — React.lazy + Suspense on admin pages flashes loading state on the public Explorer:** If `React.lazy()` is used for admin page components (sensible, since admin is rarely visited), the Suspense fallback displays while the admin chunk loads. If the Suspense boundary is placed too high in the component tree — e.g., wrapping `<RouterProvider>` — then every cold navigation (first visit to any route) shows a loading flash, including the public Explorer on first load.
+**Option A — Add `email` column to `user_events`:** All new events from gated users carry email. Historical events (all events before v5.2) have `email = NULL`. Admin queries that aggregate by email will silently exclude all pre-v5.2 activity for every user. The lead timeline in `LeadsPage.tsx` already does a three-way merge (conversations + lead_clicks + session-linked user_events) — adding a fourth path (email-keyed user_events) will complicate this merge further.
 
-**C — VirtuosoGrid and motion animation competing:** The current `ExpertGrid.tsx` uses `animate()` from `motion/react` for the barrel roll easter egg. `VirtuosoGrid` uses `ResizeObserver` internally. If an animation runs on the `containerRef` that wraps `VirtuosoGrid`, the element's layout changes during animation can trigger `ResizeObserver` callbacks inside Virtuoso, causing scroll position recalculation mid-animation. This is a known react-virtuoso issue (GitHub issue #440 — rapid padding changes causing screen shake).
+**Option B — Continue using session_id + post-capture linking:** The subscribe endpoint already captures `session_id` at the moment of subscription. Pre-subscription events linked to that session_id can be joined at query time. This is the current approach but it only works if the session_id captured at subscribe time matches the session_id used for events — which breaks if the user clears localStorage or switches browsers.
+
+**Option C — Client sends email in event payload:** After gate submission, `tracking.ts` could include the stored email in every event's payload. This adds email to the payload JSON blob without schema change. But `user_events.payload` is a JSON text column — querying by email requires `json_extract(payload, '$.email')` which is slow and cannot be indexed.
+
+The risk is implementing Option C as a shortcut: it avoids schema changes but creates an unindexed email field in a JSONB blob that the admin queries will need to extract. As `user_events` grows (every search, every click), this becomes an O(n) scan for any per-email query.
 
 **Why it happens:**
-Performance optimization on an existing app often means adding lazy loading as an afterthought without auditing which modules are in which chunks. The Framer Motion issue specifically affects apps that look like they should benefit from `LazyMotion` but are prevented by Vite's bundling defaults.
+Email-in-payload feels like "just adding one field" and avoids a migration. The performance and indexing implications only surface when the admin timeline query becomes slow as the table grows.
 
 **How to avoid:**
-- Do not add `LazyMotion` unless also setting `build.rollupOptions.output.manualChunks` to exclude `motion/react` from the vendor chunk — otherwise the optimization is purely cosmetic.
-- Place `Suspense` boundaries at the route level, not at the router level: wrap individual route `element` values in `<Suspense fallback={<SkeletonGrid />}>` so only that route's chunk triggers a loading state.
-- For the barrel roll animation: wrap the `animate()` call with a `requestAnimationFrame` guard or use CSS transforms (instead of layout-affecting properties) to avoid triggering Virtuoso's ResizeObserver. The current implementation uses `rotate: 360` which is a transform — this is safe. Do not change it to `width` or `height` animations.
-- The most impactful performance gain for this app is not code splitting but rather ensuring `VirtuosoGrid`'s `overscan={200}` is tuned correctly. Too-high overscan pre-renders unnecessary cards; too-low causes blank patches during fast scrolling.
-- Run `npx vite build --analyze` (or Rollup visualizer) before and after any bundling change to verify chunk sizes actually decreased.
+- Add a nullable `email` column to `user_events` with an index: `email: Mapped[str | None] = mapped_column(String(320), nullable=True, index=True)`. This is a non-breaking schema change (SQLite `Base.metadata.create_all` does not add columns to existing tables — requires an explicit `ALTER TABLE` migration).
+- Write the migration explicitly: `ALTER TABLE user_events ADD COLUMN email TEXT;` as a startup migration in `main.py` (same pattern as the email purge migration).
+- After gate submission, store email in `tracking.ts` alongside session_id: when email is available, include it in the event payload AND set `UserEvent.email` on the backend.
+- The lead timeline query in `leads.py` can then join `user_events` directly on `email` instead of the session_id bridge — simpler, more reliable, and works retroactively for any events where email was captured.
 
 **Warning signs:**
-- Bundle size unchanged after adding LazyMotion (Framer Motion still in vendor chunk)
-- First paint shows loading flash on the public Explorer (Suspense boundary too high)
-- Screen shakes when barrel roll animation triggers while user is mid-scroll (ResizeObserver conflict)
-- Console warning: `ResizeObserver loop limit exceeded` during animation
+- Admin lead timeline shows blank activity for users who submitted the email-first gate (session_id at submit time does not match session from earlier browsing)
+- "See All" for top searches doesn't show which emails drove which searches (data is session-only, no email attribution)
+- `EXPLAIN QUERY PLAN` on the lead timeline query shows a full table scan on `user_events` when email filtering is done via `json_extract`
 
-**Phase to address:** Performance optimization phase — audit bundle composition before changing anything; use `--analyze` as first step.
+**Phase to address:** Email-based tracking phase — add the indexed `email` column to `user_events` via an explicit startup migration before building the frontend tracking changes.
 
 ---
 
-### Pitfall 6: SQLite Under Real Public Traffic Hits "Database Is Locked" Without WAL Mode
+### Pitfall 6: Gate on Page Entry Blocks Intercom and Analytics from Firing Until After Submission
 
 **What goes wrong:**
-SQLite in default journal mode (DELETE/rollback) blocks readers during any write operation. Railway runs a single FastAPI process, but FastAPI is async — multiple concurrent requests run in the same event loop, and SQLAlchemy's async session management can queue multiple write transactions that compete for the write lock. Under real public traffic (not just admin use), the `user_events` table receives a `POST /api/events` write on every card click, Sage query, and filter change. These fire-and-forget writes arrive concurrently and can cause `sqlite3.OperationalError: database is locked` if `busy_timeout` is not configured.
+GA4 and Microsoft Clarity both fire page_view events as soon as the page loads (the `Analytics` component calls `logPageView()` on route change). Intercom initializes via `IntercomProvider` in `RootLayout.tsx`. These run regardless of gate state.
 
-The specific scenario: 10 users browse simultaneously, each triggering filter events every few seconds → 20–50 concurrent `INSERT INTO user_events` calls → the write lock queue backs up → SQLAlchemy raises `OperationalError` → the `/api/events` endpoint returns 500 (even though it should be fire-and-forget — the 500 is logged by Sentry, creating noise).
+However, if the page-entry gate is implemented as a full-page blocking modal with `pointer-events: none` on everything behind it, Intercom's launcher button becomes inaccessible to users who have not yet submitted their email. A user who sees the gate and wants help via Intercom cannot reach the chat widget. This is a support flow regression: the current system allows free browsing (no gate until profile click), so users can always reach Intercom.
 
-Additionally, the `search_intelligence.py` runs complex multi-table reads during every `/api/explore` call. If a write is in progress (even a tiny `user_events` insert), those reads queue behind it without WAL mode.
-
-**Why it happens:**
-SQLite's default journal mode was set for single-user desktop use. WAL mode requires explicit configuration: `PRAGMA journal_mode=WAL` and `PRAGMA busy_timeout=5000` (5s wait before giving up). SQLAlchemy does not set either by default. The issue only surfaces under real concurrent traffic — dev and soft-launch with a few users never hits this threshold.
-
-**How to avoid:**
-- Add WAL mode and busy_timeout configuration to the SQLAlchemy engine in `database.py`:
-  ```python
-  from sqlalchemy import event as sa_event
-
-  @sa_event.listens_for(engine, "connect")
-  def set_sqlite_pragmas(dbapi_connection, _):
-      cursor = dbapi_connection.cursor()
-      cursor.execute("PRAGMA journal_mode=WAL")
-      cursor.execute("PRAGMA busy_timeout=5000")
-      cursor.execute("PRAGMA synchronous=NORMAL")
-      cursor.close()
-  ```
-- Keep write transactions short — the existing `POST /api/events` is already fire-and-forget and fast (single INSERT), which is correct.
-- Do not run long-running write transactions (e.g., FAISS rebuild + FTS5 rebuild) in the same SQLite connection that handles user requests. The existing `_ingest_lock` (`asyncio.Lock`) already prevents concurrent rebuilds — verify it holds during the FTS5 `INSERT INTO experts_fts(experts_fts) VALUES('rebuild')` call.
-- WAL mode creates a `-wal` and `-shm` file alongside the SQLite db file on Railway's volume. Verify Railway's persistent volume mount includes these files or SQLite falls back to DELETE mode on restart.
-
-**Warning signs:**
-- Sentry shows `sqlite3.OperationalError: database is locked` from `events.py` or `explore.py` under load
-- Railway logs show 500 responses on `/api/events` after public launch
-- FAISS rebuild hangs indefinitely (the `_ingest_lock` is blocked by a WAL checkpoint that can't complete due to concurrent readers — WAL checkpoint starvation)
-
-**Phase to address:** Production hardening phase — add WAL pragma on engine connect before public launch day.
-
----
-
-### Pitfall 7: Single-Key Admin on the Same Public Domain Has No Brute Force Protection
-
-**What goes wrong:**
-The `/api/admin/auth` endpoint in `admin.py` accepts any POST with a `{"key": "..."}` body and returns `200 {"ok": true}` or `401`. There is no rate limiting, no lockout after failed attempts, no IP blocking, and no request logging for auth failures. Once the marketplace goes fully public, bots and crawlers that discover the `/api/admin/auth` URL (it appears in the Vercel-deployed JS bundle since `VITE_API_URL` is baked in) can brute-force the admin key with no friction.
-
-`sessionStorage` for the admin key has one specific security property worth preserving: unlike `localStorage`, it is cleared when the browser tab closes, so a stolen session does not persist indefinitely. However, if the admin visits the public site on the same browser (same origin), any XSS vulnerability in the public Explorer could read the admin `sessionStorage` key and send it to an attacker. This is the "same domain" risk — public user content (future expert bios, review text, etc.) could be used as an XSS vector against the admin session.
-
-The single-key approach also means key rotation requires updating a Railway env var and notifying all admin users simultaneously (currently just one person, but worth noting).
+Additionally, if the gate is implemented with a `z-index: 50` overlay (as `NewsletterGateModal.tsx` currently uses), Intercom's launcher sits at a lower z-index and is visually covered. The user sees a dark overlay but no chat button.
 
 **Why it happens:**
-The single-key auth was deliberately simple for internal use. The risk profile changes when the site goes public because the attack surface (the `/api/admin/auth` URL) becomes discoverable by anyone inspecting network requests or the JS bundle.
+Gate UX is typically designed in isolation without checking what other UI elements sit behind the overlay. Intercom's launcher z-index is fixed at 2147483001 (the Intercom default) which should win — but if the overlay is `position: fixed` with `z-index: 9999` or higher and `pointer-events: all`, clicks on the Intercom launcher position will be captured by the overlay instead.
 
 **How to avoid:**
-- Add rate limiting to `/api/admin/auth` using `slowapi` (the FastAPI-compatible rate limiter): limit to 5 attempts per IP per minute. This is a 3-line change:
-  ```python
-  from slowapi import Limiter
-  from slowapi.util import get_remote_address
-  limiter = Limiter(key_func=get_remote_address)
-  @auth_router.post("/auth")
-  @limiter.limit("5/minute")
-  def authenticate(request: Request, body: AuthBody): ...
-  ```
-- Log all failed auth attempts with `structlog`: `log.warning("admin.auth_failure", ip=request.client.host)` — this creates an audit trail without requiring external infrastructure.
-- If migrating to username+password (per v4.0 target), use bcrypt via `passlib`: `CryptContext(schemes=["bcrypt"])`. A bcrypt hash takes ~100ms to verify, which is the single most effective brute-force defense (makes automated attacks infeasibly slow).
-- The admin panel is at `/admin` which is a well-known path — consider renaming to a non-obvious path (e.g., `/dashboard-internal`) as a low-effort obscurity measure, though this is not a substitute for rate limiting.
-- If the admin logs in from the same browser as public users: use a separate browser profile or a private window for admin access until the session key is rotated to a dedicated admin browser.
+- Keep the gate modal at `z-index: 50` (same as current `NewsletterGateModal`) and rely on Intercom's hard-coded high z-index to remain clickable above the overlay.
+- Verify Intercom launcher remains accessible behind the gate by testing on a production-like environment (Intercom only initializes with a real `appId`).
+- If a dismiss option is added to the page-entry gate, ensure clicking the backdrop calls `onDismiss` to close the modal — the current `NewsletterGateModal` already does this (`onClick={onDismiss}` on the overlay div) and this should be preserved.
+- Do NOT use `pointer-events: none` on the Intercom launcher area as a "hide until subscribed" mechanism — this silently removes support access for new users who hit friction.
 
 **Warning signs:**
-- Railway logs show hundreds of POST requests to `/api/admin/auth` from varying IPs within minutes of public launch
-- Sentry shows spike in 401 responses from the auth endpoint (brute force in progress)
-- Admin dashboard becomes inaccessible due to Railway receiving bot traffic (rate limited at Railway infrastructure level, not application level)
+- Intercom chat button is not clickable while the gate is open
+- Users who want help before submitting email have no support channel
+- Intercom widget appears behind the gate overlay (visible but not clickable)
 
-**Phase to address:** Auth security hardening phase — add rate limiting to `/api/admin/auth` before or alongside the auth migration, not after.
+**Phase to address:** Email-first gate phase — test Intercom accessibility with the gate open before shipping; use the existing NewsletterGateModal z-index (50) as the baseline.
 
 ---
 
@@ -252,26 +211,26 @@ Shortcuts that seem reasonable but create long-term problems.
 
 | Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
 |----------|-------------------|----------------|-----------------|
-| Keeping sessionStorage for admin token instead of HttpOnly cookie | Simple migration, no CSRF complexity | XSS on public Explorer can steal admin session if both use same origin | Acceptable only if admin never logs in on the public domain's browser tab |
-| Single flat `tags` array for both domain and industry tags | No schema change, no migration | Backend must distinguish tag types by value matching (fragile), or users see confusing filter behavior | Never — separate the namespaces before launch |
-| Removing admin pages without removing backend endpoints | Faster cleanup, fewer backend changes | Dead endpoints remain in API surface, occupying route slots and confusing future contributors | Acceptable if endpoints are truly harmless no-ops; unacceptable if they accept writes |
-| Skipping WAL mode until after public launch | No immediate visible problem | First day of real traffic may produce locked database errors; Sentry fills with 500s | Never — add WAL mode in production hardening phase before public launch |
-| Adding `React.lazy` to admin pages without a `Suspense` boundary | Smaller initial bundle | Any navigation to admin shows a blank screen until chunk loads (no loading indicator) | Never without a Suspense boundary |
+| Writing email in `user_events.payload` JSON instead of indexed column | No schema migration needed | All per-email event queries do full table scan via `json_extract` | Never — add the column with index |
+| Using the same `source: "gate"` for page-entry and profile-unlock captures | No code change to Loops integration | Cannot segment leads by acquisition intent in Loops or admin | Never — distinct source values cost nothing |
+| "See All" navigates away without passing `days` context | Simple implementation with `Link` | Admin loses period context on every drill-down | Acceptable only if destination page defaults to the most useful period (All-time) |
+| Dismissible page-entry gate (user can skip it) | Lower friction UX | Loses the lead capture purpose entirely; returning users who skip are never captured | Depends on business decision — if the gate is hard (no dismiss), this is N/A |
+| Re-using `NewsletterGateModal` component for page-entry gate with different copy | No new component needed | Tight coupling between modal and trigger context makes the two gates hard to evolve independently | Acceptable if copy is passed as props, not hardcoded |
 
 ---
 
 ## Integration Gotchas
 
-Common mistakes when connecting to internal systems during v4.0 changes.
+Common mistakes when connecting the new features to the existing system.
 
 | Integration | Common Mistake | Correct Approach |
 |-------------|----------------|------------------|
-| Zustand persist + new tag schema | Bumping tag filter shape without bumping `version` | Set `version: 2` and add `migrate: (state) => ({ ...state, industryTags: [] })` to the persist config |
-| VirtuosoGrid + list toggle | Defining `components` prop inline in render function | Define `components` as module-level constants outside the component function |
-| FastAPI + SQLite WAL | Setting WAL mode via raw SQL before SQLAlchemy pool init | Use SQLAlchemy `event.listens_for(engine, "connect")` — fires on every connection, including pool connections |
-| slowapi rate limiter + FastAPI | Forgetting to add `SlowAPIMiddleware` to the app | `app.add_middleware(SlowAPIMiddleware)` is required alongside the `@limiter.limit()` decorator |
-| bcrypt + passlib | Using `bcrypt` directly without `passlib.CryptContext` | `CryptContext` handles algorithm agility and future migration; direct `bcrypt` is harder to upgrade |
-| Framer Motion + Vite LazyMotion | Expecting vendor chunk exclusion automatically | Must set `rollupOptions.output.manualChunks` explicitly to split motion from vendor chunk |
+| Loops + page-entry gate | Calling `sync_contact_to_loops` with source `"gate"` from page-entry path | Add `source: "page_entry"` and pass it through to Loops as a custom contact property |
+| `useNltrStore` + page-entry gate | Calling `localStorage.setItem('tcs_gate_email', email)` directly | Call `setSubscribed(email)` from `useNltrStore` — this writes to the Zustand persist key and triggers the reactive `isUnlocked` check in `MarketplacePage.tsx` |
+| `user_events` + email tracking | Including email in `payload` JSON blob | Add indexed `email TEXT` column via startup `ALTER TABLE` migration; pass email field in the POST `/api/events` body |
+| `nltrStore` Zustand persist + new gate | Changing the persist key name `tinrate-newsletter-v1` | Do NOT change the key — this would force all subscribed users to re-submit the gate. Bump only the internal `version` number with a `migrate` function if the state shape changes |
+| Admin "See All" + period toggle | Hardcoding `days: 0` (all-time) in the expanded view | Read `days` from the parent's period toggle state and pass it as a prop to the expanded view |
+| Admin "See All" + exposure endpoint | Calling `/events/exposure` without a limit | The endpoint already returns all rows ordered by clicks — client-side `slice(0, 5)` is the current limit. Adding a "See All" just removes the slice; no backend change needed |
 
 ---
 
@@ -281,39 +240,37 @@ Patterns that work at small scale but fail as usage grows.
 
 | Trap | Symptoms | Prevention | When It Breaks |
 |------|----------|------------|----------------|
-| SQLite without WAL mode | `database is locked` errors under concurrent writes | Add WAL + busy_timeout pragmas on engine connect | At ~10+ concurrent active users |
-| VirtuosoGrid overscan too high | High memory usage, slow initial render on mobile | Keep `overscan={200}` (current); go no higher than `{400}` | At 530+ items with mobile devices |
-| Inline `components` prop in Virtuoso | All cards remount on every parent re-render | Define component types outside render function | Immediately on first filter change |
-| No rate limiting on auth endpoint | Sentry fills with 401s; Railway CPU spike | Add `slowapi` rate limit before public launch | At first bot discovery of `/api/admin/auth` |
-| Industry tags in same FAISS search as domain tags | Empty results when both tag types are active (over-filtered) | Separate industry tags into SQL `WHERE category IN` pre-filter, keep domain tags in FAISS | At first user who selects both tag types simultaneously |
+| `json_extract(payload, '$.email')` on `user_events` for email filtering | Lead timeline query becomes slow as events table grows | Add indexed `email` column; use direct column equality for filtering | At ~10,000+ rows in `user_events` |
+| Fetching all rows for "See All" without pagination | Large teams with high search volume cause `/events/exposure` to return 500+ rows and slow the admin overview | Add `limit` param to "See All" fetch, or add scroll-loaded pagination | At 100+ experts with active click tracking |
+| Page-entry gate shows on every page load for test/preview environments | Gate fires in Railway preview PRs, making it harder to test admin changes | Read an env var or URL param to bypass the gate in staging (e.g., `?bypass_gate=1` in non-prod) | Immediately in staging environments |
+| Full `user_events` table scan in lead timeline for the session_id bridge | Timeline query joins three tables with a subquery on `user_events.session_id` | The current query is already bounded per-email — acceptable. Risk is if `user_events` grows to 100k+ rows without an index on `session_id` | `user_events.session_id` already has `index=True` — current implementation is fine |
 
 ---
 
 ## Security Mistakes
 
-Domain-specific security issues beyond general web security.
+Domain-specific security issues relevant to v5.2 changes.
 
 | Mistake | Risk | Prevention |
 |---------|------|------------|
-| No rate limiting on `/api/admin/auth` | Brute force of single admin key; key discovered = full admin access | Add `slowapi` limit + bcrypt verification (slow hash = natural rate limit) |
-| Admin key in sessionStorage on public domain | XSS on Explorer page can read admin sessionStorage | Use separate browser profile for admin; or move admin to a subdomain with separate origin |
-| Shipping plaintext password in admin migration | If Railway env vars leak, password is exposed | Store only bcrypt hash as `ADMIN_PASSWORD_HASH` env var; never store plaintext |
-| Industry tag names overlapping with SQL injection vectors | FTS5 MATCH on tag names could be exploited | The existing `_safe_fts_query()` sanitizer already handles this; apply it to industry tag filter values too |
-| Removing `_require_admin` dependency from a cleanup endpoint | Endpoint becomes publicly accessible | Double-check that every route on `router` (not `auth_router`) has the `Depends(_require_admin)` inherited from the router-level dependency |
+| Sending email in `POST /api/events` payload without rate limiting | Attacker can enumerate valid emails by submitting them as tracking events | The events endpoint already has no auth and no rate limit — email in payload is fine because the endpoint does not confirm or deny email validity |
+| Persisting email in localStorage under a new key after the gate | Multiple keys for the same email can accumulate in localStorage over time | Write only to `useNltrStore` (Zustand persist, single key `tinrate-newsletter-v1`) |
+| Gate bypass via localStorage manipulation | Technically-savvy users can set `tcs_gate_email` in dev tools to bypass the gate | This is intentional (not a security threat) — the gate is a lead capture mechanism, not access control; the expert profiles are public anyway |
+| "See All" endpoint returns more data than paginated endpoint | Admin sees full list without pagination — acceptable since it's behind JWT auth | No action needed — this is correct behavior for the admin panel |
 
 ---
 
 ## UX Pitfalls
 
-Common user experience mistakes in this v4.0 context.
+Common user experience mistakes specific to v5.2 changes.
 
 | Pitfall | User Impact | Better Approach |
 |---------|-------------|-----------------|
-| Grid/list toggle resets scroll to top | Users lose their place after toggling view | Accept this as expected behavior; add a visual affordance ("View changed — showing from top") |
-| Industry tags displayed identically to domain tags in cloud | Users cannot tell "Finance" (industry) from "Financial Modeling" (domain) | Use distinct visual treatment: section labels, color, or icon prefix |
-| Admin login shows no error for wrong username (only wrong password) | Admin cannot diagnose whether username or password is wrong | Return generic "Invalid credentials" message for both — do not distinguish which field was wrong (security best practice) |
-| Auth migration leaves old sessionStorage key on existing admin sessions | Admin appears logged in but all API calls fail (new backend rejects old key format) | Add a `useEffect` in `RequireAuth.tsx` that validates the stored token against `/api/admin/auth` on mount; redirect to login if 401 |
-| List view card design not specified before implementation | Developer invents card layout that doesn't match the bento-card aesthetic | Define list card design (what information shows, what's hidden) in the phase spec before coding |
+| Page-entry gate has no dismiss option | Users who don't want to submit email are completely blocked from browsing | Depends on business decision — if hard gate, this is intentional; if soft gate, add a dismiss that records a "skipped" flag in sessionStorage (not localStorage) so the gate re-appears on next session |
+| Gate copy doesn't explain why email is needed | Users are suspicious and abandon | Lead with value: "Get curated expert insights + instant access to profiles" — the existing `NewsletterGateModal` copy already does this correctly |
+| "See All" opens full list but there's no way to collapse it | Admin sees a very long list with no way to return to the 5-row summary view | Add a "Show Less" button that toggles `showAll` back to false |
+| Email-first gate fires on direct navigation to a specific expert URL | Users who share filtered URLs or direct links are immediately gated before seeing content | Check if there's a `?ref=` or direct URL context that should bypass the gate (or show a lighter interstitial) |
+| Admin "See All" for TopExpertsCard navigates to `/admin/experts` (current behavior for expert links) | Expert links on Overview go to the experts page, not a click-detail view | Keep this behavior — it's consistent with the existing `Link to="/admin/experts"` in `TopExpertsCard` |
 
 ---
 
@@ -321,16 +278,16 @@ Common user experience mistakes in this v4.0 context.
 
 Things that appear complete but are missing critical pieces.
 
-- [ ] **Auth migration:** New login form works in dev — verify token validation against the live Railway backend, not just localhost; check that old sessionStorage sessions are invalidated on first visit after migration
-- [ ] **Auth migration:** Rate limiting added — verify `SlowAPIMiddleware` is registered in `main.py` (not just the decorator on the endpoint)
-- [ ] **Grid/list toggle:** Toggle works in dev — verify at mobile viewport (375px) that the list view's height container resolves to a non-zero pixel value
-- [ ] **Grid/list toggle:** `components.Header` and `components.Footer` defined outside render — verify by checking that cards do NOT flash/remount on filter change in the React DevTools Profiler
-- [ ] **Industry tags:** `industryTags` field added to `filterSlice.ts` `filterDefaults` — verify `resetFilters()` also clears `industryTags: []`
-- [ ] **Industry tags:** Zustand persist version bumped to 2 with `migrate` function — verify by opening the app with old `explorer-filters` localStorage data and confirming no console errors and a clean initial state
-- [ ] **Admin cleanup:** t-SNE background task removed from `main.py` lifespan — verify Railway startup logs no longer show `tsne.background_task_started`
-- [ ] **Admin cleanup:** No 404s on pages that remain after removing sibling pages — check every `adminFetch` URL in remaining pages against the backend route list
-- [ ] **WAL mode:** `PRAGMA journal_mode=WAL` fires on engine connect — verify by checking Railway logs for `sqlite3.OperationalError` under simulated concurrent load (ApacheBench or k6 with 10 concurrent users)
-- [ ] **WAL mode:** Railway volume persists `-wal` and `-shm` files — verify by checking Railway volume contents after restart
+- [ ] **Email-first gate:** Gate shows correctly for new users — verify returning subscribed users do NOT see it (test by opening in an incognito tab after localStorage has `tinrate-newsletter-v1` set with `subscribed: true`)
+- [ ] **Email-first gate:** Gate dismissal (if dismissible) writes to `sessionStorage`, not `localStorage` — a dismissed gate should re-appear on next session
+- [ ] **Email-first gate:** Loops receives `source: "page_entry"` (not `"gate"`) for page-entry captures — verify in Loops contacts list after a test submission
+- [ ] **Email-first gate:** Backend `POST /api/newsletter/subscribe` deduplication still works — second submission from the same email returns `{"status": "ok"}` with no error
+- [ ] **Email-first gate:** Intercom launcher remains clickable while the gate modal is open — test on production (Intercom only renders with a live appId)
+- [ ] **Admin See-All:** "See All" on TopExpertsCard shows the same period as the parent's period toggle — verify switching from "7d" to "All" on the toggle also changes the expanded list
+- [ ] **Admin See-All:** Expanded card does not cause the rest of the Overview page to jump — use `max-h` + scroll instead of full height expansion
+- [ ] **Email-based tracking:** `user_events` table has `email` column after startup migration — verify with `SELECT * FROM user_events LIMIT 1` in Railway SQLite
+- [ ] **Email-based tracking:** Lead timeline in `LeadsPage.tsx` shows events from email-keyed `user_events` rows — test by submitting the gate, performing a search, then checking the lead's timeline in admin
+- [ ] **Email-based tracking:** Users who browse before submitting the gate still show pre-gate events in their timeline via the `session_id` bridge — verify the existing session_id linking still works alongside the new email-keyed path
 
 ---
 
@@ -340,12 +297,12 @@ When pitfalls occur despite prevention, how to recover.
 
 | Pitfall | Recovery Cost | Recovery Steps |
 |---------|---------------|----------------|
-| Admin locked out during auth migration | HIGH | Revert backend to previous deploy via Railway; old `ADMIN_SECRET` env var is still set; admin can log in with old key |
-| VirtuosoGrid height is 0 after list toggle | LOW | Add explicit `minHeight: '400px'` to the container as a fallback; redeploy Vercel |
-| Industry tags corrupt Zustand state for returning users | MEDIUM | Bump persist version + add migrate function; returning users get fresh state on next visit (filter preferences lost, but data intact) |
-| Admin page removed but endpoint still needed | MEDIUM | Restore the route in `AdminApp.tsx` with a minimal stub component; full page can be deferred |
-| `database is locked` errors in production | MEDIUM | Add WAL pragma via hotfix; Railway redeploy takes ~60s; no data loss since SQLite WAL is non-destructive |
-| Brute force on `/api/admin/auth` | LOW | Add `slowapi` rate limit via hotfix; or temporarily change `ADMIN_SECRET` in Railway env vars to invalidate in-progress brute force |
+| Split-brain unlock state (returning users re-gated) | MEDIUM | Add the missing `legacyUnlocked` check to the new gate component; redeploy Vercel (~30s). No data loss. |
+| Flash of gate modal for returning users | LOW | Switch gate `isOpen` state to synchronous init; redeploy. No data loss. |
+| Wrong Loops source field for page-entry captures | LOW | Update `source` value in the subscribe call and the `loops.py` sync; existing DB records keep old source value (not retroactively fixable without a data migration, but new captures are correct) |
+| "See All" discards period context | LOW | Add `days` as a query param in the Link URL or pass it as a prop; redeploy |
+| Email in `user_events.payload` without index | MEDIUM | Run `ALTER TABLE user_events ADD COLUMN email TEXT; CREATE INDEX ix_user_events_email ON user_events(email);` on the Railway SQLite file; requires Railway SSH access or a startup migration hotfix |
+| Intercom inaccessible behind gate | LOW | Reduce gate z-index to 50 (matches current `NewsletterGateModal`); Intercom's hard-coded high z-index takes over. Redeploy. |
 
 ---
 
@@ -355,37 +312,25 @@ How roadmap phases should address these pitfalls.
 
 | Pitfall | Prevention Phase | Verification |
 |---------|------------------|--------------|
-| Admin lockout during auth migration | Admin auth phase — dual-mode endpoint | New login works in Railway preview before merging to main |
-| VirtuosoGrid/Virtuoso height breakage | Grid/list toggle phase — height test first | Chrome DevTools shows non-zero container height at 375px, 768px, 1280px |
-| Inline component definitions cause remount storm | Grid/list toggle phase — code review gate | React DevTools Profiler shows no card remounts on filter change |
-| Industry + domain tag filter collision | Tag taxonomy phase — backend contract defined first | Selecting "Finance" (industry) + "Financial Modeling" (domain) returns results, not 0 |
-| Zustand persist schema mismatch | Tag taxonomy phase — version bump and migrate | Old localStorage state does not cause console errors on first visit |
-| Admin cleanup breaks remaining pages | Admin cleanup phase — dependency audit | All admin pages that remain return 200 with data after cleanup deploy |
-| LazyMotion in Vite vendor chunk | Performance phase — bundle analysis before/after | `npx vite build --analyze` shows motion chunk size decreased |
-| SQLite database locked under traffic | Production hardening phase — WAL before public launch | k6 10-concurrent-user test shows 0 `database is locked` errors |
-| No brute force protection on auth | Auth security phase — rate limit added same PR as migration | POST to `/api/admin/auth` 6 times in 1 minute returns 429 on 6th attempt |
-| XSS risk from same-domain admin | Auth security phase — document and decide | Decision recorded: separate browser profile for admin, OR subdomain separation deferred to v5.0 |
+| Split-brain unlock state | Email-first gate phase — audit all unlock paths first | Returning newsletter subscribers do not see page-entry gate; legacy `tcs_gate_email` users also bypassed |
+| Flash of gate for returning users | Email-first gate phase — synchronous state init | Gate does not appear even for 1 frame in returning-user test in React DevTools |
+| Wrong Loops source field | Email-first gate phase — define source values before building | Loops contacts table shows `page_entry` source for page-entry submits |
+| "See All" discards period context | Admin See-All phase — pass `days` to expanded view | Clicking "See All" while "7d" is active shows 7d data in expanded list |
+| Email in unindexed payload | Email tracking phase — add indexed column migration first | `EXPLAIN QUERY PLAN` on lead timeline query shows index seek, not full scan |
+| Intercom blocked by gate overlay | Email-first gate phase — test Intercom with gate open | Intercom launcher is clickable while gate is visible in production test |
+| Dual data model without retroactive backfill | Email tracking phase — accept the NULL gap explicitly | Lead timeline documents that events before v5.2 use session_id bridge; events after v5.2 use email column directly |
 
 ---
 
 ## Sources
 
-- Direct codebase analysis: `frontend/src/layouts/RootLayout.tsx`, `frontend/src/admin/LoginPage.tsx`, `frontend/src/admin/RequireAuth.tsx`, `frontend/src/admin/AdminApp.tsx`, `frontend/src/components/marketplace/ExpertGrid.tsx`, `frontend/src/pages/MarketplacePage.tsx`, `frontend/src/components/marketplace/ExpertCard.tsx`, `frontend/src/store/filterSlice.ts`, `frontend/src/store/index.ts`, `frontend/vite.config.ts`, `frontend/package.json`, `app/routers/admin.py`, `app/main.py`
-- [react-virtuoso GitHub Issues #440, #479, #703, #801](https://github.com/petyosi/react-virtuoso/issues) — VirtuosoGrid height, padding shake, mixed-height scroll bugs
-- [react-virtuoso Troubleshooting Guide](https://virtuoso.dev/react-virtuoso/troubleshooting/) — inline component definition remount cause, getState/restoreStateFrom API
-- [Vite code splitting ineffective with vendor chunk #3731](https://github.com/vitejs/vite/issues/3731) — Framer Motion LazyMotion bypass via vendor chunk
-- [Motion docs: Reduce bundle size](https://motion.dev/docs/react-reduce-bundle-size) — LazyMotion requires manualChunks to be effective
-- [SQLite WAL mode](https://sqlite.org/wal.html) — WAL internals, checkpoint starvation, concurrent readers/writers
-- [SQLite "database is locked" solutions](https://tenthousandmeters.com/blog/sqlite-concurrent-writes-and-database-is-locked-errors/) — WAL + busy_timeout pattern
-- [Solving SQLITE_BUSY with WAL Mode](https://coldfusion-example.blogspot.com/2026/01/solving-sqlitebusy-database-is-locked.html) — production WAL configuration
-- [FastAPI OAuth2 with JWT](https://fastapi.tiangolo.com/tutorial/security/oauth2-jwt/) — bcrypt + passlib pattern for FastAPI auth
-- [FastAPI session guide](https://byo.propelauth.com/post/fastapi-session-guide) — session vs token storage tradeoffs
-- [JWT storage and XSS](https://blog.ropnop.com/storing-tokens-in-browser/) — sessionStorage, localStorage, HttpOnly cookie tradeoffs
-- [Lack of Brute-Force Protection on Auth Endpoints](https://github.com/ethyca/fides/security/advisories/GHSA-7q62-r88r-j5gw) — real-world advisory for unprotected admin login
-- [Zustand version migration](https://dev.to/diballesteros/how-to-migrate-zustand-local-storage-store-to-a-new-version-njp) — version + migrate function pattern for schema changes
-- [Taxonomy and IA: Categories vs Tags](https://medium.com/design-bootcamp/categories-or-tagging-differences-in-taxonomy-and-ia-b9944ee73da8) — domain-specific tag conflict analysis
-- [FastAPI Security best practices 2025](https://blog.greeden.me/en/2025/10/14/a-beginners-guide-to-serious-security-design-with-fastapi-authentication-authorization-jwt-oauth2-cookie-sessions-rbac-scopes-csrf-protection-and-real-world-pitfalls/) — session fixation, CSRF, XSS countermeasures
+- Direct codebase analysis: `frontend/src/pages/MarketplacePage.tsx` (lines 44–52 legacy unlock check), `frontend/src/store/nltrStore.ts`, `frontend/src/hooks/useEmailGate.ts`, `frontend/src/components/marketplace/NewsletterGateModal.tsx`, `frontend/src/tracking.ts`, `frontend/src/admin/pages/OverviewPage.tsx` (TopExpertsCard, TopQueriesCard, ZeroResultQueriesCard), `frontend/src/admin/components/AdminCard.tsx`, `app/routers/newsletter.py`, `app/routers/email_capture.py`, `app/routers/events.py`, `app/routers/admin/events.py`, `app/routers/admin/analytics.py`, `app/routers/admin/leads.py`, `app/models.py`, `app/loops.py`
+- Known `NewsletterGateModal` z-index value: `z-50` (line 30 of `NewsletterGateModal.tsx`) vs. Intercom default z-index: 2147483001 (Intercom docs)
+- Zustand persist rehydration: synchronous before first render — `useNltrStore.getState()` is available immediately without `useEffect`
+- SQLite `ALTER TABLE ADD COLUMN` semantics: non-destructive, adds column with `DEFAULT NULL` for existing rows, supported in SQLite 3.x
+- SQLite startup migration pattern: existing precedent in `main.py` lifespan (`UPDATE experts SET email=''`) — same pattern applicable for `ALTER TABLE user_events ADD COLUMN email TEXT`
+- Loops API `/contacts/create` — idempotent by email, source field is a standard property; custom properties require Loops property registration
 
 ---
-*Pitfalls research for: v4.0 Public Launch — auth migration, grid/list toggle, tag taxonomy, admin cleanup, performance, SQLite hardening, auth security*
-*Researched: 2026-02-27*
+*Pitfalls research for: v5.2 Email-First Gate, Admin See-All, and Email-Based Tracking*
+*Researched: 2026-03-04*

@@ -1,27 +1,30 @@
 # Feature Research
 
-**Domain:** Expert marketplace admin + public explorer (React + FastAPI)
-**Milestone:** v4.0 Public Launch — polish, admin overhaul, production hardening
-**Researched:** 2026-02-27
-**Confidence:** HIGH overall — codebase fully inspected; patterns verified against 2025/2026 sources
+**Domain:** Expert marketplace — email-first gate, admin "See All" expansion, email-based tracking
+**Milestone:** v5.2 Email-First Gate & Admin See-All
+**Researched:** 2026-03-04
+**Confidence:** HIGH overall — codebase fully inspected; patterns verified against current sources
 
 ---
 
 ## Context: What Already Exists (do NOT re-implement)
 
-This is a polish/hardening milestone on top of a fully-shipped v3.1 product. All research
-below is scoped to the six new feature areas only.
+This is an additive milestone on a shipped v5.1 product. All research below is scoped to the
+three new feature areas only.
 
 | Existing Baseline | Status |
 |-------------------|--------|
-| Single-key admin auth (`ADMIN_SECRET` env var, raw key in sessionStorage) | Live — replace with bcrypt |
-| `VirtuosoGrid` with `grid-cols-2 md:grid-cols-3`, fixed `h-[180px]` cards | Live — extend with list toggle |
-| Tag cloud with 18 domain tags from `TOP_TAGS` constant | Live — extend with industry row |
-| `user_events` table: `card_click`, `sage_query`, `filter_change` events | Live — use for export |
-| Newsletter leads on `LeadsPage`; email leads linked to `Conversation` search history | Live — extend with CSV export |
-| `OverviewPage` with health speedometer + 4 KPI cards + zero-result top-5 + Sage sparkline | Live — extend with 2 cards |
-| `SkeletonGrid` on initial load; `EmptyState` on zero results; `animate-pulse` loading text | Live — extend with error state |
-| Logout button in `AdminSidebar` (sessionStorage.removeItem) | Live — no changes needed |
+| `useEmailGate` hook — `localStorage` key `tcs_gate_email`, lazy initializer, fire-and-forget backend call | Live — reuse, do NOT rewrite |
+| `ProfileGateModal` — AnimatePresence modal wrapping `EmailGate` form, triggered on "View Full Profile" click | Live — keep as fallback for direct-link users who bypass page entry |
+| `POST /api/email-capture` — idempotent SQLite upsert, Loops sync, returns `{status: "ok"}` | Live — no changes needed |
+| `email_leads` table — `id`, `email` (unique), `created_at` | Live — the identity anchor for v5.2 |
+| `user_events` table — `session_id` (anonymous), `event_type`, `payload`, `created_at` | Live — will gain `email` column for direct attribution |
+| `lead_clicks` table — `email`, `expert_username`, `search_query`, `created_at` | Live — already email-keyed; model for new tracking approach |
+| `OverviewPage` — `TopExpertsCard` (shows 5), `TopQueriesCard` (shows 5), period toggle | Live — add "See All" links/buttons to both cards |
+| Admin `TopExpertsCard` fetches `GET /events/exposure?days=X` (returns full list, sliced to 5 on frontend) | Live — data already available; only the UI cap needs changing |
+| Admin `TopQueriesCard` fetches `GET /analytics/top-queries?days=X&limit=5` | Live — `limit` param exists; change to `limit=50` or remove cap |
+| `trackEvent()` module function — fire-and-forget `POST /api/events` with `session_id` | Live — extend to optionally include `email` |
+| Lead journey timeline — expandable rows in `LeadsPage` with chronological search/click history | Live — will benefit from richer email-attributed data |
 
 ---
 
@@ -29,454 +32,282 @@ below is scoped to the six new feature areas only.
 
 ### Table Stakes (Users Expect These)
 
-These are non-negotiable for a product going to public launch. Missing them signals incomplete or
-unsafe software.
+These are the behaviors users and admins expect without being told. Missing them = confusion or
+data gaps that erode trust in the product.
 
 | Feature | Why Expected | Complexity | Notes |
 |---------|--------------|------------|-------|
-| Admin login with username + hashed password | A single plaintext env var secret is not defensible for a public product. Any internal tool with a web-accessible login form needs bcrypt-hashed credentials. | LOW | Backend: bcrypt hash stored as `ADMIN_PASSWORD_HASH` env var; frontend adds username field. No JWT needed — sessionStorage expiry is sufficient for a single-admin tool. |
-| Error state on public explorer grid | If `/api/explore` returns 5xx, users see a blank grid with no explanation — unacceptable for launch. | LOW | Inline error card in the grid area: "Something went wrong — try refreshing" with a retry button. Not a full-page crash. Handled in `useExplore` hook on non-200 response. |
-| White search input for contrast | Current header input uses `bg-slate-900`, blending into the dark header. A public-facing product needs high-contrast, visible input fields. | LOW | CSS change in `Header.tsx`: `bg-white text-gray-900 placeholder-gray-400`. Keyword placeholders: "e.g. SaaS fundraising advisor" instead of animated role names. |
-| Grid / list view toggle | Any marketplace that shows browsable cards is expected to offer a density toggle. Users want list view to compare rates and bios side-by-side. | MEDIUM | `viewMode: 'grid' \| 'list'` in Zustand `filterSlice`; localStorage persist; conditional render of `VirtuosoGrid` vs `Virtuoso` (list variant). |
-| Lead export CSV | Admin needs to export email leads with search history for post-launch outreach. Currently there is no cross-referenced leads CSV (newsletter CSV exists separately). | MEDIUM | New endpoint `GET /api/admin/export/leads.csv`; JOIN `email_leads` + `conversations`; columns: email, first seen, last active, search count, gap searches. |
+| Email gate fires on page entry | Any gated marketplace gates before browsing. Users expect to identify themselves upfront — not be surprised mid-session. Gating on "View Full Profile" means the admin captures leads only after users browse, leaving early-exit visitors untracked. | LOW | New `EntryGateModal` component; shown when `!isUnlocked` on first render of `ExplorerPage`. Reuses existing `EmailGate` form + `useEmailGate` hook. Returning visitors bypass instantly via `localStorage` check (no flash). |
+| "See All" on Top Experts card | Admin cards that cap a ranked list at 5 must link to the full list. Without it, the admin cannot act on data beyond rank 5 — the card is informational only, not actionable. | LOW | Inline expansion toggle (show all rows in-card) OR a `Link` to a dedicated full-list view. The data already comes back as a full list from the API; the cap is a frontend `.slice(0, 5)`. |
+| "See All" on Top Searches card | Same rationale as Top Experts. The `limit=5` passed to `GET /analytics/top-queries` must be increased or removed to expose the full ranked list. | LOW | Same pattern as Top Experts — either expand in-card or link to full list. Backend `limit` param already supports arbitrary values. |
+| Email identity on tracked events | When a user has submitted their email, all subsequent `user_events` rows should carry that email for direct attribution. Without it, the admin cannot correlate "who searched for X" with a known lead — the session_id is anonymous and not reliably linkable to email. | MEDIUM | Add `email: string \| null` to `EventRequest` Pydantic model and `UserEvent` table. Frontend passes `useEmailGate().email` at call sites in `trackEvent()`. SQLite `ALTER TABLE` migration at startup. |
 
 ### Differentiators (Competitive Advantage)
 
-These features directly support the v4.0 goal of a polished, intelligence-rich admin and a
-production-hardened explorer.
+These are the features that make v5.2 meaningfully better, not just technically complete.
 
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| Industry tags alongside domain tags | Domain tags describe *what* an expert does (skills); industry tags describe *where* they work (verticals). These are orthogonal dimensions users expect to filter independently on a mature marketplace. | HIGH | Requires: `industry_tags` field on Expert model + metadata.json; Gemini batch-tagging with curated ~15-tag taxonomy; FilterSidebar industry section; `run_explore()` pipeline update; TagCloud second row. Touches 6+ files. |
-| Streamlined admin "one-snap overview" | `OverviewPage` already exists but omits total leads count and expert pool count. An admin should answer "what is the state of this system?" without navigating elsewhere. | LOW | Add "Total Leads" and "Expert Pool" stat cards to the existing KPI grid. Requires two new fields in `GET /api/admin/stats` response. |
-| Admin session with password + username | Two-field login (username + hashed password) is the expected pattern for any credential-based admin. The existing single-field key form is functional but feels like a temp hack. | LOW | Additive — same form, same sessionStorage pattern, same `RequireAuth` guard. Change is entirely in the `/auth` endpoint logic and the login form fields. |
-| Production hardening: mobile polish and loading speed | Public launch traffic will include users on slow mobile connections. The current Sage double-rendering bug (desktop + mobile popout overlap) and double-click profile-open on mobile are known issues that affect first impressions. | MEDIUM | Sage: add `md:hidden` guard to mobile sheet, `hidden md:block` to desktop panel (they already coexist but conditionals are missing). Mobile double-click: change from double-tap expand to single-tap (desktop hover covers the expand need). Loading speed: audit lazy-loading of heavy dependencies. |
+| Dismissible entry gate with hard skip option | A mandatory no-dismiss gate converts better for serious users but frustrates casual visitors who want to browse before committing. An optional "Skip for now — gate resurfaces on 'View Full Profile'" path reduces bounce while still capturing high-intent leads. Research: fullscreen welcome gates with an alternative exit path outperform mandatory-only gates (OptinMonster, 2025). | LOW | Add a "Skip for now" link below the CTA. On skip: do not set `localStorage`; gate re-triggers on "View Full Profile" click (existing behavior). This is a single `onDismiss` prop already present on `ProfileGateModal` — wire the same behavior to the entry modal. |
+| In-card expansion (not redirect) for "See All" | Navigating away from Overview to see rank 6–50 breaks the admin's mental context (they are reviewing the period snapshot). Expanding in-card keeps the period toggle active and the full dashboard visible. Standard pattern in SaaS admin dashboards (Vercel, Linear, Stripe): overflow items hidden behind an expand toggle, not a page navigation. | LOW | `useState<boolean>(expanded)` in `TopExpertsCard` and `TopQueriesCard`; toggle renders full list vs `.slice(0, 5)`. "Show fewer" collapses back. No new route needed. |
+| Email-attributed search tracking for lead timeline | The existing lead journey timeline in `LeadsPage` shows search/click history, but only when a lead's email was already on the `Conversation` table (chat flow) or `lead_clicks` table. Explorer search queries tracked via `user_events` are currently anonymous. Email-attributed `search_query` events would extend the timeline to Explorer sessions, making it a complete picture of what each lead searched for. | MEDIUM | Requires email column on `user_events` + passing email in `trackEvent()` at the `search_query` call site in `useExplore.ts`. The timeline query in the admin then joins on `user_events.email = lead.email` for `search_query` events. |
 
 ### Anti-Features (Commonly Requested, Often Problematic)
 
 | Feature | Why Requested | Why Problematic | Alternative |
 |---------|---------------|-----------------|-------------|
-| JWT session tokens with expiry | "Proper auth" implies JWTs | For a single-admin internal tool, JWT refresh flows add 3-4x implementation complexity with zero user-facing benefit. sessionStorage already expires on tab close — that is the right expiry model for a solo operator. | bcrypt password hashing on the existing single-key flow. Same security surface, 20% of the code. |
-| Admin password reset via email | Security hygiene | There is one admin. Email-based reset requires SMTP integration, a reset token table, and a recovery UI — disproportionate for a solo operator tool. | Document: rotate `ADMIN_PASSWORD_HASH` in Railway env vars. Takes 30 seconds. |
-| Real-time live admin events | "See what users are doing now" | WebSocket or rapid polling for live admin events adds backend complexity and Railway egress. The 30s health check interval already in `OverviewPage` is the right model. | Manual refresh button on Overview if needed. Keep 30s health polling as-is. |
-| Inline expert editing in list view | "While in list view, edit expert from card" | Expert management belongs on `ExpertsPage`. Mixing browse and edit in the same view creates confusing IA and testing surface. | Link from list-view card to `/admin/experts?highlight=username`. |
-| Free-form AI-invented industry tags | "Let Gemini choose industry labels" | Without a fixed taxonomy, Gemini produces "fin-tech", "FinTech", "financial technology" — inconsistent values that break filter matching. | Curated taxonomy of ~15 industry tags passed as an enum in the Gemini prompt. Force-fit to nearest match. |
-| Card click export (email + click correlation) | "Show which experts each lead viewed" | `user_events.session_id` is an anonymous random string. `email_leads.email` is captured at the email gate. These are not currently linked in the DB — reliable correlation is not possible without a data model addition. | Export email + search queries from `Conversation` table (fully available now). Document the session linking gap for v4.1. |
+| Mandatory non-dismissible entry gate | "Capture email from every visitor, no exceptions" | Blocks all casual traffic, including shareable links passed around in sales contexts. A prospect receiving a link from a Tinrate rep who cannot browse without emailing is a friction point — not a conversion. Also: Google penalizes intrusive interstitials that block content on mobile (Core Web Vitals). | Dismissible gate with "Skip for now" link. Gate resurfaces on "View Full Profile" click (existing behavior). High-intent users email; casual browsers proceed. |
+| Full-page entry gate (replaces router render) | "Prevent any rendering before email" | Breaks shareable filtered URLs — the URL params are loaded by the store but the grid never renders. Also prevents SEO indexing of the explorer surface (no content visible to crawlers). | Overlay modal on top of rendered content. Content is visible but blurred/pointer-events:none while modal is open, or simply obscured by modal backdrop. Store and filters load normally beneath. |
+| Tie ALL existing `user_events` session_ids to emails retrospectively | "We want to know who did what before v5.2" | `user_events.session_id` is a random client-generated string with no persistent identity. There is no reliable way to correlate existing anonymous events to emails — the join does not exist in the data model. Any retrospective attribution would be guesswork. | Accept the data gap. Email attribution starts from v5.2 forward. Document the cutoff date in admin. |
+| Replace `session_id` with email as the primary event identifier | "Email is more useful than session_id for analytics" | `session_id` serves anonymous pre-gate tracking (before the user emails). Removing it would create a gap where filter changes and card clicks before email submission are unrecorded. | Keep `session_id` on `UserEvent`. Add `email` as a nullable column that is populated once the gate is submitted. Both fields coexist — one for anonymous sessions, one for identified sessions. |
+| Dedicated "See All" page routes (`/admin/top-experts`, `/admin/top-searches`) | "Cleaner UX to have a dedicated page" | Adds 2 new routes, 2 new components, 2 new sidebar entries (or hidden routes), and breaks the period toggle context (new page must re-implement the same toggle). Implementation cost is 5x the in-card expansion approach with no user-facing benefit. | In-card expansion toggle. "Show all / Show fewer" within the existing card. Data already available from the API. |
 
 ---
 
 ## Feature Dependencies
 
 ```
-[Admin bcrypt password login]
-    └──replaces──> [ADMIN_SECRET plaintext comparison in /auth endpoint]
-    └──requires──> [ADMIN_PASSWORD_HASH env var pre-generated with passlib]
-    └──requires──> [ADMIN_USERNAME env var (defaults to "admin")]
-    └──frontend: add username field to LoginPage.tsx]
-    └──backend: 10-line change in admin.py /auth endpoint]
+[Entry gate modal on page load]
+    └──reuses──> [useEmailGate hook] (already built, STORAGE_KEY unchanged)
+    └──reuses──> [EmailGate form component] (already built)
+    └──reuses──> [AnimatePresence from motion/react] (already in codebase)
+    └──renders over──> [ExplorerPage] (page loads normally beneath)
+    └──bypasses on──> [localStorage STORAGE_KEY present] (returning visitors)
+    └──skip path────> [onDismiss: no localStorage write → gate resurfaces on "View Full Profile"]
+    └──note: ProfileGateModal stays in codebase for users who somehow reach the page
+             while unlocked=false (e.g. a direct link after clearing storage)
 
-[Grid / list view toggle]
-    └──requires──> [viewMode state in Zustand useFilterSlice]
-    └──requires──> [Virtuoso (list variant) component as alternative to VirtuosoGrid]
-    └──requires──> [ExpertCard list layout variant (wider, bio visible, no tap-expand)]
-    └──enhances──> [localStorage persist via existing Zustand persist middleware]
-    └──note: VirtuosoGrid assumes uniform height — list cards are variable height;
-             must conditionally render Virtuoso, not pass a prop to VirtuosoGrid]
+["See All" expansion on TopExpertsCard]
+    └──requires no API change──> [GET /events/exposure already returns full list]
+    └──frontend change only──> [remove .slice(0, 5) behind useState(expanded) toggle]
+    └──independent of all other v5.2 features]
 
-[Industry tags]
-    └──requires──> [industry_tags column on Expert model (SQLite ADD COLUMN migration)]
-    └──requires──> [industry_tags field in metadata.json]
-    └──requires──> [Gemini batch-tagging script with curated 15-tag taxonomy]
-    └──requires──> [run_explore() pipeline: industry_tags pre-filter]
-    └──requires──> [FilterSidebar: industry multi-select section]
-    └──requires──> [useExplorerStore: industryTags: string[] filter slice]
-    └──enhances──> [TagCloud: second row labeled "Industry"]
-    └──conflicts with timing of──> [Grid/list toggle]
-       (both touch ExpertCard layout — ship in separate phases to avoid merge conflicts)
+["See All" expansion on TopQueriesCard]
+    └──requires minor API change──> [GET /analytics/top-queries?limit=5 → remove limit cap or increase to 50]
+    └──frontend change──> [remove .slice behind expanded toggle]
+    └──independent of all other v5.2 features]
 
-[Lead export CSV]
-    └──requires──> [email_leads table] (ALREADY BUILT)
-    └──requires──> [conversations table] (ALREADY BUILT)
-    └──requires──> [new GET /api/admin/export/leads.csv endpoint on authenticated router]
-    └──enhances──> [LeadsPage: "Export Leads CSV" button, matching newsletter export pattern]
-    └──note: card click correlation NOT achievable without data model addition;
-             scope to email + search queries for v4.0]
+[Email-attributed event tracking]
+    └──requires──> [email column on user_events table (SQLite ALTER TABLE nullable)]
+    └──requires──> [email field on EventRequest Pydantic model (optional, default null)]
+    └──requires──> [trackEvent() accepts optional email param]
+    └──requires──> [call sites pass useEmailGate().email — ExpertCard, useExplore, RateSlider, TagMultiSelect]
+    └──enhances──> [lead journey timeline in LeadsPage — can now include Explorer search events]
+    └──note: no change to session_id — it stays as the anonymous identifier pre-gate]
+    └──note: email column is nullable — events before gate submission have email=null]
 
-[One-snap overview additions]
-    └──requires──> [total_leads and expert_count added to /api/admin/stats response]
-    └──enhances──> [OverviewPage: two new stat cards in existing KPI grid]
-    └──independent of all other v4.0 features]
-    └──note: simplest change in the milestone — good first PR]
-
-[White search input]
-    └──modifies──> [Header.tsx: input className only]
-    └──independent of all other v4.0 features]
-
-[Error state on public explorer]
-    └──modifies──> [useExplore hook: handle non-200 response from /api/explore]
-    └──modifies──> [MarketplacePage.tsx or ExpertGrid.tsx: render error banner]
-    └──independent of all other v4.0 features]
+[Entry gate modal] ──enables──> [Email-attributed event tracking]
+    (email is set in localStorage/state after gate submit; subsequent events carry it)
 ```
 
 ### Dependency Notes
 
-- **Industry tags requires startup migration:** Adding `industry_tags` to `Expert` uses SQLite
-  `ALTER TABLE ADD COLUMN NULL` — safe and idempotent. Match the existing startup migration
-  pattern (`idempotent_startup_migration` for email purge).
-- **Grid/list toggle requires component switch, not a prop:** `VirtuosoGrid` requires uniform
-  item height. List mode cards contain variable-height bio text. Conditionally render
-  `<VirtuosoGrid>` vs `<Virtuoso>` based on `viewMode`. This is 15 lines in `ExpertGrid.tsx`.
-- **Lead export is read-only:** No new tables. The JOIN over `email_leads` + `conversations` is
-  straightforward SQL.
-- **Bcrypt admin auth is a surgical change:** The `/auth` endpoint body changes from `{key}`
-  to `{username, password}`; the comparison changes from `body.key != secret` to
-  `pwd_context.verify(body.password, stored_hash)`. Frontend adds one `<input>` field.
+- **Entry gate is independent of email attribution:** The gate can ship and capture emails
+  without the events table change. Attribution is additive and ships in the same milestone.
+- **"See All" is fully independent:** No backend changes for TopExpertsCard; one query param
+  change for TopQueriesCard. These are low-risk, ship first.
+- **Email attribution requires a startup migration:** `ALTER TABLE user_events ADD COLUMN email
+  TEXT NULL` is idempotent and safe on SQLite. Match the existing startup migration pattern
+  (`idempotent_startup_migration`).
+- **No breaking change to existing `trackEvent()` callers:** Email is an optional param with
+  default `null`. All existing call sites work without modification; only the 4-5 relevant
+  call sites need updating.
+- **`lead_clicks` table already uses email as key:** The pattern is proven in the codebase.
+  `user_events` adopts the same identity model for email-known sessions.
 
 ---
 
 ## MVP Definition
 
-### Launch With (v4.0 — required for public launch)
+### Launch With (v5.2 — the three agreed features)
 
-- [ ] White search input with keyword placeholders — 30-minute change; immediate polish signal
-- [ ] Error state on public explorer grid — prevents blank page on backend failure
-- [ ] Admin bcrypt password + username login — plaintext key comparison is not defensible
-- [ ] Grid / list view toggle — table stakes for a marketplace product
-- [ ] Lead export CSV (email + search history) — enables post-launch outreach
-- [ ] One-snap overview additions (total leads + expert pool count) — zero-cost win
+- [ ] "See All" expansion on TopExpertsCard — independent, lowest risk, ship first
+- [ ] "See All" expansion on TopQueriesCard — same pattern, ship together
+- [ ] Entry gate modal on page load — reuses existing components, returning visitor bypass built in
+- [ ] Email attribution on `user_events` — `email` column + optional param in `trackEvent()`
 
-### Add After Validation (v4.x)
+### Add After Validation (v5.x)
 
-- [ ] Industry tags — high complexity, high value; ship after launch traffic validates domain tag
-  model first
-- [ ] Card click correlation in lead export — requires `session_id → email` data model addition
-- [ ] Admin session expiry (configurable timeout) — add if security audit requires it
+- [ ] Email-attributed search events in lead journey timeline — requires joining
+  `user_events WHERE event_type='search_query' AND email=lead.email`; ship once v5.2
+  attribution data has accumulated (a few days of production data confirms the column
+  is being populated correctly)
+- [ ] "Show fewer" collapse on expanded cards — QoL; ship with the expansion feature or
+  immediately after if the expanded list feels overwhelming
 
-### Future Consideration (v5+)
+### Future Consideration (v6+)
 
-- [ ] Multi-admin user management with roles
-- [ ] Export with date-range filtering
-- [ ] Saved filter presets
+- [ ] Rate-limit gate re-triggers for skip users (e.g. show entry gate again after 3 sessions
+  without submitting) — requires session counting, not in scope
+- [ ] Entry gate A/B test (mandatory vs dismissible) — requires a feature flag system
 
 ---
 
 ## Feature Prioritization Matrix
 
-| Feature | User Value | Implementation Cost | Priority |
-|---------|------------|---------------------|----------|
-| White search input + keyword placeholders | MEDIUM | LOW | P1 |
-| Error state on explorer grid | HIGH | LOW | P1 |
-| Admin bcrypt password login | HIGH | LOW | P1 |
-| Grid / list view toggle | HIGH | MEDIUM | P1 |
-| Lead export CSV | HIGH | MEDIUM | P1 |
-| One-snap overview (2 stat cards) | MEDIUM | LOW | P1 |
-| Industry tags | HIGH | HIGH | P2 |
-| Sage double-rendering fix | MEDIUM | LOW | P1 |
-| Mobile double-click profile fix | LOW | LOW | P1 |
-| Admin session expiry | LOW | MEDIUM | P3 |
+| Feature | User/Admin Value | Implementation Cost | Priority |
+|---------|-----------------|---------------------|----------|
+| "See All" — TopExpertsCard | HIGH (admin can act on data beyond rank 5) | LOW (frontend only) | P1 |
+| "See All" — TopQueriesCard | HIGH (same rationale) | LOW (one query param + frontend toggle) | P1 |
+| Entry gate on page load | HIGH (captures leads who browse and exit without clicking a profile) | LOW (reuses all existing components) | P1 |
+| Email attribution on user_events | MEDIUM (enriches lead timeline; unlocks search attribution) | MEDIUM (DB migration + 4-5 call site updates) | P1 |
+| "Show fewer" collapse on cards | LOW (nice-to-have polish) | LOW | P2 |
+| Email events in lead timeline join | MEDIUM (more complete lead journey) | LOW (query change in admin endpoint) | P2 |
 
 **Priority key:**
-- P1: Must have for v4.0 launch
-- P2: Ship in v4.1 after launch validates the data model
-- P3: Defer
+- P1: Must have for v5.2 milestone
+- P2: Add once v5.2 data has been validated in production
+- P3: Defer to later milestone
 
 ---
 
 ## Per-Feature Implementation Notes
 
-### 1. Admin Login with Username + Hashed Password
+### 1. Entry Gate Modal on Page Load
 
-**Current state:** `POST /api/admin/auth` accepts `{key: string}` and compares raw string
-against `ADMIN_SECRET` env var. Plaintext comparison.
+**Current state:** `ProfileGateModal` is triggered on "View Full Profile" click in `ExpertCard`.
+`useEmailGate()` returns `isUnlocked` (from `localStorage`). Returning visitors are immediately
+unlocked with no flash.
 
-**Target state:** Accept `{username: string, password: string}`; compare username against
-`ADMIN_USERNAME` env var; verify password against bcrypt hash in `ADMIN_PASSWORD_HASH` env var.
+**Target state:** `ExplorerPage` (or `App.tsx` root) checks `isUnlocked` on mount. If false,
+renders a full-screen `EntryGateModal` over the page. The page content loads normally beneath —
+grid renders, filters work, store hydrates — but the modal backdrop covers it visually.
 
-**Backend change (10 lines in admin.py):**
-```python
-from passlib.context import CryptContext
-_pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+**Key design decisions:**
+- Do NOT block rendering. Page loads behind the modal so the first interaction after email submit
+  feels instant (grid is already loaded).
+- Include a "Skip for now" dismiss path. On skip: no `localStorage` write; modal closes; gate
+  returns on "View Full Profile" click (existing `ProfileGateModal` behavior unchanged).
+- The `EntryGateModal` is a new thin wrapper component — it calls `useEmailGate().submitEmail`
+  on submit, same as `ProfileGateModal`. No changes to `useEmailGate`, `EmailGate`, or
+  `POST /api/email-capture`.
+- Returning visitors: `isUnlocked=true` on first render (lazy `localStorage` read). Modal never
+  mounts. Zero flash.
 
-class AuthBody(BaseModel):
-    username: str
-    password: str
-
-@auth_router.post("/auth")
-def authenticate(body: AuthBody):
-    stored_username = os.getenv("ADMIN_USERNAME", "admin")
-    stored_hash = os.getenv("ADMIN_PASSWORD_HASH", "")
-    if not stored_hash or body.username != stored_username:
-        raise HTTPException(status_code=401, detail="Invalid credentials")
-    if not _pwd_context.verify(body.password, stored_hash):
-        raise HTTPException(status_code=401, detail="Invalid credentials")
-    return {"ok": True}
+**Component:**
+```tsx
+// EntryGateModal.tsx — wraps EmailGate with entry-specific copy + optional dismiss
+function EntryGateModal({ onSubmit, onSkip }: { onSubmit: ..., onSkip: () => void }) {
+  // AnimatePresence wrapper (same as ProfileGateModal)
+  // Headline: "Meet the experts" / body: "Enter your email to browse full profiles"
+  // EmailGate form (reused)
+  // "Skip for now" text link below CTA (calls onSkip)
+}
 ```
 
-**Library note:** FastAPI docs now reference `pwdlib` instead of `passlib` (passlib maintenance
-lapsed per GitHub discussion #11773). For a single-endpoint auth with no legacy hashes, either
-works. `pwdlib` is the forward-looking choice. `passlib` remains battle-tested and is the safer
-choice if Railway's Python environment already has it. Use `passlib` for v4.0 — switching later is
-a one-line change.
+**ExplorerPage usage:**
+```tsx
+const { isUnlocked, submitEmail } = useEmailGate()
+const [skipped, setSkipped] = useState(false)
 
-**Pre-generating the hash (operator one-time setup):**
-```python
-from passlib.context import CryptContext
-ctx = CryptContext(schemes=["bcrypt"], deprecated="auto")
-print(ctx.hash("your-secure-password"))
-# Output: $2b$12$... (paste this into ADMIN_PASSWORD_HASH in Railway)
+{!isUnlocked && !skipped && (
+  <EntryGateModal onSubmit={submitEmail} onSkip={() => setSkipped(true)} />
+)}
 ```
 
-**Frontend change:** Add `username` text input above the existing password field in
-`LoginPage.tsx`. Pass `{username, password}` in the POST body. Store the key in sessionStorage
-as before — or store `username` separately and use it only for display.
-
-**Session management:** sessionStorage provides implicit expiry (clears on tab close). No
-server-side session table needed for v4.0. This is the correct tradeoff for a solo-operator
-internal tool — confirmed by FastAPI auth best practices sources.
-
-**No password reset UI:** Rotate `ADMIN_PASSWORD_HASH` and `ADMIN_USERNAME` in the Railway
-dashboard. Document this in `ADMIN.md`. Takes 30 seconds.
-
-**Confidence:** HIGH — bcrypt/passlib is thoroughly documented; the codebase change is surgical.
+**Confidence:** HIGH — pure component composition over existing hooks and components.
 
 ---
 
-### 2. Grid / List View Toggle
+### 2. "See All" Expansion on Admin Overview Cards
 
-**Current state:** `VirtuosoGrid` renders `grid-cols-2 md:grid-cols-3` with fixed `h-[180px]`
-cards. No view mode state exists.
+**Current state:** `TopExpertsCard` calls `.slice(0, 5)` on the full `exposure` array returned
+by the API. `TopQueriesCard` passes `limit: 5` as a query param to
+`GET /analytics/top-queries`.
 
-**Target state:** Toggle in the `FilterChips` toolbar area; `viewMode: 'grid' | 'list'` in
-`useFilterSlice` Zustand slice; `localStorage` persist; conditional rendering in `ExpertGrid.tsx`.
+**Target state:** Both cards have an expanded/collapsed state. Collapsed shows 5 rows (default).
+Expanded shows all rows. Toggle button below the list: "Show all X" / "Show fewer".
 
-**Key technical constraint:** `VirtuosoGrid` requires uniform row height. List mode cards expose
-bio text and variable content — must render `<Virtuoso>` (standard list variant) instead of
-`VirtuosoGrid`. This is a conditional render, not a prop.
+**TopExpertsCard change (frontend only):**
+```tsx
+const [expanded, setExpanded] = useState(false)
+const rows = expanded ? (data?.exposure ?? []) : (data?.exposure ?? []).slice(0, 5)
+// Add below list:
+{(data?.exposure ?? []).length > 5 && (
+  <button onClick={() => setExpanded(e => !e)}>
+    {expanded ? 'Show fewer' : `Show all ${data.exposure.length}`}
+  </button>
+)}
+```
 
-**List card layout:** Full-width single column; shows `photo + name + title + company + rate +
-2-3 tags + bio preview (2 lines) + View Full Profile`. Match reason visible by default (no
-tap-expand needed). Card height: auto (variable). Remove the `h-[180px]` constraint in list mode.
+**TopQueriesCard change (frontend + minor backend):**
+- Change `adminFetch<TopQueriesResponse>('/analytics/top-queries', { days, limit: 5 })` to
+  `limit: 50` (or omit limit entirely if the backend supports it).
+- Check `GET /analytics/top-queries` backend: if `limit` is required, set default=50 in the
+  query param handler.
+- Same expanded/collapsed toggle pattern as TopExpertsCard.
 
-**Grid card layout:** Unchanged from current — `h-[180px]`, four bento zones, tap-expand on
-mobile.
-
-**Toggle persistence:** `localStorage` via Zustand `persist` middleware is already configured on
-`filterSlice`. Adding `viewMode` to the persisted slice is a two-line addition.
-
-**Mobile behavior:** List view is the better default on mobile (single column, easier to scan
-titles and rates). On mobile, grid = 2 columns (existing); list = 1 column. Toggle visible on
-both breakpoints.
-
-**Toggle UI:** Two icon buttons in the toolbar (grid icon and list icon), active state uses
-`text-brand-purple`, inactive uses `text-gray-400`. No labels needed — icons are universally
-recognized. Place in `FilterChips.tsx` rightmost area or above the grid as a standalone control.
-
-**Confidence:** HIGH — VirtuosoGrid/Virtuoso conditional rendering is well-documented in
-react-virtuoso docs; Zustand persist pattern is already in the codebase.
+**Confidence:** HIGH — additive state toggle, no new components, data already available.
 
 ---
 
-### 3. Industry Tags Alongside Domain Tags
+### 3. Email Attribution on User Events
 
-**Current state:** `tags` field on Expert contains 3–8 AI-assigned domain tags (skills/topics).
-`category` field exists in DB and `metadata.json` but is `None` for all 536 experts — populated
-only by keyword-matching in `_auto_categorize()` based on job titles (9 broad categories: Tech,
-Marketing, Finance, etc.). Category is not exposed in the public Explorer UI.
+**Current state:** `UserEvent` has `session_id` (anonymous, required) but no `email` column.
+`trackEvent()` sends `{session_id, event_type, payload}`. Email is captured separately in
+`email_leads` with no link to `user_events`.
 
-**Target state:** A separate `industry_tags` field (list of 1–3 industry verticals) shown as a
-second row in the `TagCloud` and as a second multi-select section in `FilterSidebar`. Industry
-tags filter the FAISS/BM25 pipeline as a pre-filter.
+**Target state:** `user_events` gains a nullable `email` column. After the entry gate is
+submitted (or after any gate submit), `trackEvent()` includes the email in the payload.
+Events before gate submit have `email=null`. Events after submit have `email=<submitted>`.
 
-**Recommended industry taxonomy (curated, ~15 tags):**
-`fintech`, `healthcare`, `e-commerce`, `saas / software`, `real estate`, `construction`,
-`energy`, `media & entertainment`, `professional services`, `manufacturing`, `education`,
-`nonprofit`, `hospitality & food`, `logistics`, `legal`
+**Backend changes:**
+1. Startup migration: `ALTER TABLE user_events ADD COLUMN email TEXT NULL`
+2. `EventRequest` Pydantic model: `email: str | None = None`
+3. `UserEvent` model: `email: Mapped[str | None] = mapped_column(String(320), nullable=True)`
+4. `record_event` endpoint: pass `email=body.email` to `UserEvent(...)` constructor
 
-Using a fixed enum in the Gemini prompt prevents free-form inconsistencies ("fin-tech" vs
-"FinTech" vs "financial technology"). This is the critical implementation decision — confirmed by
-filter UX research showing that filter values must be predictable for users to trust them.
+**Frontend changes:**
+1. `trackEvent()` signature: `trackEvent(event_type, payload, email?: string | null)`
+2. `tracking.ts` internal: include `email` in the fetch body (or null if not provided)
+3. Call sites to update (pass `useEmailGate().email`):
+   - `useExplore.ts` — `search_query` events (most valuable for lead timeline)
+   - `ExpertCard.tsx` — `card_click` events
+   - `useHeaderSearch.ts` — `filter_change` events
+   - `RateSlider.tsx` — `filter_change` events
+   - `TagMultiSelect.tsx` — `filter_change` events
 
-**Implementation path (6 touch points):**
-1. Startup migration: `ALTER TABLE experts ADD COLUMN industry_tags TEXT NULL` — idempotent
-2. Update `_serialize_expert()` in `admin.py` to include `industry_tags`
-3. Batch-tagging script: `scripts/tag_industry.py` using Gemini flash-lite with enum-constrained
-   prompt; updates both SQLite and `metadata.json`
-4. `run_explore()` in `explore.py`: add `industry_tags` SQLite JSON contains pre-filter
-5. `useExplorerStore`: add `industryTags: string[]` to filter slice and URL sync
-6. UI: `IndustryTagCloud` row in `FilterSidebar` + second row in `TagCloud.tsx`
+**Note on call site access:** These components do not currently call `useEmailGate()`.
+Options:
+- a) Add `useEmailGate()` hook call at each call site — clean, self-contained.
+- b) Store `email` in Zustand (e.g. a `userSlice`) and read from store — removes hook
+  coupling at individual components. Recommended if more than 5 call sites need it.
+- c) Pass email as a param from parent component — adds prop-drilling, not preferred.
 
-**Complexity:** HIGH — touches 6+ files across model, scripts, pipeline, store, and UI.
-Batch tagging for 536 experts takes ~5 minutes with Gemini flash-lite. Data quality depends
-on bio content — experts with thin bios may get imprecise industry assignments.
+**Recommendation:** Add a `userSlice` to Zustand with `email: string | null` set on gate submit.
+`trackEvent()` reads from `useExplorerStore.getState().email` (module-level call — avoids
+React hook constraints). This is the cleanest extension of the existing pattern.
 
-**Confidence for UX pattern:** HIGH (separate filter dimensions for skills vs industry is
-standard marketplace pattern per NN/G research). **Confidence for implementation timeline:**
-MEDIUM — Gemini enum-constrained tagging works but needs a test pass to verify accuracy.
-
----
-
-### 4. Lead Export with Search/Click History
-
-**Current state:** `LeadsPage` shows email-grouped leads with expandable recent queries from
-`Conversation` table. Newsletter CSV export exists (`GET /api/admin/export/newsletter.csv`).
-No cross-referenced export of email + full search history.
-
-**Target state:** "Export Leads CSV" button on `LeadsPage` → `GET /api/admin/export/leads.csv`.
-One row per email lead.
-
-**Available columns (all from existing tables):**
-```
-email           — email_leads.email
-first_seen      — email_leads.created_at
-last_active_at  — MAX(conversations.created_at) grouped by email
-search_count    — COUNT(conversations.id) grouped by email
-gap_searches    — COUNT WHERE response_type='clarification'
-newsletter_sub  — boolean: email in newsletter_subscribers table
-recent_queries  — pipe-separated last 5 queries from conversations
-```
-
-**Card click data gap:** `user_events.session_id` is an anonymous string generated client-side.
-`email_leads.email` is captured separately at the email gate. There is no `session_id → email`
-join in the current data model. Card clicks cannot be reliably attributed to emails. Do not
-fabricate this column in v4.0. Label it "not available" or omit it. Document the gap for v4.1
-(fix: include `session_id` in the email gate submission).
-
-**Backend implementation:**
-```python
-@router.get("/export/leads.csv")
-def export_leads_csv(db: Session = Depends(get_db)):
-    # JOIN email_leads + conversations
-    rows = db.execute(text("""
-        SELECT
-            el.email,
-            el.created_at AS first_seen,
-            MAX(c.created_at) AS last_active_at,
-            COUNT(c.id) AS search_count,
-            SUM(CASE WHEN c.response_type = 'clarification' THEN 1 ELSE 0 END) AS gap_searches,
-            GROUP_CONCAT(c.query, ' | ') AS recent_queries
-        FROM email_leads el
-        LEFT JOIN conversations c ON c.email = el.email
-        GROUP BY el.email
-        ORDER BY last_active_at DESC
-    """)).fetchall()
-    # Stream CSV response (matching newsletter export pattern)
-```
-
-**Frontend:** Identical to newsletter export button in `LeadsPage.tsx` — `fetch blob → URL.createObjectURL → a.click()` pattern already exists. Add a second button labeled "Export Leads CSV".
-
-**Confidence:** HIGH for email + search data (fully available now). LOW for card click
-correlation (requires data model addition, not in v4.0 scope).
-
----
-
-### 5. Admin One-Snap Overview
-
-**Current state:** `OverviewPage` has: health speedometer + 4 KPI cards (total searches,
-matches, match rate, gaps) + zero-result top-5 + Sage sparkline + top queries + top feedback.
-
-**Gap:** No total leads count, no expert pool count. The duplicate "Match Rate" standalone card
-(already shown as sub-label on "Matches" card) wastes a slot that should show business metrics.
-
-**Target state:** Replace the two least-informative KPI cards with actionable business metrics:
-- Replace standalone "Match Rate" card with "Total Leads" (email_leads count, sub: newsletter
-  subscribers count)
-- Replace "Gaps" card with "Expert Pool" (expert count, sub: "X with photos")
-
-The "gaps" data already appears prominently in the zero-result table immediately below — it does
-not need a redundant KPI card.
-
-**API change:** `GET /api/admin/stats` must return two new fields:
-```python
-"total_leads": db.query(func.count(EmailLead.id)).scalar(),
-"expert_count": db.query(func.count(Expert.id)).scalar(),
-```
-
-**Frontend change:** Replace two `<StatCard>` entries in `OverviewPage.tsx` with the new data.
-The `StatCard` component already supports `label`, `value`, `sub`, and `accent` props — no
-component changes needed.
-
-**F-pattern layout alignment:** Eye-tracking research confirms users scan top-left to
-bottom-right. "Total Searches" (top-left) and "Total Leads" (second card) are the two most
-executive-relevant metrics — correct placement per 2025 SaaS dashboard design guidance.
-
-**Confidence:** HIGH — additive change to existing endpoint and component.
-
----
-
-### 6. Production Error States and Loading Patterns
-
-**Current state:**
-- Admin: `animate-pulse` loading text + inline `text-red-400` error strings per page
-- Explorer: `SkeletonGrid` on initial load; `EmptyState` on zero results
-- Missing: no explicit error UI if `/api/explore` returns 500 — grid stays blank indefinitely
-
-**Target state for public explorer:**
-
-If `/api/explore` fails (network error or 5xx), show an error banner inside the grid area:
-```
-[!] Having trouble loading experts. Try refreshing.   [Retry]
-```
-This is an inline error card, not a full-page error. The banner replaces the skeleton/grid area
-on failure. Retry button re-triggers the `useExplore` fetch.
-
-Implementation in `useExplore` hook: catch non-200 responses; set `error` state; pass to
-`ExpertGrid`. In `ExpertGrid.tsx`, add an error branch before the skeleton/empty checks.
-
-**Target state for Sage panel:**
-Sage already handles errors partially. Ensure the Sage panel shows an error message (not a blank
-panel) if the Gemini call fails. Check `SagePanel.tsx` — if there is no error branch, add one.
-
-**Target state for admin:**
-Admin API errors already render `text-red-400` inline — acceptable for internal tooling. No
-changes needed to admin error states.
-
-**React error state best practice (MEDIUM confidence — LogRocket 2025):**
-- Content-level API errors: inline error card within the content area (not full-page)
-- Network errors: banner with retry button; auto-retry optional
-- Use `ErrorBoundary` only for catastrophic JS exceptions, not for API fetch failures
-- Never show raw error messages to public users (show friendly copy; log details to Sentry)
-
-**Loading patterns already in codebase (no changes needed):**
-- `SkeletonGrid` for initial grid load — correct, keep
-- `animate-pulse` for sub-section loads — correct for admin, keep
-- `SkeletonFooter` in `ExpertGrid.tsx` for infinite scroll — correct, keep
-- Sage in-flight pulse in header — correct, keep
-
-**Confidence:** HIGH for patterns. LOW for which specific failure modes currently produce blank
-screens (requires integration testing to confirm).
+**Confidence:** HIGH for schema change (proven pattern from `lead_clicks` table). MEDIUM for
+Zustand user slice (new, but simple). LOW for retrospective attribution (explicitly not in scope).
 
 ---
 
 ## Competitor Feature Analysis
 
-| Feature | Standard Marketplace Pattern | Our v4.0 Approach |
-|---------|------------------------------|-------------------|
-| Grid/list toggle | List primary (LinkedIn, Upwork); grid primary (photo-heavy products) | Grid default (photos are the primary differentiator), list toggle in toolbar |
-| Tag filtering | Single tag dimension (most platforms) | Two dimensions (domain + industry) — launches as domain-only; industry in v4.1 |
-| Admin auth | Single admin key OR full auth service | Single admin with bcrypt hash — pragmatic for solo operator |
-| Lead export | CRM integration or CSV with email + activity | CSV with email + search history — actionable without a CRM |
-| Error states | Full error page with support links (large products); inline retry (small products) | Inline error card with retry — appropriate for marketplace scale |
-| Admin overview | Health + KPIs above the fold, details below | Existing OverviewPage is already close to one-snap ideal; two card additions complete it |
+| Feature | Standard Pattern | Our v5.2 Approach |
+|---------|-----------------|-------------------|
+| Email gate timing | Entry gate (before browse) OR action gate (before key action). Entry gate is standard for lead-gen-first products (Clearbit, Bombora). Action gate is standard for product-led products (Figma community). | Move to entry gate — Tinrate is lead-gen-first; every visitor is a potential qualified lead. |
+| Gate dismiss option | Most welcome gates provide an exit option (close button or "No thanks" link). Mandatory-only gates see higher immediate bounce. | "Skip for now" link — captures high-intent visitors, reduces friction for casual browsers. |
+| Admin card "See All" | Vercel/Linear/Stripe pattern: top-N items visible, "Show all" expansion in-card. Dedicated page for full history. | In-card expansion — keeps period toggle context intact, lower implementation cost. |
+| Event identity model | Most analytics tools use both anonymous ID + identified ID. Identify call links them: `analytics.identify(userId, {email})`. | Retain session_id (anonymous pre-gate), add email column (identified post-gate). Same dual-identity pattern used by Segment/Amplitude. |
 
 ---
 
 ## Sources
 
-- **Codebase inspection (HIGH confidence):** `frontend/src/admin/LoginPage.tsx`,
-  `frontend/src/admin/pages/OverviewPage.tsx`, `frontend/src/admin/pages/LeadsPage.tsx`,
-  `frontend/src/components/marketplace/ExpertGrid.tsx`,
-  `frontend/src/components/sidebar/TagCloud.tsx`, `app/routers/admin.py`, `app/models.py`,
-  `data/metadata.json`
-- [FastAPI Security — official docs](https://fastapi.tiangolo.com/tutorial/security/) — HIGH confidence
-- [Authentication and Authorization with FastAPI — Better Stack](https://betterstack.com/community/guides/scaling-python/authentication-fastapi/) — MEDIUM confidence
-- [passlib vs pwdlib discussion — fastapi/fastapi GitHub #11773](https://github.com/fastapi/fastapi/discussions/11773) — HIGH confidence (official repo)
-- [UI best practices for loading, error, empty states — LogRocket](https://blog.logrocket.com/ui-design-best-practices-loading-error-empty-state-react/) — MEDIUM confidence
-- [Helpful Filter Categories and Values — Nielsen Norman Group](https://www.nngroup.com/articles/filter-categories-values/) — HIGH confidence (authoritative UX research)
-- [15 Filter UI Patterns That Actually Work in 2025 — Bricxlabs](https://bricxlabs.com/blogs/universal-search-and-filters-ui) — MEDIUM confidence
-- [Smart SaaS Dashboard Design Guide 2026 — F1Studioz](https://f1studioz.com/blog/smart-saas-dashboard-design/) — MEDIUM confidence
-- [React Loading Skeleton: Smooth Loading States — Medium](https://medium.com/@joodi/react-loading-skeleton-smooth-loading-states-in-your-app-1061c92e2f73) — MEDIUM confidence
+- **Codebase inspection (HIGH confidence):** `frontend/src/hooks/useEmailGate.ts`,
+  `frontend/src/components/EmailGate.tsx`, `frontend/src/components/marketplace/ProfileGateModal.tsx`,
+  `frontend/src/admin/pages/OverviewPage.tsx`, `app/models.py`, `app/routers/events.py`,
+  `app/routers/email_capture.py`, `frontend/src/tracking.ts`
+- [Email Capture Best Practices 2026 — OptiMonk](https://www.optimonk.com/email-capture-best-practices/) — MEDIUM confidence
+- [Mastering Modal UX Best Practices — Eleken](https://www.eleken.co/blog-posts/modal-ux) — MEDIUM confidence
+- [Modal UX Design for SaaS 2026 — Userpilot](https://userpilot.com/blog/modal-ux-design/) — MEDIUM confidence
+- [Gated Content Strategy — ProductLed](https://productled.com/blog/when-you-should-ungate-content) — MEDIUM confidence
+- [Welcome Gate Best Practices — Intercom](https://www.intercom.com/blog/welcome-page/) — MEDIUM confidence
+- Internal codebase patterns: `lead_clicks` table (email-keyed), `newsletter_subscribers.session_id` (cross-identity linking precedent)
 
 ---
 
-*Feature research for: Tinrate Expert Marketplace v4.0 Public Launch*
-*Researched: 2026-02-27*
+*Feature research for: Tinrate Expert Marketplace v5.2 Email-First Gate & Admin See-All*
+*Researched: 2026-03-04*
