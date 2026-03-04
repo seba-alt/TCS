@@ -211,7 +211,7 @@ function DemandSection({ days }: { days: number }) {
     <AdminCard className="p-5 space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-sm font-semibold text-white">Unmet Demand</h2>
+          <h2 className="text-sm font-semibold text-white">Zero-Result Queries</h2>
           <p className="text-xs text-slate-500 mt-0.5">Zero-result search queries sorted by frequency</p>
         </div>
         <button
