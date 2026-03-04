@@ -126,7 +126,7 @@ See `.planning/milestones/v5.1-ROADMAP.md`
 
 **Milestone Goal:** Move email gate to page entry for upfront lead capture, attribute all user events directly to email, add See All expansion to admin overview cards, and install Vercel Speed Insights.
 
-- [ ] **Phase 63: Tracking Infrastructure** - Backend email column on user_events + frontend tracking enrichment
+- [ ] **Phase 63: Tracking Infrastructure** - Backend email column on user_events + frontend tracking enrichment (1 plan)
 - [ ] **Phase 64: Email-First Gate** - Page-entry gate UI + lead timeline email attribution
 - [ ] **Phase 65: Admin Enhancements** - See All expansion on overview cards + Vercel Speed Insights
 
@@ -141,7 +141,9 @@ See `.planning/milestones/v5.1-ROADMAP.md`
   2. Events fired after a user has subscribed include their email in the POST body to `/api/events`
   3. Events fired before gate submission continue to work with `email: null` — no regressions on anonymous tracking
   4. The backend startup migration is idempotent — redeploying does not error if the column already exists
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 63-01-PLAN.md — Backend email column + migration + API field + frontend trackEvent enrichment
 
 ### Phase 64: Email-First Gate
 **Goal**: Every new visitor sees the email gate before browsing the Explorer, returning subscribers bypass it instantly, and lead timelines show post-gate search activity attributed by email
@@ -173,6 +175,6 @@ See `.planning/milestones/v5.1-ROADMAP.md`
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 63. Tracking Infrastructure | 0/TBD | Not started | - |
+| 63. Tracking Infrastructure | 0/1 | Planned | - |
 | 64. Email-First Gate | 0/TBD | Not started | - |
 | 65. Admin Enhancements | 0/TBD | Not started | - |
