@@ -139,7 +139,7 @@ See `.planning/milestones/v5.2-ROADMAP.md`
 
 **Milestone Goal:** Improve email gate UX, fix list-view save button bug, track save events, and surface saved-expert analytics in admin
 
-- [ ] **Phase 67: Email Gate Polish & List View Fix** — Cleaner gate UI, auto-focus behaviors, list view save button
+- [x] **Phase 67: Email Gate Polish & List View Fix** — Cleaner gate UI, auto-focus behaviors, list view save button (completed 2026-03-04)
 - [ ] **Phase 68: Save Event Tracking** — Backend save/unsave event instrumentation
 - [ ] **Phase 69: Admin Saved Insights** — Top Saved Experts card and lead timeline save events
 
@@ -183,6 +183,6 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 67. Email Gate Polish & List View Fix | 0/2 | Planned | - |
+| 67. Email Gate Polish & List View Fix | 2/2 | Complete   | 2026-03-04 |
 | 68. Save Event Tracking | 0/TBD | Not started | - |
 | 69. Admin Saved Insights | 0/TBD | Not started | - |

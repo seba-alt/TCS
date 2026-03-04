@@ -9,9 +9,9 @@ Requirements for milestone v5.3 UX Polish & Admin Saved Insights.
 
 ### Email Gate
 
-- [ ] **GATE-01**: Email gate uses dark-background logo and cleaner minimal layout (less text)
-- [ ] **GATE-02**: Cursor auto-focuses email input when gate is active; search bar is not accessible
-- [ ] **GATE-03**: After gate dismisses, cursor auto-focuses the search bar
+- [x] **GATE-01**: Email gate uses dark-background logo and cleaner minimal layout (less text)
+- [x] **GATE-02**: Cursor auto-focuses email input when gate is active; search bar is not accessible
+- [x] **GATE-03**: After gate dismisses, cursor auto-focuses the search bar
 
 ### Saved Tracking
 
@@ -21,7 +21,7 @@ Requirements for milestone v5.3 UX Polish & Admin Saved Insights.
 
 ### Bug Fix
 
-- [ ] **FIX-01**: List view renders a save/bookmark button for each expert (matching grid view behavior)
+- [x] **FIX-01**: List view renders a save/bookmark button for each expert (matching grid view behavior)
 
 ## Future Requirements
 
@@ -40,10 +40,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| GATE-01 | Phase 67 | Pending |
-| GATE-02 | Phase 67 | Pending |
-| GATE-03 | Phase 67 | Pending |
-| FIX-01 | Phase 67 | Pending |
+| GATE-01 | Phase 67 | Complete |
+| GATE-02 | Phase 67 | Complete |
+| GATE-03 | Phase 67 | Complete |
+| FIX-01 | Phase 67 | Complete |
 | SAVE-01 | Phase 68 | Pending |
 | SAVE-02 | Phase 69 | Pending |
 | SAVE-03 | Phase 69 | Pending |
@@ -55,4 +55,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-03-04*
-*Last updated: 2026-03-04 after roadmap creation*
+*Last updated: 2026-03-04 after Phase 67 completion*
