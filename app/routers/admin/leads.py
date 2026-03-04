@@ -114,6 +114,7 @@ def get_lead_timeline(email: str, limit: int = 10, offset: int = 0, db: Session 
         })
 
     # 3. Fetch anonymous session search events (linked via session_id captured at signup)
+    session_event_ids: set[int] = set()
     subscriber = db.scalar(
         select(NewsletterSubscriber).where(NewsletterSubscriber.email == email)
     )
@@ -124,12 +125,43 @@ def get_lead_timeline(email: str, limit: int = 10, offset: int = 0, db: Session 
                 UserEvent.event_type == "search_query",
             )
         ).all()
+        session_event_ids = {row.id for row in session_event_rows}
         for row in session_event_rows:
             payload_data = json.loads(row.payload or "{}")
             search_events.append({
                 "type": "search",
                 "query": payload_data.get("query_text", ""),
                 "result_count": payload_data.get("result_count", 0),
+                "created_at": row.created_at.isoformat(),
+            })
+
+    # 3.5. Fetch email-attributed user_events — post-gate identified activity (TRACK-03)
+    # These are Explorer search queries and card clicks fired AFTER gate submission,
+    # when trackEvent includes the user's email. Matched by email only (no session_id fallback).
+    email_ue_rows = db.scalars(
+        select(UserEvent).where(
+            UserEvent.email == email,
+            UserEvent.event_type.in_(["search_query", "card_click"]),
+        )
+    ).all()
+
+    for row in email_ue_rows:
+        if row.id in session_event_ids:
+            continue  # Already included via session_id match — avoid duplicates
+        payload_data = json.loads(row.payload or "{}")
+        if row.event_type == "search_query":
+            search_events.append({
+                "type": "explorer_search",
+                "query": payload_data.get("query_text", ""),
+                "result_count": payload_data.get("result_count", 0),
+                "created_at": row.created_at.isoformat(),
+            })
+        elif row.event_type == "card_click":
+            click_events.append({
+                "type": "explorer_click",
+                "expert_username": payload_data.get("expert", ""),
+                "expert_name": payload_data.get("expert", ""),
+                "search_query": None,
                 "created_at": row.created_at.isoformat(),
             })
 
