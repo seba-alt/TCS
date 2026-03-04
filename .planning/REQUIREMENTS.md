@@ -57,23 +57,23 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ADMOV-01 | — | Pending |
-| ADMOV-02 | — | Pending |
-| ADMOV-03 | — | Pending |
-| GATE-01 | — | Pending |
-| GATE-02 | — | Pending |
-| GATE-03 | — | Pending |
-| GATE-04 | — | Pending |
-| TRACK-01 | — | Pending |
-| TRACK-02 | — | Pending |
-| TRACK-03 | — | Pending |
-| ANLYT-01 | — | Pending |
+| TRACK-01 | Phase 63 | Pending |
+| TRACK-02 | Phase 63 | Pending |
+| GATE-01 | Phase 64 | Pending |
+| GATE-02 | Phase 64 | Pending |
+| GATE-03 | Phase 64 | Pending |
+| GATE-04 | Phase 64 | Pending |
+| TRACK-03 | Phase 64 | Pending |
+| ADMOV-01 | Phase 65 | Pending |
+| ADMOV-02 | Phase 65 | Pending |
+| ADMOV-03 | Phase 65 | Pending |
+| ANLYT-01 | Phase 65 | Pending |
 
 **Coverage:**
 - v5.2 requirements: 11 total
-- Mapped to phases: 0
-- Unmapped: 11 ⚠️
+- Mapped to phases: 11
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-03-04*
-*Last updated: 2026-03-04 after initial definition*
+*Last updated: 2026-03-04 — traceability complete after roadmap creation*
