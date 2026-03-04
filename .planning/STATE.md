@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.1
 milestone_name: Lead Insights & Overview
 status: executing
-stopped_at: Phase 62.1 Admin Bugs — plan 01 complete
+stopped_at: Phase 62.2 Loops Usergroup, OG Image, Leads Context — plan 01 complete
 last_updated: "2026-03-04"
-last_activity: "2026-03-04 — Phase 62.1 plan 01 executed: unified card naming, merged duplicates, reordered grid"
+last_activity: "2026-03-04 — Phase 62.2 plan 01 executed: Loops userGroup, OG landscape image, session-linked lead timeline"
 progress:
-  total_phases: 4
-  completed_phases: 3
-  total_plans: 6
-  completed_plans: 6
+  total_phases: 5
+  completed_phases: 4
+  total_plans: 7
+  completed_plans: 7
   percent: 100
 ---
 
@@ -21,22 +21,22 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-03)
 
 **Core value:** A user describes any problem and instantly gets expertly matched professionals they can browse, filter, and contact — no searching, no guesswork.
-**Current focus:** Phase 62.1 Admin Bugs — executing
+**Current focus:** Phase 62.2 Loops Usergroup, OG Image, Leads Context — executing
 
 ## Current Position
 
 Milestone: v5.1 Lead Insights & Overview
-Phases: 3/4 complete (60, 61, 62) — Phase 62.1 executing
-Plans: 6/6 complete
-Status: Phase 62.1 plan 01 complete
-Last activity: 2026-03-04 — Phase 62.1 plan 01 executed
+Phases: 4/5 complete (60, 61, 62, 62.1) — Phase 62.2 executing
+Plans: 7/7 complete
+Status: Phase 62.2 plan 01 complete
+Last activity: 2026-03-04 — Phase 62.2 plan 01 executed
 
-Progress: [█████████░] 95%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 6 (this milestone)
+- Total plans completed: 7 (this milestone)
 - Total execution time: ~1 day
 
 **By Phase:**
@@ -47,6 +47,7 @@ Progress: [█████████░] 95%
 | 61. Lead Journey Timeline | 2/2 | 2026-03-03 |
 | 62. Overview Enhancements | 2/2 | 2026-03-03 |
 | 62.1. Admin Bugs | 1/1 | 2026-03-04 |
+| 62.2. Loops Usergroup, OG Image, Leads Context | 1/1 | 2026-03-04 |
 
 ## Accumulated Context
 
@@ -67,6 +68,10 @@ Recent decisions affecting future work:
 - [Phase 62]: New GET /analytics/top-queries endpoint for search frequency aggregation
 - [Phase 62.1]: Merged TopZeroResultsCard + UnmetDemandCard into single period-aware ZeroResultQueriesCard
 - [Phase 62.1]: Single 2-col grid replaces split 2-col + 3-col layout for admin overview cards
+- [Phase 62.2]: userGroup "search" is unconditional on all Loops contacts
+- [Phase 62.2]: First signup's session_id wins — re-subscribes with different session_id ignored
+- [Phase 62.2]: Uses query_text key from UserEvent payload (matches frontend trackEvent)
+- [Phase 62.2]: getattr(subscriber, 'session_id', None) for migration safety
 
 ### Pending Todos
 
@@ -79,5 +84,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-04
-Stopped at: Phase 62.1 Admin Bugs — plan 01 complete, awaiting verification
+Stopped at: Phase 62.2 plan 01 complete, awaiting verification
 Resume: Verification step
