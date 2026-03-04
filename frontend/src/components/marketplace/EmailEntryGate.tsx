@@ -1,11 +1,11 @@
 /**
- * EmailEntryGate — Dark overlay email gate.
+ * EmailEntryGate — Dark overlay with white card email gate.
  *
  * Blocks the entire Explorer until the visitor submits their email.
  * No dismiss path: no close button, no overlay click, no Escape key.
  * Only a valid email submission unlocks the Explorer.
  *
- * Design: Dark charcoal (#1a1a2e) semi-transparent overlay with minimal copy.
+ * Design: Dark overlay + centered white card with logo, heading, email input, purple CTA.
  * Animation: motion/react AnimatePresence fade-in/out on mount/unmount (~300ms exit).
  */
 import { useState, useRef, useEffect, type FormEvent } from 'react'
@@ -49,60 +49,70 @@ export function EmailEntryGate({ onSubmit }: EmailEntryGateProps) {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.3, ease: 'easeOut' }}
-      className="fixed inset-0 z-50 flex flex-col items-center justify-center px-6"
+      className="fixed inset-0 z-50 flex items-center justify-center px-6"
       style={{ backgroundColor: 'rgba(26, 26, 46, 0.95)' }}
     >
-      {/* Logo */}
-      <img
-        src="/logo-dark-bg.png"
-        alt="Tinrate"
-        className="h-10 mb-8"
-      />
-
-      {/* Minimal copy */}
-      <h2 className="text-xl font-semibold text-white text-center mb-2">
-        Get Access
-      </h2>
-      <p className="text-white/50 text-sm text-center mb-6">
-        Enter your email to unlock.
-      </p>
-
-      {/* Form */}
-      <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-3 w-full max-w-sm">
-        <input
-          ref={inputRef}
-          type="email"
-          value={email}
-          onChange={(e) => { setEmail(e.target.value); setError(null) }}
-          placeholder="your@email.com"
-          aria-label="Email address"
-          aria-required="true"
-          aria-invalid={error ? 'true' : 'false'}
-          aria-describedby={error ? 'entry-gate-error' : undefined}
-          className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-white/30 text-sm focus:outline-none focus:border-white/50 focus:bg-white/15 transition-all"
+      {/* White card */}
+      <div className="bg-white rounded-3xl shadow-2xl px-8 py-10 w-full max-w-md flex flex-col items-center">
+        {/* Logo */}
+        <img
+          src="/logo.png"
+          alt="Tinrate"
+          className="h-12 mb-2"
         />
 
-        {error && (
-          <p id="entry-gate-error" className="text-red-400 text-xs" role="alert">
-            {error}
-          </p>
-        )}
+        {/* Badge */}
+        <span className="inline-block bg-gray-100 text-gray-500 text-xs font-semibold tracking-wider uppercase px-3 py-1 rounded-full mb-6">
+          Search
+        </span>
 
-        <button
-          type="submit"
-          disabled={!email.trim()}
-          className="w-full py-3 rounded-xl font-semibold text-sm transition-all
-            bg-white text-gray-900 hover:bg-white/90
-            disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white"
-        >
+        {/* Heading */}
+        <h2 className="text-2xl font-bold text-gray-900 text-center mb-2">
           Get Access
-        </button>
-      </form>
+        </h2>
 
-      {/* Privacy note */}
-      <p className="text-white/30 text-xs text-center mt-4">
-        We respect your privacy. No spam.
-      </p>
+        {/* Subtitle */}
+        <p className="text-gray-400 text-sm text-center mb-8 max-w-xs">
+          Enter your email to unlock.
+        </p>
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-3 w-full">
+          <input
+            ref={inputRef}
+            type="email"
+            value={email}
+            onChange={(e) => { setEmail(e.target.value); setError(null) }}
+            placeholder="you@email.com"
+            aria-label="Email address"
+            aria-required="true"
+            aria-invalid={error ? 'true' : 'false'}
+            aria-describedby={error ? 'entry-gate-error' : undefined}
+            className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-4 text-gray-900 placeholder-gray-400 text-sm focus:outline-none focus:border-brand-purple/40 focus:ring-2 focus:ring-brand-purple/20 transition-all"
+          />
+
+          {error && (
+            <p id="entry-gate-error" className="text-red-500 text-xs" role="alert">
+              {error}
+            </p>
+          )}
+
+          <button
+            type="submit"
+            disabled={!email.trim()}
+            className="w-full py-4 rounded-2xl font-semibold text-sm text-white transition-all
+              bg-brand-purple hover:bg-brand-purple/90
+              disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-brand-purple"
+          >
+            Get Access
+          </button>
+        </form>
+
+        {/* Privacy note */}
+        <p className="text-gray-400 text-xs text-center mt-4">
+          We respect your privacy. No spam.
+        </p>
+      </div>
     </motion.div>
   )
 }
