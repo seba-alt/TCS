@@ -127,7 +127,7 @@ See `.planning/milestones/v5.1-ROADMAP.md`
 **Milestone Goal:** Move email gate to page entry for upfront lead capture, attribute all user events directly to email, add See All expansion to admin overview cards, and install Vercel Speed Insights.
 
 - [x] **Phase 63: Tracking Infrastructure** - Backend email column on user_events + frontend tracking enrichment (1 plan) (completed 2026-03-04)
-- [ ] **Phase 64: Email-First Gate** - Page-entry gate UI + lead timeline email attribution (2 plans)
+- [x] **Phase 64: Email-First Gate** - Page-entry gate UI + lead timeline email attribution (2 plans) (completed 2026-03-04)
 - [ ] **Phase 65: Admin Enhancements** - See All expansion on overview cards + Vercel Speed Insights
 
 ## Phase Details
@@ -179,5 +179,5 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 63. Tracking Infrastructure | 1/1 | Complete    | 2026-03-04 |
-| 64. Email-First Gate | 1/2 | In Progress|  |
+| 64. Email-First Gate | 2/2 | Complete    | 2026-03-04 |
 | 65. Admin Enhancements | 0/TBD | Not started | - |

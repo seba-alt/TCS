@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v5.2
 milestone_name: Email-First Gate & Admin See-All
-status: in_progress
-stopped_at: Phase 63 complete — ready to plan Phase 64
-last_updated: "2026-03-04"
-last_activity: "2026-03-04 — Phase 63 Tracking Infrastructure completed (1/1 plans)"
+status: planning
+stopped_at: Phase 64 complete — ready to plan Phase 65
+last_updated: "2026-03-04T12:23:18.618Z"
+last_activity: 2026-03-04 — Phase 64 Email-First Gate completed (2/2 plans)
 progress:
   total_phases: 3
-  completed_phases: 1
-  total_plans: 1
-  completed_plans: 1
-  percent: 33
+  completed_phases: 2
+  total_plans: 3
+  completed_plans: 3
+  percent: 67
 ---
 
 # Project State
@@ -21,17 +21,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-04)
 
 **Core value:** A user describes any problem and instantly gets expertly matched professionals they can browse, filter, and contact — no searching, no guesswork.
-**Current focus:** Phase 64 — Email-First Gate
+**Current focus:** Phase 65 — Admin Enhancements
 
 ## Current Position
 
 Milestone: v5.2 Email-First Gate & Admin See-All
-Phase: 64 of 65 (Email-First Gate)
+Phase: 65 of 65 (Admin Enhancements)
 Plan: 0 of TBD in current phase
 Status: Ready to plan
-Last activity: 2026-03-04 — Phase 63 Tracking Infrastructure completed (1/1 plans)
+Last activity: 2026-03-04 — Phase 64 Email-First Gate completed (2/2 plans)
 
-Progress: [███░░░░░░░] 33% (v5.2 milestone)
+Progress: [██████░░░░] 67% (v5.2 milestone)
 
 ## Accumulated Context
 
@@ -48,6 +48,10 @@ Recent decisions affecting current work:
 - [v5.2 Phase 63]: Email read from tinrate-newsletter-v1 Zustand persist key (not separate subscriber_email key)
 - [v5.2 Phase 63]: Email validation in route handler (not Pydantic model) — invalid emails stored as null, never reject events
 - [v5.2 Phase 63]: EventRequest does NOT have extra='forbid' — confirmed, backward compatible
+- [v5.2 Phase 64]: Entry gate replaces old newsletter gate — NewsletterGateModal deleted
+- [v5.2 Phase 64]: Legacy localStorage bypass keys (tcs_gate_email, tcs_email_unlocked) removed — users re-gate if never used newsletter flow
+- [v5.2 Phase 64]: Loops subscribe call delayed 3 seconds after gate submission for first-search bundling
+- [v5.2 Phase 64]: Timeline uses distinct types: explorer_search (green/compass), explorer_click (amber/eye) — separate from search (blue) and click (purple)
 
 ### Pending Todos
 
@@ -56,11 +60,11 @@ None.
 ### Blockers/Concerns
 
 - [Phase 63 pre-check]: ~~Confirm EventRequest does NOT have extra='forbid'~~ RESOLVED — confirmed, no extra='forbid'
-- [Phase 64 pre-check]: Audit dual localStorage unlock paths (tcs_gate_email legacy + tinrate-newsletter-v1 Zustand) before implementing gate
+- [Phase 64 pre-check]: ~~Audit dual localStorage unlock paths~~ RESOLVED — legacy keys removed, only useNltrStore.subscribed used
 - [Phase 64 pre-check]: Register Loops contactSource custom property in Loops dashboard (one-time manual step) before Phase 64 ships
 
 ## Session Continuity
 
 Last session: 2026-03-04
-Stopped at: Phase 63 complete — ready to plan Phase 64
-Resume: Run /gsd:discuss-phase 64 --auto
+Stopped at: Phase 64 complete — ready to plan Phase 65
+Resume: Run /gsd:discuss-phase 65 --auto
