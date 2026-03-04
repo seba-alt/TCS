@@ -179,7 +179,9 @@ Plans:
   1. Admin overview shows a "Top Saved Experts" ranked card following the same pattern as Top Experts/Top Searches
   2. Top Saved card responds to the period toggle (Today / 7d / 30d / All)
   3. Lead timeline rows display save and unsave events with distinct icons alongside searches and clicks
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 69-01-PLAN.md — Top Saved Experts card + save/unsave events in lead timeline
 
 ## Progress
 
@@ -187,4 +189,4 @@ Plans:
 |-------|----------------|--------|-----------|
 | 67. Email Gate Polish & List View Fix | 2/2 | Complete   | 2026-03-04 |
 | 68. Save Event Tracking | 1/1 | Complete    | 2026-03-04 |
-| 69. Admin Saved Insights | 0/TBD | Not started | - |
+| 69. Admin Saved Insights | 0/1 | Not started | - |
