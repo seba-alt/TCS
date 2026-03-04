@@ -128,7 +128,7 @@ See `.planning/milestones/v5.1-ROADMAP.md`
 
 - [x] **Phase 63: Tracking Infrastructure** - Backend email column on user_events + frontend tracking enrichment (1 plan) (completed 2026-03-04)
 - [x] **Phase 64: Email-First Gate** - Page-entry gate UI + lead timeline email attribution (2 plans) (completed 2026-03-04)
-- [ ] **Phase 65: Admin Enhancements** - See All expansion on overview cards + Vercel Speed Insights
+- [ ] **Phase 65: Admin Enhancements** - See All expansion on overview cards + Vercel Speed Insights (1 plan)
 
 ## Phase Details
 
@@ -170,7 +170,9 @@ Plans:
   2. Clicking "See All" on the Top Searches card expands it in-place to show all queries (up to 50) without navigating away
   3. Both expanded cards show a "Show less" control that collapses back to the top 5 view, preserving the period toggle selection
   4. Vercel Speed Insights data appears in the Vercel dashboard for the frontend deployment
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 65-01-PLAN.md — Accordion expansion on Top Clicks & Top Searches cards + Speed Insights verification
 
 ## Progress
 
