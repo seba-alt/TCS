@@ -159,8 +159,8 @@ def get_lead_timeline(email: str, limit: int = 10, offset: int = 0, db: Session 
         elif row.event_type == "card_click":
             click_events.append({
                 "type": "explorer_click",
-                "expert_username": payload_data.get("expert", ""),
-                "expert_name": payload_data.get("expert", ""),
+                "expert_username": payload_data.get("expert_id", ""),
+                "expert_name": payload_data.get("expert_id", ""),
                 "search_query": None,
                 "created_at": row.created_at.isoformat(),
             })
