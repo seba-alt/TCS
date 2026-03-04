@@ -1,14 +1,14 @@
 /**
- * EmailEntryGate — Full-screen mandatory email gate overlay.
+ * EmailEntryGate — Dark overlay email gate.
  *
  * Blocks the entire Explorer until the visitor submits their email.
  * No dismiss path: no close button, no overlay click, no Escape key.
  * Only a valid email submission unlocks the Explorer.
  *
- * Design: Blurred Explorer backdrop with centered glassmorphic card.
- * Animation: motion/react AnimatePresence fade-in/out on mount/unmount.
+ * Design: Dark charcoal (#1a1a2e) semi-transparent overlay with minimal copy.
+ * Animation: motion/react AnimatePresence fade-in/out on mount/unmount (~300ms exit).
  */
-import { useState, type FormEvent } from 'react'
+import { useState, useRef, useEffect, type FormEvent } from 'react'
 import { motion } from 'motion/react'
 
 interface EmailEntryGateProps {
@@ -18,6 +18,15 @@ interface EmailEntryGateProps {
 export function EmailEntryGate({ onSubmit }: EmailEntryGateProps) {
   const [email, setEmail] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  // Auto-focus the email input after a short delay to ensure the overlay is rendered
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      inputRef.current?.focus()
+    }, 100)
+    return () => clearTimeout(timer)
+  }, [])
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -39,67 +48,61 @@ export function EmailEntryGate({ onSubmit }: EmailEntryGateProps) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      transition={{ duration: 0.4, ease: 'easeOut' }}
-      className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-md bg-black/50"
+      transition={{ duration: 0.3, ease: 'easeOut' }}
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center px-6"
+      style={{ backgroundColor: 'rgba(26, 26, 46, 0.95)' }}
     >
-      <motion.div
-        initial={{ scale: 0.95, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.95, opacity: 0 }}
-        transition={{ duration: 0.3 }}
-        className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl"
-      >
-        {/* Logo */}
-        <div className="flex justify-center mb-5">
-          <img src="/logo.png" alt="Tinrate" className="h-8" />
-        </div>
+      {/* Logo */}
+      <img
+        src="/logo-dark-bg.png"
+        alt="Tinrate"
+        className="h-10 mb-8"
+      />
 
-        {/* Tagline */}
-        <h2 className="text-xl font-semibold text-white text-center leading-tight mb-2">
-          Find the Right Expert, Instantly
-        </h2>
-        <p className="text-white/60 text-sm text-center mb-6 leading-relaxed">
-          Browse verified consultants matched to your exact needs.
-          Enter your email to get started.
-        </p>
+      {/* Minimal copy */}
+      <h2 className="text-xl font-semibold text-white text-center mb-2">
+        Get Access
+      </h2>
+      <p className="text-white/50 text-sm text-center mb-6">
+        Enter your email to unlock.
+      </p>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-3">
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => { setEmail(e.target.value); setError(null) }}
-            placeholder="your@email.com"
-            aria-label="Email address"
-            aria-required="true"
-            aria-invalid={error ? 'true' : 'false'}
-            aria-describedby={error ? 'entry-gate-error' : undefined}
-            className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-white/40 text-sm focus:outline-none focus:border-white/50 focus:bg-white/15 transition-all"
-            autoFocus
-          />
+      {/* Form */}
+      <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-3 w-full max-w-sm">
+        <input
+          ref={inputRef}
+          type="email"
+          value={email}
+          onChange={(e) => { setEmail(e.target.value); setError(null) }}
+          placeholder="your@email.com"
+          aria-label="Email address"
+          aria-required="true"
+          aria-invalid={error ? 'true' : 'false'}
+          aria-describedby={error ? 'entry-gate-error' : undefined}
+          className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-white/30 text-sm focus:outline-none focus:border-white/50 focus:bg-white/15 transition-all"
+        />
 
-          {error && (
-            <p id="entry-gate-error" className="text-red-400 text-xs" role="alert">
-              {error}
-            </p>
-          )}
+        {error && (
+          <p id="entry-gate-error" className="text-red-400 text-xs" role="alert">
+            {error}
+          </p>
+        )}
 
-          <button
-            type="submit"
-            disabled={!email.trim()}
-            className="w-full py-3 rounded-xl font-semibold text-sm transition-all
-              bg-white text-gray-900 hover:bg-white/90
-              disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white"
-          >
-            Get Access
-          </button>
-        </form>
+        <button
+          type="submit"
+          disabled={!email.trim()}
+          className="w-full py-3 rounded-xl font-semibold text-sm transition-all
+            bg-white text-gray-900 hover:bg-white/90
+            disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white"
+        >
+          Get Access
+        </button>
+      </form>
 
-        {/* Privacy note */}
-        <p className="text-white/40 text-xs text-center mt-3">
-          We respect your privacy. No spam.
-        </p>
-      </motion.div>
+      {/* Privacy note */}
+      <p className="text-white/30 text-xs text-center mt-4">
+        We respect your privacy. No spam.
+      </p>
     </motion.div>
   )
 }
