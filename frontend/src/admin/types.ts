@@ -274,7 +274,22 @@ export interface TimelineClickEvent {
   created_at: string  // ISO datetime
 }
 
-export type TimelineEvent = TimelineSearchEvent | TimelineClickEvent
+export interface TimelineExplorerSearchEvent {
+  type: 'explorer_search'
+  query: string
+  result_count: number
+  created_at: string  // ISO datetime
+}
+
+export interface TimelineExplorerClickEvent {
+  type: 'explorer_click'
+  expert_username: string
+  expert_name: string
+  search_query: string | null
+  created_at: string  // ISO datetime
+}
+
+export type TimelineEvent = TimelineSearchEvent | TimelineClickEvent | TimelineExplorerSearchEvent | TimelineExplorerClickEvent
 
 export interface LeadTimelineResponse {
   email: string

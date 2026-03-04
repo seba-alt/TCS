@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Compass, Eye } from 'lucide-react'
 import { useNewsletterSubscribers, useLeadTimeline } from '../hooks/useAdminData'
 import { AdminCard } from '../components/AdminCard'
 import { AdminPageHeader } from '../components/AdminPageHeader'
@@ -159,9 +160,11 @@ export default function LeadsPage() {
                                       )}
                                       <div className="relative flex items-start gap-3 py-2">
                                         <div className={`absolute -left-[25px] top-3 w-2.5 h-2.5 rounded-full border-2 ${
-                                          event.type === 'search'
-                                            ? 'bg-blue-500/80 border-blue-400'
-                                            : 'bg-purple-500/80 border-purple-400'
+                                          event.type === 'search' ? 'bg-blue-500/80 border-blue-400'
+                                            : event.type === 'click' ? 'bg-purple-500/80 border-purple-400'
+                                            : event.type === 'explorer_search' ? 'bg-emerald-500/80 border-emerald-400'
+                                            : event.type === 'explorer_click' ? 'bg-amber-500/80 border-amber-400'
+                                            : 'bg-slate-500/80 border-slate-400'
                                         }`} />
                                         <div className="flex-1 min-w-0">
                                           {event.type === 'search' ? (
@@ -174,7 +177,7 @@ export default function LeadsPage() {
                                                 {event.result_count} {event.result_count === 1 ? 'result' : 'results'}
                                               </span>
                                             </div>
-                                          ) : (
+                                          ) : event.type === 'click' ? (
                                             <div className="flex items-center gap-2 flex-wrap">
                                               <svg className="w-3.5 h-3.5 text-purple-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
@@ -186,7 +189,20 @@ export default function LeadsPage() {
                                                 </span>
                                               )}
                                             </div>
-                                          )}
+                                          ) : event.type === 'explorer_search' ? (
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                              <Compass className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
+                                              <span className="text-sm text-slate-200">{event.query}</span>
+                                              <span className="text-xs bg-slate-800 border border-slate-700 text-slate-400 px-2 py-0.5 rounded">
+                                                {event.result_count} {event.result_count === 1 ? 'result' : 'results'}
+                                              </span>
+                                            </div>
+                                          ) : event.type === 'explorer_click' ? (
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                              <Eye className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+                                              <span className="text-sm font-medium text-amber-300">{event.expert_name}</span>
+                                            </div>
+                                          ) : null}
                                         </div>
                                         <span className="text-xs text-slate-500 flex-shrink-0 whitespace-nowrap" title={new Date(event.created_at).toLocaleString()}>
                                           {timeAgo(event.created_at)}
