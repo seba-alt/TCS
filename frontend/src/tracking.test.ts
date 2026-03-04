@@ -127,4 +127,24 @@ describe('trackEvent', () => {
     const body = JSON.parse(fetchMock.mock.calls[0][1]?.body as string)
     expect(body.session_id).toBe('existing-session-id')
   })
+
+  it('sends save event with expert_id and action save', async () => {
+    const { trackEvent } = await import('./tracking')
+    trackEvent('save', { expert_id: 'john-doe', action: 'save' })
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    const body = JSON.parse(fetchMock.mock.calls[0][1]?.body as string)
+    expect(body.event_type).toBe('save')
+    expect(body.payload).toEqual({ expert_id: 'john-doe', action: 'save' })
+  })
+
+  it('sends save event with action unsave', async () => {
+    const { trackEvent } = await import('./tracking')
+    trackEvent('save', { expert_id: 'jane-smith', action: 'unsave' })
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    const body = JSON.parse(fetchMock.mock.calls[0][1]?.body as string)
+    expect(body.event_type).toBe('save')
+    expect(body.payload).toEqual({ expert_id: 'jane-smith', action: 'unsave' })
+  })
 })

@@ -1,5 +1,6 @@
 import type { StateCreator } from 'zustand'
 import type { ExplorerStore } from './index'
+import { trackEvent } from '../tracking'
 
 export interface FilterSlice {
   // Filter data fields — these are persisted to localStorage
@@ -96,10 +97,18 @@ export const createFilterSlice: StateCreator<
   setSavedFilter: (v) => set({ savedFilter: v }),
 
   toggleSavedExpert: (username) => set((state) => {
-    const next = state.savedExperts.includes(username)
+    const isRemoving = state.savedExperts.includes(username)
+    const next = isRemoving
       ? state.savedExperts.filter(u => u !== username)
       : [...state.savedExperts, username]
     localStorage.setItem('tcs_saved_experts', JSON.stringify(next))
+
+    // Fire-and-forget analytics event
+    void trackEvent('save', {
+      expert_id: username,
+      action: isRemoving ? 'unsave' : 'save',
+    })
+
     return { savedExperts: next }
   }),
 
