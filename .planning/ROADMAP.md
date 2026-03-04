@@ -185,7 +185,7 @@ Plans:
   2. Phase 64 VERIFICATION.md exists and confirms GATE-01–04 and TRACK-03 are satisfied
 **Plans**: 1 plan
 Plans:
-- [ ] 66-01-PLAN.md — Fix payload key mismatch + Phase 64 verification
+- [ ] 66-01-PLAN.md — Fix explorer_click payload key bug + Phase 64 VERIFICATION.md + REQUIREMENTS.md update
 
 ## Progress
 
