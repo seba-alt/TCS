@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { TrendingUp, Search, AlertCircle, CheckCircle } from 'lucide-react'
 import { useAdminStats, adminFetch, useAnalyticsSummary } from '../hooks/useAdminData'
 import { AdminCard } from '../components/AdminCard'
-import type { DemandResponse, ExposureResponse, TopQueriesResponse, LeadsResponse, RecentSearchEntry, RecentClickEntry } from '../types'
+import type { DemandResponse, ExposureResponse, TopQueriesResponse, NewsletterSubscribersResponse, RecentSearchEntry, RecentClickEntry } from '../types'
 
 function timeAgo(iso: string): string {
   const seconds = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
@@ -137,20 +137,17 @@ function ZeroResultQueriesCard({ days }: { days: number }) {
 }
 
 function RecentLeadsCard() {
-  const [data, setData] = useState<LeadsResponse | null>(null)
+  const [data, setData] = useState<NewsletterSubscribersResponse | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    adminFetch<LeadsResponse>('/leads')
+    adminFetch<NewsletterSubscribersResponse>('/newsletter-subscribers')
       .then(setData)
       .catch(() => setData(null))
       .finally(() => setLoading(false))
   }, [])
 
-  const rows = (data?.leads ?? [])
-    .filter(l => l.last_search_at)
-    .sort((a, b) => new Date(b.last_search_at!).getTime() - new Date(a.last_search_at!).getTime())
-    .slice(0, 5)
+  const rows = (data?.subscribers ?? []).slice(0, 5)
 
   return (
     <AdminCard className="p-5">
@@ -169,10 +166,7 @@ function RecentLeadsCard() {
           {rows.map((row) => (
             <div key={row.email} className="flex items-center justify-between">
               <span className="text-sm text-slate-300 truncate max-w-[60%]" title={row.email}>{row.email}</span>
-              <div className="flex items-center gap-3 flex-shrink-0 ml-2">
-                <span className="text-xs text-slate-500">{row.total_searches} searches</span>
-                <span className="text-xs text-slate-500">{timeAgo(row.last_search_at!)}</span>
-              </div>
+              <span className="text-xs text-slate-500 flex-shrink-0 ml-2">{timeAgo(row.created_at)}</span>
             </div>
           ))}
         </div>
@@ -460,9 +454,9 @@ export default function OverviewPage() {
 
       {/* All detail cards — single unified grid, ordered by visibility */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        <ZeroResultQueriesCard days={days} />
-        <TopQueriesCard days={days} />
         <TopExpertsCard days={days} />
+        <TopQueriesCard days={days} />
+        <ZeroResultQueriesCard days={days} />
         <RecentExploreSearchesCard
           searches={analytics?.recent_searches ?? []}
           loading={analyticsLoading}

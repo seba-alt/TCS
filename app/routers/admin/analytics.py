@@ -11,7 +11,7 @@ from sqlalchemy import Integer, func, select, text as _text, update
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import Conversation, Expert, Feedback
+from app.models import Conversation, Expert, Feedback, NewsletterSubscriber
 from app.routers.admin._common import GAP_THRESHOLD, _is_gap
 
 router = APIRouter()
@@ -79,15 +79,12 @@ def get_stats(days: int = 0, db: Session = Depends(get_db)):
     top_fb_rows = db.execute(top_fb_stmt).all()
     top_feedback = [{"query": r.query, "vote": r.vote, "count": r.count} for r in top_fb_rows]
 
-    # Phase 48: Total leads (distinct emails), expert pool, 7-day trends
+    # Total leads from newsletter subscribers (gate signups)
     leads_stmt = (
-        select(func.count(func.distinct(Conversation.email)))
-        .select_from(Conversation)
-        .where(Conversation.email != "")
-        .where(Conversation.email.is_not(None))
+        select(func.count()).select_from(NewsletterSubscriber)
     )
     if date_filter:
-        leads_stmt = leads_stmt.where(Conversation.created_at >= date_filter)
+        leads_stmt = leads_stmt.where(NewsletterSubscriber.created_at >= date_filter)
     total_leads = db.scalar(leads_stmt) or 0
 
     expert_pool = db.scalar(
@@ -98,20 +95,16 @@ def get_stats(days: int = 0, db: Session = Depends(get_db)):
     fourteen_days_ago = datetime.utcnow() - timedelta(days=14)
 
     leads_7d = db.scalar(
-        select(func.count(func.distinct(Conversation.email)))
-        .select_from(Conversation)
-        .where(Conversation.email != "")
-        .where(Conversation.email.is_not(None))
-        .where(Conversation.created_at >= seven_days_ago)
+        select(func.count())
+        .select_from(NewsletterSubscriber)
+        .where(NewsletterSubscriber.created_at >= seven_days_ago)
     ) or 0
 
     leads_prior_7d = db.scalar(
-        select(func.count(func.distinct(Conversation.email)))
-        .select_from(Conversation)
-        .where(Conversation.email != "")
-        .where(Conversation.email.is_not(None))
-        .where(Conversation.created_at >= fourteen_days_ago)
-        .where(Conversation.created_at < seven_days_ago)
+        select(func.count())
+        .select_from(NewsletterSubscriber)
+        .where(NewsletterSubscriber.created_at >= fourteen_days_ago)
+        .where(NewsletterSubscriber.created_at < seven_days_ago)
     ) or 0
 
     expert_pool_7d = 0
