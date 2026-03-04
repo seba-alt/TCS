@@ -69,10 +69,11 @@ export default function MarketplacePage() {
     setShowGate(false)
 
     // Fire-and-forget backend call (silent failure — user already unlocked via Zustand)
+    const sessionId = localStorage.getItem('tcs_session_id')
     fetch(`${API_URL}/api/newsletter/subscribe`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email }),
+      body: JSON.stringify({ email, session_id: sessionId }),
     }).catch(() => {})
 
     // Open the pending profile
