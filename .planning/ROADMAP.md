@@ -112,5 +112,11 @@ See `.planning/milestones/v5.1-ROADMAP.md`
 - [x] Phase 62.1: Admin Bugs (1 plan) (completed 2026-03-04)
   Plans:
   - [ ] 62.1-01-PLAN.md — Unify card naming, merge duplicates, reorder overview grid
+- [ ] Phase 62.2: Loops Usergroup, OG Preview Image, Leads Timeline Context (1 plan)
+  **Goal:** Add Loops userGroup tagging, replace OG image with landscape format, link anonymous session searches to lead timeline
+  **Requirements:** LOOPS-01, OG-01, SESSION-01
+  **Plans:** 1 plan
+  Plans:
+  - [ ] 62.2-01-PLAN.md — Loops userGroup + OG image + session-linked lead timeline
 
 </details>
