@@ -249,6 +249,7 @@ def _serialize_expert(e: Expert) -> dict:
         "findability_score": e.findability_score,
         "photo_url": e.photo_url,
         "industry_tags": json.loads(e.industry_tags) if e.industry_tags else [],
+        "is_active": e.is_active,
     }
 
 

@@ -8,7 +8,7 @@ from collections import Counter
 from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -35,11 +35,15 @@ router = APIRouter()
 
 
 @router.get("/experts")
-def get_experts(db: Session = Depends(get_db)):
-    """Return all experts from the experts DB table."""
-    experts = db.scalars(
-        select(Expert).order_by(Expert.findability_score.asc().nulls_first())
-    ).all()
+def get_experts(
+    db: Session = Depends(get_db),
+    active_only: bool = Query(default=False),
+):
+    """Return all experts from the experts DB table. Optionally filter to active-only."""
+    stmt = select(Expert).order_by(Expert.findability_score.asc().nulls_first())
+    if active_only:
+        stmt = stmt.where(Expert.is_active == True)
+    experts = db.scalars(stmt).all()
     return {"experts": [_serialize_expert(e) for e in experts]}
 
 
@@ -170,34 +174,15 @@ def assign_industry_tags(db: Session = Depends(get_db)):
 
 @router.delete("/experts/{username}")
 def delete_expert(username: str, request: Request, db: Session = Depends(get_db)):
-    """Delete a single expert from DB, metadata.json, and experts.csv."""
+    """Soft-delete a single expert (sets is_active=False). Triggers FAISS rebuild to exclude them."""
     expert = db.scalar(select(Expert).where(Expert.username == username))
     if not expert:
         raise HTTPException(status_code=404, detail=f"Expert '{username}' not found")
 
-    db.delete(expert)
+    expert.is_active = False
     db.commit()
 
-    # Remove from metadata.json
-    if METADATA_PATH.exists():
-        with open(METADATA_PATH, "r", encoding="utf-8") as f:
-            metadata = json.load(f)
-        metadata = [m for m in metadata if m.get("Username") != username]
-        with open(METADATA_PATH, "w", encoding="utf-8") as f:
-            json.dump(metadata, f, indent=2, ensure_ascii=False)
-
-    # Remove from experts.csv
-    if EXPERTS_CSV_PATH.exists():
-        with open(EXPERTS_CSV_PATH, "r", newline="", encoding="utf-8") as f:
-            reader = csv.DictReader(f)
-            fieldnames = reader.fieldnames or []
-            rows = [row for row in reader if row.get("Username") != username]
-        with open(EXPERTS_CSV_PATH, "w", newline="", encoding="utf-8") as f:
-            writer = csv.DictWriter(f, fieldnames=fieldnames)
-            writer.writeheader()
-            writer.writerows(rows)
-
-    # Trigger FAISS rebuild in background
+    # Trigger FAISS rebuild in background (ingest.py filters is_active=False automatically)
     rebuilding = False
     if _ingest["status"] != "running":
         _ingest["status"] = "running"
@@ -205,7 +190,7 @@ def delete_expert(username: str, request: Request, db: Session = Depends(get_db)
         thread.start()
         rebuilding = True
 
-    log.info("admin.expert_deleted", username=username, rebuilding=rebuilding)
+    log.info("admin.expert_soft_deleted", username=username, rebuilding=rebuilding)
     return {"ok": True, "username": username, "rebuilding": rebuilding}
 
 
@@ -215,7 +200,7 @@ class BulkDeleteBody(BaseModel):
 
 @router.post("/experts/delete-bulk")
 def delete_experts_bulk(body: BulkDeleteBody, request: Request, db: Session = Depends(get_db)):
-    """Delete multiple experts from DB, metadata.json, and experts.csv."""
+    """Soft-delete multiple experts (sets is_active=False). Triggers FAISS rebuild to exclude them."""
     experts = db.scalars(
         select(Expert).where(Expert.username.in_(body.usernames))
     ).all()
@@ -223,30 +208,11 @@ def delete_experts_bulk(body: BulkDeleteBody, request: Request, db: Session = De
     deleted_usernames = []
     for expert in experts:
         deleted_usernames.append(expert.username)
-        db.delete(expert)
+        expert.is_active = False
     db.commit()
 
     if not deleted_usernames:
         return {"ok": True, "deleted": 0, "rebuilding": False}
-
-    username_set = set(deleted_usernames)
-
-    if METADATA_PATH.exists():
-        with open(METADATA_PATH, "r", encoding="utf-8") as f:
-            metadata = json.load(f)
-        metadata = [m for m in metadata if m.get("Username") not in username_set]
-        with open(METADATA_PATH, "w", encoding="utf-8") as f:
-            json.dump(metadata, f, indent=2, ensure_ascii=False)
-
-    if EXPERTS_CSV_PATH.exists():
-        with open(EXPERTS_CSV_PATH, "r", newline="", encoding="utf-8") as f:
-            reader = csv.DictReader(f)
-            fieldnames = reader.fieldnames or []
-            rows = [row for row in reader if row.get("Username") not in username_set]
-        with open(EXPERTS_CSV_PATH, "w", newline="", encoding="utf-8") as f:
-            writer = csv.DictWriter(f, fieldnames=fieldnames)
-            writer.writeheader()
-            writer.writerows(rows)
 
     rebuilding = False
     if _ingest["status"] != "running":
@@ -255,7 +221,7 @@ def delete_experts_bulk(body: BulkDeleteBody, request: Request, db: Session = De
         thread.start()
         rebuilding = True
 
-    log.info("admin.experts_bulk_deleted", count=len(deleted_usernames), usernames=deleted_usernames, rebuilding=rebuilding)
+    log.info("admin.experts_bulk_soft_deleted", count=len(deleted_usernames), usernames=deleted_usernames, rebuilding=rebuilding)
     return {"ok": True, "deleted": len(deleted_usernames), "rebuilding": rebuilding}
 
 
