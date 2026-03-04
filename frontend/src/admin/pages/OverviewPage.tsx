@@ -85,41 +85,49 @@ function StatCard({
 
 // ─── Section cards ──────────────────────────────────────────────────────────
 
-function TopZeroResultsCard() {
+function ZeroResultQueriesCard({ days }: { days: number }) {
   const [data, setData] = useState<DemandResponse | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    adminFetch<DemandResponse>('/events/demand', { days: 30, page: 0, page_size: 5 })
+    setLoading(true)
+    adminFetch<DemandResponse>('/events/demand', { days, page: 0, page_size: 5 })
       .then(setData)
       .catch(() => setData(null))
       .finally(() => setLoading(false))
-  }, [])
+  }, [days])
 
   const rows = data?.demand ?? []
 
   return (
     <AdminCard className="p-5">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-sm font-semibold text-white">Top Zero-Result Queries</h2>
+        <div className="flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 text-amber-400" />
+          <h2 className="text-sm font-semibold text-white">Zero-Result Queries</h2>
+        </div>
         <Link to="/admin/gaps" className="text-xs text-purple-400 hover:text-purple-300 transition-colors">
           See all &rarr;
         </Link>
       </div>
       {loading ? (
-        <p className="text-slate-500 text-sm animate-pulse">Loading...</p>
-      ) : data?.data_since === null ? (
-        <p className="text-slate-500 text-sm">No tracking data yet</p>
+        <div className="space-y-2">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="h-5 bg-slate-700/50 rounded animate-pulse" />
+          ))}
+        </div>
       ) : rows.length === 0 ? (
-        <p className="text-slate-500 text-sm">No zero-result queries in the last 30 days</p>
+        <div className="flex items-center gap-2 text-sm text-emerald-400">
+          <CheckCircle className="w-4 h-4" />
+          <span>All searches returned results</span>
+        </div>
       ) : (
         <div className="space-y-2">
-          {rows.slice(0, 5).map((row, i) => (
-            <div key={i} className="flex items-center justify-between">
-              <span className="text-sm text-slate-300 truncate max-w-[75%]" title={row.query_text}>
-                {row.query_text}
-              </span>
-              <span className="text-xs text-red-400 font-mono ml-2 flex-shrink-0">{row.frequency}&times;</span>
+          {rows.map((row, i) => (
+            <div key={row.query_text} className="flex items-center gap-2">
+              <span className="text-xs text-slate-500 w-4 flex-shrink-0">{i + 1}.</span>
+              <span className="text-sm text-slate-300 truncate flex-1" title={row.query_text}>{row.query_text}</span>
+              <span className="text-xs text-slate-500 font-mono flex-shrink-0">{row.frequency} searches</span>
             </div>
           ))}
         </div>
@@ -147,7 +155,7 @@ function RecentLeadsCard() {
   return (
     <AdminCard className="p-5">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-sm font-semibold text-white">Recent Leads</h2>
+        <h2 className="text-sm font-semibold text-white">Leads</h2>
         <Link to="/admin/leads" className="text-xs text-purple-400 hover:text-purple-300 transition-colors">
           View all &rarr;
         </Link>
@@ -177,7 +185,7 @@ function RecentExploreSearchesCard({ searches, loading }: { searches: RecentSear
   return (
     <AdminCard className="p-5">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-sm font-semibold text-white">Recent Explore Searches</h2>
+        <h2 className="text-sm font-semibold text-white">Recent Searches</h2>
         <Link to="/admin/data" className="text-xs text-purple-400 hover:text-purple-300 transition-colors">
           View all &rarr;
         </Link>
@@ -230,7 +238,7 @@ function RecentCardClicksCard({ clicks, loading }: { clicks: RecentClickEntry[];
   return (
     <AdminCard className="p-5">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-sm font-semibold text-white">Recent Card Clicks</h2>
+        <h2 className="text-sm font-semibold text-white">Recent Clicks</h2>
         <Link to="/admin/data" className="text-xs text-purple-400 hover:text-purple-300 transition-colors">
           Exposure details &rarr;
         </Link>
@@ -282,7 +290,7 @@ function TopExpertsCard({ days }: { days: number }) {
     <AdminCard className="p-5">
       <div className="flex items-center gap-2 mb-4">
         <TrendingUp className="w-4 h-4 text-purple-400" />
-        <h2 className="text-sm font-semibold text-white">Top Experts</h2>
+        <h2 className="text-sm font-semibold text-white">Top Clicks</h2>
       </div>
       {loading ? (
         <div className="space-y-2">
@@ -341,52 +349,6 @@ function TopQueriesCard({ days }: { days: number }) {
         </div>
       ) : rows.length === 0 ? (
         <p className="text-sm text-slate-500">No search activity yet</p>
-      ) : (
-        <div className="space-y-2">
-          {rows.map((row, i) => (
-            <div key={row.query_text} className="flex items-center gap-2">
-              <span className="text-xs text-slate-500 w-4 flex-shrink-0">{i + 1}.</span>
-              <span className="text-sm text-slate-300 truncate flex-1" title={row.query_text}>{row.query_text}</span>
-              <span className="text-xs text-slate-500 font-mono flex-shrink-0">{row.frequency} searches</span>
-            </div>
-          ))}
-        </div>
-      )}
-    </AdminCard>
-  )
-}
-
-function UnmetDemandCard({ days }: { days: number }) {
-  const [data, setData] = useState<DemandResponse | null>(null)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    setLoading(true)
-    adminFetch<DemandResponse>('/events/demand', { days, page: 0, page_size: 5 })
-      .then(setData)
-      .catch(() => setData(null))
-      .finally(() => setLoading(false))
-  }, [days])
-
-  const rows = data?.demand ?? []
-
-  return (
-    <AdminCard className="p-5">
-      <div className="flex items-center gap-2 mb-4">
-        <AlertCircle className="w-4 h-4 text-amber-400" />
-        <h2 className="text-sm font-semibold text-white">Unmet Demand</h2>
-      </div>
-      {loading ? (
-        <div className="space-y-2">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="h-5 bg-slate-700/50 rounded animate-pulse" />
-          ))}
-        </div>
-      ) : rows.length === 0 ? (
-        <div className="flex items-center gap-2 text-sm text-emerald-400">
-          <CheckCircle className="w-4 h-4" />
-          <span>All searches returned results</span>
-        </div>
       ) : (
         <div className="space-y-2">
           {rows.map((row, i) => (
@@ -476,7 +438,7 @@ export default function OverviewPage() {
           onClick={() => navigate('/admin/data')}
         />
         <StatCard
-          label="Gaps"
+          label="Zero-Result Queries"
           value={stats.gap_count}
           sub="queries needing improvement"
           onClick={() => navigate('/admin/gaps')}
@@ -496,8 +458,11 @@ export default function OverviewPage() {
         />
       </div>
 
-      {/* Detail sections — 2x2 grid */}
+      {/* All detail cards — single unified grid, ordered by visibility */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <ZeroResultQueriesCard days={days} />
+        <TopQueriesCard days={days} />
+        <TopExpertsCard days={days} />
         <RecentExploreSearchesCard
           searches={analytics?.recent_searches ?? []}
           loading={analyticsLoading}
@@ -506,15 +471,7 @@ export default function OverviewPage() {
           clicks={analytics?.recent_clicks ?? []}
           loading={analyticsLoading}
         />
-        <TopZeroResultsCard />
         <RecentLeadsCard />
-      </div>
-
-      {/* Ranked insights row */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <TopExpertsCard days={days} />
-        <TopQueriesCard days={days} />
-        <UnmetDemandCard days={days} />
       </div>
 
     </div>
