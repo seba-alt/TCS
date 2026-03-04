@@ -1,0 +1,58 @@
+# Requirements: TCS Expert Marketplace
+
+**Defined:** 2026-03-04
+**Core Value:** A user describes any problem and instantly gets expertly matched professionals they can browse, filter, and contact — no searching, no guesswork.
+
+## v5.3 Requirements
+
+Requirements for milestone v5.3 UX Polish & Admin Saved Insights.
+
+### Email Gate
+
+- [ ] **GATE-01**: Email gate uses dark-background logo and cleaner minimal layout (less text)
+- [ ] **GATE-02**: Cursor auto-focuses email input when gate is active; search bar is not accessible
+- [ ] **GATE-03**: After gate dismisses, cursor auto-focuses the search bar
+
+### Saved Tracking
+
+- [ ] **SAVE-01**: Save/unsave actions tracked as backend events via trackEvent() with expert_id and action (save/unsave)
+- [ ] **SAVE-02**: Admin overview shows "Top Saved Experts" ranked card (same pattern as Top Clicks/Top Searches)
+- [ ] **SAVE-03**: Admin lead timeline shows save/unsave events with distinct icon alongside searches and clicks
+
+### Bug Fix
+
+- [ ] **FIX-01**: List view renders a save/bookmark button for each expert (matching grid view behavior)
+
+## Future Requirements
+
+None deferred.
+
+## Out of Scope
+
+| Feature | Reason |
+|---------|--------|
+| Backend-persisted saved experts (per-user accounts) | No user auth — saves remain localStorage, events are fire-and-forget analytics |
+| Aggregate "most saved" public display | Admin-only analytics; no public-facing saved rankings |
+
+## Traceability
+
+Which phases cover which requirements. Updated during roadmap creation.
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| GATE-01 | — | Pending |
+| GATE-02 | — | Pending |
+| GATE-03 | — | Pending |
+| SAVE-01 | — | Pending |
+| SAVE-02 | — | Pending |
+| SAVE-03 | — | Pending |
+| FIX-01 | — | Pending |
+
+**Coverage:**
+- v5.3 requirements: 7 total
+- Mapped to phases: 0
+- Unmapped: 7 ⚠️
+
+---
+*Requirements defined: 2026-03-04*
+*Last updated: 2026-03-04 after initial definition*
