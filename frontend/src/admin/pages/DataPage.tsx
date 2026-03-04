@@ -181,7 +181,7 @@ function TrendSection({ days }: { days: number }) {
 // -- Demand Section --
 
 function DemandSection({ days }: { days: number }) {
-  const [demandPage, setDemandPage] = useState(1)
+  const [demandPage, setDemandPage] = useState(0)
   const [exporting, setExporting] = useState(false)
   const [exportError, setExportError] = useState<string | null>(null)
   const { data, loading } = useMarketplaceDemand(days, demandPage)
@@ -202,10 +202,10 @@ function DemandSection({ days }: { days: number }) {
 
   const total = data?.total ?? 0
   const pageSize = data?.page_size ?? 25
-  const currentPage = data?.page ?? 1
+  const currentPage = data?.page ?? 0
   const totalPages = Math.ceil(total / pageSize)
-  const rowStart = (currentPage - 1) * pageSize + 1
-  const rowEnd = Math.min(currentPage * pageSize, total)
+  const rowStart = currentPage * pageSize + 1
+  const rowEnd = Math.min((currentPage + 1) * pageSize, total)
 
   return (
     <AdminCard className="p-5 space-y-4">
@@ -271,15 +271,15 @@ function DemandSection({ days }: { days: number }) {
               </span>
               <div className="flex gap-2">
                 <button
-                  onClick={() => setDemandPage(p => Math.max(1, p - 1))}
-                  disabled={currentPage <= 1}
+                  onClick={() => setDemandPage(p => Math.max(0, p - 1))}
+                  disabled={currentPage <= 0}
                   className="px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   Prev
                 </button>
                 <button
-                  onClick={() => setDemandPage(p => Math.min(totalPages, p + 1))}
-                  disabled={currentPage >= totalPages}
+                  onClick={() => setDemandPage(p => Math.min(totalPages - 1, p + 1))}
+                  disabled={currentPage >= totalPages - 1}
                   className="px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   Next
