@@ -26,6 +26,17 @@ class EventRequest(BaseModel):
     session_id: str = Field(..., min_length=1, max_length=64)
     event_type: EVENT_TYPES
     payload: dict[str, Any] = Field(default_factory=dict)
+    email: str | None = None  # Phase 63: optional, validated in handler
+
+
+def _validate_email(email: str | None) -> str | None:
+    """Basic check: must contain @ and a dot. Returns None if invalid."""
+    if not email:
+        return None
+    email = email.strip()
+    if "@" not in email or "." not in email:
+        return None
+    return email.lower()
 
 
 @router.post("/api/events", status_code=202)
@@ -33,13 +44,16 @@ def record_event(body: EventRequest, db: Session = Depends(get_db)):
     """
     Insert a user behavior event. Returns 202 Accepted.
     Unknown event_type values are rejected with 422 by Pydantic validation.
+    Invalid emails are silently stored as null — never reject/lose a tracking event.
     """
+    validated_email = _validate_email(body.email)
     record = UserEvent(
         session_id=body.session_id,
         event_type=body.event_type,
         payload=json.dumps(body.payload),
+        email=validated_email,
     )
     db.add(record)
     db.commit()
-    log.info("event.recorded", event_type=body.event_type, session_id=body.session_id)
+    log.info("event.recorded", event_type=body.event_type, session_id=body.session_id, email=validated_email)
     return {"status": "accepted"}
