@@ -141,7 +141,7 @@ See `.planning/milestones/v5.2-ROADMAP.md`
 
 - [x] **Phase 67: Email Gate Polish & List View Fix** — Cleaner gate UI, auto-focus behaviors, list view save button (completed 2026-03-04)
 - [x] **Phase 68: Save Event Tracking** — Backend save/unsave event instrumentation (completed 2026-03-04)
-- [ ] **Phase 69: Admin Saved Insights** — Top Saved Experts card and lead timeline save events
+- [x] **Phase 69: Admin Saved Insights** — Top Saved Experts card and lead timeline save events (completed 2026-03-04)
 
 ## Phase Details
 
@@ -189,4 +189,4 @@ Plans:
 |-------|----------------|--------|-----------|
 | 67. Email Gate Polish & List View Fix | 2/2 | Complete   | 2026-03-04 |
 | 68. Save Event Tracking | 1/1 | Complete    | 2026-03-04 |
-| 69. Admin Saved Insights | 0/1 | Not started | - |
+| 69. Admin Saved Insights | 1/1 | Complete   | 2026-03-04 |
