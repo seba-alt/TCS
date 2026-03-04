@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v5.2
 milestone_name: Email-First Gate & Admin See-All
-status: executing
-stopped_at: Phase 65 plan 01 complete — ready for verification
-last_updated: "2026-03-04T12:47:16Z"
+status: verifying
+stopped_at: Phase 66 plan 01 complete — all v5.2 requirements done, milestone ready for sign-off
+last_updated: "2026-03-04T13:13:25.787Z"
 last_activity: 2026-03-04 — Phase 65 Admin Enhancements plan 01 completed (1/1 plans)
 progress:
-  total_phases: 3
-  completed_phases: 2
-  total_plans: 4
-  completed_plans: 4
+  total_phases: 4
+  completed_phases: 4
+  total_plans: 5
+  completed_plans: 5
   percent: 100
 ---
 
@@ -21,15 +21,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-04)
 
 **Core value:** A user describes any problem and instantly gets expertly matched professionals they can browse, filter, and contact — no searching, no guesswork.
-**Current focus:** Phase 65 — Admin Enhancements
+**Current focus:** Phase 66 — Audit Gap Closure (complete)
 
 ## Current Position
 
 Milestone: v5.2 Email-First Gate & Admin See-All
-Phase: 65 of 65 (Admin Enhancements)
+Phase: 66 of 66 (Audit Gap Closure)
 Plan: 1 of 1 in current phase
-Status: All plans complete — ready for verification
-Last activity: 2026-03-04 — Phase 65 Admin Enhancements plan 01 completed (1/1 plans)
+Status: All plans complete — v5.2 milestone fully satisfied
+Last activity: 2026-03-04 — Phase 66 Audit Gap Closure plan 01 completed (1/1 plans)
 
 Progress: [██████████] 100% (v5.2 milestone)
 
@@ -54,6 +54,8 @@ Recent decisions affecting current work:
 - [v5.2 Phase 64]: Timeline uses distinct types: explorer_search (green/compass), explorer_click (amber/eye) — separate from search (blue) and click (purple)
 - [v5.2 Phase 65]: Single expandedCard state slot enforces accordion — expanding one card collapses the other
 - [v5.2 Phase 65]: TopQueriesCard fetch limit bumped from 5 to 50 — all data loaded upfront
+- [Phase 66-audit-gap-closure]: explorer_click payload reads expert_id (not expert) — aligns with ExpertCard.tsx trackEvent payload
+- [Phase 66-audit-gap-closure]: TRACK-03 marked PASSED with Phase 66 fix note — infrastructure correct in Phase 64, payload key was post-hoc bug
 
 ### Pending Todos
 
@@ -67,6 +69,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-04
-Stopped at: Phase 65 plan 01 complete — all plans done, ready for verification
-Resume: Run verification for Phase 65
+Last session: 2026-03-04T13:13:25.782Z
+Stopped at: Phase 66 plan 01 complete — all v5.2 requirements done, milestone ready for sign-off
+Resume: v5.2 milestone complete — push to main to trigger Railway/Vercel deployments
