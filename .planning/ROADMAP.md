@@ -14,7 +14,7 @@
 - ✅ **v4.1 UX Polish & Mobile Overhaul** — Phases 51-54 (shipped 2026-03-03)
 - ✅ **v5.0 Platform Polish & Admin Overhaul** — Phases 55-59 (shipped 2026-03-03)
 - ✅ **v5.1 Lead Insights & Overview** — Phases 60-62 (shipped 2026-03-03)
-- 🚧 **v5.2 Email-First Gate & Admin See-All** — Phases 63-65 (in progress)
+- 🚧 **v5.2 Email-First Gate & Admin See-All** — Phases 63-66 (in progress)
 
 ## Phases
 
@@ -129,6 +129,7 @@ See `.planning/milestones/v5.1-ROADMAP.md`
 - [x] **Phase 63: Tracking Infrastructure** - Backend email column on user_events + frontend tracking enrichment (1 plan) (completed 2026-03-04)
 - [x] **Phase 64: Email-First Gate** - Page-entry gate UI + lead timeline email attribution (2 plans) (completed 2026-03-04)
 - [x] **Phase 65: Admin Enhancements** - See All expansion on overview cards + Vercel Speed Insights (1 plan) (completed 2026-03-04)
+- [ ] **Phase 66: Audit Gap Closure** - Fix payload key bug + Phase 64 verification (1 plan) **Gap Closure**
 
 ## Phase Details
 
@@ -174,12 +175,25 @@ Plans:
 Plans:
 - [ ] 65-01-PLAN.md — Accordion expansion on Top Clicks & Top Searches cards + Speed Insights verification
 
+### Phase 66: Audit Gap Closure
+**Goal**: Close all gaps identified by v5.2 milestone audit — fix the explorer_click payload key bug and formally verify Phase 64 requirements
+**Depends on**: Phase 65
+**Requirements**: GATE-01, GATE-02, GATE-03, GATE-04, TRACK-03
+**Gap Closure:** Closes gaps from audit
+**Success Criteria** (what must be TRUE):
+  1. `explorer_click` entries in admin lead timeline show the correct expert name (not blank)
+  2. Phase 64 VERIFICATION.md exists and confirms GATE-01–04 and TRACK-03 are satisfied
+**Plans**: 1 plan
+Plans:
+- [ ] 66-01-PLAN.md — Fix payload key mismatch + Phase 64 verification
+
 ## Progress
 
-**Execution Order:** Phases execute in numeric order: 63 → 64 → 65
+**Execution Order:** Phases execute in numeric order: 63 → 64 → 65 → 66
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 63. Tracking Infrastructure | 1/1 | Complete    | 2026-03-04 |
 | 64. Email-First Gate | 2/2 | Complete    | 2026-03-04 |
 | 65. Admin Enhancements | 1/1 | Complete    | 2026-03-04 |
+| 66. Audit Gap Closure | 0/1 | Pending     | — |
