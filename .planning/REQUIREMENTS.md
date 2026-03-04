@@ -15,16 +15,16 @@ Requirements for milestone v5.2 Email-First Gate & Admin See-All. Each maps to r
 
 ### Email Gate
 
-- [ ] **GATE-01**: User sees mandatory email gate modal on first page load before browsing the Explorer
-- [ ] **GATE-02**: User cannot dismiss or skip the email gate — email submission is required to access the platform
-- [ ] **GATE-03**: Returning subscriber bypasses gate instantly with no flash (synchronous localStorage check)
-- [ ] **GATE-04**: Email gate submission sends distinct `source: "page_entry"` to Loops for lead segmentation
+- [x] **GATE-01**: User sees mandatory email gate modal on first page load before browsing the Explorer
+- [x] **GATE-02**: User cannot dismiss or skip the email gate — email submission is required to access the platform
+- [x] **GATE-03**: Returning subscriber bypasses gate instantly with no flash (synchronous localStorage check)
+- [x] **GATE-04**: Email gate submission sends distinct `source: "page_entry"` to Loops for lead segmentation
 
 ### Email Tracking
 
 - [x] **TRACK-01**: Backend stores email on `user_events` table (nullable indexed column, idempotent startup migration)
 - [x] **TRACK-02**: Frontend `trackEvent()` includes user's email in every event after gate submission
-- [ ] **TRACK-03**: Admin lead journey timeline includes Explorer search queries attributed to the lead's email
+- [x] **TRACK-03**: Admin lead journey timeline includes Explorer search queries attributed to the lead's email
 
 ### Analytics
 
@@ -59,11 +59,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | TRACK-01 | Phase 63 | Done |
 | TRACK-02 | Phase 63 | Done |
-| GATE-01 | Phase 66 | Pending |
-| GATE-02 | Phase 66 | Pending |
-| GATE-03 | Phase 66 | Pending |
-| GATE-04 | Phase 66 | Pending |
-| TRACK-03 | Phase 66 | Pending |
+| GATE-01 | Phase 64 | Done |
+| GATE-02 | Phase 64 | Done |
+| GATE-03 | Phase 64 | Done |
+| GATE-04 | Phase 64 | Done |
+| TRACK-03 | Phase 64 | Done |
 | ADMOV-01 | Phase 65 | Complete |
 | ADMOV-02 | Phase 65 | Complete |
 | ADMOV-03 | Phase 65 | Complete |
@@ -72,7 +72,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 **Coverage:**
 - v5.2 requirements: 11 total
 - Mapped to phases: 11
-- Pending (gap closure): 5
+- Pending (gap closure): 0
 - Unmapped: 0 ✓
 
 ---
