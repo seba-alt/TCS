@@ -195,7 +195,7 @@ def run_explore(
     # --- Saved-view shortcut: fetch only specified usernames, skip all filters/search ---
     if usernames:
         experts = list(db.scalars(
-            select(Expert).where(Expert.username.in_(usernames))
+            select(Expert).where(Expert.username.in_(usernames), Expert.is_active == True)
         ).all())
         cards = [
             _build_card(e, None, None, e.findability_score or 0.0, "")
@@ -214,6 +214,7 @@ def run_explore(
         and_(
             Expert.hourly_rate >= rate_min,
             Expert.hourly_rate <= rate_max,
+            Expert.is_active == True,
         )
     )
     # AND logic: expert must have ALL selected tags — uses indexed ExpertTag join table (PERF-02)

@@ -58,7 +58,7 @@ def load_tagged_experts() -> list[dict]:
     """
     with SessionLocal() as db:
         experts = db.scalars(
-            select(Expert).where(Expert.tags.isnot(None))
+            select(Expert).where(Expert.tags.isnot(None), Expert.is_active == True)
         ).all()
         return [
             {

@@ -115,6 +115,7 @@ class Expert(Base):
     findability_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     photo_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     industry_tags: Mapped[str | None] = mapped_column(Text, nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="1")
     created_at: Mapped[datetime.datetime] = mapped_column(
         DateTime, default=datetime.datetime.utcnow, nullable=False
     )
