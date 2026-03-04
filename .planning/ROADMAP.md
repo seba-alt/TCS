@@ -189,13 +189,13 @@ Plans:
 |-------|----------------|--------|-----------|
 | 67. Email Gate Polish & List View Fix | 2/2 | Complete   | 2026-03-04 |
 | 68. Save Event Tracking | 1/1 | Complete    | 2026-03-04 |
-| 69. Admin Saved Insights | 1/1 | Complete    | 2026-03-04 |
+| 69. Admin Saved Insights | 1/1 | Complete   | 2026-03-04 |
 
 ### Phase 69.1: CSV upload sync: remove deleted experts and update existing fields (INSERTED)
 
 **Goal:** Upgrade CSV upload from upsert-only to full sync with soft-delete, empty-field protection, preview with cherry-pick, and automatic FAISS rebuild
 **Depends on:** Phase 69
-**Plans:** 3 plans
+**Plans:** 1/1 plans complete
 
 Plans:
 - [ ] 69.1-01-PLAN.md — Soft-delete infrastructure (is_active flag + public query filters)
