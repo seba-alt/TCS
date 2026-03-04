@@ -1,7 +1,12 @@
 import { motion, AnimatePresence, useMotionValue, useSpring } from 'motion/react'
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, forwardRef, useImperativeHandle } from 'react'
 import { Search, X } from 'lucide-react'
 import { useHeaderSearch } from '../hooks/useHeaderSearch'
+import { useNltrStore } from '../store/nltrStore'
+
+export interface HeaderHandle {
+  focusSearchBar: () => void
+}
 
 function useMobileScrollCollapse() {
   const [collapsed, setCollapsed] = useState(false)
@@ -20,7 +25,7 @@ function useMobileScrollCollapse() {
   return collapsed
 }
 
-export default function Header() {
+const Header = forwardRef<HeaderHandle>(function Header(_props, ref) {
   const {
     localValue,
     handleChange,
@@ -38,12 +43,22 @@ export default function Header() {
     selectedIndex,
   } = useHeaderSearch()
 
-  // Autofocus search input on mount — imperative ref approach is more reliable than
-  // the autoFocus HTML attribute with animated mount transitions
   const inputRef = useRef<HTMLInputElement>(null)
+
+  // Expose focusSearchBar to parent via ref (used after gate dismissal — GATE-03)
+  useImperativeHandle(ref, () => ({
+    focusSearchBar: () => inputRef.current?.focus(),
+  }))
+
+  // Auto-focus search input on mount ONLY for returning users (already subscribed).
+  // New users see the email gate first — gate handles its own input focus.
+  // After gate submission, MarketplacePage calls focusSearchBar() explicitly.
+  const subscribed = useNltrStore((s) => s.subscribed)
   useEffect(() => {
-    inputRef.current?.focus()
-  }, [])
+    if (subscribed) {
+      inputRef.current?.focus()
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Expert count spring
   const rawCount = useMotionValue(total)
@@ -245,4 +260,6 @@ export default function Header() {
       </div>{/* end search row wrapper */}
     </motion.header>
   )
-}
+})
+
+export default Header

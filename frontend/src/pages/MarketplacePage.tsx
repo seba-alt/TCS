@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { AnimatePresence } from 'motion/react'
 import { Bookmark, LayoutGrid, List } from 'lucide-react'
 import { useExplorerStore, useFilterSlice } from '../store'
@@ -6,7 +6,7 @@ import { useExplore } from '../hooks/useExplore'
 import { useUrlSync } from '../hooks/useUrlSync'
 import { useNltrStore } from '../store/nltrStore'
 import { AuroraBackground } from '../components/AuroraBackground'
-import Header from '../components/Header'
+import Header, { type HeaderHandle } from '../components/Header'
 import { FilterSidebar } from '../components/sidebar/FilterSidebar'
 import { FilterChips } from '../components/marketplace/FilterChips'
 import { ExpertGrid } from '../components/marketplace/ExpertGrid'
@@ -46,11 +46,19 @@ export default function MarketplacePage() {
   // Zustand persist hydrates synchronously from localStorage → no flash for returning subscribers
   const { subscribed, setSubscribed } = useNltrStore()
 
+  // Header ref — used to focus search bar after gate dismissal (GATE-03)
+  const headerRef = useRef<HeaderHandle>(null)
+
   function handleGateSubmit(email: string) {
     // 1. Write to Zustand store immediately — this dismisses the gate
     setSubscribed(email)
 
-    // 2. Delayed subscribe call — gives time for first search query
+    // 2. Focus search bar after gate fade-out completes (~300ms animation)
+    setTimeout(() => {
+      headerRef.current?.focusSearchBar()
+    }, 350)
+
+    // 3. Delayed subscribe call — gives time for first search query
     //    to fire with email before Loops sync (CONTEXT.md decision)
     setTimeout(() => {
       const sessionId = localStorage.getItem('tcs_session_id')
@@ -80,7 +88,7 @@ export default function MarketplacePage() {
 
       <div className="flex flex-col h-screen overflow-x-hidden">
         {/* Desktop top header — Command Center glassmorphic header */}
-        <Header />
+        <Header ref={headerRef} />
 
         {/* Body row — sidebar + main */}
         <div className="flex flex-1 min-h-0">
