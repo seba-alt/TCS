@@ -167,6 +167,18 @@ async def lifespan(app: FastAPI):
                 pass  # Column already exists — idempotent
     log.info("startup: expert industry_tags column migrated/verified")
 
+    # Phase 62.2: session_id on newsletter_subscribers for lead timeline linking
+    with engine.connect() as _conn:
+        for _col_ddl in [
+            "ALTER TABLE newsletter_subscribers ADD COLUMN session_id VARCHAR(64)",
+        ]:
+            try:
+                _conn.execute(_text(_col_ddl))
+                _conn.commit()
+            except Exception:
+                pass  # column already exists
+    log.info("startup: newsletter_subscribers session_id column migrated/verified")
+
     # Phase 41: Expert email purge — blank all Expert.email values (PII removal)
     with engine.connect() as _conn:
         _conn.execute(_text("UPDATE experts SET email = ''"))

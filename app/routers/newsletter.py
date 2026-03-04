@@ -26,6 +26,7 @@ router = APIRouter()
 class NewsletterSubscribeRequest(BaseModel):
     email: EmailStr
     source: str = "gate"
+    session_id: str | None = None
 
 
 @router.post("/api/newsletter/subscribe", status_code=200)
@@ -36,7 +37,7 @@ def subscribe(body: NewsletterSubscribeRequest, background_tasks: BackgroundTask
     """
     stmt = (
         insert(NewsletterSubscriber)
-        .values(email=str(body.email), source=body.source)
+        .values(email=str(body.email), source=body.source, session_id=body.session_id)
         .on_conflict_do_nothing(index_elements=["email"])
     )
     db.execute(stmt)

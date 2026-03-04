@@ -13,7 +13,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import Conversation, Expert, LeadClick, NewsletterSubscriber
+from app.models import Conversation, Expert, LeadClick, NewsletterSubscriber, UserEvent
 from app.routers.admin._common import _is_gap
 
 router = APIRouter()
@@ -113,11 +113,31 @@ def get_lead_timeline(email: str, limit: int = 10, offset: int = 0, db: Session 
             "created_at": row.created_at.isoformat(),
         })
 
-    # 3. Merge and sort newest-first
+    # 3. Fetch anonymous session search events (linked via session_id captured at signup)
+    subscriber = db.scalar(
+        select(NewsletterSubscriber).where(NewsletterSubscriber.email == email)
+    )
+    if subscriber and getattr(subscriber, 'session_id', None):
+        session_event_rows = db.scalars(
+            select(UserEvent).where(
+                UserEvent.session_id == subscriber.session_id,
+                UserEvent.event_type == "search_query",
+            )
+        ).all()
+        for row in session_event_rows:
+            payload_data = json.loads(row.payload or "{}")
+            search_events.append({
+                "type": "search",
+                "query": payload_data.get("query_text", ""),
+                "result_count": payload_data.get("result_count", 0),
+                "created_at": row.created_at.isoformat(),
+            })
+
+    # 4. Merge and sort newest-first
     all_events = search_events + click_events
     all_events.sort(key=lambda e: e["created_at"], reverse=True)
 
-    # 4. Paginate
+    # 5. Paginate
     total = len(all_events)
     paginated = all_events[offset:offset + limit]
 
