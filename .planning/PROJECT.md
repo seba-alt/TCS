@@ -133,7 +133,15 @@ A user describes any problem and instantly gets expertly matched professionals t
 
 ### Active
 
-(No active milestone — start next with `/gsd:new-milestone`)
+## Current Milestone: v5.3 UX Polish & Admin Saved Insights
+
+**Goal:** Improve email gate UX, surface saved-expert analytics in admin, and fix list-view save button bug
+
+**Target features:**
+- Email gate UX/UI improvements
+- Admin: Top saved experts ranking
+- Admin: Lead-to-saved-expert mapping on leads page
+- Fix: Save button missing in list view
 
 ### Out of Scope
 
@@ -272,7 +280,7 @@ A user describes any problem and instantly gets expertly matched professionals t
 **Admin panel:** Secured with bcrypt+JWT + rate limiting; 10-module router package; URL-based routing with shared components (AdminCard, AdminInput, AdminPagination, AdminPageHeader). Overview with period toggle (Today/7d/30d/All) + active tag chips + ranked insight cards (Top Experts, Top Searches, Unmet Demand). Unified Data page (merged Searches/Marketplace) with shared date picker. Experts page with name search + deletion. Leads page with expandable timeline (chronological search/click history with time gap labels), click count column + Click Activity table + CSV export. Settings/feedback caching (30s TTL).
 **Analytics:** GA4 (G-0T526W3E1Z) + Microsoft Clarity (vph5o95n6c) + Vercel Speed Insights tracking all page views with SPA route change support
 
-**Current milestone:** None (v5.2 shipped 2026-03-04)
+**Current milestone:** v5.3 UX Polish & Admin Saved Insights (started 2026-03-04)
 
 ## Context
 
@@ -362,4 +370,4 @@ A user describes any problem and instantly gets expertly matched professionals t
 | 3s delayed Loops subscribe | Bundles first search event with subscribe call | ✓ Good — richer lead context |
 
 ---
-*Last updated: 2026-03-04 after v5.2 milestone*
+*Last updated: 2026-03-04 after v5.3 milestone start*
