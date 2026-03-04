@@ -123,16 +123,17 @@ A user describes any problem and instantly gets expertly matched professionals t
 - ✓ Overview: top search queries ranked by frequency with period toggle — v5.1
 - ✓ Overview: zero-result queries as unmet demand signals with period toggle — v5.1
 
+- ✓ Backend email column on user_events with idempotent startup migration — v5.2
+- ✓ Frontend trackEvent() enrichment with email from Zustand persist store — v5.2
+- ✓ Mandatory email entry gate on page load (no dismiss, synchronous bypass for returning subscribers) — v5.2
+- ✓ Loops lead tagging with source: "page_entry" for gate submissions — v5.2
+- ✓ Email-attributed Explorer events in admin lead timeline (search + click with distinct icons) — v5.2
+- ✓ Admin overview accordion expansion on Top Experts and Top Searches cards (up to 50 items) — v5.2
+- ✓ Vercel Speed Insights active on frontend — v5.2
+
 ### Active
 
-**Current Milestone: v5.2 Email-First Gate & Admin See-All**
-
-**Goal:** Move email gate to page entry for upfront lead capture, add "See All" expansion to admin overview cards, and simplify tracking by tying all activity directly to lead email.
-
-**Target features:**
-- Admin overview "See All" buttons on Top Searches and Top Experts cards
-- Email gate on first page load (before any browsing)
-- Direct email-based tracking (no session_id linking needed)
+(No active milestone — start next with `/gsd:new-milestone`)
 
 ### Out of Scope
 
@@ -147,6 +148,20 @@ A user describes any problem and instantly gets expertly matched professionals t
 - Custom analytics dashboard — GA4 dashboard is sufficient for launch
 
 ## Shipped Versions
+
+### v5.2 Email-First Gate & Admin See-All — Shipped 2026-03-04
+- Email gate moved to page entry — mandatory full-screen gate blocks Explorer until email submitted; returning subscribers bypass instantly via synchronous Zustand persist check
+- Email tracking infrastructure — nullable indexed email column on user_events, trackEvent() enrichment from Zustand persist store
+- Email-attributed lead timeline — admin sees Explorer search/click events matched by email with distinct icons (green/compass, amber/eye)
+- Admin overview accordion — Top Experts and Top Searches cards expand in-place to full ranked lists (up to 50), single-slot accordion state
+- Vercel Speed Insights active on frontend
+- Audit gap closure — fixed explorer_click payload key bug, Phase 64 formally verified
+- All 11 requirements satisfied across 4 phases
+- Archive: `.planning/milestones/v5.2-ROADMAP.md`
+
+### v5.1 Lead Insights & Overview — Shipped 2026-03-03
+- See MILESTONES.md for details
+- Archive: `.planning/milestones/v5.1-ROADMAP.md`
 
 ### v5.0 Platform Polish & Admin Overhaul — Shipped 2026-03-03
 - Explorer UX bugs fixed: tier-sorted search results, currency symbols on all surfaces, mobile card completeness, OG meta tags
@@ -249,15 +264,15 @@ A user describes any problem and instantly gets expertly matched professionals t
 
 ## Current State
 
-**Deployed version:** v5.1 (Railway + Vercel, auto-deploys on push to main)
+**Deployed version:** v5.2 (Railway + Vercel, auto-deploys on push to main)
 **Expert pool:** experts (growing weekly) (data/metadata.json), all AI-tagged with domain + industry tags; FAISS index at vectors (grows with expert pool); profile photos via proxy endpoint; expert email PII purged
 **Search intelligence:** Three-stage hybrid pipeline live; HyDE + feedback re-ranking toggled via admin steering panel; FTS5 autocomplete suggestions with tag-first ranking; dynamic rate slider max from API; embedding cache (60s TTL) prevents duplicate Google API calls
 **Explorer:** Single-page aurora-aesthetic marketplace at `/` with glassmorphic Command Center header, autofocused search with tag-first autocomplete, responsive cards (mobile photo-centric / desktop photo-left) in grid or list view, animated tag cloud (18 domain tags + industry tags), inline mobile filters (simplified — clear-all only when filters active), seeded random initial ordering, bookmarks with purple visual treatment and filter-independent saved view, Intercom no-results CTA, anonymous search tracking, newsletter gate, API error states with retry. Search results tier-sorted (Top Match → Good Match → rest). Currency symbols on all rate displays.
 **Live chat:** Intercom (replaces Sage AI co-pilot, removed in phase 50.3)
 **Admin panel:** Secured with bcrypt+JWT + rate limiting; 10-module router package; URL-based routing with shared components (AdminCard, AdminInput, AdminPagination, AdminPageHeader). Overview with period toggle (Today/7d/30d/All) + active tag chips + ranked insight cards (Top Experts, Top Searches, Unmet Demand). Unified Data page (merged Searches/Marketplace) with shared date picker. Experts page with name search + deletion. Leads page with expandable timeline (chronological search/click history with time gap labels), click count column + Click Activity table + CSV export. Settings/feedback caching (30s TTL).
-**Analytics:** GA4 (G-0T526W3E1Z) + Microsoft Clarity (vph5o95n6c) tracking all page views with SPA route change support
+**Analytics:** GA4 (G-0T526W3E1Z) + Microsoft Clarity (vph5o95n6c) + Vercel Speed Insights tracking all page views with SPA route change support
 
-**Current milestone:** v5.2 Email-First Gate & Admin See-All
+**Current milestone:** None (v5.2 shipped 2026-03-04)
 
 ## Context
 
@@ -340,6 +355,11 @@ A user describes any problem and instantly gets expertly matched professionals t
 | Expert link to search page | No per-expert detail route exists; link to `/admin/experts` | ✓ Good — uses existing route |
 | Skeleton loaders (not spinners) | Animated placeholder lines match card layout for loading state | ✓ Good — polished UX |
 | Positive empty state for unmet demand | CheckCircle + "All searches returned results" — good news framing | ✓ Good — reduces alarm fatigue |
+| Email gate at page entry | Mandatory gate before any browsing — maximizes lead capture vs old profile-click gate | ✓ Good — every visitor captured |
+| Synchronous Zustand bypass | useState lazy initializer reads persist store — no useEffect flash | ✓ Good — instant bypass for subscribers |
+| Email on user_events column | Dedicated indexed column vs payload JSON blob — queryable, filterable | ✓ Good — clean admin timeline queries |
+| Single expandedCard accordion | One state slot — expanding one card collapses the other | ✓ Good — clean UX, simple state |
+| 3s delayed Loops subscribe | Bundles first search event with subscribe call | ✓ Good — richer lead context |
 
 ---
-*Last updated: 2026-03-04 after v5.2 milestone start*
+*Last updated: 2026-03-04 after v5.2 milestone*

@@ -14,7 +14,7 @@
 - ✅ **v4.1 UX Polish & Mobile Overhaul** — Phases 51-54 (shipped 2026-03-03)
 - ✅ **v5.0 Platform Polish & Admin Overhaul** — Phases 55-59 (shipped 2026-03-03)
 - ✅ **v5.1 Lead Insights & Overview** — Phases 60-62 (shipped 2026-03-03)
-- 🚧 **v5.2 Email-First Gate & Admin See-All** — Phases 63-66 (in progress)
+- ✅ **v5.2 Email-First Gate & Admin See-All** — Phases 63-66 (shipped 2026-03-04)
 
 ## Phases
 
@@ -122,78 +122,14 @@ See `.planning/milestones/v5.1-ROADMAP.md`
 
 </details>
 
-### 🚧 v5.2 Email-First Gate & Admin See-All (In Progress)
+<details>
+<summary>✅ v5.2 Email-First Gate & Admin See-All (Phases 63-66) — SHIPPED 2026-03-04</summary>
 
-**Milestone Goal:** Move email gate to page entry for upfront lead capture, attribute all user events directly to email, add See All expansion to admin overview cards, and install Vercel Speed Insights.
+See `.planning/milestones/v5.2-ROADMAP.md`
 
-- [x] **Phase 63: Tracking Infrastructure** - Backend email column on user_events + frontend tracking enrichment (1 plan) (completed 2026-03-04)
-- [x] **Phase 64: Email-First Gate** - Page-entry gate UI + lead timeline email attribution (2 plans) (completed 2026-03-04)
-- [x] **Phase 65: Admin Enhancements** - See All expansion on overview cards + Vercel Speed Insights (1 plan) (completed 2026-03-04)
-- [x] **Phase 66: Audit Gap Closure** - Fix payload key bug + Phase 64 verification (1 plan) **Gap Closure** (completed 2026-03-04)
+- [x] Phase 63: Tracking Infrastructure (1/1 plan) — completed 2026-03-04
+- [x] Phase 64: Email-First Gate (2/2 plans) — completed 2026-03-04
+- [x] Phase 65: Admin Enhancements (1/1 plan) — completed 2026-03-04
+- [x] Phase 66: Audit Gap Closure (1/1 plan) — completed 2026-03-04
 
-## Phase Details
-
-### Phase 63: Tracking Infrastructure
-**Goal**: The backend accepts and persists email on every tracked event, and the frontend sends it automatically for identified users
-**Depends on**: Phase 62.2 (last shipped phase)
-**Requirements**: TRACK-01, TRACK-02
-**Success Criteria** (what must be TRUE):
-  1. A new nullable indexed `email` column exists on `user_events` after Railway redeploy (verified via admin DB or Railway logs)
-  2. Events fired after a user has subscribed include their email in the POST body to `/api/events`
-  3. Events fired before gate submission continue to work with `email: null` — no regressions on anonymous tracking
-  4. The backend startup migration is idempotent — redeploying does not error if the column already exists
-**Plans**: 1 plan
-Plans:
-- [ ] 63-01-PLAN.md — Backend email column + migration + API field + frontend trackEvent enrichment
-
-### Phase 64: Email-First Gate
-**Goal**: Every new visitor sees the email gate before browsing the Explorer, returning subscribers bypass it instantly, and lead timelines show post-gate search activity attributed by email
-**Depends on**: Phase 63
-**Requirements**: GATE-01, GATE-02, GATE-03, GATE-04, TRACK-03
-**Success Criteria** (what must be TRUE):
-  1. A new visitor lands on the Explorer and sees the gate modal before any expert cards are visible
-  2. Submitting a valid email dismisses the gate and unlocks the full Explorer immediately
-  3. A returning subscriber who refreshes the page sees no gate flash — the Explorer loads directly
-  4. The gate cannot be dismissed by clicking outside or pressing Escape — only email submission unlocks it
-  5. After gate submission, the lead appears in Loops with source tagged as `page_entry` (not `gate`)
-  6. Admin lead timeline shows search queries fired after gate submission, attributed to the lead's email
-**Plans**: 2 plans
-Plans:
-- [ ] 64-01-PLAN.md — Email entry gate UI + MarketplacePage integration + old gate removal
-- [ ] 64-02-PLAN.md — Admin lead timeline with email-attributed Explorer events
-
-### Phase 65: Admin Enhancements
-**Goal**: Admins can see the full ranked list on Top Experts and Top Searches cards, and Vercel Speed Insights reports frontend performance data
-**Depends on**: Phase 63 (independent of Phase 64, sequenced last for focus)
-**Requirements**: ADMOV-01, ADMOV-02, ADMOV-03, ANLYT-01
-**Success Criteria** (what must be TRUE):
-  1. Clicking "See All" on the Top Experts card expands it in-place to show the complete ranked list without navigating away
-  2. Clicking "See All" on the Top Searches card expands it in-place to show all queries (up to 50) without navigating away
-  3. Both expanded cards show a "Show less" control that collapses back to the top 5 view, preserving the period toggle selection
-  4. Vercel Speed Insights data appears in the Vercel dashboard for the frontend deployment
-**Plans**: 1 plan
-Plans:
-- [ ] 65-01-PLAN.md — Accordion expansion on Top Clicks & Top Searches cards + Speed Insights verification
-
-### Phase 66: Audit Gap Closure
-**Goal**: Close all gaps identified by v5.2 milestone audit — fix the explorer_click payload key bug and formally verify Phase 64 requirements
-**Depends on**: Phase 65
-**Requirements**: GATE-01, GATE-02, GATE-03, GATE-04, TRACK-03
-**Gap Closure:** Closes gaps from audit
-**Success Criteria** (what must be TRUE):
-  1. `explorer_click` entries in admin lead timeline show the correct expert name (not blank)
-  2. Phase 64 VERIFICATION.md exists and confirms GATE-01–04 and TRACK-03 are satisfied
-**Plans**: 1 plan
-Plans:
-- [ ] 66-01-PLAN.md — Fix explorer_click payload key bug + Phase 64 VERIFICATION.md + REQUIREMENTS.md update
-
-## Progress
-
-**Execution Order:** Phases execute in numeric order: 63 → 64 → 65 → 66
-
-| Phase | Plans Complete | Status | Completed |
-|-------|----------------|--------|-----------|
-| 63. Tracking Infrastructure | 1/1 | Complete    | 2026-03-04 |
-| 64. Email-First Gate | 2/2 | Complete    | 2026-03-04 |
-| 65. Admin Enhancements | 1/1 | Complete    | 2026-03-04 |
-| 66. Audit Gap Closure | 1/1 | Complete    | 2026-03-04 |
+</details>

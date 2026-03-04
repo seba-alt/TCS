@@ -257,3 +257,25 @@
 
 ---
 
+
+## v5.2 Email-First Gate & Admin See-All (Shipped: 2026-03-04)
+
+**Phases completed:** 4 phases (63-66), 5 plans
+**Timeline:** 1 day (2026-03-04)
+**Git range:** feat(63-01) → docs(phase-66)
+
+**Key accomplishments:**
+1. Email tracking infrastructure — nullable indexed `email` column on `user_events`, idempotent startup migration, `trackEvent()` enrichment from Zustand persist store with 8 unit tests
+2. Mandatory email entry gate — full-screen glassmorphic gate blocks Explorer until email submitted, synchronous Zustand bypass for returning subscribers (no flash), Loops `source: "page_entry"` tagging
+3. Email-attributed lead timeline — admin sees Explorer search and click events matched by email with distinct icons (green/compass for search, amber/eye for click), deduplication against session-linked events
+4. Admin overview accordion expansion — Top Experts and Top Searches cards expand in-place to show full ranked lists (up to 50 items) with "Show less" collapse, accordion single-slot state
+5. Vercel Speed Insights active on frontend deployment
+6. Audit gap closure — fixed `explorer_click` payload key bug (`expert` → `expert_id`), Phase 64 formally verified with VERIFICATION.md, all 11 requirements satisfied
+
+**Archive:**
+- Roadmap: `.planning/milestones/v5.2-ROADMAP.md`
+- Requirements: `.planning/milestones/v5.2-REQUIREMENTS.md`
+- Audit: `.planning/milestones/v5.2-MILESTONE-AUDIT.md`
+
+---
+
