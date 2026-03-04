@@ -38,7 +38,7 @@ function getSubscriberEmail(): string | null {
   }
 }
 
-type EventType = 'card_click' | 'filter_change' | 'search_query'
+type EventType = 'card_click' | 'filter_change' | 'search_query' | 'save'
 
 interface TrackPayload {
   [key: string]: unknown

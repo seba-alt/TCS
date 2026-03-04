@@ -19,7 +19,7 @@ from app.models import UserEvent
 log = structlog.get_logger()
 router = APIRouter()
 
-EVENT_TYPES = Literal["card_click", "sage_query", "filter_change", "search_query"]
+EVENT_TYPES = Literal["card_click", "sage_query", "filter_change", "search_query", "save"]
 
 
 class EventRequest(BaseModel):
