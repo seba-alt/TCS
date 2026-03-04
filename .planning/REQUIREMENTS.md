@@ -9,9 +9,9 @@ Requirements for milestone v5.2 Email-First Gate & Admin See-All. Each maps to r
 
 ### Admin Overview
 
-- [ ] **ADMOV-01**: Admin can expand Top Experts card to see all experts ranked by click volume (not just top 5)
-- [ ] **ADMOV-02**: Admin can expand Top Searches card to see all search queries ranked by frequency (not just top 5)
-- [ ] **ADMOV-03**: Admin can collapse expanded cards back to top 5 view
+- [x] **ADMOV-01**: Admin can expand Top Experts card to see all experts ranked by click volume (not just top 5)
+- [x] **ADMOV-02**: Admin can expand Top Searches card to see all search queries ranked by frequency (not just top 5)
+- [x] **ADMOV-03**: Admin can collapse expanded cards back to top 5 view
 
 ### Email Gate
 
@@ -28,7 +28,7 @@ Requirements for milestone v5.2 Email-First Gate & Admin See-All. Each maps to r
 
 ### Analytics
 
-- [ ] **ANLYT-01**: Vercel Speed Insights active on the frontend
+- [x] **ANLYT-01**: Vercel Speed Insights active on the frontend
 
 ## Future Requirements
 
@@ -64,10 +64,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | GATE-03 | Phase 64 | Done |
 | GATE-04 | Phase 64 | Done |
 | TRACK-03 | Phase 64 | Done |
-| ADMOV-01 | Phase 65 | Pending |
-| ADMOV-02 | Phase 65 | Pending |
-| ADMOV-03 | Phase 65 | Pending |
-| ANLYT-01 | Phase 65 | Pending |
+| ADMOV-01 | Phase 65 | Complete |
+| ADMOV-02 | Phase 65 | Complete |
+| ADMOV-03 | Phase 65 | Complete |
+| ANLYT-01 | Phase 65 | Complete |
 
 **Coverage:**
 - v5.2 requirements: 11 total
