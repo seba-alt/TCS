@@ -53,6 +53,7 @@ Progress: [█████████░] 95%
 ### Roadmap Evolution
 
 - Phase 62.1 inserted after Phase 62: Admin Bugs (URGENT)
+- Phase 62.2 inserted after Phase 62.1: Loops Usergroup, OG Preview Image, Leads Timeline Context (URGENT)
 
 ### Decisions
 
