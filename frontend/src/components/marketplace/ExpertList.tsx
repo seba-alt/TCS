@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { Virtuoso } from 'react-virtuoso'
+import { Bookmark } from 'lucide-react'
 import type { Expert } from '../../store/resultsSlice'
 import { useExplorerStore, useFilterSlice } from '../../store'
 import { EmptyState } from './EmptyState'
@@ -51,7 +52,7 @@ function ListFooter({ isFetchingMore }: { isFetchingMore: boolean }) {
 }
 
 export function ExpertList({ experts, loading, isFetchingMore, onEndReached, onViewProfile }: ExpertListProps) {
-  const { savedFilter, savedExperts } = useFilterSlice()
+  const { savedFilter, savedExperts, toggleSavedExpert } = useFilterSlice()
   const toggleTag = useExplorerStore((s) => s.toggleTag)
 
   // When "Saved" filter is active, show only bookmarked experts from loaded list
@@ -80,9 +81,14 @@ export function ExpertList({ experts, loading, isFetchingMore, onEndReached, onV
         computeItemKey={(_, expert) => expert.username}
         itemContent={(_, expert) => {
           const initials = `${expert.first_name?.[0] ?? ''}${expert.last_name?.[0] ?? ''}`
+          const isSaved = savedExperts.includes(expert.username)
           return (
             <div
-              className="flex items-center gap-4 px-4 py-3 border-b border-gray-50 hover:bg-gray-50 cursor-pointer transition-colors overflow-hidden"
+              className={`flex items-center gap-4 px-4 py-3 border-b cursor-pointer transition-colors overflow-hidden ${
+                isSaved
+                  ? 'bg-purple-50/50 border-purple-100 hover:bg-purple-50'
+                  : 'border-gray-50 hover:bg-gray-50'
+              }`}
               onClick={() => onViewProfile(expert.profile_url)}
               role="button"
               tabIndex={0}
@@ -137,6 +143,15 @@ export function ExpertList({ experts, loading, isFetchingMore, onEndReached, onV
                   </button>
                 ))}
               </div>
+
+              {/* Bookmark button — always visible, matches grid view ExpertCard behavior */}
+              <button
+                onClick={(e) => { e.stopPropagation(); toggleSavedExpert(expert.username) }}
+                className="p-1 text-gray-400 hover:text-brand-purple transition-colors shrink-0"
+                aria-label={isSaved ? 'Remove bookmark' : 'Bookmark expert'}
+              >
+                <Bookmark size={16} className={isSaved ? 'fill-current text-brand-purple' : ''} />
+              </button>
             </div>
           )
         }}
