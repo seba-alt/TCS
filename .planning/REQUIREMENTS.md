@@ -16,8 +16,8 @@ Requirements for milestone v5.3 UX Polish & Admin Saved Insights.
 ### Saved Tracking
 
 - [x] **SAVE-01**: Save/unsave actions tracked as backend events via trackEvent() with expert_id and action (save/unsave)
-- [ ] **SAVE-02**: Admin overview shows "Top Saved Experts" ranked card (same pattern as Top Clicks/Top Searches)
-- [ ] **SAVE-03**: Admin lead timeline shows save/unsave events with distinct icon alongside searches and clicks
+- [x] **SAVE-02**: Admin overview shows "Top Saved Experts" ranked card (same pattern as Top Clicks/Top Searches)
+- [x] **SAVE-03**: Admin lead timeline shows save/unsave events with distinct icon alongside searches and clicks
 
 ### Bug Fix
 
@@ -45,8 +45,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | GATE-03 | Phase 67 | Complete |
 | FIX-01 | Phase 67 | Complete |
 | SAVE-01 | Phase 68 | Complete |
-| SAVE-02 | Phase 69 | Pending |
-| SAVE-03 | Phase 69 | Pending |
+| SAVE-02 | Phase 69 | Complete |
+| SAVE-03 | Phase 69 | Complete |
 
 **Coverage:**
 - v5.3 requirements: 7 total
@@ -55,4 +55,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-03-04*
-*Last updated: 2026-03-04 after Phase 68 completion*
+*Last updated: 2026-03-04 after Phase 69 completion*
