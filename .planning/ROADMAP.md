@@ -109,5 +109,8 @@ See `.planning/milestones/v5.1-ROADMAP.md`
 - [x] Phase 60: Bug Fixes (1/1 plan) — completed 2026-03-03
 - [x] Phase 61: Lead Journey Timeline (2/2 plans) — completed 2026-03-03
 - [x] Phase 62: Overview Enhancements (2/2 plans) — completed 2026-03-03
+- [ ] Phase 62.1: Admin Bugs (1 plan)
+  Plans:
+  - [ ] 62.1-01-PLAN.md — Unify card naming, merge duplicates, reorder overview grid
 
 </details>
