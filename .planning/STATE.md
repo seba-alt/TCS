@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v5.3
 milestone_name: UX Polish & Admin Saved Insights
 status: completed
-stopped_at: Completed 69.1-02-PLAN.md
-last_updated: "2026-03-04T18:42:20.182Z"
-last_activity: 2026-03-04 — Phase 69 complete (Top Saved Experts card + timeline save events)
+stopped_at: Completed 69.1-03-PLAN.md
+last_updated: "2026-03-04T18:45:33Z"
+last_activity: 2026-03-04 — Phase 69.1 complete (CSV sync UI with cherry-pick deletion control)
 progress:
   total_phases: 4
   completed_phases: 3
@@ -26,10 +26,10 @@ See: .planning/PROJECT.md (updated 2026-03-04)
 ## Current Position
 
 Milestone: v5.3 UX Polish & Admin Saved Insights
-Phase: 69 of 69 (Admin Saved Insights)
-Plan: 01/01 complete
-Status: Phase 69 complete, all v5.3 phases done
-Last activity: 2026-03-04 — Phase 69 complete (Top Saved Experts card + timeline save events)
+Phase: 69.1 (CSV Upload Sync — remove deleted experts and update existing fields)
+Plan: 03/03 complete
+Status: Phase 69.1 complete, all phases done
+Last activity: 2026-03-04 — Phase 69.1 complete (CSV sync UI with cherry-pick deletion control)
 
 Progress: [██████████] 100%
 
@@ -54,6 +54,8 @@ Recent decisions affecting current work:
 - [Phase 69.1]: Removed metadata.json and experts.csv cleanup from delete endpoints — FAISS rebuild handles exclusion via is_active filter in ingest.py
 - [Phase 69.1]: Conversation archiving skipped in sync-apply: expert data embedded in JSON blobs; soft-delete on Expert sufficient for data preservation
 - [Phase 69.1]: sync-preview excludes already-inactive experts from to_delete to prevent idempotency issues on repeated CSV uploads
+- [Phase 69.1 plan 03]: Section component kept inline in CsvImportModal (not extracted) — only used in one place, self-contained modal pattern
+- [Phase 69.1 plan 03]: auto_advance=true — human-verify checkpoint auto-approved; full E2E verification deferred to user
 
 ### Pending Todos
 
@@ -69,6 +71,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-04T18:42:20.177Z
-Stopped at: Completed 69.1-02-PLAN.md
-Resume: Run milestone completion
+Last session: 2026-03-04T18:45:33Z
+Stopped at: Completed 69.1-03-PLAN.md
+Resume: Phase 69.1 complete — all three plans done. Milestone v5.3 complete.

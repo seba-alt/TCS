@@ -195,7 +195,7 @@ Plans:
 
 **Goal:** Upgrade CSV upload from upsert-only to full sync with soft-delete, empty-field protection, preview with cherry-pick, and automatic FAISS rebuild
 **Depends on:** Phase 69
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 
 Plans:
 - [ ] 69.1-01-PLAN.md — Soft-delete infrastructure (is_active flag + public query filters)
