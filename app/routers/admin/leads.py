@@ -132,10 +132,18 @@ def get_lead_timeline(email: str, limit: int = 10, offset: int = 0, db: Session 
 
 @router.get("/newsletter-subscribers")
 def get_newsletter_subscribers(db: Session = Depends(get_db)):
-    """Return all newsletter subscribers ordered by most recent first."""
+    """Return all newsletter subscribers enriched with click counts."""
     rows = db.scalars(
         select(NewsletterSubscriber).order_by(NewsletterSubscriber.created_at.desc())
     ).all()
+
+    # Enrich with click counts from lead_clicks table
+    click_counts_rows = db.execute(
+        select(LeadClick.email, func.count(LeadClick.id).label("click_count"))
+        .group_by(LeadClick.email)
+    ).all()
+    click_map = {r.email: r.click_count for r in click_counts_rows}
+
     return {
         "count": len(rows),
         "subscribers": [
@@ -143,6 +151,7 @@ def get_newsletter_subscribers(db: Session = Depends(get_db)):
                 "email": r.email,
                 "created_at": r.created_at.isoformat(),
                 "source": r.source,
+                "click_count": click_map.get(r.email, 0),
             }
             for r in rows
         ],

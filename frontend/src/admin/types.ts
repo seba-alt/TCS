@@ -175,6 +175,7 @@ export interface NewsletterSubscriber {
   email: string
   created_at: string  // ISO string
   source: string
+  click_count: number
 }
 
 export interface NewsletterSubscribersResponse {

@@ -39,14 +39,15 @@ def get_stats(days: int = 0, db: Session = Depends(get_db)):
         match_stmt = match_stmt.where(Conversation.created_at >= date_filter)
     match_count = db.scalar(match_stmt) or 0
 
-    gap_stmt = select(func.count()).select_from(Conversation).where(
-        (Conversation.top_match_score.is_(None))
-        | (Conversation.top_match_score < GAP_THRESHOLD)
-        | (Conversation.response_type == "clarification")
-    )
-    if date_filter:
-        gap_stmt = gap_stmt.where(Conversation.created_at >= date_filter)
-    gap_count = db.scalar(gap_stmt) or 0
+    # Zero-result queries from user_events (same source as /events/demand)
+    gap_cutoff = date_filter.strftime("%Y-%m-%d") if date_filter else "2000-01-01"
+    gap_count = db.execute(_text("""
+        SELECT COUNT(DISTINCT json_extract(payload, '$.query_text')) AS cnt
+        FROM user_events
+        WHERE event_type = 'search_query'
+          AND CAST(json_extract(payload, '$.result_count') AS INTEGER) = 0
+          AND date(created_at) >= :cutoff
+    """), {"cutoff": gap_cutoff}).scalar() or 0
 
     match_rate = round(match_count / total, 3) if total else 0.0
 

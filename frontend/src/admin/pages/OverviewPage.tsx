@@ -440,7 +440,6 @@ export default function OverviewPage() {
         <StatCard
           label="New Leads"
           value={stats.total_leads ?? 0}
-          sub={`${((stats.lead_rate ?? 0) * 100).toFixed(1)}% conversion`}
           accent
           onClick={() => navigate('/admin/leads')}
         />
