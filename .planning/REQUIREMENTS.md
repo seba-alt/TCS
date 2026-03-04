@@ -40,19 +40,19 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| GATE-01 | — | Pending |
-| GATE-02 | — | Pending |
-| GATE-03 | — | Pending |
-| SAVE-01 | — | Pending |
-| SAVE-02 | — | Pending |
-| SAVE-03 | — | Pending |
-| FIX-01 | — | Pending |
+| GATE-01 | Phase 67 | Pending |
+| GATE-02 | Phase 67 | Pending |
+| GATE-03 | Phase 67 | Pending |
+| FIX-01 | Phase 67 | Pending |
+| SAVE-01 | Phase 68 | Pending |
+| SAVE-02 | Phase 69 | Pending |
+| SAVE-03 | Phase 69 | Pending |
 
 **Coverage:**
 - v5.3 requirements: 7 total
-- Mapped to phases: 0
-- Unmapped: 7 ⚠️
+- Mapped to phases: 7
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-03-04*
-*Last updated: 2026-03-04 after initial definition*
+*Last updated: 2026-03-04 after roadmap creation*

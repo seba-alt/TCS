@@ -15,6 +15,7 @@
 - ✅ **v5.0 Platform Polish & Admin Overhaul** — Phases 55-59 (shipped 2026-03-03)
 - ✅ **v5.1 Lead Insights & Overview** — Phases 60-62 (shipped 2026-03-03)
 - ✅ **v5.2 Email-First Gate & Admin See-All** — Phases 63-66 (shipped 2026-03-04)
+- 🚧 **v5.3 UX Polish & Admin Saved Insights** — Phases 67-69 (in progress)
 
 ## Phases
 
@@ -133,3 +134,52 @@ See `.planning/milestones/v5.2-ROADMAP.md`
 - [x] Phase 66: Audit Gap Closure (1/1 plan) — completed 2026-03-04
 
 </details>
+
+### 🚧 v5.3 UX Polish & Admin Saved Insights (In Progress)
+
+**Milestone Goal:** Improve email gate UX, fix list-view save button bug, track save events, and surface saved-expert analytics in admin
+
+- [ ] **Phase 67: Email Gate Polish & List View Fix** — Cleaner gate UI, auto-focus behaviors, list view save button
+- [ ] **Phase 68: Save Event Tracking** — Backend save/unsave event instrumentation
+- [ ] **Phase 69: Admin Saved Insights** — Top Saved Experts card and lead timeline save events
+
+## Phase Details
+
+### Phase 67: Email Gate Polish & List View Fix
+**Goal**: Users experience a cleaner, more focused email gate and save experts from list view
+**Depends on**: Phase 66
+**Requirements**: GATE-01, GATE-02, GATE-03, FIX-01
+**Success Criteria** (what must be TRUE):
+  1. Email gate displays dark background logo and minimal layout with less text
+  2. Email input is auto-focused when gate is active; search bar cannot be interacted with
+  3. After gate submission, search bar receives focus automatically
+  4. List view expert cards each render a save/bookmark button matching grid view behavior
+**Plans**: TBD
+
+### Phase 68: Save Event Tracking
+**Goal**: Save and unsave actions are recorded as backend events for analytics
+**Depends on**: Phase 67
+**Requirements**: SAVE-01
+**Success Criteria** (what must be TRUE):
+  1. Bookmarking an expert fires a trackEvent() call with expert_id and action: "save"
+  2. Unbookmarking an expert fires a trackEvent() call with expert_id and action: "unsave"
+  3. Events appear in the user_events table and are attributed to the visitor's email when known
+**Plans**: TBD
+
+### Phase 69: Admin Saved Insights
+**Goal**: Admin can see which experts are most saved and see save events in lead timelines
+**Depends on**: Phase 68
+**Requirements**: SAVE-02, SAVE-03
+**Success Criteria** (what must be TRUE):
+  1. Admin overview shows a "Top Saved Experts" ranked card following the same pattern as Top Experts/Top Searches
+  2. Top Saved card responds to the period toggle (Today / 7d / 30d / All)
+  3. Lead timeline rows display save and unsave events with distinct icons alongside searches and clicks
+**Plans**: TBD
+
+## Progress
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 67. Email Gate Polish & List View Fix | 0/TBD | Not started | - |
+| 68. Save Event Tracking | 0/TBD | Not started | - |
+| 69. Admin Saved Insights | 0/TBD | Not started | - |
