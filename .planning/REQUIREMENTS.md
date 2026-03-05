@@ -26,14 +26,14 @@ Requirements for launch hardening. Preparing for 10k concurrent users from marke
 
 ### Frontend Performance
 
-- [ ] **FPERF-01**: Event tracking batched client-side (module-level queue, flush on 10 items / 3s timer / beforeunload)
-- [ ] **FPERF-02**: Vite manualChunks expanded (vendor-motion, vendor-virtuoso, vendor-icons, vendor-intercom, vendor-router)
-- [ ] **FPERF-03**: Preconnect hint to Railway API origin added to index.html
+- [x] **FPERF-01**: Event tracking batched client-side (module-level queue, flush on 10 items / 3s timer / beforeunload)
+- [x] **FPERF-02**: Vite manualChunks expanded (vendor-motion, vendor-virtuoso, vendor-icons, vendor-intercom, vendor-router)
+- [x] **FPERF-03**: Preconnect hint to Railway API origin added to index.html
 
 ### Vercel Config
 
-- [ ] **VCFG-01**: Cache-Control immutable headers for /assets/* in vercel.json (public, max-age=31536000, immutable)
-- [ ] **VCFG-02**: Cache-Control for static images in vercel.json (public, max-age=86400, stale-while-revalidate=604800)
+- [x] **VCFG-01**: Cache-Control immutable headers for /assets/* in vercel.json (public, max-age=31536000, immutable)
+- [x] **VCFG-02**: Cache-Control for static images in vercel.json (public, max-age=86400, stale-while-revalidate=604800)
 
 ### Resilience
 
@@ -98,11 +98,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | RAIL-01 | Phase 71 | Complete |
 | RAIL-02 | Phase 71 | Complete |
 | RAIL-03 | Phase 71 | Complete |
-| FPERF-01 | Phase 72 | Pending |
-| FPERF-02 | Phase 72 | Pending |
-| FPERF-03 | Phase 72 | Pending |
-| VCFG-01 | Phase 72 | Pending |
-| VCFG-02 | Phase 72 | Pending |
+| FPERF-01 | Phase 72 | Complete |
+| FPERF-02 | Phase 72 | Complete |
+| FPERF-03 | Phase 72 | Complete |
+| VCFG-01 | Phase 72 | Complete |
+| VCFG-02 | Phase 72 | Complete |
 | RSIL-01 | Phase 73 | Pending |
 | RSIL-02 | Phase 73 | Pending |
 | SEO-01 | Phase 73 | Pending |
