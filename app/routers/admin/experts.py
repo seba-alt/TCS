@@ -11,7 +11,7 @@ from typing import Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select
 from sqlalchemy.orm import Session
 
 
@@ -40,7 +40,7 @@ def get_experts(
     db: Session = Depends(get_db),
     active_only: bool = Query(default=False),
     page: int = Query(default=0, ge=0),
-    limit: int = Query(default=50, ge=1, le=200),
+    limit: int = Query(default=50, ge=1, le=1000),
     search: str = Query(default=""),
 ):
     """Return paginated experts from the DB. Supports search by name, page/limit params."""
@@ -52,8 +52,12 @@ def get_experts(
         stmt = stmt.where(
             func.lower(Expert.first_name + " " + Expert.last_name).contains(search_lower)
         )
-    # Alphabetical A-Z by first name (user decision)
-    stmt = stmt.order_by(Expert.first_name.asc(), Expert.last_name.asc())
+    # Alphabetical A-Z, letters first, specials (non-letter starts) last
+    letters_first = case(
+        (func.substr(func.upper(Expert.first_name), 1, 1).between('A', 'Z'), 0),
+        else_=1,
+    )
+    stmt = stmt.order_by(letters_first, Expert.first_name.asc(), Expert.last_name.asc())
 
     # Count total matching rows before pagination
     total = db.scalar(select(func.count()).select_from(stmt.subquery()))

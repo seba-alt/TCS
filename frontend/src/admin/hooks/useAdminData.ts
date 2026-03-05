@@ -176,7 +176,7 @@ export function useAdminExperts() {
 
   const fetchData = useCallback(() => {
     setLoading(true)
-    adminFetch<ExpertsResponse>('/experts')
+    adminFetch<PaginatedExpertsResponse>('/experts', { limit: 1000 })
       .then(setData)
       .catch(e => setError(e.message))
       .finally(() => setLoading(false))
