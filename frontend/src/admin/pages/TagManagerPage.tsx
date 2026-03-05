@@ -122,52 +122,6 @@ export default function TagManagerPage() {
         <p className="text-slate-400 text-sm">Manage predefined tags and assign them to experts for improved search findability</p>
       </div>
 
-      {/* Catalog Management */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 mb-6">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-white font-semibold text-sm">
-            Tag Catalog ({catalog.length} tags)
-          </h2>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={newTag}
-              onChange={e => setNewTag(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleAddCatalogTag()}
-              placeholder="Add new tag..."
-              className="bg-slate-800 border border-slate-700 text-white placeholder-slate-500 rounded-lg px-3 py-1.5 text-sm w-48 focus:outline-none focus:ring-1 focus:ring-purple-500"
-            />
-            <button
-              onClick={handleAddCatalogTag}
-              disabled={!newTag.trim()}
-              className="bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
-            >
-              Add
-            </button>
-          </div>
-        </div>
-        {catalogError && (
-          <p className="text-red-400 text-xs mb-2">{catalogError}</p>
-        )}
-        {catalogLoading ? (
-          <p className="text-slate-500 text-sm">Loading catalog...</p>
-        ) : (
-          <div className="flex flex-wrap gap-2">
-            {catalog.map(t => (
-              <span
-                key={t.id}
-                className="inline-flex items-center bg-slate-700 text-slate-300 px-2.5 py-1 rounded-full text-xs"
-              >
-                {t.tag}
-              </span>
-            ))}
-            {catalog.length === 0 && (
-              <p className="text-slate-500 text-xs">No tags in catalog. Tags will be seeded from AI skill tags on first load.</p>
-            )}
-          </div>
-        )}
-      </div>
-
       {/* Expert -> Tags */}
       <div className="flex gap-4">
         {/* Left panel: Expert list */}
@@ -237,21 +191,45 @@ export default function TagManagerPage() {
           {/* Tag picker */}
           <div className="mb-4">
             <p className="text-slate-400 text-xs mb-2">Click tags to select, then assign:</p>
-            <div className="flex flex-wrap gap-2 mb-3">
-              {catalog.map(t => (
-                <button
-                  key={t.id}
-                  onClick={() => toggleTag(t.tag)}
-                  className={`px-2.5 py-1 rounded-full text-xs font-medium transition-all ${
-                    selectedTags.has(t.tag)
-                      ? 'bg-purple-600 text-white'
-                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                  }`}
-                >
-                  {t.tag}
-                </button>
-              ))}
+            {catalogLoading ? (
+              <p className="text-slate-500 text-sm mb-3">Loading tags...</p>
+            ) : (
+              <div className="flex flex-wrap gap-2 mb-3">
+                {catalog.map(t => (
+                  <button
+                    key={t.id}
+                    onClick={() => toggleTag(t.tag)}
+                    className={`px-2.5 py-1 rounded-full text-xs font-medium transition-all ${
+                      selectedTags.has(t.tag)
+                        ? 'bg-purple-600 text-white'
+                        : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                    }`}
+                  >
+                    {t.tag}
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="flex gap-2 mb-3">
+              <input
+                type="text"
+                value={newTag}
+                onChange={e => setNewTag(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleAddCatalogTag()}
+                placeholder="Add new tag..."
+                className="bg-slate-800 border border-slate-700 text-white placeholder-slate-500 rounded-lg px-3 py-1.5 text-sm w-48 focus:outline-none focus:ring-1 focus:ring-purple-500"
+              />
+              <button
+                onClick={handleAddCatalogTag}
+                disabled={!newTag.trim()}
+                className="bg-slate-700 hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed text-slate-300 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+              >
+                + Add
+              </button>
             </div>
+            {catalogError && (
+              <p className="text-red-400 text-xs mb-2">{catalogError}</p>
+            )}
             <button
               onClick={handleBulkAssign}
               disabled={selectedExperts.size === 0 || selectedTags.size === 0 || assignLoading}
