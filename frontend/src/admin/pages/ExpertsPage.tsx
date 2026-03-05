@@ -1,5 +1,5 @@
-import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
-import { useAdminExperts, useAdminDomainMap, useIngestStatus, adminPost, adminFetch, adminDelete } from '../hooks/useAdminData'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { useAdminExpertsPaginated, useAdminDomainMap, useIngestStatus, adminPost, adminFetch, adminDelete } from '../hooks/useAdminData'
 import CsvImportModal from '../components/CsvImportModal'
 import type { ExpertRow, DomainMapEntry, LeadClicksByExpertResponse } from '../types'
 import { AdminInput } from '../components/AdminInput'
@@ -35,21 +35,6 @@ function timeAgo(isoString: string): string {
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
-
-function SortHeader({ col, label, current, dir, onClick }: {
-  col: string; label: string; current: string; dir: 'asc' | 'desc'; onClick: (col: string) => void
-}) {
-  const active = current === col
-  return (
-    <th
-      className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer select-none hover:text-slate-300"
-      onClick={() => onClick(col)}
-    >
-      {label}
-      {active && <span className="ml-1 opacity-70">{dir === 'asc' ? '\u2191' : '\u2193'}</span>}
-    </th>
-  )
-}
 
 function ScoreBadge({ score }: { score: number | null | undefined }) {
   const zone = scoreZone(score)
@@ -105,7 +90,23 @@ const EMPTY_FORM: AddFormState = {
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function ExpertsPage() {
-  const { data, loading, error, refetch } = useAdminExperts()
+  // Server-side pagination state
+  const [page, setPage] = useState(0)
+  const [searchInput, setSearchInput] = useState('')
+  const [search, setSearch] = useState('')
+
+  // Debounce: apply search 300ms after input stops
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const handleSearchChange = useCallback((value: string) => {
+    setSearchInput(value)
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => {
+      setSearch(value)
+      setPage(0)
+    }, 300)
+  }, [])
+
+  const { data, loading, error, refetch } = useAdminExpertsPaginated(page, search)
   const { data: domainData, loading: domainLoading, fetchData: fetchDomainMap } = useAdminDomainMap()
   const { ingest, triggerRun } = useIngestStatus()
 
@@ -121,15 +122,6 @@ export default function ExpertsPage() {
   const [form, setForm] = useState<AddFormState>(EMPTY_FORM)
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
-
-  // Sort/filter/pagination state
-  const [sortCol, setSortCol] = useState<string>('score')
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
-  const [nameSearch, setNameSearch] = useState('')
-  const [zoneFilter, setZoneFilter] = useState<'red' | 'yellow' | 'green' | null>(null)
-  const [tagFilter, setTagFilter] = useState<string | null>(null)
-  const [hideNoBio, setHideNoBio] = useState(false)
-  const [pageIdx, setPageIdx] = useState(0)
 
   // Domain-map state
   const [showDomainMap, setShowDomainMap] = useState(false)
@@ -230,15 +222,6 @@ export default function ExpertsPage() {
     }
   }
 
-  const handleSort = useCallback((col: string) => {
-    if (col === sortCol) {
-      setSortDir(d => d === 'asc' ? 'desc' : 'asc')
-    } else {
-      setSortCol(col)
-      setSortDir('asc')
-    }
-  }, [sortCol])
-
   const handleToggleDomainMap = useCallback(() => {
     setShowDomainMap(v => !v)
     if (!domainData && !domainLoading) fetchDomainMap()
@@ -263,60 +246,18 @@ export default function ExpertsPage() {
     }
   }
 
-  // handleCsvUpload replaced by CsvImportModal
-
   // Auto-refresh expert list when ingest completes
   useEffect(() => {
     if (ingest.status === 'done') refetch()
   }, [ingest.status, refetch])
 
+  // Clear selection when page changes
+  useEffect(() => { setSelectedUsernames(new Set()) }, [page, search])
+
   // ── Derived data ──────────────────────────────────────────────────────────
 
   const experts = data?.experts ?? []
-
-  const sorted = useMemo(() => {
-    return [...experts].sort((a, b) => {
-      if (sortCol === 'score') {
-        const aScore = a.findability_score ?? -1
-        const bScore = b.findability_score ?? -1
-        return sortDir === 'asc' ? aScore - bScore : bScore - aScore
-      }
-      if (sortCol === 'name') {
-        const aName = `${a.first_name} ${a.last_name}`.toLowerCase()
-        const bName = `${b.first_name} ${b.last_name}`.toLowerCase()
-        return sortDir === 'asc' ? aName.localeCompare(bName) : bName.localeCompare(aName)
-      }
-      if (sortCol === 'company') {
-        const aC = (a.company || '').toLowerCase()
-        const bC = (b.company || '').toLowerCase()
-        return sortDir === 'asc' ? aC.localeCompare(bC) : bC.localeCompare(aC)
-      }
-      return 0
-    })
-  }, [experts, sortCol, sortDir])
-
-  const filtered = useMemo(() => {
-    let result = sorted
-    // Always hide experts with no name
-    result = result.filter(e => (e.first_name || '').trim() || (e.last_name || '').trim())
-    // Name search filter (primary, applied first)
-    if (nameSearch.trim()) {
-      const q = nameSearch.trim().toLowerCase()
-      result = result.filter(e =>
-        `${e.first_name} ${e.last_name}`.toLowerCase().includes(q)
-      )
-    }
-    if (hideNoBio) result = result.filter(e => (e.bio || '').trim())
-    if (zoneFilter) result = result.filter(e => scoreZone(e.findability_score) === zoneFilter)
-    if (tagFilter) result = result.filter(e => e.tags?.includes(tagFilter))
-    return result
-  }, [sorted, nameSearch, hideNoBio, zoneFilter, tagFilter])
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / 50))
-  const pageData = filtered.slice(pageIdx * 50, (pageIdx + 1) * 50)
-
-  // Reset page and clear selection on filter/sort change
-  useEffect(() => { setPageIdx(0); setSelectedUsernames(new Set()) }, [nameSearch, hideNoBio, zoneFilter, tagFilter, sortCol, sortDir])
+  const pageData = experts
 
   // Update indeterminate state on select-all checkbox
   useEffect(() => {
@@ -334,7 +275,11 @@ export default function ExpertsPage() {
     <div className="p-8 space-y-6">
       <AdminPageHeader
         title="Experts"
-        subtitle={`${filtered.length} of ${experts.length} experts`}
+        subtitle={
+          data
+            ? `Showing ${experts.length} of ${data.total} experts`
+            : 'Loading experts…'
+        }
         action={
           <button
             onClick={() => setShowAddForm(!showAddForm)}
@@ -348,59 +293,23 @@ export default function ExpertsPage() {
         }
       />
 
-      {/* Name search (primary filter) */}
+      {/* Name search + actions row */}
       <div className="flex flex-wrap items-center gap-3">
         <AdminInput
           type="search"
           placeholder="Search experts by name..."
-          value={nameSearch}
-          onChange={e => setNameSearch(e.target.value)}
+          value={searchInput}
+          onChange={e => handleSearchChange(e.target.value)}
           className="!w-72"
         />
 
-        {/* Secondary filters */}
-        <div className="flex gap-1">
-          {(['red', 'yellow', 'green'] as const).map(zone => (
-            <button
-              key={zone}
-              onClick={() => setZoneFilter(zoneFilter === zone ? null : zone)}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors ${
-                zoneFilter === zone
-                  ? zone === 'red'    ? 'bg-slate-800 border-red-500/50 text-red-400'
-                  : zone === 'yellow' ? 'bg-slate-800 border-yellow-500/50 text-yellow-400'
-                  :                     'bg-slate-800 border-green-500/50 text-green-400'
-                  : 'border-slate-700 text-slate-500 hover:border-slate-500 hover:text-slate-400'
-              }`}
-            >
-              {zone.charAt(0).toUpperCase() + zone.slice(1)}
-            </button>
-          ))}
-          {(zoneFilter || tagFilter || nameSearch) && (
-            <button
-              onClick={() => { setZoneFilter(null); setTagFilter(null); setNameSearch('') }}
-              className="px-3 py-1.5 text-xs text-slate-500 hover:text-slate-300 transition-colors"
-            >
-              Clear
-            </button>
-          )}
-        </div>
-
-        {/* Hide no-bio toggle */}
-        <button
-          onClick={() => setHideNoBio(v => !v)}
-          className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors ${
-            hideNoBio
-              ? 'bg-slate-800 border-slate-400/50 text-slate-200'
-              : 'border-slate-700 text-slate-500 hover:border-slate-500 hover:text-slate-400'
-          }`}
-        >
-          {hideNoBio ? 'Showing with bio' : 'Hide no bio'}
-        </button>
-
-        {tagFilter && (
-          <span className="text-xs text-slate-400">
-            Filtered by tag: <span className="text-slate-200 font-medium">{tagFilter}</span>
-          </span>
+        {searchInput && (
+          <button
+            onClick={() => { handleSearchChange(''); setSearchInput('') }}
+            className="px-3 py-1.5 text-xs text-slate-500 hover:text-slate-300 transition-colors"
+          >
+            Clear
+          </button>
         )}
 
         {/* Actions */}
@@ -526,12 +435,12 @@ export default function ExpertsPage() {
                     />
                   </th>
                   <th className="w-8 px-2 py-3" />
-                  <SortHeader col="name"    label="Name"    current={sortCol} dir={sortDir} onClick={handleSort} />
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Name</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Bio</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Tags</th>
-                  <SortHeader col="company" label="Company" current={sortCol} dir={sortDir} onClick={handleSort} />
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Company</th>
                   <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider text-center">Link</th>
-                  <SortHeader col="score"   label="Score"   current={sortCol} dir={sortDir} onClick={handleSort} />
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Score</th>
                   <th className="w-10 px-2 py-3" />
                 </tr>
               </thead>
@@ -642,10 +551,10 @@ export default function ExpertsPage() {
                     )}
                   </>
                 ))}
-                {pageData.length === 0 && (
+                {pageData.length === 0 && !loading && (
                   <tr>
                     <td colSpan={9} className="px-4 py-8 text-center text-slate-500 text-sm">
-                      {filtered.length === 0 ? 'No experts match the current filters.' : 'Loading experts...'}
+                      {search ? `No experts match "${search}".` : 'No experts found.'}
                     </td>
                   </tr>
                 )}
@@ -656,9 +565,9 @@ export default function ExpertsPage() {
           {/* Pagination */}
           <div className="px-4 py-3 border-t border-slate-800">
             <AdminPagination
-              page={pageIdx}
-              totalPages={totalPages}
-              onPageChange={setPageIdx}
+              page={data?.page ?? 0}
+              totalPages={data?.total_pages ?? 0}
+              onPageChange={setPage}
             />
           </div>
         </AdminCard>
@@ -724,22 +633,17 @@ export default function ExpertsPage() {
               {!domainLoading && domainData && domainData.domains.length > 0 && (
                 <div>
                   <p className="text-xs text-slate-500 mb-3">
-                    Click a domain to filter the expert table. Showing top {domainData.domains.length} domains by downvote count.
+                    Showing top {domainData.domains.length} domains by downvote count.
                   </p>
                   <div className="space-y-1.5">
                     {domainData.domains.map((d: DomainMapEntry) => (
-                      <button
+                      <div
                         key={d.domain}
-                        onClick={() => setTagFilter(tagFilter === d.domain ? null : d.domain)}
-                        className={`flex items-center justify-between w-full px-3 py-1.5 rounded-lg text-sm transition-colors text-left ${
-                          tagFilter === d.domain
-                            ? 'bg-slate-700 text-slate-200'
-                            : 'hover:bg-slate-700/50 text-slate-300'
-                        }`}
+                        className="flex items-center justify-between w-full px-3 py-1.5 rounded-lg text-sm text-slate-300"
                       >
                         <span className="capitalize">{d.domain}</span>
                         <span className="text-xs text-slate-500 ml-4">{d.count} downvote{d.count !== 1 ? 's' : ''}</span>
-                      </button>
+                      </div>
                     ))}
                   </div>
                 </div>

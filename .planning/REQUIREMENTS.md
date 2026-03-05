@@ -12,11 +12,11 @@ Requirements for launch hardening. Preparing for 10k concurrent users from marke
 - [ ] **BPERF-01**: Health check endpoint returns DB status, expert count, and latency metric
 - [ ] **BPERF-02**: Admin experts endpoint supports pagination (page/limit query params, default 50)
 - [ ] **BPERF-03**: Photo proxy endpoint returns Cache-Control header (public, max-age=86400)
-- [ ] **BPERF-04**: Event writes batched via asyncio queue (flush every 2-3s or 10 items, executemany commit)
-- [ ] **BPERF-05**: SQLite PRAGMAs tuned (synchronous=NORMAL, cache_size=-32000, temp_store=MEMORY, mmap_size=128MB, wal_autocheckpoint=1000)
-- [ ] **BPERF-06**: GZipMiddleware compresses API responses over 500 bytes
-- [ ] **BPERF-07**: Explore endpoint caches responses with 5-minute TTL (300s) (invalidated on expert add/delete/import)
-- [ ] **BPERF-08**: Connection pool explicitly configured (pool_size=5, max_overflow=10, pool_pre_ping=True)
+- [x] **BPERF-04**: Event writes batched via asyncio queue (flush every 2-3s or 10 items, executemany commit)
+- [x] **BPERF-05**: SQLite PRAGMAs tuned (synchronous=NORMAL, cache_size=-32000, temp_store=MEMORY, mmap_size=128MB, wal_autocheckpoint=1000)
+- [x] **BPERF-06**: GZipMiddleware compresses API responses over 500 bytes
+- [x] **BPERF-07**: Explore endpoint caches responses with 5-minute TTL (300s) (invalidated on expert add/delete/import)
+- [x] **BPERF-08**: Connection pool explicitly configured (pool_size=5, max_overflow=10, pool_pre_ping=True)
 
 ### Railway Config
 
@@ -90,11 +90,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | BPERF-01 | Phase 71 | Pending |
 | BPERF-02 | Phase 71 | Pending |
 | BPERF-03 | Phase 71 | Pending |
-| BPERF-04 | Phase 71 | Pending |
-| BPERF-05 | Phase 71 | Pending |
-| BPERF-06 | Phase 71 | Pending |
-| BPERF-07 | Phase 71 | Pending |
-| BPERF-08 | Phase 71 | Pending |
+| BPERF-04 | Phase 71 | Complete |
+| BPERF-05 | Phase 71 | Complete |
+| BPERF-06 | Phase 71 | Complete |
+| BPERF-07 | Phase 71 | Complete |
+| BPERF-08 | Phase 71 | Complete |
 | RAIL-01 | Phase 71 | Pending |
 | RAIL-02 | Phase 71 | Pending |
 | RAIL-03 | Phase 71 | Pending |

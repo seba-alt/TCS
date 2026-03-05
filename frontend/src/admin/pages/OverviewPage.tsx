@@ -20,21 +20,45 @@ const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
 
 type HealthStatus = 'checking' | 'up' | 'down'
 
+interface AdminHealthData {
+  status: string
+  db: string
+  expert_count: number | null
+  db_latency_ms: number | null
+  faiss_vectors: number
+  uptime_s: number
+  version: string
+}
+
 function useHealthCheck() {
   const [status, setStatus] = useState<HealthStatus>('checking')
   const [latency, setLatency] = useState<number | null>(null)
+  const [adminHealth, setAdminHealth] = useState<AdminHealthData | null>(null)
 
   useEffect(() => {
     const check = async () => {
       const t0 = performance.now()
       try {
-        const res = await fetch(`${API_URL}/api/health`, { cache: 'no-store' })
+        // Try authenticated admin health endpoint for rich diagnostics
+        const data = await adminFetch<AdminHealthData>('/health')
         const ms = Math.round(performance.now() - t0)
         setLatency(ms)
-        setStatus(res.ok ? 'up' : 'down')
+        setAdminHealth(data)
+        setStatus('up')
       } catch {
-        setStatus('down')
-        setLatency(null)
+        // Fallback to public health endpoint if admin auth fails
+        try {
+          const t1 = performance.now()
+          const res = await fetch(`${API_URL}/api/health`, { cache: 'no-store' })
+          const ms = Math.round(performance.now() - t1)
+          setLatency(ms)
+          setAdminHealth(null)
+          setStatus(res.ok ? 'up' : 'down')
+        } catch {
+          setStatus('down')
+          setLatency(null)
+          setAdminHealth(null)
+        }
       }
     }
     check()
@@ -42,7 +66,7 @@ function useHealthCheck() {
     return () => clearInterval(id)
   }, [])
 
-  return { status, latency }
+  return { status, latency, adminHealth }
 }
 
 // ─── Period toggle ──────────────────────────────────────────────────────────
@@ -452,7 +476,7 @@ export default function OverviewPage() {
   const [days, setDays] = useState(7)
   const [expandedCard, setExpandedCard] = useState<'experts' | 'queries' | 'saved' | null>(null)
   const { stats, loading, error } = useAdminStats(days)
-  const { status: healthStatus, latency } = useHealthCheck()
+  const { status: healthStatus, latency, adminHealth } = useHealthCheck()
   const { data: analytics, loading: analyticsLoading } = useAnalyticsSummary(days)
   const navigate = useNavigate()
 
@@ -493,10 +517,25 @@ export default function OverviewPage() {
               ? 'bg-red-900/30 text-red-400 border border-red-500/30'
               : 'bg-slate-800 text-slate-400 border border-slate-700'
           }`}>
-            <span className={`w-2 h-2 rounded-full ${
+            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${
               healthStatus === 'up' ? 'bg-emerald-400' : healthStatus === 'down' ? 'bg-red-400' : 'bg-slate-400 animate-pulse'
             }`} />
-            {healthStatus === 'up' ? `${latency}ms` : healthStatus === 'down' ? 'Offline' : 'Checking'}
+            {healthStatus === 'up'
+              ? (
+                <span className="flex items-center gap-1.5">
+                  <span>{latency}ms</span>
+                  {adminHealth && (
+                    <>
+                      <span className="opacity-40">|</span>
+                      <span>DB {adminHealth.db_latency_ms != null ? `${adminHealth.db_latency_ms}ms` : adminHealth.db}</span>
+                      <span className="opacity-40">|</span>
+                      <span>{adminHealth.expert_count ?? '—'} experts</span>
+                    </>
+                  )}
+                </span>
+              )
+              : healthStatus === 'down' ? 'Offline' : 'Checking'
+            }
           </div>
         </div>
         {/* Period toggle */}

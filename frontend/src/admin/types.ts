@@ -103,6 +103,13 @@ export interface ExpertsResponse {
   experts: ExpertRow[]
 }
 
+export interface PaginatedExpertsResponse {
+  experts: ExpertRow[]
+  total: number
+  page: number
+  total_pages: number
+}
+
 export interface IngestStatus {
   status: 'idle' | 'running' | 'done' | 'error'
   log: string

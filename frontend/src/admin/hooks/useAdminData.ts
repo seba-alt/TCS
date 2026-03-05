@@ -6,6 +6,7 @@ import type {
   SearchFilters,
   LeadsResponse,
   ExpertsResponse,
+  PaginatedExpertsResponse,
   DomainMapResponse,
   IngestStatus,
   AdminSettingsResponse,
@@ -180,6 +181,28 @@ export function useAdminExperts() {
       .catch(e => setError(e.message))
       .finally(() => setLoading(false))
   }, [])
+
+  useEffect(() => { fetchData() }, [fetchData])
+
+  return { data, loading, error, refetch: fetchData }
+}
+
+export function useAdminExpertsPaginated(page: number, search: string) {
+  const [data, setData] = useState<PaginatedExpertsResponse | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const fetchData = useCallback(() => {
+    setLoading(true)
+    adminFetch<PaginatedExpertsResponse>('/experts', {
+      page,
+      limit: 50,
+      search: search || undefined,
+    })
+      .then(setData)
+      .catch(e => setError(e.message))
+      .finally(() => setLoading(false))
+  }, [page, search])
 
   useEffect(() => { fetchData() }, [fetchData])
 
