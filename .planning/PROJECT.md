@@ -141,7 +141,17 @@ A user describes any problem and instantly gets expertly matched professionals t
 
 ### Active
 
-(None — planning next milestone)
+## Current Milestone: v5.4 Launch Hardening
+
+**Goal:** Harden the platform for a 10k-concurrent-user marketing launch — performance, resilience, SEO, and analytics reliability.
+
+**Target features:**
+- Frontend performance optimization (bundle, caching, preload)
+- Backend performance optimization (event batching, WAL tuning, API caching)
+- Resilience and fault tolerance (error boundaries, graceful degradation, health check)
+- SEO and meta tags (structured data, social sharing, page titles)
+- Analytics hardening (GA4, Clarity, event tracking under load)
+- Admin experts endpoint pagination (fix Sentry large payload)
 
 ### Out of Scope
 
@@ -290,6 +300,7 @@ A user describes any problem and instantly gets expertly matched professionals t
 **Analytics:** GA4 (G-0T526W3E1Z) + Microsoft Clarity (vph5o95n6c) + Vercel Speed Insights tracking all page views with SPA route change support
 
 **Last milestone completed:** v5.3 UX Polish & Admin Saved Insights (shipped 2026-03-05)
+**Current milestone:** v5.4 Launch Hardening (started 2026-03-05)
 
 ## Context
 
@@ -388,4 +399,4 @@ A user describes any problem and instantly gets expertly matched professionals t
 | TAG-04 dual-mode superseded | Single Expert→Tags flow per UAT decision — simpler UX | ✓ Good — user-validated design |
 
 ---
-*Last updated: 2026-03-05 after v5.3 milestone*
+*Last updated: 2026-03-05 after v5.4 milestone start*
