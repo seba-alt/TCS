@@ -182,11 +182,11 @@ Plans:
   2. Vite build produces separate vendor chunks for motion, virtuoso, icons, intercom, and router — verified with `npm run preview` showing zero console errors
   3. `/assets/*` responses include `Cache-Control: public, max-age=31536000, immutable` — returning visitors skip asset re-download
   4. `<link rel="preconnect">` to the Railway API origin is present in `index.html` — eliminates cold TCP/TLS penalty on first API call
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 72-01: Client-side event batch queue in tracking.ts + Vite manualChunks + preconnect hint
-- [ ] 72-02: vercel.json Cache-Control headers for assets and static images
+- [ ] 72-01-PLAN.md — Client-side event batch queue + backend batch endpoint + Vite manualChunks + preconnect hint
+- [ ] 72-02-PLAN.md — vercel.json Cache-Control headers for assets and static images
 
 ### Phase 73: Resilience & SEO
 **Goal**: The Explorer is protected by error boundaries so a JS crash shows a retry UI instead of a blank screen, and every page has correct meta tags and crawler directives before launch traffic arrives
