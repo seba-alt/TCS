@@ -15,7 +15,7 @@ Requirements for launch hardening. Preparing for 10k concurrent users from marke
 - [ ] **BPERF-04**: Event writes batched via asyncio queue (flush every 2-3s or 10 items, executemany commit)
 - [ ] **BPERF-05**: SQLite PRAGMAs tuned (synchronous=NORMAL, cache_size=-32000, temp_store=MEMORY, mmap_size=128MB, wal_autocheckpoint=1000)
 - [ ] **BPERF-06**: GZipMiddleware compresses API responses over 500 bytes
-- [ ] **BPERF-07**: Explore endpoint caches responses with 30s TTL (invalidated on expert add/delete/import)
+- [ ] **BPERF-07**: Explore endpoint caches responses with 5-minute TTL (300s) (invalidated on expert add/delete/import)
 - [ ] **BPERF-08**: Connection pool explicitly configured (pool_size=5, max_overflow=10, pool_pre_ping=True)
 
 ### Railway Config
