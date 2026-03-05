@@ -169,9 +169,9 @@ See `.planning/milestones/v5.3-ROADMAP.md`
 **Plans**: 3 plans
 
 Plans:
-- [ ] 71-01-PLAN.md — Two-tier health endpoints + admin experts pagination + photo proxy verification (Wave 1)
-- [ ] 71-02-PLAN.md — Event batch queue + SQLite PRAGMA tuning + GZipMiddleware + explore cache + connection pool (Wave 1)
-- [ ] 71-03-PLAN.md — Railway config: region, Uvicorn flags, healthcheck timeout, restart policy (Wave 2)
+- [x] 71-01-PLAN.md — Two-tier health endpoints + admin experts pagination + photo proxy verification (Wave 1)
+- [x] 71-02-PLAN.md — Event batch queue + SQLite PRAGMA tuning + GZipMiddleware + explore cache + connection pool (Wave 1)
+- [x] 71-03-PLAN.md — Railway config: region, Uvicorn flags, healthcheck timeout, restart policy (Wave 2)
 
 ### Phase 72: Frontend Performance & Vercel Config
 **Goal**: The public bundle is split for maximum cache reuse, event tracking is batched client-side to match the backend queue, and Vercel serves static assets with optimal cache headers
@@ -224,7 +224,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 71. Backend Performance & Railway Config | 2/3 | In Progress|  |
+| 71. Backend Performance & Railway Config | 3/3 | Complete | 2026-03-05 |
 | 72. Frontend Performance & Vercel Config | 0/2 | Not started | - |
 | 73. Resilience & SEO | 0/2 | Not started | - |
 | 74. Analytics Hardening | 0/1 | Not started | - |

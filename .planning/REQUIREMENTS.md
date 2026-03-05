@@ -20,9 +20,9 @@ Requirements for launch hardening. Preparing for 10k concurrent users from marke
 
 ### Railway Config
 
-- [ ] **RAIL-01**: Railway region set to europe-west4 (Netherlands) in railway.json
-- [ ] **RAIL-02**: Uvicorn tuned with --timeout-keep-alive 75 --log-level warning --no-access-log
-- [ ] **RAIL-03**: healthcheckTimeout reduced to 120s with ON_FAILURE restart policy in railway.json
+- [x] **RAIL-01**: Railway region set to europe-west4 (Netherlands) in railway.json
+- [x] **RAIL-02**: Uvicorn tuned with --timeout-keep-alive 75 --log-level warning --no-access-log
+- [x] **RAIL-03**: healthcheckTimeout reduced to 120s with ON_FAILURE restart policy in railway.json
 
 ### Frontend Performance
 
@@ -95,9 +95,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | BPERF-06 | Phase 71 | Complete |
 | BPERF-07 | Phase 71 | Complete |
 | BPERF-08 | Phase 71 | Complete |
-| RAIL-01 | Phase 71 | Pending |
-| RAIL-02 | Phase 71 | Pending |
-| RAIL-03 | Phase 71 | Pending |
+| RAIL-01 | Phase 71 | Complete |
+| RAIL-02 | Phase 71 | Complete |
+| RAIL-03 | Phase 71 | Complete |
 | FPERF-01 | Phase 72 | Pending |
 | FPERF-02 | Phase 72 | Pending |
 | FPERF-03 | Phase 72 | Pending |
