@@ -213,10 +213,10 @@ Plans:
   2. `trackEvent()` calls made while `navigator.onLine === false` are silently dropped with no Railway error logs
   3. On iOS Safari, a `beforeunload` event triggers a `navigator.sendBeacon` fallback instead of a failing `fetch` with `keepalive`
   4. `index.html` contains an inline comment on `send_page_view: false` explaining the intentional SPA pattern — prevents accidental removal
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 74-01: GA4 beacon transport + navigator.onLine guard + sendBeacon fallback + defensive comment
+- [ ] 74-01-PLAN.md — GA4 beacon transport + offline guard + sendBeacon fallback + Sentry filter + defensive comment
 
 ## Progress
 
