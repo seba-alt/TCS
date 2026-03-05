@@ -4,17 +4,19 @@ POST /api/events — Record user behavior events (card clicks, Sage queries, fil
 Fire-and-forget from frontend (fetch + keepalive: true, no await).
 Returns 202 Accepted. No authentication required.
 event_type is validated via Pydantic Literal — unknown values return 422.
+
+Phase 71.02: Enqueues events for background batch write instead of writing synchronously.
+Queue caps at 1000 items; when full, oldest event is dropped.
 """
+import asyncio
 import json
 from typing import Any, Literal
 
 import structlog
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
 from pydantic import BaseModel, Field
-from sqlalchemy.orm import Session
 
-from app.database import get_db
-from app.models import UserEvent
+from app.event_queue import _event_queue
 
 log = structlog.get_logger()
 router = APIRouter()
@@ -40,20 +42,28 @@ def _validate_email(email: str | None) -> str | None:
 
 
 @router.post("/api/events", status_code=202)
-def record_event(body: EventRequest, db: Session = Depends(get_db)):
+async def record_event(body: EventRequest):
     """
-    Insert a user behavior event. Returns 202 Accepted.
+    Enqueue a user behavior event for background batch write. Returns 202 Accepted.
     Unknown event_type values are rejected with 422 by Pydantic validation.
     Invalid emails are silently stored as null — never reject/lose a tracking event.
+    The event is written to the DB within ~2 seconds by the background flush worker.
     """
     validated_email = _validate_email(body.email)
-    record = UserEvent(
-        session_id=body.session_id,
-        event_type=body.event_type,
-        payload=json.dumps(body.payload),
-        email=validated_email,
-    )
-    db.add(record)
-    db.commit()
-    log.info("event.recorded", event_type=body.event_type, session_id=body.session_id, email=validated_email)
+    item = {
+        "session_id": body.session_id,
+        "event_type": body.event_type,
+        "payload": json.dumps(body.payload),
+        "email": validated_email,
+    }
+    try:
+        _event_queue.put_nowait(item)
+    except asyncio.QueueFull:
+        # Drop oldest event to make room, then enqueue the new one
+        try:
+            _event_queue.get_nowait()
+        except asyncio.QueueEmpty:
+            pass
+        _event_queue.put_nowait(item)
+        log.warning("event.queue_full_drop_oldest", event_type=body.event_type)
     return {"status": "accepted"}

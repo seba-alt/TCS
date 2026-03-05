@@ -14,6 +14,7 @@ Uses ALLOWED_ORIGINS env var (comma-separated).
 Default: localhost:5173 (Vite dev server).
 Production: Railway injects the actual Vercel URL.
 """
+import asyncio
 import csv
 import json
 import os
@@ -26,10 +27,12 @@ import structlog
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import func, select
+from fastapi.middleware.gzip import GZipMiddleware
+from sqlalchemy import func, select, text
 
 from app.config import FAISS_INDEX_PATH, METADATA_PATH
 from app.database import Base, SessionLocal, engine
+from app.event_queue import _event_queue
 from app.models import Expert
 from app.routers import admin, browse, chat, email_capture, events, feedback, health, explore, newsletter, suggest
 
@@ -48,6 +51,65 @@ if dsn := os.getenv("SENTRY_DSN"):
 log = structlog.get_logger()
 
 EXPERTS_CSV_PATH = METADATA_PATH.parent / "experts.csv"
+
+# ── Event flush worker (Phase 71.02) ─────────────────────────────────────────
+
+FLUSH_INTERVAL = 2.0   # seconds between batch flushes
+BATCH_SIZE = 10        # max events per batch
+
+
+async def _event_flush_worker() -> None:
+    """
+    Background asyncio task: drains _event_queue in batches and writes to SQLite.
+
+    Collects up to BATCH_SIZE events within FLUSH_INTERVAL seconds, then bulk-inserts.
+    On DB failure, retries once. If retry also fails, logs the error and drops the batch
+    (event tracking is non-critical — never block the server for analytics).
+    """
+    while True:
+        batch: list[dict] = []
+        deadline = asyncio.get_event_loop().time() + FLUSH_INTERVAL
+
+        while len(batch) < BATCH_SIZE:
+            remaining = deadline - asyncio.get_event_loop().time()
+            if remaining <= 0:
+                break
+            try:
+                item = await asyncio.wait_for(_event_queue.get(), timeout=remaining)
+                batch.append(item)
+            except asyncio.TimeoutError:
+                break
+
+        if not batch:
+            continue
+
+        # Build parameter list for bulk insert
+        batch_params = [
+            {"s": e["session_id"], "e": e["event_type"], "p": e["payload"], "m": e["email"]}
+            for e in batch
+        ]
+
+        insert_sql = text(
+            "INSERT INTO user_events (session_id, event_type, payload, email) "
+            "VALUES (:s, :e, :p, :m)"
+        )
+
+        # Two attempts: retry once on failure, then drop
+        for attempt in range(2):
+            try:
+                with SessionLocal() as db:
+                    db.execute(insert_sql, batch_params)
+                    db.commit()
+                break  # Success
+            except Exception as exc:
+                if attempt == 0:
+                    log.warning("event.flush_retry", error=str(exc), batch_size=len(batch))
+                else:
+                    log.error(
+                        "event.flush_failed_drop",
+                        error=str(exc),
+                        batch_size=len(batch),
+                    )
 
 
 def _seed_experts_from_csv() -> int:
@@ -344,7 +406,19 @@ async def lifespan(app: FastAPI):
     if not os.getenv("JWT_SECRET") and os.getenv("RAILWAY_ENVIRONMENT"):
         log.error("startup: JWT_SECRET must be set in production")
 
+    # Phase 71.02: Start event flush worker as a persistent background task
+    flush_task = asyncio.create_task(_event_flush_worker())
+    log.info("startup: event flush worker started")
+
     yield
+
+    # Shutdown: cancel flush worker and wait for it to exit cleanly
+    flush_task.cancel()
+    try:
+        await flush_task
+    except asyncio.CancelledError:
+        pass
+    log.info("shutdown: event flush worker stopped")
     # Shutdown: in-memory FAISS index is garbage-collected automatically
 
 
@@ -377,6 +451,11 @@ app.add_middleware(
     allow_methods=["GET", "POST", "DELETE"],
     allow_headers=["Content-Type", "Authorization"],
 )
+
+# Phase 71.02: GZip compress responses over 500 bytes.
+# Registered after CORS (Starlette applies middlewares in LIFO order, so GZip
+# runs on the response after CORS headers have been set).
+app.add_middleware(GZipMiddleware, minimum_size=500)
 
 # --- Routes ---
 app.include_router(health.router)

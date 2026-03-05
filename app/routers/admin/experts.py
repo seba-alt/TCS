@@ -3,6 +3,7 @@ Admin expert CRUD, tag-all, ingest, domain-map, add-expert, deletion endpoints.
 """
 import csv
 import json
+import math
 import threading
 from collections import Counter
 from datetime import datetime
@@ -10,12 +11,13 @@ from typing import Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 
 from app.database import get_db, SessionLocal
 from app.models import Expert, Feedback
+from app.services.explore_cache import invalidate_explore_cache
 from app.services.tagging import compute_findability_score, tag_expert_sync
 from app.services.tag_sync import sync_expert_tags
 from app.routers.admin._common import (
@@ -37,13 +39,35 @@ router = APIRouter()
 def get_experts(
     db: Session = Depends(get_db),
     active_only: bool = Query(default=False),
+    page: int = Query(default=0, ge=0),
+    limit: int = Query(default=50, ge=1, le=200),
+    search: str = Query(default=""),
 ):
-    """Return all experts from the experts DB table. Optionally filter to active-only."""
-    stmt = select(Expert).order_by(Expert.findability_score.asc().nulls_first())
+    """Return paginated experts from the DB. Supports search by name, page/limit params."""
+    stmt = select(Expert)
     if active_only:
         stmt = stmt.where(Expert.is_active.is_(True))
-    experts = db.scalars(stmt).all()
-    return {"experts": [_serialize_expert(e) for e in experts]}
+    if search:
+        search_lower = search.lower()
+        stmt = stmt.where(
+            func.lower(Expert.first_name + " " + Expert.last_name).contains(search_lower)
+        )
+    # Alphabetical A-Z by first name (user decision)
+    stmt = stmt.order_by(Expert.first_name.asc(), Expert.last_name.asc())
+
+    # Count total matching rows before pagination
+    total = db.scalar(select(func.count()).select_from(stmt.subquery()))
+    total = total or 0
+
+    # Apply pagination
+    experts = db.scalars(stmt.offset(page * limit).limit(limit)).all()
+
+    return {
+        "experts": [_serialize_expert(e) for e in experts],
+        "total": total,
+        "page": page,
+        "total_pages": math.ceil(total / limit) if total else 0,
+    }
 
 
 @router.post("/experts/tag-all")
@@ -180,6 +204,7 @@ def delete_expert(username: str, request: Request, db: Session = Depends(get_db)
 
     expert.is_active = False
     db.commit()
+    invalidate_explore_cache()
 
     # Trigger FAISS rebuild in background (ingest.py filters is_active=False automatically)
     rebuilding = False
@@ -212,6 +237,8 @@ def delete_experts_bulk(body: BulkDeleteBody, request: Request, db: Session = De
 
     if not deleted_usernames:
         return {"ok": True, "deleted": 0, "rebuilding": False}
+
+    invalidate_explore_cache()
 
     rebuilding = False
     if _ingest["status"] != "running":
@@ -309,6 +336,8 @@ def add_expert(body: AddExpertBody, background_tasks: BackgroundTasks, db: Sessi
         # Phase 56: sync expert_tags (no skill tags, only industry tags)
         sync_expert_tags(db, new_expert.id, [], _itags)
         db.commit()
+
+    invalidate_explore_cache()
 
     # Append to experts.csv
     csv_exists = EXPERTS_CSV_PATH.exists()
