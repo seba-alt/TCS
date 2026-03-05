@@ -191,7 +191,7 @@ Plans:
 | 67. Email Gate Polish & List View Fix | 2/2 | Complete   | 2026-03-04 |
 | 68. Save Event Tracking | 1/1 | Complete    | 2026-03-04 |
 | 69. Admin Saved Insights | 1/1 | Complete   | 2026-03-04 |
-| 70. Audit Gap Closure | 1/1 | Complete   | 2026-03-05 |
+| 70. Audit Gap Closure | 1/1 | Complete    | 2026-03-05 |
 
 ### Phase 69.2: Admin expert tagging for improved search and findability (INSERTED)
 
