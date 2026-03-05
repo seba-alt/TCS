@@ -21,130 +21,179 @@ const localStorageMock = {
 }
 vi.stubGlobal('localStorage', localStorageMock)
 
+// Mock window.addEventListener for beforeunload
+const addEventListenerMock = vi.fn()
+vi.stubGlobal('window', { addEventListener: addEventListenerMock })
+
 beforeEach(() => {
   store = {}
   fetchMock.mockClear()
   localStorageMock.getItem.mockClear()
   localStorageMock.setItem.mockClear()
+  addEventListenerMock.mockClear()
+  vi.useFakeTimers()
 })
 
 afterEach(() => {
+  vi.useRealTimers()
   // Reset module cache so each test gets fresh imports
   vi.resetModules()
 })
 
 // --- Tests ---
 
-describe('trackEvent', () => {
-  it('sends email: null when no newsletter store in localStorage', async () => {
+describe('trackEvent batch queue', () => {
+  it('queues events instead of sending immediately', async () => {
     const { trackEvent } = await import('./tracking')
     trackEvent('card_click', { expert: 'test' })
 
-    expect(fetchMock).toHaveBeenCalledTimes(1)
-    const [url, options] = fetchMock.mock.calls[0]
-    expect(url).toContain('/api/events')
-    const body = JSON.parse(options?.body as string)
-    expect(body.email).toBeNull()
-    expect(body.session_id).toBeDefined()
-    expect(body.event_type).toBe('card_click')
-    expect(body.payload).toEqual({ expert: 'test' })
+    // Should NOT have called fetch yet (queued, not sent)
+    expect(fetchMock).not.toHaveBeenCalled()
   })
 
-  it('includes email when newsletter store has email', async () => {
+  it('flush sends batch POST to /api/events/batch', async () => {
+    const { trackEvent, flush } = await import('./tracking')
+    trackEvent('card_click', { expert: 'test' })
+    flush()
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    const [url, options] = fetchMock.mock.calls[0]
+    expect(url).toContain('/api/events/batch')
+    const body = JSON.parse(options?.body as string)
+    expect(body.events).toHaveLength(1)
+    expect(body.events[0].event_type).toBe('card_click')
+    expect(body.events[0].payload).toEqual({ expert: 'test' })
+  })
+
+  it('auto-flushes at BATCH_SIZE (10) items', async () => {
+    const { trackEvent } = await import('./tracking')
+    for (let i = 0; i < 10; i++) {
+      trackEvent('card_click', { index: i })
+    }
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    const body = JSON.parse(fetchMock.mock.calls[0][1]?.body as string)
+    expect(body.events).toHaveLength(10)
+  })
+
+  it('timer-based flush after 3 seconds', async () => {
+    const { trackEvent } = await import('./tracking')
+    trackEvent('card_click', { expert: 'test' })
+
+    expect(fetchMock).not.toHaveBeenCalled()
+
+    vi.advanceTimersByTime(3000)
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    const body = JSON.parse(fetchMock.mock.calls[0][1]?.body as string)
+    expect(body.events).toHaveLength(1)
+  })
+
+  it('flush drains the queue — second flush is no-op', async () => {
+    const { trackEvent, flush } = await import('./tracking')
+    trackEvent('card_click', { a: 1 })
+    trackEvent('filter_change', { b: 2 })
+    trackEvent('search_query', { c: 3 })
+
+    flush()
+    flush() // second flush should be no-op
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    const body = JSON.parse(fetchMock.mock.calls[0][1]?.body as string)
+    expect(body.events).toHaveLength(3)
+  })
+
+  it('includes email from newsletter store in batch payload', async () => {
     store['tinrate-newsletter-v1'] = JSON.stringify({
       state: { subscribed: true, email: 'lead@example.com' },
       version: 0,
     })
 
-    const { trackEvent } = await import('./tracking')
+    const { trackEvent, flush } = await import('./tracking')
     trackEvent('search_query', { query: 'react' })
+    flush()
 
     expect(fetchMock).toHaveBeenCalledTimes(1)
     const body = JSON.parse(fetchMock.mock.calls[0][1]?.body as string)
-    expect(body.email).toBe('lead@example.com')
-    expect(body.event_type).toBe('search_query')
+    expect(body.events[0].email).toBe('lead@example.com')
+  })
+
+  it('sends email: null when no newsletter store', async () => {
+    const { trackEvent, flush } = await import('./tracking')
+    trackEvent('card_click', {})
+    flush()
+
+    const body = JSON.parse(fetchMock.mock.calls[0][1]?.body as string)
+    expect(body.events[0].email).toBeNull()
   })
 
   it('sends email: null when localStorage has invalid JSON', async () => {
     store['tinrate-newsletter-v1'] = 'not-valid-json'
 
-    const { trackEvent } = await import('./tracking')
+    const { trackEvent, flush } = await import('./tracking')
     trackEvent('filter_change', {})
+    flush()
 
     const body = JSON.parse(fetchMock.mock.calls[0][1]?.body as string)
-    expect(body.email).toBeNull()
+    expect(body.events[0].email).toBeNull()
   })
 
-  it('sends email: null when newsletter store has no email field', async () => {
-    store['tinrate-newsletter-v1'] = JSON.stringify({
-      state: { subscribed: false },
-      version: 0,
-    })
-
-    const { trackEvent } = await import('./tracking')
+  it('uses keepalive: true on batch request', async () => {
+    const { trackEvent, flush } = await import('./tracking')
     trackEvent('card_click', {})
-
-    const body = JSON.parse(fetchMock.mock.calls[0][1]?.body as string)
-    expect(body.email).toBeNull()
-  })
-
-  it('sends email: null when newsletter store email is empty string', async () => {
-    store['tinrate-newsletter-v1'] = JSON.stringify({
-      state: { subscribed: false, email: '' },
-      version: 0,
-    })
-
-    const { trackEvent } = await import('./tracking')
-    trackEvent('card_click', {})
-
-    const body = JSON.parse(fetchMock.mock.calls[0][1]?.body as string)
-    expect(body.email).toBeNull()
-  })
-
-  it('uses keepalive: true for page navigation survival', async () => {
-    const { trackEvent } = await import('./tracking')
-    trackEvent('card_click', {})
+    flush()
 
     const options = fetchMock.mock.calls[0][1]
     expect(options?.keepalive).toBe(true)
   })
 
   it('generates and persists session_id on first call', async () => {
-    const { trackEvent } = await import('./tracking')
+    const { trackEvent, flush } = await import('./tracking')
     trackEvent('card_click', {})
+    flush()
 
     const body = JSON.parse(fetchMock.mock.calls[0][1]?.body as string)
-    expect(body.session_id).toBe('test-uuid-1234')
+    expect(body.events[0].session_id).toBe('test-uuid-1234')
     expect(localStorageMock.setItem).toHaveBeenCalledWith('tcs_session_id', 'test-uuid-1234')
   })
 
   it('reuses existing session_id', async () => {
     store['tcs_session_id'] = 'existing-session-id'
 
+    const { trackEvent, flush } = await import('./tracking')
+    trackEvent('card_click', {})
+    flush()
+
+    const body = JSON.parse(fetchMock.mock.calls[0][1]?.body as string)
+    expect(body.events[0].session_id).toBe('existing-session-id')
+  })
+
+  it('registers beforeunload listener on module load', async () => {
+    await import('./tracking')
+
+    expect(addEventListenerMock).toHaveBeenCalledWith('beforeunload', expect.any(Function))
+  })
+
+  it('does not flush before timer expires', async () => {
     const { trackEvent } = await import('./tracking')
     trackEvent('card_click', {})
 
-    const body = JSON.parse(fetchMock.mock.calls[0][1]?.body as string)
-    expect(body.session_id).toBe('existing-session-id')
+    vi.advanceTimersByTime(2999)
+
+    expect(fetchMock).not.toHaveBeenCalled()
   })
 
-  it('sends save event with expert_id and action save', async () => {
-    const { trackEvent } = await import('./tracking')
-    trackEvent('save', { expert_id: 'john-doe', action: 'save' })
+  it('batches multiple event types correctly', async () => {
+    const { trackEvent, flush } = await import('./tracking')
+    trackEvent('card_click', { expert: 'john' })
+    trackEvent('filter_change', { filter: 'rate' })
+    trackEvent('save', { expert_id: 'jane', action: 'save' })
+    flush()
 
-    expect(fetchMock).toHaveBeenCalledTimes(1)
     const body = JSON.parse(fetchMock.mock.calls[0][1]?.body as string)
-    expect(body.event_type).toBe('save')
-    expect(body.payload).toEqual({ expert_id: 'john-doe', action: 'save' })
-  })
-
-  it('sends save event with action unsave', async () => {
-    const { trackEvent } = await import('./tracking')
-    trackEvent('save', { expert_id: 'jane-smith', action: 'unsave' })
-
-    expect(fetchMock).toHaveBeenCalledTimes(1)
-    const body = JSON.parse(fetchMock.mock.calls[0][1]?.body as string)
-    expect(body.event_type).toBe('save')
-    expect(body.payload).toEqual({ expert_id: 'jane-smith', action: 'unsave' })
+    expect(body.events).toHaveLength(3)
+    expect(body.events[0].event_type).toBe('card_click')
+    expect(body.events[1].event_type).toBe('filter_change')
+    expect(body.events[2].event_type).toBe('save')
   })
 })

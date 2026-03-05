@@ -1,11 +1,13 @@
 """
 POST /api/events — Record user behavior events (card clicks, Sage queries, filter changes).
+POST /api/events/batch — Accept a batch of events in a single request.
 
 Fire-and-forget from frontend (fetch + keepalive: true, no await).
 Returns 202 Accepted. No authentication required.
 event_type is validated via Pydantic Literal — unknown values return 422.
 
 Phase 71.02: Enqueues events for background batch write instead of writing synchronously.
+Phase 72.01: Added batch endpoint for client-side event queue flush.
 Queue caps at 1000 items; when full, oldest event is dropped.
 """
 import asyncio
@@ -67,3 +69,34 @@ async def record_event(body: EventRequest):
         _event_queue.put_nowait(item)
         log.warning("event.queue_full_drop_oldest", event_type=body.event_type)
     return {"status": "accepted"}
+
+
+class BatchEventRequest(BaseModel):
+    events: list[EventRequest] = Field(..., min_length=1, max_length=50)
+
+
+@router.post("/api/events/batch", status_code=202)
+async def record_event_batch(body: BatchEventRequest):
+    """
+    Accept a batch of events from the frontend queue flush.
+    Each event is validated and enqueued for background batch write.
+    Returns 202 Accepted with the count of enqueued events.
+    """
+    for event in body.events:
+        validated_email = _validate_email(event.email)
+        item = {
+            "session_id": event.session_id,
+            "event_type": event.event_type,
+            "payload": json.dumps(event.payload),
+            "email": validated_email,
+        }
+        try:
+            _event_queue.put_nowait(item)
+        except asyncio.QueueFull:
+            try:
+                _event_queue.get_nowait()
+            except asyncio.QueueEmpty:
+                pass
+            _event_queue.put_nowait(item)
+            log.warning("event.queue_full_drop_oldest", event_type=event.event_type)
+    return {"status": "accepted", "count": len(body.events)}
