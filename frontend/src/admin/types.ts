@@ -86,6 +86,8 @@ export interface ExpertRow {
   category: string | null
   tags: string[]
   findability_score: number | null
+  manual_tags?: string[]   // admin-assigned tags (Phase 69.2)
+  is_active?: boolean      // soft-delete flag (Phase 69.1)
 }
 
 export interface DomainMapEntry {
@@ -359,4 +361,26 @@ export interface TopSavedRow {
 export interface TopSavedResponse {
   data_since: string | null
   top_saved: TopSavedRow[]
+}
+
+// -- Tag Manager (Phase 69.2) --
+
+export interface TagCatalogEntry {
+  id: number
+  tag: string
+}
+
+export interface TagCatalogResponse {
+  tags: TagCatalogEntry[]
+}
+
+export interface TagAssignmentEntry {
+  username: string
+  first_name: string
+  last_name: string
+  manual_tags: string[]
+}
+
+export interface TagAssignmentsResponse {
+  assignments: TagAssignmentEntry[]
 }

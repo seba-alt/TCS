@@ -15,6 +15,8 @@ import type {
   MarketplaceTrendResponse,
   AnalyticsSummary,
   LeadTimelineResponse,
+  TagCatalogResponse,
+  TagAssignmentsResponse,
 } from '../types'
 
 const getAdminToken = () => sessionStorage.getItem('admin_token') ?? ''
@@ -387,4 +389,42 @@ export function useLeadTimeline(email: string | null) {
   const hasMore = data ? data.events.length < data.total : false
 
   return { data, loading, error, loadMore, hasMore }
+}
+
+// -- Tag Manager hooks (Phase 69.2) --
+
+export function useTagCatalog() {
+  const [data, setData] = useState<TagCatalogResponse | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const fetchData = useCallback(() => {
+    setLoading(true)
+    adminFetch<TagCatalogResponse>('/tags/catalog')
+      .then(setData)
+      .catch((e: Error) => setError(e.message))
+      .finally(() => setLoading(false))
+  }, [])
+
+  useEffect(() => { fetchData() }, [fetchData])
+
+  return { data, loading, error, refetch: fetchData }
+}
+
+export function useTagAssignments() {
+  const [data, setData] = useState<TagAssignmentsResponse | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const fetchData = useCallback(() => {
+    setLoading(true)
+    adminFetch<TagAssignmentsResponse>('/tags/assignments')
+      .then(setData)
+      .catch((e: Error) => setError(e.message))
+      .finally(() => setLoading(false))
+  }, [])
+
+  useEffect(() => { fetchData() }, [fetchData])
+
+  return { data, loading, error, refetch: fetchData }
 }

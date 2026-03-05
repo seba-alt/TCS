@@ -23,6 +23,7 @@ const DataPage = lazy(() => import('./admin/pages/DataPage'))
 const ScoreExplainerPage = lazy(() => import('./admin/pages/ScoreExplainerPage'))
 const SearchLabPage = lazy(() => import('./admin/pages/SearchLabPage'))
 const IndexManagementPanel = lazy(() => import('./admin/components/IndexManagementPanel'))
+const TagManagerPage = lazy(() => import('./admin/pages/TagManagerPage'))
 // SearchesPage and AdminMarketplacePage removed — content merged into DataPage
 
 /**
@@ -106,6 +107,7 @@ const router = createBrowserRouter([
           { path: 'gaps', element: <GapsPage /> },
           { path: 'leads', element: <LeadsPage /> },
           { path: 'experts', element: <ExpertsPage /> },
+          { path: 'tags', element: <TagManagerPage /> },
           { path: 'settings', element: <SettingsPage /> },
           // New consolidated pages — nested child routes for tab navigation
           {
