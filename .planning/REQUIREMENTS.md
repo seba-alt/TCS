@@ -37,14 +37,14 @@ Requirements for launch hardening. Preparing for 10k concurrent users from marke
 
 ### Resilience
 
-- [ ] **RSIL-01**: React error boundaries wrap Explorer page and ExpertGrid with user-friendly fallback UI
-- [ ] **RSIL-02**: Global unhandled rejection handler catches async errors (window.addEventListener)
+- [x] **RSIL-01**: React error boundaries wrap Explorer page and ExpertGrid with user-friendly fallback UI
+- [x] **RSIL-02**: Global unhandled rejection handler catches async errors (window.addEventListener)
 
 ### SEO
 
-- [ ] **SEO-01**: Meta description tag present on Explorer route
-- [ ] **SEO-02**: robots.txt serves Disallow: /admin
-- [ ] **SEO-03**: sitemap.xml lists root URL with lastmod
+- [x] **SEO-01**: Meta description tag present on Explorer route
+- [x] **SEO-02**: robots.txt serves Disallow: /admin
+- [x] **SEO-03**: sitemap.xml lists root URL with lastmod
 
 ### Analytics
 
@@ -103,11 +103,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FPERF-03 | Phase 72 | Complete |
 | VCFG-01 | Phase 72 | Complete |
 | VCFG-02 | Phase 72 | Complete |
-| RSIL-01 | Phase 73 | Pending |
-| RSIL-02 | Phase 73 | Pending |
-| SEO-01 | Phase 73 | Pending |
-| SEO-02 | Phase 73 | Pending |
-| SEO-03 | Phase 73 | Pending |
+| RSIL-01 | Phase 73 | Complete |
+| RSIL-02 | Phase 73 | Complete |
+| SEO-01 | Phase 73 | Complete |
+| SEO-02 | Phase 73 | Complete |
+| SEO-03 | Phase 73 | Complete |
 | ANLT-01 | Phase 74 | Pending |
 | ANLT-02 | Phase 74 | Pending |
 | ANLT-03 | Phase 74 | Pending |
