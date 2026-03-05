@@ -1,219 +1,333 @@
 # Stack Research
 
-**Domain:** Expert Marketplace — v5.2 Email-First Gate, Admin See-All, Email-Based Tracking
-**Researched:** 2026-03-04
+**Domain:** Expert marketplace SPA — v5.4 Launch Hardening (performance, resilience, SEO, analytics)
+**Researched:** 2026-03-05
 **Research Mode:** Ecosystem (Subsequent Milestone — stack additions only)
-**Confidence:** HIGH — all claims derived from direct inspection of v5.1 production files (package.json, requirements.txt, models.py, tracking.ts, MarketplacePage.tsx, OverviewPage.tsx, and all relevant routers)
+**Confidence:** HIGH — key claims verified against official docs and multiple credible sources; see Sources section
 
 ---
 
-## Scope of This Document
+## Context: What Already Exists (Do NOT Re-Research)
 
-Covers ONLY what is new or changed for v5.2. The existing production stack is validated and must not change:
+The following stack is validated and in production. This file covers ONLY what changes or
+additions are needed for v5.4 Launch Hardening.
 
-- **Backend:** FastAPI 0.129.* + SQLAlchemy 2.0.* + SQLite (WAL) + faiss-cpu 1.13.* + google-genai 1.64.* + pydantic 2.12.* + email-validator 2.1.* + structlog 24.2.* + pyjwt 2.10.* + pwdlib[bcrypt] 0.3.* + slowapi 0.1.*
-- **Frontend:** React 19.2 + Vite 7.3 + Tailwind v3.4 + React Router v7.13 + motion/react v12.34 + Zustand v5.0.11 + react-virtuoso 4.18 + lucide-react 0.575 + recharts 3.7 + @radix-ui/react-slider 1.3.6 + @tanstack/react-table 8.21
+| Layer | Existing | Status |
+|-------|----------|--------|
+| Frontend | React 19.2 + Vite 7.3 + Tailwind 3.4 + Zustand 5.0.11 + react-virtuoso 4.18 | Deployed on Vercel |
+| Backend | FastAPI 0.129 + SQLAlchemy 2.0 + SQLite WAL + FAISS faiss-cpu 1.13 | Deployed on Railway |
+| Bundling | React.lazy (11 admin routes) + Vite manualChunks (recharts, react-table) | Active |
+| Analytics | GA4 + Microsoft Clarity + Vercel Speed Insights + Sentry | Active |
+| Auth | bcrypt + JWT (pyjwt) + slowapi rate limiting | Active |
+| Tracking | fire-and-forget fetch + keepalive:true in tracking.ts | Active |
+| Caching | 60s TTL embedding cache + 30s TTL settings/feedback cache (in-memory) | Active |
+| DB tuning | SQLite WAL mode + busy_timeout=5000 per-connection | Active |
 
-**The three new capability areas for v5.2:**
-
-1. Email-first gate — show the newsletter gate modal on page entry, before any browsing, instead of only on "View Full Profile" click
-2. Admin "See All" expansion — inline expand buttons on Top Experts and Top Searches overview cards
-3. Direct email-based tracking — attach captured email to subsequent tracking events so admin can query activity directly by email without retroactive session joins
+**One confirmed gap to fix now:** `GET /admin/experts` returns ALL experts with no pagination — Sentry flags this as a large payload. Fix is a pure backend param change (no new package).
 
 ---
 
 ## Net-New Packages
 
-**Zero.** Every capability needed for v5.2 is already installed in the v5.1 production stack. This milestone is entirely about repositioning existing components and wiring existing data structures differently.
+**One new dependency.** All other changes are config params, stdlib patterns, HTML tags, or SQLite PRAGMAs.
 
-### requirements.txt Changes
-
-None.
-
-### package.json Changes
-
-None.
+| Package | Side | Version | Purpose |
+|---------|------|---------|---------|
+| `react-error-boundary` | Frontend (prod) | `6.1.1` | Strategic error boundaries with reset, async hook, Sentry integration |
+| `rollup-plugin-visualizer` | Frontend (dev-only) | `5.x` | Bundle treemap analysis — find what's bloating the public chunk |
 
 ---
 
-## Feature-by-Feature Stack Analysis
+## Recommended Stack Additions
 
-### 1. Email-First Gate
+### Frontend Performance
 
-**What already exists:**
+| Technology | Version | Purpose | Why Recommended |
+|------------|---------|---------|-----------------|
+| `rollup-plugin-visualizer` | `5.x` (latest) | Bundle treemap in dev builds | Integrates into existing `vite.config.ts` as a plugin; generates `stats.html` showing each dep's gzip footprint. Use once to identify which modules to add to `manualChunks`, then leave in as a build artifact. Dev-only (no prod bundle impact). Node 22 required — already met by Vite 7 |
+| Vite `build.chunkSizeWarningLimit: 600` | Config param | Suppress false-positive chunk warnings | Default 500 kB threshold fires on the aurora animation bundle + `motion` (~90 kB gzip). Raising to 600 surfaces real problems without alert fatigue |
+| Vite `modulePreload.polyfill: false` | Config param | Remove ~2 kB polyfill from prod bundle | All target browsers (Chrome 61+, Firefox 67+, Safari 17+) support `<link rel="modulepreload">` natively. Polyfill is dead weight in 2026 |
+| Vite `manualChunks` additions | Config param | Split `react-dom`+`react-router` and `motion` into stable vendor chunks | `react-dom` (143 kB gzip) and `react-router-dom` change rarely; separating them into `vendor-react` maximises browser cache reuse between deployments. `motion` (~90 kB gzip) used only for modals/FAB; separating into `vendor-motion` stops animation library updates from busting the core app chunk |
+| `<link rel="preconnect">` in index.html | HTML tag | Warm TCP/TLS to Railway API + Google Tag Manager before first paint | Eliminates ~150 ms cold-connection penalty on first `/api/explore` call. Zero code change. Add two tags: Railway URL and `www.googletagmanager.com` |
 
-- `NewsletterGateModal` — fully-built glassmorphic modal at `frontend/src/components/marketplace/NewsletterGateModal.tsx`, uses `AnimatePresence` + `motion` from `motion/react` (installed at `^12.34.3`), accepts `isOpen`, `onSubscribe`, `onDismiss` props
-- `useNltrStore` (Zustand) — persisted store at `frontend/src/store/nltrStore.ts` with `subscribed: boolean` and `email: string | null` backed to `localStorage` under key `tinrate-newsletter-v1`
-- `NewsletterSubscriber` model — `email`, `source`, `session_id`, `created_at` with unique constraint on `email`, INSERT OR IGNORE idempotency
-- `POST /api/newsletter/subscribe` — idempotent endpoint, fire-and-forget from frontend, syncs to Loops in background
-- Legacy bypass — `MarketplacePage.tsx` already checks both `tcs_gate_email` and `tcs_email_unlocked` localStorage keys for returning users from v2.0
-
-**What changes (no new packages):**
-
-`MarketplacePage.tsx`:
-- Change `showGate` initial state: derive synchronously from `useNltrStore` — show modal when `!subscribed && !legacyUnlocked` on mount. The synchronous read pattern already exists in `useEmailGate.ts` via a `useState` lazy initializer — avoids flash of unlocked state.
-- Remove the `handleViewProfile` gate check: once the email-first gate guarantees every browsing user has submitted their email, the profile click can go directly to `window.open()`.
-- `pendingProfileUrl` state can be removed entirely.
-
-`NewsletterGateModal.tsx`:
-- Remove the `×` close button and the `onDismiss` prop — a page-entry gate should not be dismissable (blocks browsing until email submitted).
-- Update copy to page-entry framing: headline from "Unlock the Full Expert Pool" to entry-level framing. Copy change only; JSX structure unchanged.
-- Keep `autoFocus` on the email input — correct for a blocking modal.
-
-`handleSubscribe` in `MarketplacePage.tsx`:
-- Keep writing to Zustand store first (source of truth for unlock).
-- Keep fire-and-forget `POST /api/newsletter/subscribe` with `session_id` (no change to backend).
-- Remove `pendingProfileUrl` redirect — no longer needed.
-
-**Backend impact:** None. The existing `/api/newsletter/subscribe` endpoint handles this unchanged.
-
-**Returning user bypass:** Already implemented — `useNltrStore` reads `subscribed` from localStorage on first render via Zustand persist. No FOUC risk. The `legacyUnlocked` check covers users who passed through the old v2.0 email gate.
+**What NOT to add for frontend performance:**
+- `vite-plugin-compression` — Vercel CDN handles Brotli/gzip automatically; adding it at build time duplicates work and can break streaming responses
+- `workbox` / service worker / PWA — Offline mode is explicitly out of scope (PROJECT.md); adds ~60 kB and significant complexity
+- Image lazy-loading libraries — Expert photos already use native `loading="lazy"`; no library needed
 
 ---
 
-### 2. Admin "See All" Expansion (TopExpertsCard, TopQueriesCard)
+### Backend Performance
 
-**What already exists:**
+| Technology | Version | Purpose | Why Recommended |
+|------------|---------|---------|-----------------|
+| FastAPI `GZipMiddleware` | Built-in Starlette (no new package) | Compress large API responses | JSON compresses 70–90%. `/api/explore` responses are ~8–40 kB uncompressed at 530 experts. Use `minimum_size=500, compresslevel=6` — balances CPU cost vs savings. Built into Starlette so no `requirements.txt` change |
+| SQLite `PRAGMA synchronous=NORMAL` | PRAGMA (no package) | 2–3x write throughput on hot-path writes | Already in WAL mode; `NORMAL` is safe from data corruption in WAL mode per SQLite official docs — only checkpoint FSYNCs wait for disk sync. Add to existing `_set_sqlite_pragma()` event listener in `database.py` |
+| SQLite `PRAGMA cache_size=-32000` | PRAGMA (no package) | 32 MB page cache in memory | Eliminates repeat disk reads for hot expert rows across concurrent requests. Negligible RAM cost on Railway 512 MB container |
+| SQLite `PRAGMA temp_store=MEMORY` | PRAGMA (no package) | FTS5 sort operations in memory | FTS5 queries create temporary sort tables. Memory temp store eliminates ephemeral disk I/O for ~530-expert queries. Safe to enable; temp data is discarded on connection close |
+| In-process event queue (`collections.deque`) | Python stdlib (no package) | Batch `/api/events` writes 10-at-a-time | `/api/events` is the highest-write-volume endpoint under load (every card click, search, save). Currently each event is a separate `db.commit()`. Batching 10 writes into 1 commit reduces SQLite write contention ~10x. Pattern: `asyncio.Lock` + `collections.deque` in `app.state`, background flush every 2 seconds via `asyncio.create_task` in lifespan |
 
-`TopExpertsCard` in `OverviewPage.tsx`:
-- Calls `GET /api/admin/events/exposure?days=N` via `adminFetch`
-- Backend `get_exposure()` in `events.py` returns ALL rows ordered by click count — no server-side row limit
-- Component slices client-side: `(data?.exposure ?? []).slice(0, 5)`
-
-`TopQueriesCard` in `OverviewPage.tsx`:
-- Calls `GET /api/admin/analytics/top-queries?days=N&limit=5` via `adminFetch`
-- Backend `get_top_queries()` in `analytics.py` accepts a `limit` param — currently always called with `limit: 5`
-- Component uses full response: `data?.queries ?? []` (no additional client slice)
-
-**What changes (no new packages):**
-
-For `TopExpertsCard`:
-- Add `const [showAll, setShowAll] = useState(false)` local state
-- Change render: when `!showAll`, display `rows.slice(0, 5)`; when `showAll`, display all rows
-- Add a toggle button after the list: when `!showAll` and `data?.exposure.length > 5`, show `"See all {N}"` link; when `showAll`, show `"Show less"`
-- The "See all" button style matches the existing `ZeroResultQueriesCard` pattern (`text-xs text-purple-400 hover:text-purple-300 transition-colors`)
-- No re-fetch needed — full data is already in memory
-
-For `TopQueriesCard`:
-- Add `const [showAll, setShowAll] = useState(false)` local state
-- When `showAll = true`, re-fetch with `limit: 50` instead of `limit: 5` — or prefetch all 50 on mount and slice client-side
-- Preferred approach: always fetch `limit: 50`, slice to 5 on render when `!showAll`. This avoids a second network request on toggle. One extra query at mount is negligible.
-- Add same toggle button pattern as TopExpertsCard
-
-**Backend impact:** None for TopExpertsCard (already returns all). For TopQueriesCard, increase the fetch call from `limit: 5` to `limit: 50` — the endpoint already accepts this param.
+**What NOT to add for backend performance:**
+- Redis / Memcached — Over-engineered for 530 experts on a single Railway instance. Embedding cache (60s TTL) already covers the expensive path; ExpertTag join table already has composite indexes. Redis adds ~$20/mo ops and a new dependency for zero measurable gain at this scale
+- PostgreSQL migration — Correct long-term call but wrong scope for a 1-day milestone. Railway SQLite on WAL handles 10k concurrent readers (writes are serialized but sub-millisecond). Migration requires downtime, data transfer, and connection string changes across both Railway and the app. Defer to post-launch
+- Celery / ARQ — Heavy task queue infrastructure for a single background flush use case. `asyncio` + `collections.deque` covers it with zero infrastructure change
 
 ---
 
-### 3. Direct Email-Based Tracking
+### Backend Resilience
 
-**What already exists:**
+| Technology | Version | Purpose | Why Recommended |
+|------------|---------|---------|-----------------|
+| Enhanced `/api/health` deep probe | No new package | Verify DB writability + FAISS + uptime | Current health check only returns `{status: ok, index_size: N}` and does not verify the DB is reachable. Add a fast `SELECT 1` probe and return `{status, index_size, db_ok, uptime_s}`. Railway uses this endpoint for restart decisions. Latency cost: <1 ms |
+| `PRAGMA wal_checkpoint(PASSIVE)` on health | SQLite PRAGMA | Prevent WAL file unbounded growth under sustained load | WAL file grows without bound if readers are always active and no checkpoint completes. Calling `PASSIVE` checkpoint from the health endpoint (with a 30-second in-memory cooldown timer in `app.state`) piggybacks on Railway's existing liveness polling without a dedicated background thread |
 
-`tracking.ts` — `trackEvent()` module function:
-- Reads `session_id` from `localStorage` key `tcs_session_id` (anonymous UUID, persisted)
-- Posts to `POST /api/events` with `{session_id, event_type, payload}`
-- Fire-and-forget with `keepalive: true`
+**What NOT to add for backend resilience:**
+- Circuit breaker libraries (pybreaker, etc.) — External calls are limited to Google GenAI embed + generate, already wrapped with `tenacity` retry (in `requirements.txt`). A circuit breaker adds stateful complexity for a dependency that already has retry logic
+- Kubernetes liveness/readiness split — Railway uses a single HTTP health check, not the K8s dual-probe model. One enhanced `/api/health` endpoint is sufficient
 
-`user_events` table — rows: `{id, session_id, event_type, payload (JSON blob), created_at}`. No `email` column.
+---
 
-`lead_clicks` table — rows: `{id, email, expert_username, search_query, created_at}`. Already email-keyed.
+### Frontend Resilience
 
-`newsletter_subscribers` table — rows: `{id, email, source, session_id, created_at}`. The `session_id` column exists precisely for retroactive session-to-email linking.
+| Technology | Version | Purpose | Why Recommended |
+|------------|---------|---------|-----------------|
+| `react-error-boundary` | `6.1.1` | Strategic error boundaries around Explorer grid, email gate, and root layout | React 19 does not add a built-in functional alternative to class-based `ErrorBoundary`. `react-error-boundary` v6 is React 19-compatible (released explicitly for React 19), provides `useErrorBoundary` hook for catching async errors in event handlers, `resetKeys` for recovery without page reload, and `onError` callback for Sentry reporting. Without this, a FAISS timeout or render error in `ExpertGrid` crashes the entire SPA |
 
-`lead-timeline` endpoint in `leads.py` — already joins `user_events` to email via `newsletter_subscribers.session_id`. When a subscriber row has a `session_id` that matches a `user_events` row, those events appear in the lead's timeline.
+**Placement strategy (three boundaries, not one big catch-all):**
+1. Wrap `<ExpertGrid>` — isolates search result rendering failures; shows inline "Search failed — retry" state
+2. Wrap `<ProfileGateModal>` — isolates email gate failures; gate error should not kill the whole page
+3. Top-level boundary in `RootLayout` — catch-all fallback for anything that escapes the above
 
-**The gap:** The `lead-timeline` join is retroactive — it joins events recorded BEFORE email capture. After the email-first gate, every user submits their email before any browsing activity is tracked. This means `newsletter_subscribers.session_id` is set when the first event fires, enabling the join for all subsequent events. The retroactive join now covers 100% of new users. No schema migration needed.
+**What NOT to add:**
+- Separate circuit-breaker library for frontend API calls — The `useExplore` hook already has an `error` state and the API error state with retry button was shipped in v4.0 (EXP-06). Error boundaries handle render-phase crashes; the retry button handles network failures. These two together cover all cases
 
-**What changes (no new packages):**
+---
 
-Zero-migration path — inject email into the `payload` JSON blob:
+### SEO
 
-`tracking.ts`:
-- Add `getEmail()` helper: reads `localStorage.getItem('tinrate-newsletter-v1')`, parses JSON, returns `.email` or `null`
-- Inject `email` into the `payload` argument on every `trackEvent()` call: `payload = { ...payload, email: getEmail() }`
-- The `POST /api/events` endpoint accepts `payload: dict[str, Any]` — no validation constraint on payload keys. No backend change required.
-- Email appears in `user_events.payload` as `json_extract(payload, '$.email')` — admin queries can filter/group by this if needed without a schema migration
+| Technology | Version | Purpose | Why Recommended |
+|------------|---------|---------|-----------------|
+| JSON-LD structured data in `index.html` | No package — pure HTML `<script>` tag | `WebSite` + `Organization` schema for Google rich results and AI-search entity recognition | Google's preferred structured data format. No library needed for a single-page static site with one public URL. Implement `WebSite` schema with `potentialAction: SearchAction` pointing to `/?query={search_term_string}` — this explicitly tells Google the search widget exists. Pages with structured data see 20–30% CTR lift on average per recent studies |
+| `<meta name="description">` | HTML tag | SERP snippet copy | `index.html` has OG tags and Twitter Card but is missing the plain `<meta name="description">` tag that search engines use to generate SERP snippets. Low effort, high SEO impact |
+| `<link rel="canonical">` | HTML tag | Prevent duplicate content from URL-param Explorer views | Explorer uses query params (`?tags=finance&rate_max=500`). Canonical tag pointing to bare `/` tells crawlers which version is authoritative, preventing content dilution |
+| `vercel.json` `Cache-Control` headers | Config file (no package) | 1-year immutable caching for hashed Vite assets | Vite outputs content-hashed filenames (`/assets/index-a1b2c3.js`). Without explicit headers, Vercel applies a default shorter TTL. Setting `Cache-Control: public, max-age=31536000, immutable` for `/assets/*` enables 1-year browser caching, which eliminates repeat downloads for returning users |
 
-**Why not add an `email` column to `user_events`:**
+**What NOT to add:**
+- `react-helmet` / `react-helmet-async` — Single public route (`/`). Dynamic per-route meta tags are unnecessary. Static tags in `index.html` are equivalent and simpler
+- Next.js SSR migration — Out of scope; Vercel does not server-render Vite CSR apps. Correct tool for a future rebuild; wrong scope now
+- Sitemap generation library — With one public URL (`/`), a hand-written `public/sitemap.xml` is sufficient and requires no dependencies
 
-SQLite `ALTER TABLE` only supports adding nullable columns. SQLAlchemy `create_all()` only creates missing tables, not missing columns — adding a column requires an explicit startup migration script. The payload injection approach achieves the same admin query capability (`json_extract`) with zero migration risk. If direct SQL `GROUP BY email` on `user_events` becomes a performance concern at scale, the column addition can be a v5.3 task with a proper migration.
+---
 
-**Concrete payload shape after v5.2:**
+### Analytics Hardening
+
+| Technology | Version | Purpose | Why Recommended |
+|------------|---------|---------|-----------------|
+| `navigator.onLine` guard in `trackEvent()` | Browser API (no package) | Skip event POST when offline | `keepalive: true` is already set (correct). Under flaky connectivity, failed fire-and-forget requests generate Railway error log noise without losing meaningful data. Adding a `!navigator.onLine` early-return is a 2-line change that eliminates offline noise |
+| `navigator.sendBeacon` fallback | Browser API (no package) | Guarantee event delivery on page-unload in Safari | `fetch + keepalive: true` is supported in all modern browsers, but a `sendBeacon` fallback provides an extra safety net for iOS Safari's historically inconsistent `keepalive` behavior. Pattern: try `fetch`, fall back to `navigator.sendBeacon` |
+
+**Admin experts endpoint pagination (Sentry large payload fix):**
+
+Add `page` + `page_size` Query params to `GET /admin/experts` in `app/routers/admin/experts.py`. Currently the endpoint returns ALL experts in one JSON array (530+ records, ~200 kB payload). Sentry flags this as oversized. Fix is four lines: add `page: int = Query(default=1, ge=1)` and `page_size: int = Query(default=50, ge=1, le=200)` params, apply `.offset((page-1)*page_size).limit(page_size)` to the SQLAlchemy query, and return `{"experts": [...], "total": N, "page": page}`. The frontend `ExpertsPage` already uses the `AdminPagination` component — wire it to the new `total` field.
+
+**No new packages needed for any analytics change.**
+
+---
+
+## Installation
+
+```bash
+# Frontend — one new dev dependency, one new prod dependency
+cd frontend
+npm install react-error-boundary          # prod — error boundaries
+npm install -D rollup-plugin-visualizer   # dev only — bundle analysis
+
+# Backend — zero new packages
+# All changes: PRAGMA params, stdlib asyncio/deque pattern, GZipMiddleware (built-in Starlette)
+```
+
+---
+
+## Vite Config Changes
+
+```typescript
+// frontend/vite.config.ts — full updated config
+import { defineConfig } from 'vitest/config'
+import react from '@vitejs/plugin-react'
+import { sentryVitePlugin } from "@sentry/vite-plugin"
+import { visualizer } from 'rollup-plugin-visualizer'
+
+export default defineConfig({
+  plugins: [
+    react(),
+    sentryVitePlugin({
+      org: process.env.SENTRY_ORG,
+      project: process.env.SENTRY_PROJECT,
+      authToken: process.env.SENTRY_AUTH_TOKEN,
+      disable: !process.env.SENTRY_AUTH_TOKEN,
+    }),
+    // Bundle analysis — generates stats.html after every build
+    // Open manually: open frontend/stats.html
+    visualizer({ open: false, gzipSize: true, brotliSize: true }),
+  ],
+  build: {
+    chunkSizeWarningLimit: 600,     // kB — aurora animation + motion legitimately exceed 500 kB default
+    modulePreload: {
+      polyfill: false,              // All 2026 target browsers support modulepreload natively
+    },
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('recharts')) return 'vendor-charts'
+            if (id.includes('@tanstack/react-table')) return 'vendor-table'
+            // NEW: stable React core — rarely changes, maximise cache reuse
+            if (id.includes('react-dom') || id.includes('react-router')) return 'vendor-react'
+            // NEW: animation library — separate from core app chunk
+            if (id.includes('motion')) return 'vendor-motion'
+          }
+        },
+      },
+    },
+  },
+  test: {
+    environment: 'node',
+    globals: true,
+  },
+})
+```
+
+---
+
+## SQLite PRAGMA Additions
+
+```python
+# app/database.py — extend _set_sqlite_pragma() with three new PRAGMAs
+@event.listens_for(engine, "connect")
+def _set_sqlite_pragma(dbapi_connection, connection_record):
+    """Enable WAL mode and set pragmas on every new connection."""
+    cursor = dbapi_connection.cursor()
+    cursor.execute("PRAGMA journal_mode=WAL")         # already set
+    cursor.execute("PRAGMA busy_timeout=5000")        # already set
+    # NEW for v5.4 Launch Hardening:
+    cursor.execute("PRAGMA synchronous=NORMAL")       # safe in WAL; 2-3x faster commits
+    cursor.execute("PRAGMA cache_size=-32000")        # 32 MB page cache (negative = kibibytes)
+    cursor.execute("PRAGMA temp_store=MEMORY")        # FTS5 temp tables in memory
+    cursor.close()
+```
+
+**Safety rationale for `synchronous=NORMAL`:** Per SQLite official WAL documentation, WAL mode is "always consistent with synchronous=NORMAL" — the database is never left in a corrupt state. The trade-off is that a committed transaction *could* roll back after a power failure (not a crash), which is acceptable for an analytics SPA. The existing `busy_timeout=5000` already handles write contention.
+
+---
+
+## index.html Additions
+
+```html
+<!-- Add to <head> in frontend/index.html -->
+
+<!-- Missing meta description — used by search engines for SERP snippets -->
+<meta name="description" content="Describe any problem and instantly get matched with vetted experts. Browse 500+ professionals by domain, rate, and speciality. No searching, no guesswork." />
+
+<!-- Canonical URL — prevent query-param variants from diluting SEO -->
+<link rel="canonical" href="https://tcs-three-sigma.vercel.app" />
+
+<!-- Preconnect — warms TCP/TLS before first API call -->
+<link rel="preconnect" href="https://tcs-production.up.railway.app" />
+<link rel="preconnect" href="https://www.googletagmanager.com" />
+
+<!-- JSON-LD structured data — WebSite + SearchAction schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "name": "Tinrate",
+      "url": "https://tcs-three-sigma.vercel.app",
+      "description": "AI-powered expert marketplace. Describe your problem, get matched with vetted professionals instantly.",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": {
+          "@type": "EntryPoint",
+          "urlTemplate": "https://tcs-three-sigma.vercel.app/?query={search_term_string}"
+        },
+        "query-input": "required name=search_term_string"
+      }
+    },
+    {
+      "@type": "Organization",
+      "name": "Tinrate",
+      "url": "https://tinrate.com",
+      "logo": "https://tcs-three-sigma.vercel.app/logo.png"
+    }
+  ]
+}
+</script>
+```
+
+---
+
+## vercel.json Cache Headers
 
 ```json
-// card_click event (after v5.2)
 {
-  "expert_id": "johndoe",
-  "context": "grid",
-  "rank": 3,
-  "active_filters": {},
-  "email": "user@example.com"
-}
-
-// search_query event (after v5.2)
-{
-  "query_text": "AI strategy consultant",
-  "result_count": 12,
-  "active_tags": [],
-  "email": "user@example.com"
+  "headers": [
+    {
+      "source": "/assets/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    }
+  ]
 }
 ```
 
----
-
-## Integration Points
-
-### Frontend
-
-```
-MarketplacePage.tsx
-  ├── reads useNltrStore({ subscribed, email }) synchronously on mount
-  ├── shows NewsletterGateModal when !subscribed && !legacyUnlocked (page entry, not profile click)
-  └── handleSubscribe() — sets Zustand store, fires POST /api/newsletter/subscribe
-
-tracking.ts
-  └── getEmail() — reads tinrate-newsletter-v1 from localStorage, parses JSON, extracts .email
-      └── injected into payload on every trackEvent() call
-
-OverviewPage.tsx → TopExpertsCard
-  └── showAll local state — slice(0, 5) vs full array toggle
-
-OverviewPage.tsx → TopQueriesCard
-  └── showAll local state — fetch with limit: 50, slice(0, 5) vs full array toggle
-```
-
-### Backend
-
-```
-POST /api/newsletter/subscribe (newsletter.py) — unchanged
-GET /api/admin/events/exposure (events.py) — unchanged, already returns all rows
-GET /api/admin/analytics/top-queries (analytics.py) — unchanged, limit param already exists
-POST /api/events (events.py) — unchanged, payload is free-form dict; email appears in blob
-```
-
----
-
-## What NOT to Add
-
-| Avoid | Why | Use Instead |
-|-------|-----|-------------|
-| New modal/dialog library (Radix Dialog, headlessui) | `NewsletterGateModal` already uses motion/react AnimatePresence — consistent with existing codebase, no new dependency | Existing `NewsletterGateModal` component |
-| New Zustand store for gate | `useNltrStore` already tracks `subscribed` + `email` with localStorage persist; adding a second store creates split truth | Extend gate logic within `useNltrStore` or add `gateShown` flag if needed |
-| `email` column on `user_events` table | Requires SQLite ALTER TABLE startup migration; payload injection achieves same result with zero downside | Inject `email` into `payload` JSON blob in `tracking.ts` |
-| Separate "See All" route/page for overview cards | Adds navigation complexity; in-card expand matches the established admin UX pattern | Local `showAll` boolean state per card |
-| `useEffect` for gate show/hide decision | `useEffect` causes one-render flash of unlocked state for returning users — the bug documented in `useEmailGate.ts` comments | Lazy `useState` initializer or synchronous Zustand selector read |
-| Server-side gate enforcement | This is a lead-gen gate, not a security gate; localStorage bypass for returning users is correct behavior | Client-side Zustand persist check |
+**Rationale:** Vite outputs content-hashed filenames under `/assets/`. Because the filename changes every build, `immutable` is safe — browsers will never serve stale content. Without this, Vercel applies a shorter default TTL (~1 hour), meaning returning users re-download assets unnecessarily on every visit.
 
 ---
 
 ## Alternatives Considered
 
-| Recommended | Alternative | When to Use Alternative |
-|-------------|-------------|-------------------------|
-| Email in `user_events.payload` blob | New `email` column on `user_events` | Use column approach if direct SQL `GROUP BY email` on user_events becomes a query performance need |
-| In-card showAll toggle for See All | Navigate to /admin/data or /admin/gaps | Only if the full-page view adds value beyond list expansion (e.g., date filters, export) — not needed here |
-| Fetch limit: 50 on mount for TopQueriesCard | Re-fetch with limit: 50 on toggle | Re-fetch approach is also fine; prefetch avoids perceived latency on toggle at cost of one extra query at mount |
-| Remove dismiss from page-entry gate | Keep dismiss, block profile view until email | Removing dismiss is cleaner; keeping dismiss with profile view block as the gate incentive is a valid softer alternative |
-| Read gate state synchronously from useNltrStore | useEffect to check localStorage on mount | Synchronous read prevents flash; useEffect always causes one render with wrong state |
+| Recommended | Alternative | Why Not |
+|-------------|-------------|---------|
+| `react-error-boundary` 6.1.1 | Native class-based `ErrorBoundary` | Class components in React 19 still work but require boilerplate `getDerivedStateFromError` + `componentDidCatch`. `react-error-boundary` adds `resetKeys`, `useErrorBoundary` hook for async errors, and `onError` Sentry callback — 3 features for ~6 kB gzip. Zero justification for rolling our own |
+| In-process event queue (`collections.deque`) | Redis + Celery worker | Redis requires a Railway addon (~$20/mo), a separate worker process, and additional infrastructure. `collections.deque` + asyncio flush covers the use case with zero new dependencies or ops surface |
+| `GZipMiddleware` (built-in Starlette) | `brotli` package + custom middleware | Brotli is not in Starlette's built-in middleware; requires an additional package. Railway API responses are already small enough that the GZip improvement is sufficient; Vercel handles Brotli for static assets |
+| Static JSON-LD in `index.html` | `react-structured-data` library (~15 kB) | The schema never changes dynamically; a library adds bundle weight for zero benefit over an inline `<script>` tag |
+| `vercel.json` for cache headers | Vite plugin that emits headers | Vercel handles CDN headers natively via config file; no build-step plugin needed |
+
+---
+
+## What NOT to Use
+
+| Avoid | Why | Use Instead |
+|-------|-----|-------------|
+| `next/head` or `react-helmet` | Over-engineered for a single public route; each adds bundle weight | Static `<meta>` tags in `index.html` |
+| Redis for any caching | Zero benefit at 530 experts + Railway single-instance; embedding cache already covers expensive path | SQLite PRAGMA `cache_size` + existing in-memory TTL caches |
+| Celery / ARQ task queue | Infrastructure overhead for a single background flush job | `asyncio` + `collections.deque` in `app.state` |
+| `workbox-webpack-plugin` / PWA | Offline mode explicitly out of scope (PROJECT.md); service workers complicate Railway API auth and cache invalidation | Nothing — skip offline capability |
+| PostgreSQL migration | Correct long-term call, but requires downtime + data migration + Railway Postgres addon; wrong scope for a 1-day milestone | SQLite WAL + tuned PRAGMAs; defer Postgres to post-launch milestone |
+
+---
+
+## Stack Patterns by Variant
+
+**If expert pool grows past 2,000:**
+- Add `PRAGMA mmap_size=268435456` (256 MB memory-mapped I/O) to `database.py`
+- FAISS in-memory remains correct up to ~50k vectors; no change needed until then
+- `/api/explore` cursor-based pagination is already implemented; just increase default page sizes
+
+**If Railway scales to multiple replicas:**
+- SQLite file-on-volume cannot handle multi-process writes — switch to PostgreSQL at that point
+- Railway's current single-instance model makes this moot for v5.4
+
+**If event volume exceeds 10k events/hour:**
+- Decrease the queue flush interval from 2s to 0.5s
+- Consider a separate SQLite database file for `user_events` (separate WAL file eliminates write contention between event inserts and expert reads)
+- Still no Redis needed at <100k events/hour on SQLite WAL
 
 ---
 
@@ -221,28 +335,31 @@ POST /api/events (events.py) — unchanged, payload is free-form dict; email app
 
 | Package | Compatible With | Notes |
 |---------|-----------------|-------|
-| motion `^12.34.3` | React 19 | Confirmed working in v5.1 production |
-| zustand `^5.0.11` | React 19 | Confirmed working in v5.1 production; persist middleware stable |
-| pydantic `2.12.*` | FastAPI `0.129.*` | EmailStr validation already in use on newsletter endpoint |
+| `react-error-boundary@6.1.1` | `react@19.2.0` | v6 released explicitly for React 19; uses React 19's `onCaughtError` hooks internally. Confirmed via NPM release notes |
+| `rollup-plugin-visualizer@5.x` | `vite@7.3.1` | Vite 7 uses Rollup 4 internally; visualizer 5.x supports Rollup 4. Dev-only — zero prod bundle impact. Requires Node 22 (met by existing toolchain) |
+| SQLite `synchronous=NORMAL` | SQLAlchemy 2.0 + `journal_mode=WAL` | Per-connection PRAGMA via SQLAlchemy `event.listens_for(engine, "connect")` — already the pattern in `database.py`. No version conflicts |
+| `GZipMiddleware` | FastAPI 0.129 + Starlette (bundled) | Built into Starlette, which is bundled with FastAPI `[standard]`. No version change |
 
 ---
 
 ## Sources
 
-- `frontend/src/pages/MarketplacePage.tsx` — current gate trigger logic (profile click, not page entry)
-- `frontend/src/store/nltrStore.ts` — existing gate state shape, localStorage key `tinrate-newsletter-v1`
-- `frontend/src/components/marketplace/NewsletterGateModal.tsx` — existing modal component, dismiss button present
-- `frontend/src/hooks/useEmailGate.ts` — lazy initializer pattern, flash-prevention design note
-- `frontend/src/tracking.ts` — current anonymous session_id tracking, no email injection
-- `frontend/src/admin/pages/OverviewPage.tsx` — TopExpertsCard slice(0,5), TopQueriesCard limit:5 call
-- `app/routers/admin/events.py` — `get_exposure()` returns all rows, no server-side LIMIT
-- `app/routers/admin/analytics.py` — `get_top_queries()` accepts `limit` param
-- `app/routers/admin/leads.py` — `get_lead_timeline()` joins user_events via newsletter_subscribers.session_id
-- `app/models.py` — `UserEvent.payload` is free-form JSON Text column; `NewsletterSubscriber.session_id` exists
-- `app/routers/newsletter.py` — POST /api/newsletter/subscribe, idempotent, already in production
-- `frontend/package.json` — installed versions (no new dependencies needed)
-- `requirements.txt` — installed Python packages (no new dependencies needed)
+- [SQLite WAL official documentation](https://sqlite.org/wal.html) — WAL + `synchronous=NORMAL` safety guarantees (HIGH confidence)
+- [SQLite recommended PRAGMAs — High Performance SQLite](https://highperformancesqlite.com/articles/sqlite-recommended-pragmas) — `cache_size`, `temp_store` parameters (MEDIUM confidence, aligns with official pragma docs)
+- [SQLite production setup (2026)](https://oneuptime.com/blog/post/2026-02-02-sqlite-production-setup/view) — WAL + `synchronous=NORMAL` + `busy_timeout` confirmed as production config pattern (MEDIUM confidence)
+- [react-error-boundary NPM](https://www.npmjs.com/package/react-error-boundary) — version 6.1.1 current as of research date; React 19 compatible (HIGH confidence)
+- [react-error-boundary GitHub releases](https://github.com/bvaughn/react-error-boundary/releases) — v6 release notes confirm React 19 targeting (HIGH confidence)
+- [Vite Build Options](https://vite.dev/config/build-options) — `modulePreload.polyfill`, `chunkSizeWarningLimit`, `manualChunks` (HIGH confidence — official docs)
+- [FastAPI Advanced Middleware](https://fastapi.tiangolo.com/advanced/middleware/) — `GZipMiddleware` `minimum_size`, `compresslevel` params (HIGH confidence — official docs)
+- [rollup-plugin-visualizer GitHub](https://github.com/btd/rollup-plugin-visualizer) — Rollup 4 / Vite 7 compatibility confirmed in README (MEDIUM confidence)
+- [GA4 event batching guide](https://assertionhub.com/blog/ga4-event-batching-guide) — `keepalive`/`sendBeacon` behavior; confirms existing tracking.ts pattern is correct (MEDIUM confidence)
+- [schema.org WebSite](https://schema.org/WebSite) — `SearchAction` + `potentialAction` for SPA search (HIGH confidence — official schema.org docs)
+- [JSON-LD Schema for SEO 2025 — ObserviX](https://observix.ai/blog/json-ld-schema-for-seo-what-marketers-should-know) — 20–30% CTR lift claim with structured data (LOW confidence — single source, treat as directional)
+- `frontend/package.json` — installed versions verified directly
+- `requirements.txt` — installed Python packages verified directly
+- `app/database.py` — existing PRAGMA setup verified directly
+- `app/routers/admin/experts.py` — confirmed: `GET /experts` returns all records with no pagination
 
 ---
-*Stack research for: Expert Marketplace v5.2 Email-First Gate & Admin See-All*
-*Researched: 2026-03-04*
+*Stack research for: Tinrate AI Concierge — v5.4 Launch Hardening*
+*Researched: 2026-03-05*

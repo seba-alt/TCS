@@ -1,192 +1,214 @@
 # Project Research Summary
 
-**Project:** Expert Marketplace v5.2 — Email-First Gate, Admin See-All, Email-Based Tracking
-**Domain:** B2B Expert Marketplace SPA (React + FastAPI, lead-gen-first)
-**Researched:** 2026-03-04
-**Confidence:** HIGH — all four research files derived from direct v5.1 production codebase inspection
+**Project:** Tinrate AI Concierge — v5.4 Launch Hardening
+**Domain:** Expert marketplace SPA — performance, resilience, SEO, analytics hardening
+**Researched:** 2026-03-05
+**Confidence:** HIGH — grounded in direct codebase inspection plus official docs and verified sources
 
 ## Executive Summary
 
-v5.2 is a tightly scoped additive milestone on a shipped v5.1 product. Three capabilities are being added: moving the newsletter gate from a lazy trigger (on "View Full Profile" click) to an eager page-entry trigger; adding "See All" expansion to two admin overview cards; and attaching email identity to search and click events that are currently tracked anonymously via session_id. Zero new packages are required. Every needed component, store, endpoint, and data structure is already in production. The milestone is entirely about repositioning existing pieces and wiring existing data structures differently.
+Tinrate v5.4 is a launch-hardening milestone on a fully deployed expert marketplace (530 experts, FastAPI + SQLite WAL + FAISS on Railway, React + Vite + Tailwind on Vercel). The system is production-ready and receiving traffic; this milestone is not a build phase but a hardening phase — fixing known gaps before a marketing launch at 10k concurrent users. Research confirms the stack is sound and requires only two new npm dependencies (`react-error-boundary@6.1.1` and `rollup-plugin-visualizer@5.x`). All backend changes are config params, stdlib patterns, and built-in middleware — zero new Python packages needed.
 
-The recommended approach is a strict dependency-ordered build sequence: backend schema migration first (nullable `email` column on `user_events` with an index, idempotent startup ALTER TABLE), then frontend tracking enrichment, then the email-first gate UI, then the lead-timeline query update, and finally the admin "See All" expansion. This order means the backend accepts the new email field before the frontend starts sending it, and email attribution data accumulates from the moment tracking ships rather than being gated behind the UI change.
+The recommended approach is a strict four-phase sequential delivery: backend foundation first (event batching, health endpoint enhancement, admin pagination), then frontend performance (bundle splits, response caching), then user-facing resilience and SEO (error boundaries, meta tags, JSON-LD), and finally analytics hardening (Speed Insights, GA4 verification). This ordering matters because the backend must accept batch events before the frontend sends them, and the Sentry large-payload issue must be resolved before analytics is declared clean. All features are practically achievable within a single working day.
 
-The two highest-probability failure modes are (1) the dual-key localStorage unlock state — the codebase has two parallel unlock mechanisms (`tcs_gate_email` legacy key and `useNltrStore` Zustand persist) and adding a third gate entry point without auditing which key it writes to will re-gate returning subscribers on next visit, and (2) a flash-of-gate for returning users if the gate's initial state is derived via `useEffect` instead of a synchronous lazy `useState` initializer. Both are fully preventable with known patterns already in the codebase (`useNltrStore.getState()` static read, Zustand rehydration is synchronous before first render).
+The primary risks are infrastructure-category: adding Uvicorn workers without migrating off SQLite (fatal write contention), expanding `manualChunks` without testing `vite preview` (production-only circular dependency crash), and removing `send_page_view: false` from the GA4 config (permanently corrupts launch cohort data). These are all preventable with explicit defensive comments and a `vite preview` gate in the build process. There are no architecture risks — the event batching, caching, and error boundary patterns are well-documented and already proven elsewhere in the codebase.
 
 ## Key Findings
 
 ### Recommended Stack
 
-The v5.1 stack handles all three features without modification. The backend (FastAPI 0.129, SQLAlchemy 2.0, SQLite WAL, Pydantic 2.12) and frontend (React 19.2, Vite 7.3, Tailwind 3.4, React Router v7.13, motion/react 12.34, Zustand 5.0.11) are confirmed working in production. No new packages, no version upgrades.
+The existing stack needs only targeted additions, not changes. The v5.3 production stack (React 19.2, Vite 7.3, Tailwind 3.4, Zustand 5.0.11, react-virtuoso 4.18, FastAPI 0.129, SQLAlchemy 2.0, SQLite WAL, FAISS faiss-cpu 1.13) is validated and appropriate for this milestone's scope. The only new production dependency is `react-error-boundary@6.1.1`, which is React 19-compatible and adds `resetKeys`, `useErrorBoundary` hook for async errors, and Sentry integration in ~6 kB gzipped. All other improvements — GZipMiddleware, SQLite PRAGMAs, event batching, response caching, SEO tags, and cache headers — use built-in capabilities or stdlib patterns.
 
-**Core technologies relevant to v5.2:**
-- `useNltrStore` (Zustand 5.0.11 persist): Single source of truth for gate unlock state — `{ subscribed: boolean, email: string | null }` persisted to `localStorage` key `tinrate-newsletter-v1`. This key is LOCKED — do not change it.
-- `NewsletterGateModal` (motion/react AnimatePresence): Existing modal component that becomes the page-entry gate after removing its dismiss button.
-- `trackEvent()` (module function in `tracking.ts`): Will gain email injection via `useNltrStore.getState().email` — Zustand static read works outside React components, same pattern already used in `ExpertCard._fireLeadClick`.
-- SQLite `ALTER TABLE ... ADD COLUMN` (idempotent startup migration): Adds nullable `email TEXT` column to `user_events`. Non-breaking. Existing migration pattern confirmed in `main.py` lifespan.
+**Core technologies and additions:**
+- `react-error-boundary@6.1.1` (frontend prod): strategic error boundaries with async error support and Sentry integration — React 19 class-based boundaries lack this without boilerplate
+- `rollup-plugin-visualizer@5.x` (frontend dev-only): bundle treemap to identify chunk targets before splitting — assessment first, then apply `manualChunks` only where analysis confirms wins
+- `FastAPI GZipMiddleware` (built-in Starlette, no new package): compress large API responses at `minimum_size=500` — JSON compresses 70-90%
+- SQLite PRAGMAs — `synchronous=NORMAL`, `cache_size=-32000`, `temp_store=MEMORY`: safe in WAL mode, 2-3x write throughput, eliminates disk I/O for FTS5 sorts
+- `collections.deque` + asyncio event queue (Python stdlib): batch `/api/events` writes 10-at-a-time, reducing SQLite write transactions ~90-95%
+- `<link rel="preconnect">`, `<meta name="description">`, `<link rel="canonical">`, JSON-LD structured data: pure HTML additions to `index.html` — zero build cost, direct SEO and performance impact
+- `vercel.json` Cache-Control headers for `/assets/*`: 1-year immutable cache for content-hashed Vite assets
+
+**What NOT to add:** Redis, Celery, PostgreSQL migration, react-helmet-async, Next.js SSR, workbox/PWA. All are valid long-term choices but wrong scope for a 1-day hardening milestone.
 
 ### Expected Features
 
-**Must have (table stakes — v5.2 scope):**
-- Email gate fires on page entry — every visitor who has not subscribed sees the gate before browsing. Returning subscribers bypass instantly via synchronous `useNltrStore.getState()` read (no flash).
-- "See All" expansion on TopExpertsCard — already fetches the full list from the API but slices to 5 client-side. Expansion is a local `useState(showAll)` toggle with no re-fetch.
-- "See All" expansion on TopQueriesCard — currently passes `limit: 5` to the API; change to `limit: 50` on mount, then toggle between sliced and full display.
-- Email attribution on `user_events` — nullable `email` column with index; events before gate submit have `email = null`, events after have `email = <submitted>`.
+Research identifies two priority tiers. P1 features are non-negotiable before marketing launch; P2 features ship within the same milestone after P1 is verified.
 
-**Should have (differentiators — confirmed from FEATURES.md):**
-- In-card expansion (not navigate-away) for "See All" — keeps period toggle context intact, matches established admin card UX pattern (Vercel/Linear/Stripe). `max-h-96 overflow-y-auto` on expanded cards prevents layout jump.
-- Distinct source value (`page_entry` vs `gate`) in newsletter subscribe call — enables Loops segmentation between pre-search and post-search lead cohorts.
+**Must have (P1 — table stakes before marketing launch):**
+- React error boundaries on ExplorerPage + ExpertGrid — blank screen on JS error causes ~80% user abandonment; no boundaries currently exist in the public app
+- Enhanced `/api/health` endpoint — Railway restart policy depends on this; current endpoint has no DB writability probe, meaning Railway cannot detect write failures
+- `<meta name="description">` — missing entirely from `index.html`; search engines cannot generate SERP snippets without it
+- Open Graph tags completion — static OG image (1200x630) in `public/`; every launch social share lands without a proper unfurl card currently
+- `robots.txt` (Disallow: /admin) + `sitemap.xml` — crawler hygiene before launch traffic generates backlinks to the admin routes
+- JSON-LD structured data (WebSite + SearchAction) — lightest fix for SPA SEO baseline without an SSR migration
+- Admin experts endpoint pagination — Sentry large payload alert already triggered at 530 experts; fixes root cause before expert pool grows further
+- `Cache-Control: public, max-age=86400` on photo proxy — prevents upstream hammering at launch scale; 10k users = 10k redundant upstream calls per session without this
 
-**Defer (v5.x — after v5.2 data validation):**
-- Email-attributed search events surfaced in lead journey timeline — requires a few days of v5.2 production data to confirm the email column is being populated, then a query update in `leads.py`.
-- Rate-limit gate re-triggers for users who skip — requires session counting, not in v5.2 scope.
-- Entry gate A/B test (mandatory vs dismissible) — requires a feature flag system.
+**Should have (P2 — within same milestone after P1 verified):**
+- Backend event write queue (`collections.deque` + asyncio) — eliminates SQLite write bottleneck under concurrent load; reduces write transactions ~90-95%
+- SQLite PRAGMA tuning (`synchronous=NORMAL`, `cache_size`, `temp_store`) — 2-3x write throughput improvement with zero risk in WAL mode
+- Vite bundle splits for `vendor-react`, `vendor-motion` — maximises browser cache reuse between deploys; stable chunks cache independently
+- `<link rel="preconnect">` to Railway API origin — eliminates ~150ms cold TCP/TLS penalty on first API call
+- GA4 `transport_type: 'beacon'` — reduces event loss to ad blockers (20-40% drop rate in 2026)
+- `vercel.json` Cache-Control headers for `/assets/*` — 1-year immutable caching eliminates repeat asset downloads for returning users
+- `navigator.sendBeacon` fallback in `trackEvent()` — guards iOS Safari `keepalive` inconsistency
+- `navigator.onLine` guard in `trackEvent()` — eliminates Railway log noise from offline event attempts
 
-**Anti-features (explicitly ruled out):**
-- Non-dismissible full-page gate that blocks routing — breaks shareable filtered URLs.
-- Retroactive email attribution for pre-v5.2 anonymous events — no reliable cross-device identity link exists.
-- Dedicated "See All" routes (`/admin/top-experts`, `/admin/top-searches`) — 5x implementation cost of in-card toggle with no user-facing benefit.
-- Email in `user_events.payload` JSON blob instead of indexed column — creates full-table scans on lead-timeline queries as `user_events` grows.
+**Defer to v6.0+:**
+- PostgreSQL migration — correct long-term call but requires downtime, data migration, and Railway Postgres addon; wrong scope for a 1-day milestone
+- Redis caching layer — zero measurable benefit at 530 experts with in-memory TTL caches already in place
+- Sentry full integration — after large-payload noise is resolved by pagination fix, signal-to-noise ratio improves enough to invest in Sentry configuration
+- Next.js SSR migration — correct for SEO long-term; JSON-LD + meta tags deliver ~80% of SEO benefit at ~5% of the effort
+- External task queue (Celery + RabbitMQ) — overkill when in-process asyncio covers the use case with zero infrastructure
 
 ### Architecture Approach
 
-v5.2 modifies five existing frontend files and four existing backend files, and adds two new admin page components (`TopExpertsPage.tsx`, `TopSearchesPage.tsx`) as lazy-loaded routes. The page-entry gate replaces the lazy `useState(false)` in `MarketplacePage.tsx` with a synchronous lazy initializer reading `useNltrStore.getState()`. Email flows from the Zustand store into `trackEvent()` via static `.getState()` call at module scope (no React hook constraint). The admin lead-timeline merges four sources post-v5.2: conversations, lead_clicks, session-linked user_events (existing bridge), and email-keyed user_events (new direct query).
+v5.4 touches eight specific integration points across the existing system without restructuring anything. The codebase is a single-page React app on Vercel communicating with a single-instance FastAPI process on Railway backed by SQLite WAL and a FAISS in-memory index. All recommended changes layer on top of this architecture cleanly.
 
-**Modified components:**
+The highest-impact architectural change is decoupling event tracking from synchronous DB writes. Currently each `trackEvent()` call fires an individual HTTP POST that does a synchronous `db.commit()` before returning 202. The new pattern batches events in a module-level queue in `tracking.ts`, flushes on 10 items or 3 seconds, and sends a single `BatchEventRequest` that the backend commits in one WAL write cycle — reducing write transactions from N to ~1 per 10 actions. This module-level dict + TTL pattern is already proven in the codebase (`embedder.py` uses the same approach for its embedding cache).
 
-1. `MarketplacePage.tsx` — gate fires on mount (`useState(!isUnlocked)`); `handleViewProfile` removes gate check; ExpertGrid gated on `isUnlocked`
-2. `NewsletterGateModal.tsx` — remove dismiss button and overlay-click dismiss handler
-3. `tracking.ts` — import `useNltrStore`; inject `.getState().email` into every event request body when non-null
-4. `OverviewPage.tsx` — add `showAll` state and expand/collapse toggle to both cards; fetch `limit: 50` for TopQueriesCard
-5. `app/models.py` — add `email: Mapped[str | None]` column + index to `UserEvent`
-6. `app/main.py` — idempotent `ALTER TABLE user_events ADD COLUMN email TEXT` in lifespan
-7. `app/routers/events.py` — add `email: str | None = None` to `EventRequest`; persist to `UserEvent`
-8. `app/routers/admin/leads.py` — add `UserEvent WHERE email = X` query to `get_lead_timeline()`
-
-**New components:**
-
-1. `TopExpertsPage.tsx` — full ranked list of experts by click volume; reads `?days` from URL; no `.slice()`
-2. `TopSearchesPage.tsx` — full ranked list of search queries; fetches `limit: 50` or higher
+**Major integration points:**
+1. `tracking.ts` + `app/routers/events.py` — event batch queue (frontend timer/threshold + backend `BatchEventRequest | EventRequest` union type)
+2. `app/routers/explore.py` — 30s TTL module-level response cache with admin-triggered invalidation on expert add/delete/import
+3. `app/routers/admin/experts.py` — `page` + `per_page` query params added; existing `AdminPagination` component wires to new `total` field
+4. `app/routers/health.py` — enhanced with `SELECT 1` DB probe + `db_latency_ms` metric; returns `"degraded"` status on DB failure
+5. `frontend/src/components/ErrorBoundary.tsx` (new) — class component wrapping `<RouterProvider>` in `main.tsx` and `<ExpertGrid>` area in `MarketplacePage.tsx`
+6. `frontend/index.html` — `<meta name="description">`, `<link rel="canonical">`, `<link rel="preconnect">`, JSON-LD `<script type="application/ld+json">`
+7. `frontend/vite.config.ts` — `vendor-react`, `vendor-motion` chunk additions + `modulePreload.polyfill: false` + `chunkSizeWarningLimit: 600`
+8. `frontend/src/pages/MarketplacePage.tsx` — `<SpeedInsights />` addition + ErrorBoundary wrapping of grid area
 
 ### Critical Pitfalls
 
-1. **Split-brain localStorage unlock state** — The codebase has two unlock keys (`tcs_gate_email` legacy, `tinrate-newsletter-v1` Zustand persist). The email-first gate must call `setSubscribed(email)` from `useNltrStore` exclusively — not write to a new localStorage key. Audit all unlock paths before implementation.
+1. **SQLite write queue saturation** — the current `events.py` does synchronous `db.commit()` per request; at launch load the QueuePool ceiling (5+10 connections) produces 500s on the events endpoint while search continues working, silently losing tracking data. Prevention: convert to background task or in-process batch queue; raise `pool_size=10, max_overflow=20` in `database.py`. Load-test with 50 concurrent event POSTs before declaring done.
 
-2. **Flash-of-gate for returning subscribers** — Using `useState(false)` + `useEffect` for the gate open decision causes a visible 100-200ms flash for every returning subscriber. Use synchronous lazy initializer: `useState(() => !useNltrStore.getState().subscribed && !legacyUnlocked)`. Zustand persist rehydration is synchronous before first render.
+2. **Multiple Uvicorn workers break SQLite** — adding `--workers 2+` to the Procfile triggers cross-process WAL write contention; `SQLITE_BUSY` errors follow immediately and FAISS loads separately per worker creating index divergence. Prevention: add explicit `# DO NOT add --workers without migrating to PostgreSQL` comment to the Procfile. Vertical scaling (Railway plan upgrade) is the only safe scaling path with SQLite.
 
-3. **Email in unindexed payload JSON** — Putting email in `user_events.payload` blob avoids schema migration but forces `json_extract(payload, '$.email')` in all admin queries — no index possible, full table scan as events grow. Always add the dedicated `email TEXT NULL` column with `CREATE INDEX`. The idempotent startup `ALTER TABLE` migration is the correct pattern (precedent exists in `main.py`).
+3. **Vite `manualChunks` circular dependency crash** — adding `react-dom` or `react-router` to a `vendor-react` manualChunk can produce Rollup circular references; the crash is production-only (dev mode never uses chunks) and passes `vite build` without failing. Prevention: run `npm run build && npm run preview` and confirm zero console errors before merging any `manualChunks` additions. Do not split React core into manualChunks.
 
-4. **"See All" discards period toggle context** — If "See All" navigates away without encoding `days` in the URL, the admin lands on the destination page with a default period. For in-card expansion this is not an issue. For navigate-away: pass `?days=${days}` in the Link URL.
+4. **GA4 double-counting from `send_page_view` removal** — `send_page_view: false` in `index.html` is intentional (the React `Analytics` component handles all `page_view` events); removing it doubles the initial page load event and permanently corrupts launch cohort bounce rate data with no retroactive fix. Prevention: add inline comment in `index.html` explaining the setting is intentional; verify with GA4 DebugView that exactly one `page_view` fires on fresh load.
 
-5. **Wrong Loops source field** — Calling `POST /api/newsletter/subscribe` with `source: "gate"` from the page-entry path makes pre-search and post-search leads indistinguishable in Loops. Use `source: "page_entry"` for the new gate and update `loops.py` to forward the source as a contact property.
-
-6. **Intercom blocked behind gate overlay** — The existing `NewsletterGateModal` uses `z-50`. Keep gate at `z-50`; Intercom's fixed z-index (2147483001) wins above it. Do NOT add `pointer-events: none` to Intercom areas. Test on production (Intercom only renders with a live appId).
+5. **Error boundaries miss async failures** — React error boundaries only catch synchronous render errors; unhandled promise rejections from `useEffect` callbacks escape silently, causing a blank white screen with no Sentry capture. Prevention: add `window.addEventListener('unhandledrejection', ...)` sending to Sentry alongside the error boundaries; use `react-error-boundary`'s `useErrorBoundary` hook to funnel async errors into the boundary explicitly.
 
 ## Implications for Roadmap
 
-Based on the dependency ordering confirmed across all four research files, the build sequence has a clear internal logic: backend schema must precede frontend tracking; tracking enrichment should precede gate UI (so the first gated users' events are attributed immediately); gate precedes timeline query update (which benefits from having email data to query); "See All" is fully independent and can close out the milestone.
+The build order is driven by three constraints: (1) backend must accept batch events before frontend sends them, (2) the Sentry large-payload issue should be resolved before any analytics QA, and (3) error boundaries and SEO tags are user-visible changes that should go out together as a coherent deploy-and-verify cycle.
 
-### Phase 1: Backend Schema and Event Endpoint
+### Phase 1: Backend Foundation
 
-**Rationale:** The email column on `user_events` must exist before the frontend starts sending email in tracking requests. This is the foundation all three features depend on. It is a non-breaking additive change with zero risk to v5.1 behavior.
-**Delivers:** Nullable indexed `email` column on `user_events`; `EventRequest` Pydantic model accepts optional email field; `record_event()` persists it; idempotent startup migration in `main.py` lifespan.
-**Addresses:** Email attribution database layer
-**Avoids:** Unindexed payload JSON anti-pattern (Pitfall 3)
+**Rationale:** Backend changes have zero frontend dependencies and zero user-visible risk. Ship these first so Railway is ready to receive batch events before the frontend sends them, and to fix the known Sentry large-payload alert immediately.
 
-### Phase 2: Frontend Tracking Enrichment
+**Delivers:** Paginated admin experts endpoint (resolves Sentry alert), enhanced `/api/health` with DB probe, backend batch event acceptance (`BatchEventRequest | EventRequest` union), SQLite PRAGMA tuning (`synchronous=NORMAL`, `cache_size=-32000`, `temp_store=MEMORY`), `GZipMiddleware` for API response compression, explore response TTL cache with admin invalidation hooks, `Cache-Control: public, max-age=86400` on photo proxy endpoint.
 
-**Rationale:** With the backend accepting email, frontend tracking can immediately start attributing events to identified users. This is a single-file change (`tracking.ts`) with no user-visible effects. Shipping it before the gate means that the moment the gate goes live, all subsequent events are email-attributed from day one.
-**Delivers:** `trackEvent()` reads `useNltrStore.getState().email` (static Zustand read); email included in POST `/api/events` body when non-null; all existing call sites remain backward-compatible (email is additive).
-**Uses:** Zustand `.getState()` static read pattern (established in `ExpertCard._fireLeadClick`)
-**Avoids:** React hook-in-module anti-pattern (use `.getState()`, never hook call in `tracking.ts`)
+**Addresses:** Admin experts pagination (P1), `/api/health` enhancement (P1), photo proxy cache header (P1), event write queue backend half (P2), SQLite write throughput (P2).
 
-### Phase 3: Email-First Gate UI
+**Avoids:** SQLite write queue saturation (Critical Pitfall 1) — convert event writes to background task + raise QueuePool ceiling before any load arrives.
 
-**Rationale:** Gate moves from lazy (on profile click) to eager (on page mount). With tracking enrichment already live, the first gated users' subsequent events are immediately email-attributed. This is the highest-visibility change and should follow the infrastructure work.
-**Delivers:** `MarketplacePage.tsx` shows `NewsletterGateModal` on mount for non-subscribed users; dismiss button removed from modal; `handleViewProfile` no longer checks gate state; ExpertGrid gated on `isUnlocked`; `source: "page_entry"` in subscribe call; Loops contact property updated.
-**Addresses:** Page-entry gate table stakes; Loops source segmentation
-**Avoids:** Dual-key localStorage split-brain (Pitfall 1); flash-of-gate via useEffect (Pitfall 2); wrong Loops source field (Pitfall 5); Intercom blocked by overlay (Pitfall 6)
+**Research flag:** Standard patterns — BackgroundTasks, SQLite PRAGMAs, and response caching are all well-documented in official sources. No additional research phase needed.
 
-### Phase 4: Lead Timeline Query Update
+### Phase 2: Frontend Performance
 
-**Rationale:** With email data accumulating in `user_events` (from Phases 1-3), the lead timeline can be extended to query `user_events WHERE email = X` directly. This phase requires Phase 1 (email column must exist) and benefits from at least some email-attributed events being present.
-**Delivers:** `get_lead_timeline()` in `leads.py` gains a fourth source query (email-keyed `user_events` WHERE `event_type = 'search_query'`); post-gate search events appear in admin lead timeline; deduplication merge by `created_at` with existing session_id bridge.
-**Implements:** Four-source timeline merge (conversations + lead_clicks + session-linked events + email-keyed events)
-**Avoids:** Data model confusion — NULL gap for pre-v5.2 events is explicitly accepted; session_id bridge retained for pre-gate anonymous events
+**Rationale:** Depends on Phase 1 completing the batch event backend before `tracking.ts` is updated to send batches. Bundle analysis should inform chunk splits — run `rollup-plugin-visualizer` first, then apply only where analysis confirms measurable wins.
 
-### Phase 5: Admin "See All" Expansion
+**Delivers:** Event batching in `tracking.ts` (module-level queue, 10-item threshold, 3s timer, `beforeunload` flush), Vite `manualChunks` additions (`vendor-react`, `vendor-motion`), `modulePreload.polyfill: false`, `chunkSizeWarningLimit: 600`, `<link rel="preconnect">` in `index.html`.
 
-**Rationale:** Fully independent of Phases 1-4. No backend changes for TopExpertsCard (full data already returned); one query param change for TopQueriesCard. Placed last to let the tracking and gate work stabilize first. Low risk, high admin value.
-**Delivers:** `TopExpertsCard` — local `showAll` state, toggle removes `.slice(0, 5)`, expand/collapse button; `TopQueriesCard` — fetch `limit: 50` on mount, same toggle; `max-h-96 overflow-y-auto` on expanded card prevents layout jump; optional new `TopExpertsPage.tsx` and `TopSearchesPage.tsx` if deeper navigation is desired.
-**Addresses:** "See All" table stakes; in-card expansion pattern over navigate-away
-**Avoids:** Period context lost on navigate (Pitfall 4); layout jump from unbounded card expansion; hardcoding `limit: 5` in expanded view
+**Addresses:** Event write queue frontend half (P2), bundle optimization (P2), preconnect hint (P2).
+
+**Avoids:** Vite `manualChunks` circular dependency crash (Critical Pitfall 3) — run `npm run build && npm run preview` gate before merging any chunk changes.
+
+**Research flag:** Standard patterns — Vite manualChunks and tracking batch queues are well-documented. Mandatory `vite preview` gate before merge.
+
+### Phase 3: Resilience and SEO
+
+**Rationale:** User-facing changes go out together so they can be QA'd holistically. Error boundaries protect the Explorer before SEO work drives new launch traffic to it. Static `index.html` changes (meta description, canonical, JSON-LD) have zero behavioral risk but high discoverability impact.
+
+**Delivers:** `ErrorBoundary.tsx` component (class-based, EXP-06 retry button fallback), error boundary wrapping in `main.tsx` (`<RouterProvider>`) and `MarketplacePage.tsx` (`<ExpertGrid>` area), global `window.addEventListener('unhandledrejection', ...)` Sentry handler, `<meta name="description">`, `<link rel="canonical">`, JSON-LD structured data (WebSite + SearchAction schema), `robots.txt` (Disallow: /admin), `sitemap.xml` (lists `/`), static OG image (1200x630) in `frontend/public/`, `vercel.json` Cache-Control headers for `/assets/*`.
+
+**Addresses:** React error boundaries (P1), meta description (P1), JSON-LD (P1), robots.txt + sitemap.xml (P1), OG tags (P1).
+
+**Avoids:** Error boundary white-screen with blank fallback (Critical Pitfall 5) — fallback must render the EXP-06 retry button, not a blank div. Static-only OG limitation (Pitfall 6) — dynamic per-route OG requires SSR, which is out of scope; do NOT add `react-helmet-async` expecting social crawlers to execute JavaScript. Incorrect JSON-LD schema types — use `WebSite` + `Organization` only, not `Product` or `ItemList` schemas Google cannot verify.
+
+**Research flag:** Standard patterns — React error boundaries and static HTML meta tags are established. No deeper research needed. Pre-implementation note: OG image asset (1200x630 PNG) must be created and committed to `frontend/public/` before this phase ships.
+
+### Phase 4: Analytics Hardening
+
+**Rationale:** Final phase because it has no blocking dependencies and involves both code changes and manual QA verification steps. Running this last ensures Sentry signal is clean (Phase 1 resolved the large-payload noise) before verifying analytics.
+
+**Delivers:** `<SpeedInsights />` added to `MarketplacePage.tsx` (currently only in the legacy `App.tsx` chat page), `navigator.sendBeacon` fallback in `trackEvent()`, `navigator.onLine` guard, GA4 `transport_type: 'beacon'` config line, defensive `send_page_view: false` inline comment added to `index.html`, GA4 DebugView QA (verify exactly 1 `page_view` on fresh load), Microsoft Clarity admin exclusion QA (SPA-navigation edge case verification).
+
+**Addresses:** Analytics hardening (P2), GA4 Beacon transport (P2), Speed Insights for Explorer (P2).
+
+**Avoids:** GA4 double-counting (Critical Pitfall 4) — add defensive comment as the first action of this phase; complete DebugView verification before declaring analytics hardened.
+
+**Research flag:** Standard patterns — GA4 DebugView verification and Beacon API are well-documented. Note: Clarity admin exclusion has a known SPA-navigation edge case (IIFE runs once at page load, not on SPA navigations to `/admin`); this is acceptable for v5.4 with no user PII risk — admin is authenticated.
 
 ### Phase Ordering Rationale
 
-- Backend before frontend: `EventRequest` must accept `email` before `tracking.ts` sends it. Pydantic v2 ignores extra fields by default, but if `extra='forbid'` is set, Phase 1 must deploy before Phase 2.
-- Tracking before gate: ensures the very first post-gate events are email-attributed. If gate ships before tracking, there is a window where gated users' events have no email attribution.
-- Gate before timeline: the timeline query's fourth source is only useful once email-attributed events exist. Shipping the query before any data accumulates is harmless but wasteful to validate.
-- "See All" last: independent, low-risk, can ship at any point. Placing it last keeps the riskier schema migration and gate UI work in the critical path with dedicated focus.
+- Backend before frontend: `events.py` must accept `BatchEventRequest` before `tracking.ts` sends batched requests; backend union type is backward-compatible so existing single-event format continues to work during the transition window
+- Performance before resilience: bundle changes require a `vite preview` gate that is easiest to run before adding new components; performance work is pure config/stdlib with no UI surface area
+- Resilience and SEO together: both modify `index.html` and both benefit from a single deploy-and-verify cycle; error boundaries should be live before SEO work drives new traffic
+- Analytics last: depends on Sentry noise being reduced (Phase 1), and GA4 DebugView QA is the final sign-off step that confirms the whole hardened system is behaving correctly
 
 ### Research Flags
 
-Phases with standard patterns (research-phase not needed):
+All phases use standard, well-documented patterns. No phases require a `/gsd:research-phase` step during planning.
 
-- **Phase 1 (Backend Schema):** SQLite nullable column migration is well-documented; idempotent startup migration pattern already in codebase. Implement directly.
-- **Phase 2 (Tracking Enrichment):** Single-file change using established Zustand static read pattern. Implement directly.
-- **Phase 5 (Admin See-All):** In-card toggle is a standard SaaS admin pattern; data already available from existing endpoints. Implement directly.
-
-Phases that merit careful pre-implementation checklist review (not external research):
-
-- **Phase 3 (Email-First Gate):** Six pitfalls intersect here. Conduct a pre-implementation audit of all localStorage unlock paths. Explicit test checklist: returning subscriber bypass (no flash), Intercom accessibility, Loops source value in DB after test submission, duplicate email deduplication returns `{"status": "ok"}`.
-- **Phase 4 (Lead Timeline):** Four-source merge-sort needs explicit test coverage — verify that an event does not appear twice when both the session_id bridge and the email column match the same row.
+- **Phase 1:** SQLite PRAGMAs, BackgroundTasks pattern, GZipMiddleware, and response caching are covered in official docs and verified sources. Implement directly.
+- **Phase 2:** Vite manualChunks and batch queue are standard; the mandatory `vite preview` gate is the only special process requirement.
+- **Phase 3:** React error boundaries (`react-error-boundary@6.1.1`) and static HTML meta tags are established. OG image asset creation is a pre-phase dependency, not a code research gap.
+- **Phase 4:** GA4 Beacon API and DebugView verification are standard procedures. No unknowns.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | All findings from direct production file inspection; no new packages required; confirmed working versions |
-| Features | HIGH | Codebase inspection is the primary source; external UX research (OptinMonster, Intercom, ProductLed) at MEDIUM used only to validate the in-card vs navigate-away decision |
-| Architecture | HIGH | All component boundaries, data flows, and build order derived from actual running v5.1 code; no inference required |
-| Pitfalls | HIGH | All 6 critical pitfalls derived from actual code patterns: dual localStorage keys verified line-by-line, Zustand rehydration behavior confirmed, SQLite ALTER TABLE semantics confirmed, Intercom z-index from Intercom docs |
+| Stack | HIGH | Two new deps verified against official NPM release notes and Vite docs; all backend changes are built-in Starlette or stdlib; version compatibility confirmed |
+| Features | HIGH | Prioritization grounded in direct codebase inspection of v5.3 plus multiple production-scale FastAPI/React sources; all P1/P2 features have clear implementation paths |
+| Architecture | HIGH | Research was direct inspection of all affected files — events.py, health.py, explore.py, admin/experts.py, tracking.ts, main.tsx, MarketplacePage.tsx, vite.config.ts, index.html — ground truth, not inference |
+| Pitfalls | HIGH | Each critical pitfall verified against SQLite official docs, SQLAlchemy connection pool docs, Vite GitHub issues, and GA4 official docs; sources cited per pitfall |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **Loops custom property registration:** Forwarding `source` as a Loops contact property requires the property to be registered in the Loops dashboard first. Verify the Loops API accepts the chosen property name (e.g., `contactSource`) before shipping Phase 3. This is a one-time manual step in Loops UI, not a code gap.
-- **FastAPI `extra` config on `EventRequest`:** Pydantic v2 ignores extra fields by default. Confirm `EventRequest` does not have `model_config = ConfigDict(extra='forbid')` set, which would reject the new optional `email` field from Phase 2 before Phase 1 deploys. If it does, Phase 1 (Pydantic model update) must deploy before Phase 2 (frontend sends email).
-- **`user_events` row volume at scale:** The indexed `email` column is sufficient for current and near-term scale. If `user_events` exceeds ~1M rows, the `get_lead_timeline()` four-source merge-sort may need a materialized approach. Flag as a v5.3+ consideration.
+- **Uvicorn worker memory budget:** Railway Hobby plan (512 MB) is estimated to have headroom for 2 workers (~300-350 MB estimated), but this requires verification of current Railway memory metrics before bumping workers. Monitor during Phase 1 deploy; vertical scaling is always the safe fallback.
+
+- **OG image asset:** The static OG image (1200x630 PNG) must be created and committed to `frontend/public/` before Phase 3 social sharing tags can resolve. This is a content/design dependency, not a code dependency — prepare the asset before Phase 3 begins.
+
+- **Sentry build env vars:** `sentryVitePlugin` requires `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, and `SENTRY_PROJECT` env vars in Vercel build settings. If these are missing, source map upload silently skips. Verify Vercel build env vars are set before Phase 3 deploy.
+
+- **JSON-LD SearchAction URL param:** ARCHITECTURE.md uses `?q=` while STACK.md uses `?query=` as the Explorer search param. Confirm the actual URL param name from `useExplore` hook source before writing the final JSON-LD block.
 
 ## Sources
 
-### Primary (HIGH confidence — direct codebase inspection)
+### Primary (HIGH confidence)
 
-- `frontend/src/pages/MarketplacePage.tsx` — gate trigger logic, `legacyUnlocked` dual-key check (lines 44-52)
-- `frontend/src/store/nltrStore.ts` — Zustand persist shape, localStorage key `tinrate-newsletter-v1`
-- `frontend/src/components/marketplace/NewsletterGateModal.tsx` — existing modal, `z-50`, dismiss button location
-- `frontend/src/hooks/useEmailGate.ts` — lazy initializer pattern, flash-prevention design note
-- `frontend/src/tracking.ts` — anonymous `session_id` tracking, fire-and-forget with keepalive
-- `frontend/src/components/marketplace/ExpertCard.tsx` — `_fireLeadClick` Zustand static read pattern
-- `frontend/src/admin/pages/OverviewPage.tsx` — `TopExpertsCard` `.slice(0, 5)`, `TopQueriesCard` `limit: 5`, `ZeroResultQueriesCard` "See all" reference pattern
-- `app/models.py` — `UserEvent` schema (no email column confirmed), `NewsletterSubscriber` schema
-- `app/main.py` — idempotent startup migration pattern (existing precedent confirmed)
-- `app/routers/events.py` — `EventRequest`, `record_event()`, payload is free-form dict
-- `app/routers/newsletter.py` — `POST /api/newsletter/subscribe`, idempotent INSERT OR IGNORE
-- `app/routers/admin/events.py` — `get_exposure()` returns all rows, no server-side LIMIT
-- `app/routers/admin/analytics.py` — `get_top_queries()` accepts `limit` param
-- `app/routers/admin/leads.py` — `get_lead_timeline()` three-source merge; `session_id` bridge confirmed
-- `app/loops.py` — Loops contact sync, source field handling
-- `frontend/package.json`, `requirements.txt` — confirmed installed versions, no new dependencies needed
+- Direct codebase inspection: `app/routers/events.py`, `app/routers/health.py`, `app/routers/explore.py`, `app/routers/admin/experts.py`, `app/services/embedder.py`, `frontend/src/tracking.ts`, `frontend/src/main.tsx`, `frontend/src/pages/MarketplacePage.tsx`, `frontend/src/layouts/RootLayout.tsx`, `frontend/vite.config.ts`, `frontend/index.html`, `Procfile`, `railway.json` — ground truth for architecture and pitfalls
+- [SQLite WAL official documentation](https://sqlite.org/wal.html) — WAL + `synchronous=NORMAL` safety guarantees
+- [FastAPI Advanced Middleware docs](https://fastapi.tiangolo.com/advanced/middleware/) — GZipMiddleware parameters and middleware ordering
+- [Vite Build Options docs](https://vite.dev/config/build-options) — manualChunks, modulePreload.polyfill, chunkSizeWarningLimit
+- [react-error-boundary NPM](https://www.npmjs.com/package/react-error-boundary) and [GitHub releases](https://github.com/bvaughn/react-error-boundary/releases) — v6.1.1 React 19 compatibility confirmed
+- [schema.org WebSite](https://schema.org/WebSite) — SearchAction + potentialAction schema spec
+- [Railway Health Check documentation](https://station.railway.com/questions/health-check-endpoint-af9640dc) — health endpoint requirements
+- [Vercel Cache-Control Headers docs](https://vercel.com/docs/headers/cache-control-headers) — static asset caching configuration
+- [SQLAlchemy Connection Pooling docs](https://docs.sqlalchemy.org/en/20/core/pooling.html) — QueuePool parameters
 
-### Secondary (MEDIUM confidence — external sources)
+### Secondary (MEDIUM confidence)
 
-- OptinMonster (2025/2026) — email gate timing and dismiss patterns
-- Eleken, Userpilot — modal UX best practices for SaaS
-- ProductLed — gated content strategy
-- Intercom docs — Intercom launcher z-index value (2147483001)
-- SQLite documentation — `ALTER TABLE ADD COLUMN` semantics (non-destructive, DEFAULT NULL for existing rows)
+- [SQLite recommended PRAGMAs — High Performance SQLite](https://highperformancesqlite.com/articles/sqlite-recommended-pragmas) — cache_size, temp_store parameters
+- [SQLite production setup 2026](https://oneuptime.com/blog/post/2026-02-02-sqlite-production-setup/view) — WAL + synchronous=NORMAL production pattern
+- [Designing FastAPI + LLM for 10K concurrent users](https://medium.com/algomart/designing-a-fastapi-llm-system-for-10k-concurrent-users-and-scaling-rag-to-100k-daily-users-c54be7acd865) — event batching and worker tuning
+- [GA4 Event Batching Guide](https://assertionhub.com/blog/ga4-event-batching-guide) — keepalive/sendBeacon behavior, 20-40% event loss figure
+- [Oldmoe — The Write Stuff](https://oldmoe.blog/2024/07/08/the-write-stuff-concurrent-write-transactions-in-sqlite/) — SQLite write contention specifics
+- [Vite issue #12209](https://github.com/vitejs/vite/issues/12209), [#20202](https://github.com/vitejs/vite/issues/20202) — manualChunks circular dependency evidence
+- [rollup-plugin-visualizer GitHub](https://github.com/btd/rollup-plugin-visualizer) — Rollup 4 / Vite 7 compatibility
+- [React error boundaries async limitation](https://medium.com/@bloodturtle/why-react-error-boundaries-cant-catch-asynchronous-errors-28b9cab07658) — async error boundary scope
+- [GA4 SPA tracking — Google Developers](https://developers.google.com/analytics/devguides/collection/ga4/single-page-applications) — send_page_view:false pattern for SPAs
+- [Vercel SPA routing](https://community.vercel.com/t/rewrite-to-index-html-ignored-for-react-vite-spa-404-on-routes/8412) — vercel.json rewrite rule requirement
+
+### Tertiary (LOW confidence)
+
+- [JSON-LD Schema for SEO 2025 — ObserviX](https://observix.ai/blog/json-ld-schema-for-seo-what-marketers-should-know) — 20-30% CTR lift claim with structured data (directional only, single source)
 
 ---
-*Research completed: 2026-03-04*
+*Research completed: 2026-03-05*
 *Ready for roadmap: yes*

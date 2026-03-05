@@ -1,605 +1,720 @@
-# Architecture Research: v5.2 Email-First Gate, Admin See-All, Email-Based Tracking
+# Architecture Research: v5.4 Launch Hardening
 
-**Domain:** Expert Marketplace SPA — feature integration for v5.2 milestone
-**Researched:** 2026-03-04
-**Confidence:** HIGH — all findings from direct codebase inspection of v5.1 source
-**Scope:** v5.2 feature integration only. Existing v5.1 system is ground truth. Only deltas documented.
-
----
-
-## Context: v5.1 Ground Truth (verified by file inspection)
-
-```
-GATE MECHANISM  (frontend/src/store/nltrStore.ts + MarketplacePage.tsx)
-  nltrStore: { subscribed, email } — Zustand persist to localStorage key 'tinrate-newsletter-v1'
-  Gate fires: ONLY when user clicks "View Full Profile" on an ExpertCard (handleViewProfile)
-  Gate bypasses: subscribed=true OR localStorage.tcs_gate_email OR localStorage.tcs_email_unlocked
-  Gate modal: NewsletterGateModal.tsx — has dismiss (×) button; user can close without submitting
-  On submit: setSubscribed(email) → Zustand+localStorage → POST /api/newsletter/subscribe
-  Effect: user unlocked; pending profile opens in new tab
-
-TRACKING MECHANISM  (frontend/src/tracking.ts)
-  trackEvent(event_type, payload): module function — NOT a React hook
-  Reads session_id from localStorage key 'tcs_session_id' (anonymous UUID)
-  Sends: POST /api/events { session_id, event_type, payload }
-  Email: NEVER included — tracking is fully anonymous
-  Call sites: ExpertCard (card_click), useExplore (search_query), filter handlers (filter_change)
-
-LEAD CLICK TRACKING  (frontend/src/components/marketplace/ExpertCard.tsx)
-  _fireLeadClick(): module-scope function inside ExpertCard
-  Reads email from useNltrStore.getState().email — Zustand static read (no hook needed)
-  Sends: POST /api/admin/lead-clicks { email, expert_username, search_query }
-  Fires only if email is non-null (user has passed the gate at least once)
-  Result: stored in lead_clicks table (email-keyed)
-
-ADMIN OVERVIEW CARDS  (frontend/src/admin/pages/OverviewPage.tsx)
-  TopExpertsCard:
-    - Fetches adminFetch('/events/exposure', { days }) → ExposureResponse
-    - Slices result to top 5: (data?.exposure ?? []).slice(0, 5)
-    - Links each expert to /admin/experts (not to a "See All" page)
-    - NO "See all" link present
-  TopQueriesCard:
-    - Fetches adminFetch('/analytics/top-queries', { days, limit: 5 })
-    - Displays rows directly
-    - NO "See all" link present
-  ZeroResultQueriesCard: HAS "See all →" link to /admin/gaps (reference pattern)
-
-LEAD TIMELINE  (app/routers/admin/leads.py get_lead_timeline)
-  Merges three sources:
-    1. Conversation rows WHERE email = X (chat-flow searches only — legacy)
-    2. LeadClick rows WHERE email = X (expert card clicks by identified users)
-    3. UserEvent rows WHERE session_id = subscriber.session_id (pre-gate anonymous history)
-  Gap: Post-gate search_query and filter_change events are NOT linked to email
-       (they still use anonymous session_id in user_events, no email column)
-
-BACKEND ADMIN ROUTER  (app/routers/admin/__init__.py)
-  10-module package: analytics, compare, events, experts, exports, imports, leads, settings
-  All protected by _require_admin JWT dependency
-  Relevant endpoints:
-    GET /analytics/top-queries?days=N&limit=N  → top search queries ranked by frequency
-    GET /events/exposure?days=N                → experts ranked by card click volume (no limit param)
-    GET /lead-timeline/{email}                 → merged timeline
-    POST /lead-clicks                          → stores lead_clicks row (called from ExpertCard)
-
-USER_EVENTS TABLE SCHEMA  (app/models.py UserEvent)
-  Columns: id, session_id (String 64, indexed), event_type, payload (JSON text), created_at
-  NO email column — anonymous only
-```
+**Domain:** Expert Marketplace SPA — launch hardening integration
+**Researched:** 2026-03-05
+**Confidence:** HIGH — all findings from direct codebase inspection of v5.3 source
+**Scope:** v5.4 feature integration only. Existing v5.3 system is ground truth. Only deltas documented.
 
 ---
 
-## System Overview: v5.1 → v5.2 Delta
+## Context: v5.3 Ground Truth (verified by file inspection)
+
+```
+EVENT TRACKING PIPELINE  (current — synchronous per-event)
+  Frontend: trackEvent() in frontend/src/tracking.ts
+    - Fire-and-forget void fetch + keepalive:true
+    - Each call = one POST /api/events HTTP request
+    - 5 call sites: ExpertCard (card_click), useExplore (search_query),
+      filter handlers (filter_change), bookmark toggle (save)
+    - Reads session_id from localStorage, email from nltrStore
+
+  Backend: POST /api/events in app/routers/events.py
+    - Synchronous DB write per request (db.add + db.commit)
+    - Returns 202 Accepted
+    - No rate limiting or batching
+
+HEALTH ENDPOINT  (current — minimal)
+  app/routers/health.py: GET /api/health
+    Returns: { "status": "ok", "index_size": <int> }
+    No DB check, no memory check, no latency metrics
+
+ADMIN /experts ENDPOINT  (current — unbounded)
+  app/routers/admin/experts.py: GET /api/admin/experts
+    Returns: { "experts": [all experts serialized] }
+    No pagination — full table dump every request
+    At ~530 experts: ~2-3MB JSON payload per admin page load
+    Sentry large-payload alert already triggered
+
+FRONTEND BUNDLE  (current — partially split)
+  vite.config.ts manualChunks:
+    - vendor-charts: recharts
+    - vendor-table: @tanstack/react-table
+  Admin: all 11 components lazy-loaded (React.lazy + Suspense)
+  Public explorer bundle: NOT split beyond admin/public separation
+  Motion library: motion/react (v12) — full bundle included in public chunk
+
+META TAGS  (current — static HTML only)
+  frontend/index.html:
+    - <title>Tinrate — Find the right expert, instantly</title>
+    - og:title, og:description, og:image, og:url (static hardcoded)
+    - twitter:card, twitter:title, twitter:description, twitter:image
+    - NO: description meta tag, NO: canonical, NO: JSON-LD structured data
+
+ANALYTICS  (current — multiple systems, fire-and-forget)
+  GA4: window.gtag() in index.html + Analytics component in RootLayout
+    - send_page_view:false — React Analytics component handles ALL page_view events
+    - Admin routes excluded via send_page_view:false pattern
+  Microsoft Clarity: IIFE in index.html
+    - Early return for /admin/* paths
+    - Loads async, no React component needed
+  Vercel Speed Insights: <SpeedInsights /> in App.tsx (chat page only)
+    - NOT present in MarketplacePage.tsx (Explorer)
+  User events: trackEvent() → POST /api/events (custom, in-DB)
+
+RESILIENCE  (current — minimal)
+  Error boundaries: NONE — uncaught React errors crash the whole app
+  API error handling: EXP-06 (retry button on explore errors only)
+  Health checks: GET /api/health (FAISS index_size only)
+  Graceful degradation: no pattern for offline/API-down state
+
+SQLITE WAL  (current — tuned)
+  database.py: WAL mode + busy_timeout=5000ms on every connection
+  Single Railway instance — concurrent writes via WAL reader/writer
+  No connection pooling beyond SQLAlchemy SessionLocal
+```
+
+---
+
+## System Overview (v5.3 → v5.4 Integration Map)
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                         FRONTEND (Vercel)                            │
-├─────────────────────────┬───────────────────────────────────────────┤
-│  MarketplacePage.tsx    │  Admin (lazy-loaded)                       │
-│                         │                                            │
-│  BEFORE: Gate on        │  BEFORE: TopExpertsCard and                │
-│  "View Full Profile"    │  TopQueriesCard show top-5, no "See all"   │
-│  click only             │                                            │
-│                         │  AFTER: Both cards gain "See all →"        │
-│  AFTER: Gate on mount   │  links to new dedicated pages              │
-│  (blocks grid render    │  /admin/top-experts?days=N                 │
-│  until email submitted) │  /admin/top-searches?days=N                │
-│                         │                                            │
-│  ExpertCard._fireLeadCl │  NEW PAGES:                                │
-│  → already email-based  │  TopExpertsPage.tsx (NEW)                  │
-│                         │  TopSearchesPage.tsx (NEW)                 │
-│                         │                                            │
-│  tracking.ts            │  useAdminData.ts — adminFetch wrapper      │
-│  BEFORE: session_id only│  (no changes to hook signatures needed)    │
-│  AFTER: also sends email│                                            │
-│  if useNltrStore.email  │                                            │
-│  is non-null            │                                            │
-├─────────────────────────┴───────────────────────────────────────────┤
-│               State / Persistence (unchanged)                        │
-│  useNltrStore: subscribed, email — localStorage 'tinrate-newsletter-v1'│
-│  tcs_session_id — localStorage anonymous UUID for trackEvent()      │
-└─────────────────────────────────────────────────────────────────────┘
-                              │ HTTPS
-┌─────────────────────────────┴───────────────────────────────────────┐
-│                         BACKEND (Railway)                            │
+│  Vercel CDN (Frontend)                                               │
 ├─────────────────────────────────────────────────────────────────────┤
-│  UNCHANGED endpoints:                                                │
-│  POST /api/newsletter/subscribe → newsletter_subscribers table       │
-│  POST /api/admin/lead-clicks   → lead_clicks table (email-keyed)    │
-│  GET  /api/admin/events/exposure     → top experts by click vol      │
-│  GET  /api/admin/analytics/top-queries → top search queries          │
-│  GET  /api/admin/lead-timeline/{email} → merged timeline             │
-│                                                                      │
-│  MODIFIED:                                                           │
-│  POST /api/events — now accepts optional email field                 │
-│  GET  /api/admin/lead-timeline/{email} — also queries user_events    │
-│    WHERE email = X (new direct query, supplements session_id join)   │
-│                                                                      │
-│                     SQLite DB (WAL mode)                             │
-│  user_events — ADD COLUMN email TEXT nullable indexed (NEW)          │
-│  All other tables unchanged                                          │
+│  ┌──────────────┐  ┌──────────────┐  ┌─────────────┐               │
+│  │ MarketplacePage│ │  RootLayout  │  │  AdminApp   │               │
+│  │  [BOUNDARY]  │  │ [ANALYTICS+] │  │  (lazy)     │               │
+│  └──────┬───────┘  └──────────────┘  └─────────────┘               │
+│         │                                                            │
+│  ┌──────▼───────┐  ┌──────────────┐  ┌─────────────┐               │
+│  │  ExpertGrid  │  │  tracking.ts │  │ vite.config │               │
+│  │  ExpertList  │  │ [BATCH QUEUE]│  │ [CHUNK SPLIT]│              │
+│  │  ExpertCard  │  └──────────────┘  └─────────────┘               │
+│  └──────────────┘                                                    │
+├─────────────────────────────────────────────────────────────────────┤
+│  Railway Single Instance (Backend)                                   │
+├─────────────────────────────────────────────────────────────────────┤
+│  ┌──────────────┐  ┌──────────────┐  ┌─────────────┐               │
+│  │  /api/explore│  │ /api/events  │  │/api/health  │               │
+│  │  [CACHE]     │  │ [BATCH RECV] │  │ [ENHANCED]  │               │
+│  └──────────────┘  └──────┬───────┘  └─────────────┘               │
+│                            │                                         │
+│  ┌──────────────────────── ▼ ──────────────────────────────────┐    │
+│  │  SQLite WAL (conversations.db on Railway volume)             │    │
+│  │  Tables: user_events [BATCH TARGET] / experts / leads / ...  │    │
+│  └──────────────────────────────────────────────────────────────┘    │
+│                                                                       │
+│  ┌────────────────────────────────────────────────────────────┐      │
+│  │  FAISS index (in-memory)  +  metadata.json (in-memory)     │      │
+│  └────────────────────────────────────────────────────────────┘      │
 └─────────────────────────────────────────────────────────────────────┘
+
+[BOUNDARY]     = new component needed
+[ANALYTICS+]   = existing component modified
+[BATCH QUEUE]  = tracking.ts modified (in-memory queue + flush timer)
+[BATCH RECV]   = events.py modified (accept array body)
+[CACHE]        = explore.py modified (TTL response cache)
+[ENHANCED]     = health.py modified (DB + memory checks)
+[CHUNK SPLIT]  = vite.config.ts modified (more manualChunks)
 ```
-
----
-
-## Integration Points by Feature
-
-### Feature 1: Email-First Gate
-
-**Current state:** `NewsletterGateModal` is controlled by `showGate` state initialized to `false`. It only becomes `true` when `handleViewProfile` is called on a non-unlocked user. Users can browse the entire expert grid without submitting an email.
-
-**Target state:** Gate fires immediately on page load if not already unlocked. The expert grid does not render until the gate is passed.
-
-**Modified component: `MarketplacePage.tsx`**
-
-```typescript
-// BEFORE: gate fires only on "View Full Profile" click
-const [showGate, setShowGate] = useState(false)
-
-function handleViewProfile(url: string) {
-  if (isUnlocked) {
-    window.open(url, '_blank', 'noopener,noreferrer')
-  } else {
-    setPendingProfileUrl(url)
-    setShowGate(true)  // ← gate opens here
-  }
-}
-
-// AFTER: gate fires on mount if not unlocked
-const [showGate, setShowGate] = useState(!isUnlocked)  // ← immediate if locked
-
-function handleViewProfile(url: string) {
-  // No gate check here — gate was already passed at page load
-  window.open(url, '_blank', 'noopener,noreferrer')
-}
-```
-
-The expert grid render is conditionally blocked:
-```tsx
-// AFTER: grid only renders after gate is passed
-{isUnlocked ? (
-  <ExpertGrid ... />
-) : null}  // or: show blurred placeholder
-```
-
-**Modified component: `NewsletterGateModal.tsx`**
-
-The dismiss button must be removed or disabled in the email-first gate mode. The existing modal has an `onDismiss` prop and an × button. Two approaches:
-
-Option A — Add `allowDismiss?: boolean` prop (defaults to `true` for backward compat if modal is reused elsewhere):
-```tsx
-interface NewsletterGateModalProps {
-  isOpen: boolean
-  onSubscribe: (email: string) => void
-  onDismiss: () => void
-  allowDismiss?: boolean  // NEW — false for email-first mode
-}
-```
-
-Option B — Remove dismiss entirely since the modal is only used in one place (MarketplacePage). Cleaner.
-
-Recommended: Option B, since `NewsletterGateModal` is only rendered in `MarketplacePage.tsx` (verified by inspection).
-
-**Bypass logic unchanged:**
-```typescript
-// These three conditions all short-circuit the gate — unchanged
-const legacyUnlocked =
-  localStorage.getItem('tcs_gate_email') !== null ||
-  localStorage.getItem('tcs_email_unlocked') !== null
-const isUnlocked = subscribed || legacyUnlocked
-```
-
-The `useNltrStore` storage key `'tinrate-newsletter-v1'` is LOCKED — do not change it.
-
-**What changes:**
-
-| Location | Change | Type |
-|----------|--------|------|
-| `MarketplacePage.tsx` | `useState(!isUnlocked)` instead of `useState(false)` for `showGate` | MODIFIED |
-| `MarketplacePage.tsx` | `handleViewProfile` — remove gate check, always open profile directly | MODIFIED |
-| `MarketplacePage.tsx` | Wrap ExpertGrid/ExpertList render in `{isUnlocked ? ... : null}` | MODIFIED |
-| `NewsletterGateModal.tsx` | Remove × dismiss button; remove `onDismiss` call from overlay click | MODIFIED |
-| Backend | No changes | UNCHANGED |
-
----
-
-### Feature 2: Admin "See All" Buttons on TopExpertsCard and TopQueriesCard
-
-**Current state:** Both cards in `OverviewPage.tsx` are self-contained components that fetch data, slice to top-5, and render inline. `ZeroResultQueriesCard` already has `<Link to="/admin/gaps">See all &rarr;</Link>` as the reference pattern.
-
-**Target state:** Both cards add a "See all →" link navigating to a dedicated full-list page. The pages pass the current `days` value as a URL param so the same period filter applies on the destination.
-
-**Modified component: `TopExpertsCard` in `OverviewPage.tsx`**
-
-```tsx
-// BEFORE: no link
-<div className="flex items-center gap-2 mb-4">
-  <TrendingUp className="w-4 h-4 text-purple-400" />
-  <h2 className="text-sm font-semibold text-white">Top Clicks</h2>
-</div>
-
-// AFTER: add "See all →" link matching ZeroResultQueriesCard pattern
-<div className="flex items-center justify-between mb-4">
-  <div className="flex items-center gap-2">
-    <TrendingUp className="w-4 h-4 text-purple-400" />
-    <h2 className="text-sm font-semibold text-white">Top Clicks</h2>
-  </div>
-  <Link to={`/admin/top-experts?days=${days}`} className="text-xs text-purple-400 hover:text-purple-300 transition-colors">
-    See all &rarr;
-  </Link>
-</div>
-```
-
-**Modified component: `TopQueriesCard` in `OverviewPage.tsx`** — same pattern, links to `/admin/top-searches?days={days}`.
-
-**New component: `TopExpertsPage.tsx`**
-
-```typescript
-// frontend/src/admin/pages/TopExpertsPage.tsx
-// Reads ?days from URL, fetches full exposure list, renders ranked table
-
-export default function TopExpertsPage() {
-  const [searchParams] = useSearchParams()
-  const [days, setDays] = useState(Number(searchParams.get('days')) || 7)
-
-  // adminFetch('/events/exposure', { days }) — same endpoint as OverviewPage card
-  // but NO slice(0, 5) — render full list
-  // Uses same AdminCard/AdminPageHeader components
-}
-```
-
-**New component: `TopSearchesPage.tsx`**
-
-```typescript
-// frontend/src/admin/pages/TopSearchesPage.tsx
-// adminFetch('/analytics/top-queries', { days, limit: 100 })
-// 'limit: 100' instead of 'limit: 5'
-```
-
-**Router registration** in `AdminApp.tsx` (or wherever admin routes are registered):
-```tsx
-const TopExpertsPage = lazy(() => import('./pages/TopExpertsPage'))
-const TopSearchesPage = lazy(() => import('./pages/TopSearchesPage'))
-// Add routes: /admin/top-experts, /admin/top-searches
-```
-
-**What changes:**
-
-| Location | Change | Type |
-|----------|--------|------|
-| `OverviewPage.tsx` — `TopExpertsCard` | Add "See all →" link to `/admin/top-experts?days=${days}` | MODIFIED |
-| `OverviewPage.tsx` — `TopQueriesCard` | Add "See all →" link to `/admin/top-searches?days=${days}` | MODIFIED |
-| `TopExpertsPage.tsx` | Full ranked exposure list, reads `?days` from URL | NEW |
-| `TopSearchesPage.tsx` | Full ranked query frequency list, reads `?days` from URL | NEW |
-| `AdminApp.tsx` or router file | Register two new lazy-loaded routes | MODIFIED |
-| Backend `GET /api/admin/events/exposure` | No change — already returns all rows (no limit param) | UNCHANGED |
-| Backend `GET /api/admin/analytics/top-queries` | No change — already accepts `limit` param | UNCHANGED |
-| `AdminSidebar.tsx` | Optionally add nav items; can defer since pages reachable from cards | OPTIONAL |
-
----
-
-### Feature 3: Email-Based Activity Tracking
-
-**Current state:** `tracking.ts` sends only `session_id` (anonymous). The `lead_timeline` endpoint merges identified activity (via email on `conversations` and `lead_clicks`) with pre-gate anonymous activity (via `session_id` on `user_events` — only the session_id captured at newsletter signup time). Post-gate search and filter events in `user_events` are NOT attributed to the lead's email.
-
-**The gap in the current timeline:** After a user submits their email at the gate, their subsequent `search_query` and `filter_change` events in `user_events` are stored under an anonymous `session_id`. The admin lead timeline cannot show these events because there's no join between `user_events.session_id` and the lead's email.
-
-**Target state:** After email submission, `trackEvent()` includes the known email in the request. The `user_events` table stores a nullable `email` column. `lead_timeline` gains a direct `WHERE email = X` query on `user_events`.
-
-**Schema change: `app/models.py`**
-
-```python
-class UserEvent(Base):
-    __tablename__ = "user_events"
-    __table_args__ = (
-        Index("ix_user_events_type_created", "event_type", "created_at"),
-        Index("ix_user_events_email", "email"),  # NEW index
-    )
-    id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    session_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
-    event_type: Mapped[str] = mapped_column(String(50), nullable=False)
-    payload: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
-    email: Mapped[str | None] = mapped_column(String(320), nullable=True)  # NEW
-    created_at: Mapped[datetime.datetime] = mapped_column(DateTime, ...)
-```
-
-**Migration: `app/main.py` lifespan** (idempotent, established pattern):
-```python
-with engine.connect() as _conn:
-    try:
-        _conn.execute(_text("ALTER TABLE user_events ADD COLUMN email TEXT"))
-        _conn.commit()
-    except Exception:
-        pass  # Already exists — idempotent
-```
-
-**Backend change: `app/routers/events.py`**
-
-```python
-class EventRequest(BaseModel):
-    session_id: str = Field(..., min_length=1, max_length=64)
-    event_type: EVENT_TYPES
-    payload: dict[str, Any] = Field(default_factory=dict)
-    email: str | None = None  # NEW — optional, from identified users only
-
-@router.post("/api/events", status_code=202)
-def record_event(body: EventRequest, db: Session = Depends(get_db)):
-    record = UserEvent(
-        session_id=body.session_id,
-        event_type=body.event_type,
-        payload=json.dumps(body.payload),
-        email=body.email,  # NEW — stored if provided, None otherwise
-    )
-    db.add(record)
-    db.commit()
-    return {"status": "accepted"}
-```
-
-**Frontend change: `frontend/src/tracking.ts`**
-
-```typescript
-// BEFORE
-export function trackEvent(event_type: EventType, payload: TrackPayload = {}): void {
-  const session_id = getSessionId()
-  void fetch(`${API_BASE}/api/events`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    keepalive: true,
-    body: JSON.stringify({ session_id, event_type, payload }),
-  })
-}
-
-// AFTER — add email read from Zustand store
-import { useNltrStore } from './store/nltrStore'
-
-export function trackEvent(event_type: EventType, payload: TrackPayload = {}): void {
-  const session_id = getSessionId()
-  const email = useNltrStore.getState().email  // null if not yet subscribed
-  void fetch(`${API_BASE}/api/events`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    keepalive: true,
-    body: JSON.stringify({
-      session_id,
-      event_type,
-      payload,
-      ...(email ? { email } : {}),  // Only include if non-null
-    }),
-  })
-}
-```
-
-Note: `useNltrStore.getState()` is a Zustand static method — works outside React components. The same pattern is already used in `ExpertCard._fireLeadClick` (`useNltrStore.getState().email`). No hook constraint applies.
-
-**Backend change: `app/routers/admin/leads.py` — `get_lead_timeline()`**
-
-```python
-# AFTER: add direct email query on user_events in addition to session_id join
-# Step 3 (existing): session-linked events via subscriber.session_id
-# Step 3b (NEW): direct email-keyed user_events
-email_event_rows = db.scalars(
-    select(UserEvent).where(
-        UserEvent.email == email,
-        UserEvent.event_type == "search_query",
-    )
-).all()
-for row in email_event_rows:
-    payload_data = json.loads(row.payload or "{}")
-    search_events.append({
-        "type": "search",
-        "query": payload_data.get("query_text", ""),
-        "result_count": payload_data.get("result_count", 0),
-        "created_at": row.created_at.isoformat(),
-    })
-# Deduplication: sort by created_at handles any overlap between session_id and email queries
-```
-
-**What changes:**
-
-| Location | Change | Type |
-|----------|--------|------|
-| `app/models.py` — `UserEvent` | Add `email: Mapped[str | None]` column + index | MODIFIED |
-| `app/main.py` lifespan | Add idempotent `ALTER TABLE user_events ADD COLUMN email TEXT` | MODIFIED |
-| `app/routers/events.py` — `EventRequest` | Add `email: str | None = None` field | MODIFIED |
-| `app/routers/events.py` — `record_event()` | Pass `email=body.email` to `UserEvent()` | MODIFIED |
-| `frontend/src/tracking.ts` | Import `useNltrStore`; read `.getState().email`; include in request body | MODIFIED |
-| `app/routers/admin/leads.py` — `get_lead_timeline()` | Add `UserEvent WHERE email = X` query; append to `search_events` list | MODIFIED |
 
 ---
 
 ## Component Boundaries: New vs Modified
 
-| Component | Status | File | What Changes |
-|-----------|--------|------|--------------|
-| `MarketplacePage.tsx` | MODIFIED | `frontend/src/pages/MarketplacePage.tsx` | Gate on mount; `handleViewProfile` removes gate check; grid conditional on `isUnlocked` |
-| `NewsletterGateModal.tsx` | MODIFIED | `frontend/src/components/marketplace/NewsletterGateModal.tsx` | Remove × dismiss button and overlay-click dismiss |
-| `tracking.ts` | MODIFIED | `frontend/src/tracking.ts` | Import `useNltrStore`; include email if non-null |
-| `OverviewPage.tsx` | MODIFIED | `frontend/src/admin/pages/OverviewPage.tsx` | Add "See all →" links in `TopExpertsCard` and `TopQueriesCard` header rows |
-| `UserEvent` model | MODIFIED | `app/models.py` | Add `email TEXT` nullable column + index |
-| `EventRequest` Pydantic | MODIFIED | `app/routers/events.py` | Add optional `email` field |
-| `record_event()` | MODIFIED | `app/routers/events.py` | Persist `email` to `UserEvent` row |
-| `get_lead_timeline()` | MODIFIED | `app/routers/admin/leads.py` | Add direct email-keyed `UserEvent` query |
-| `main.py` lifespan | MODIFIED | `app/main.py` | Add idempotent `user_events.email` column migration |
-| `TopExpertsPage.tsx` | NEW | `frontend/src/admin/pages/TopExpertsPage.tsx` | Full ranked list of experts by click volume |
-| `TopSearchesPage.tsx` | NEW | `frontend/src/admin/pages/TopSearchesPage.tsx` | Full ranked list of search queries by frequency |
-| Admin route config | MODIFIED | `frontend/src/admin/AdminApp.tsx` or router | Register two new lazy-loaded routes |
+### NEW Components
+
+| Component | File | Responsibility |
+|-----------|------|---------------|
+| ErrorBoundary | `frontend/src/components/ErrorBoundary.tsx` | Catch uncaught React render errors, show fallback UI |
+| StructuredData | Inline in `frontend/index.html` or `MarketplacePage.tsx` | JSON-LD WebSite + Organization schema |
+
+### MODIFIED Components
+
+| Component | File | What Changes |
+|-----------|------|-------------|
+| `tracking.ts` | `frontend/src/tracking.ts` | Add in-memory queue + 3s flush timer + batch send |
+| `POST /api/events` | `app/routers/events.py` | Accept `EventRequest | list[EventRequest]` body |
+| `GET /api/explore` | `app/routers/explore.py` | Add in-memory TTL response cache keyed on query params |
+| `GET /api/health` | `app/routers/health.py` | Add DB probe + memory metrics |
+| `GET /api/admin/experts` | `app/routers/admin/experts.py` | Add `page` + `per_page` query params, return paginated slice |
+| `vite.config.ts` | `frontend/vite.config.ts` | Add motion/framer, react-virtuoso chunks |
+| `index.html` | `frontend/index.html` | Add `<meta name="description">`, canonical, JSON-LD |
+| `MarketplacePage.tsx` | `frontend/src/pages/MarketplacePage.tsx` | Wrap content in ErrorBoundary |
+| `RootLayout.tsx` | `frontend/src/layouts/RootLayout.tsx` | Ensure SpeedInsights present for Explorer |
+| `main.tsx` | `frontend/src/main.tsx` | Wrap router in top-level ErrorBoundary |
 
 ---
 
-## Data Flow
+## Feature Integration Details
 
-### Email-First Gate Flow
+### 1. Event Write Batching
 
+**Problem:** Each of the 5 tracking call sites fires an individual HTTP request. Under load (10k concurrent users each triggering filter changes, searches, card clicks), this creates a write storm against SQLite WAL. WAL handles concurrent readers well but serializes all writers — a flood of 202 responses hides backend queueing.
+
+**Current data flow:**
 ```
-App mounts (MarketplacePage)
-  → isUnlocked = useNltrStore.subscribed || legacy localStorage keys
-  → false → useState(!isUnlocked) = useState(true) → showGate = true immediately
-  → NewsletterGateModal renders as blocking overlay (no dismiss)
-  → ExpertGrid: {isUnlocked ? <ExpertGrid /> : null} — not rendered yet
-
-  → User types email + submits
-  → handleSubscribe(email):
-      1. useNltrStore.setSubscribed(email) → Zustand + localStorage persist
-      2. setShowGate(false)
-      3. fire-and-forget POST /api/newsletter/subscribe {email, session_id}
-  → isUnlocked becomes true → ExpertGrid renders
-
-  → Returning visitor (isUnlocked = true from localStorage):
-      → useState(!isUnlocked) = useState(false) → showGate never opens
-      → ExpertGrid renders immediately (no gate flash)
+User action → trackEvent() → void fetch() → POST /api/events → db.add() + db.commit()
 ```
 
-### Email-Enriched Event Tracking Flow
-
+**New data flow:**
 ```
-User action (card_click, search_query, filter_change) — post-gate
-  → trackEvent('search_query', { query_text, result_count, ... })
-      → email = useNltrStore.getState().email  → 'user@example.com'
-      → POST /api/events { session_id, event_type, payload, email: 'user@example.com' }
-          → UserEvent row: { session_id, event_type, payload, email: 'user@example.com' }
-
-User action — pre-gate (no email in nltrStore yet)
-  → trackEvent('search_query', { ... })
-      → email = useNltrStore.getState().email  → null
-      → POST /api/events { session_id, event_type, payload }  (no email field)
-          → UserEvent row: { session_id, event_type, payload, email: null }
-
-Admin views lead timeline for email X:
-  → GET /api/admin/lead-timeline/{email}
-      1. Conversations WHERE email = X          [chat flow, legacy]
-      2. LeadClicks WHERE email = X             [expert card clicks by identified users]
-      3. UserEvents WHERE session_id = subscriber.session_id  [pre-gate anon session]
-      4. UserEvents WHERE email = X             [NEW: post-gate events enriched with email]
-      → merge all four sources → sort newest-first → paginate
+User action → trackEvent() → push to localQueue[]
+                                    ↓
+                          (timer every 3s OR queue >= 10)
+                                    ↓
+                          POST /api/events  { events: [...] }
+                                    ↓
+                          backend: bulk INSERT in single transaction
 ```
 
-### "See All" Navigation Flow
+**Frontend change (tracking.ts):**
+```typescript
+// Module-level batch queue
+const _queue: EventRequest[] = []
+let _flushTimer: ReturnType<typeof setTimeout> | null = null
+
+function _scheduleFlush() {
+  if (_flushTimer) return
+  _flushTimer = setTimeout(() => {
+    _flush()
+    _flushTimer = null
+  }, 3000)
+}
+
+function _flush() {
+  if (_queue.length === 0) return
+  const batch = _queue.splice(0, _queue.length)
+  void fetch(`${API_BASE}/api/events`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    keepalive: true,
+    body: JSON.stringify({ events: batch }),
+  })
+}
+
+export function trackEvent(event_type: EventType, payload: TrackPayload = {}): void {
+  const session_id = getSessionId()
+  const email = getSubscriberEmail()
+  _queue.push({ session_id, event_type, payload, email })
+  if (_queue.length >= 10) _flush()
+  else _scheduleFlush()
+}
+```
+
+**Backend change (events.py):**
+```python
+class BatchEventRequest(BaseModel):
+    events: list[EventRequest] = Field(..., min_length=1, max_length=50)
+
+@router.post("/api/events", status_code=202)
+def record_event(body: BatchEventRequest | EventRequest, db: Session = Depends(get_db)):
+    items = body.events if isinstance(body, BatchEventRequest) else [body]
+    records = [
+        UserEvent(
+            session_id=item.session_id,
+            event_type=item.event_type,
+            payload=json.dumps(item.payload),
+            email=_validate_email(item.email),
+        )
+        for item in items
+    ]
+    db.add_all(records)
+    db.commit()
+    return {"status": "accepted", "count": len(records)}
+```
+
+**Integration notes:**
+- `keepalive: true` on batched fetch ensures events survive page navigation
+- Existing call sites unchanged — `trackEvent()` signature stays identical
+- Backend union type `BatchEventRequest | EventRequest` maintains backward compat for any direct callers
+- Flush on `beforeunload` window event needed for final batch: `window.addEventListener('beforeunload', _flush)`
+- Single transaction for batch = one WAL write cycle instead of N
+
+---
+
+### 2. Response Caching (/api/explore)
+
+**Problem:** `/api/explore` with `query=""` (initial load, no search) hits the same SQLAlchemy + FAISS + FTS5 pipeline repeatedly. With 10k users landing simultaneously, initial load causes N identical expensive queries. Each involves FAISS similarity search (CPU) + SQLite joins.
+
+**What to cache:** Empty-query (browse mode) results are safe to cache — they change only when experts are added/deleted. Filtered results (tags, rate) are query-param specific. Search queries (non-empty) embed via Google API — caching saves real money.
+
+**Current explore pipeline:**
+```
+GET /api/explore?query=&seed=12345
+  → run_in_executor → run_explore()
+    → SQLAlchemy rate/tag pre-filter
+    → FAISS IDSelectorBatch (if query)
+    → FTS5 BM25 fusion (if query)
+    → findability sort / seeded random
+  → ExploreResponse (JSON)
+```
+
+**Cache integration point (explore.py):**
+```python
+import hashlib, json, time
+
+# Module-level TTL cache: cache_key → (response_dict, timestamp)
+_explore_cache: dict[str, tuple[dict, float]] = {}
+_EXPLORE_CACHE_TTL = 30.0  # seconds — tunable
+
+def _make_cache_key(query, rate_min, rate_max, tags, industry_tags, limit, cursor, seed, usernames) -> str:
+    parts = f"{query}|{rate_min}|{rate_max}|{sorted(tags)}|{sorted(industry_tags)}|{limit}|{cursor}|{seed}|{sorted(usernames or [])}"
+    return hashlib.md5(parts.encode()).hexdigest()
+
+@router.get("/api/explore", response_model=ExploreResponse)
+async def explore(request: Request, db: Session = Depends(get_db), ...):
+    cache_key = _make_cache_key(query, rate_min, rate_max, tag_list, industry_tag_list, limit, cursor, seed, username_list)
+    now = time.time()
+    if cache_key in _explore_cache:
+        cached_response, ts = _explore_cache[cache_key]
+        if now - ts < _EXPLORE_CACHE_TTL:
+            return cached_response
+
+    result = await loop.run_in_executor(None, lambda: run_explore(...))
+    _explore_cache[cache_key] = (result, now)
+    # Evict stale entries to prevent unbounded growth
+    stale = [k for k, (_, ts) in _explore_cache.items() if now - ts > _EXPLORE_CACHE_TTL]
+    for k in stale:
+        del _explore_cache[k]
+    return result
+```
+
+**Cache invalidation:** Triggered on admin expert add/delete/import (same pattern as embedding cache). Add `_explore_cache.clear()` call in:
+- `app/routers/admin/experts.py`: `delete_expert()`, `delete_experts_bulk()`
+- `app/routers/admin/imports.py`: after CSV sync completes
+
+**Integration notes:**
+- Thread-safe: module dict reads/writes protected by GIL in single-process Railway deployment
+- Seeded random results (seed > 0): cache key includes seed, so per-user random orderings are cached separately — acceptable tradeoff (cache fills proportionally to distinct seeds)
+- Cache is per-process (single Railway instance) — no Redis needed at this scale
+- 30s TTL aligns with embedder cache TTL (already 60s) — experts change infrequently
+
+---
+
+### 3. Admin /experts Pagination
+
+**Problem:** `GET /api/admin/experts` returns all ~530 experts as a single JSON payload. Sentry has already flagged this as a large payload alert. At 530 experts with serialized tags, bios, and metadata, this is ~2-3 MB per admin page load.
+
+**Change (experts.py):**
+```python
+@router.get("/experts")
+def get_experts(
+    db: Session = Depends(get_db),
+    active_only: bool = Query(default=False),
+    page: int = Query(default=1, ge=1),
+    per_page: int = Query(default=50, ge=1, le=200),
+    search: str = Query(default=""),
+):
+    stmt = select(Expert).order_by(Expert.findability_score.asc().nulls_first())
+    if active_only:
+        stmt = stmt.where(Expert.is_active.is_(True))
+    if search:
+        stmt = stmt.where(
+            (Expert.first_name + " " + Expert.last_name).ilike(f"%{search}%")
+            | Expert.job_title.ilike(f"%{search}%")
+        )
+    total = db.scalar(select(func.count()).select_from(stmt.subquery()))
+    experts = db.scalars(stmt.offset((page - 1) * per_page).limit(per_page)).all()
+    return {
+        "experts": [_serialize_expert(e) for e in experts],
+        "total": total,
+        "page": page,
+        "per_page": per_page,
+        "pages": math.ceil(total / per_page),
+    }
+```
+
+**Frontend (ExpertsPage.tsx):** Already uses `AdminPagination` component — update `useAdminData` hook fetch to pass `page` and `per_page` params. ExpertsPage already has name search via the backend search param (v5.0 feature).
+
+---
+
+### 4. Bundle Optimization
+
+**Current manualChunks (vite.config.ts):**
+- `vendor-charts`: recharts
+- `vendor-table`: @tanstack/react-table
+- Admin: lazy-loaded (entirely separate chunks)
+
+**Missing from chunk splitting (public bundle):**
+- `motion` (v12, `motion/react`): Used for AnimatePresence in EmailEntryGate and ProfileGateModal — in public bundle, ~40-60 KB gzipped
+- `react-virtuoso`: Used by ExpertGrid and ExpertList — in public bundle, ~20-30 KB gzipped
+- `lucide-react`: Icon library tree-shakeable but can be split for clarity
+
+**Recommended additions to vite.config.ts:**
+```typescript
+manualChunks(id) {
+  if (id.includes('node_modules')) {
+    if (id.includes('recharts')) return 'vendor-charts'
+    if (id.includes('@tanstack/react-table')) return 'vendor-table'
+    if (id.includes('motion')) return 'vendor-motion'        // NEW
+    if (id.includes('react-virtuoso')) return 'vendor-virtuoso'  // NEW
+  }
+}
+```
+
+**Preload hint (index.html):** Add `<link rel="preconnect" href="https://www.googletagmanager.com">` and `<link rel="preconnect" href="https://www.clarity.ms">` to reduce DNS resolution time for analytics scripts on first load.
+
+**Expected gain:** Splitting motion and react-virtuoso reduces initial parse time for users who visit but don't trigger animations immediately. Browser parallelizes chunk loading. Marginal gain but zero cost.
+
+---
+
+### 5. Error Boundaries
+
+**Problem:** Zero React error boundaries in the public app. An uncaught error in ExpertCard, ExpertGrid, or MarketplacePage crashes the entire Explorer with a blank white screen. No user feedback.
+
+**Integration pattern (new ErrorBoundary.tsx):**
+```typescript
+// frontend/src/components/ErrorBoundary.tsx
+import { Component, type ReactNode } from 'react'
+
+interface Props {
+  children: ReactNode
+  fallback?: ReactNode
+}
+
+interface State { hasError: boolean }
+
+export class ErrorBoundary extends Component<Props, State> {
+  state: State = { hasError: false }
+
+  static getDerivedStateFromError(): State {
+    return { hasError: true }
+  }
+
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    // Sentry is already wired via instrument.ts — will auto-capture
+    console.error('ErrorBoundary caught:', error, info)
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback ?? (
+        <div className="flex flex-col items-center justify-center min-h-[200px] gap-3 p-8 text-center">
+          <p className="text-gray-600 font-medium">Something went wrong</p>
+          <button
+            onClick={() => this.setState({ hasError: false })}
+            className="text-sm px-4 py-2 rounded-lg bg-brand-purple text-white hover:bg-purple-700"
+          >
+            Try again
+          </button>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
+```
+
+**Placement strategy (2 boundaries, not many):**
+1. `main.tsx` — wraps entire `<RouterProvider>`: catches routing-level errors
+2. `MarketplacePage.tsx` — wraps the `<ExpertGrid>` / `<ExpertList>` area: isolates grid errors from header/filters
+
+**Why class component:** React error boundaries must be class components. Functional error boundary wrappers (react-error-boundary library) exist but add a dependency. Class component approach is 20 lines, no new dep.
+
+**Sentry integration:** `instrument.ts` is already imported in `main.tsx`. Sentry auto-captures errors caught by error boundaries via `componentDidCatch`. No additional wiring needed.
+
+---
+
+### 6. Health Check Enhancement
+
+**Current:** `GET /api/health` returns `{ "status": "ok", "index_size": <int> }` — only confirms FAISS loaded.
+
+**Gap:** No DB health probe. If SQLite WAL becomes locked or Railway volume is unhealthy, the FAISS check still passes but writes fail silently.
+
+**Enhanced health.py:**
+```python
+import time
+from fastapi import APIRouter, Request
+from sqlalchemy import text
+from app.database import SessionLocal
+
+router = APIRouter()
+
+@router.get("/api/health")
+async def health(request: Request) -> dict:
+    index = request.app.state.faiss_index
+
+    # DB probe — single SELECT 1
+    db_ok = False
+    db_latency_ms = None
+    try:
+        t0 = time.perf_counter()
+        with SessionLocal() as db:
+            db.execute(text("SELECT 1"))
+        db_latency_ms = round((time.perf_counter() - t0) * 1000, 1)
+        db_ok = True
+    except Exception:
+        db_ok = False
+
+    return {
+        "status": "ok" if db_ok else "degraded",
+        "index_size": index.ntotal,
+        "db": db_ok,
+        "db_latency_ms": db_latency_ms,
+    }
+```
+
+**Integration notes:**
+- Admin OverviewPage already calls `GET /api/health` for the "API health" indicator (verified in PROJECT.md). The `status` field shape is unchanged — `"ok"` or new `"degraded"` value. Frontend health display needs to handle `"degraded"` gracefully.
+- Railway health check URL: if configured at Railway dashboard, point to `/api/health`. The enhanced response is still valid JSON with `status: "ok"`.
+
+---
+
+### 7. SEO and Meta Tags
+
+**Current state (index.html):**
+- Title: static `<title>Tinrate — Find the right expert, instantly</title>`
+- OG tags: static, hardcoded Vercel preview URL for og:image
+- NO: `<meta name="description">` — major SEO gap (search engines use this for snippets)
+- NO: `<link rel="canonical">`
+- NO: JSON-LD structured data
+
+**Changes to index.html (no React components needed):**
+
+```html
+<!-- Add inside <head> -->
+
+<!-- Description (SEO snippet) -->
+<meta name="description" content="Find vetted experts for any business challenge. Browse 500+ professionals by domain, rate, and specialty. Instant matching, no guesswork." />
+
+<!-- Canonical (prevents duplicate content from query params) -->
+<link rel="canonical" href="https://tcs-three-sigma.vercel.app/" />
+
+<!-- JSON-LD structured data — WebSite + SearchAction -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "name": "Tinrate",
+  "url": "https://tcs-three-sigma.vercel.app/",
+  "description": "Find vetted experts for any business challenge.",
+  "potentialAction": {
+    "@type": "SearchAction",
+    "target": {
+      "@type": "EntryPoint",
+      "urlTemplate": "https://tcs-three-sigma.vercel.app/?q={search_term_string}"
+    },
+    "query-input": "required name=search_term_string"
+  }
+}
+</script>
+```
+
+**Why static in index.html (not React):** The app is a SPA with a single URL (`/`). No per-page dynamic meta needed. Static HTML is parsed by crawlers before React hydrates — guarantees SEO bots see the tags. React Helmet / @tanstack/react-head would be overkill for a single-route app.
+
+**Why `SearchAction` JSON-LD:** The Explorer's core value proposition is search. The `SearchAction` schema tells Google this site supports search and may enable a Sitelinks Search Box in Google results — directly relevant to a marketplace launch.
+
+---
+
+### 8. Analytics Hardening
+
+**Problem:** Vercel Speed Insights is only in `App.tsx` (the legacy chat page). `MarketplacePage.tsx` (the live Explorer at `/`) lacks it. GA4 `send_page_view:false` is correct but the `Analytics` component is only in `RootLayout.tsx` which wraps Explorer — admin routes bypass it. This is correct by design but needs verification.
+
+**Vercel Speed Insights gap:** Add `<SpeedInsights />` to `MarketplacePage.tsx`:
+```typescript
+// MarketplacePage.tsx — add at bottom of return, inside AuroraBackground
+import { SpeedInsights } from '@vercel/speed-insights/react'
+// ...
+<SpeedInsights />
+```
+
+Note: Speed Insights is idempotent — multiple instances on different routes don't double-count. But since `App.tsx` (chat) is no longer the primary route, the Explorer needs its own instance.
+
+**GA4 hardening — verify event firing under load:** The current `trackEvent()` sends to `/api/events` (custom in-DB). GA4 events are sent via `window.gtag()`. These are separate channels. With event batching, the custom events batch but GA4 events (if added) remain individual. No conflict.
+
+**Clarity admin exclusion (verify):** `index.html` IIFE checks `window.location.pathname.startsWith('/admin')` — runs at parse time, before React mounts. This is correct for hard navigations. For SPA navigations to `/admin`, Clarity is already loaded but the early-return prevents the tag initialization. SPA navigations do not re-run the IIFE. This means Clarity records admin sessions if user navigates SPA-style to `/admin` after loading `/`. Acceptable for v5.4 — no user PII concern, admin is authenticated.
+
+**Analytics event under load:** `trackEvent()` with batching means events may arrive 3 seconds late. This is acceptable for marketplace intelligence — the data is used for daily/weekly aggregates in the admin dashboard, not real-time.
+
+---
+
+## Data Flow: Event Batching
 
 ```
-OverviewPage (days=7)
-  → TopExpertsCard renders top-5 from /events/exposure
-  → "See all →" link → /admin/top-experts?days=7
-      → TopExpertsPage reads useSearchParams('days') → 7
-      → adminFetch('/events/exposure', { days: 7 })  → all rows (no limit)
-      → Full ranked list rendered with period toggle
+[User action]
+      ↓
+trackEvent('card_click', { expert_id, rank })
+      ↓
+_queue.push({ session_id, event_type, payload, email })
+      ↓
+  queue.length >= 10?                 3s timer fires?
+       YES ──────────────────────────────── YES
+              ↓
+          _flush()
+              ↓
+  POST /api/events { events: [...] }
+      keepalive: true
+              ↓
+  record_event(body: BatchEventRequest)
+              ↓
+  db.add_all([UserEvent, ...])
+  db.commit()  ← single WAL write
+              ↓
+  { "status": "accepted", "count": N }
+```
 
-  → TopQueriesCard renders top-5 from /analytics/top-queries?limit=5
-  → "See all →" link → /admin/top-searches?days=7
-      → TopSearchesPage reads useSearchParams('days') → 7
-      → adminFetch('/analytics/top-queries', { days: 7, limit: 100 })
-      → Full ranked list rendered with period toggle
+**Before-unload safety:**
+```typescript
+// tracking.ts — module-level registration
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeunload', _flush)
+}
 ```
 
 ---
 
-## Build Order
+## Data Flow: Response Cache
 
 ```
-1. Backend schema + events endpoint (user_events.email column + EventRequest update)
-   Why first: Frontend tracking.ts can start sending email immediately once backend
-   accepts the field. Schema change is additive (nullable column) — no breaking change.
-   Risk: zero — nullable column, backward-compatible endpoint change.
-   Files: models.py, main.py (migration), events.py
+GET /api/explore?query=&seed=12345&rate_max=5000
+      ↓
+_make_cache_key(params) → "a3f9b..."
+      ↓
+_explore_cache["a3f9b"] exists and age < 30s?
+  YES → return cached ExploreResponse
+  NO  →
+      ↓
+  run_in_executor → run_explore()
+      ↓
+  _explore_cache["a3f9b"] = (result, now)
+      ↓
+  return ExploreResponse
+```
 
-2. Frontend tracking.ts email enrichment
-   Why second: Depends on backend accepting email field (step 1).
-   Simple change: one import, one .getState() call, one spread in request body.
-   Immediate effect: all post-gate events from this point get email attribution.
-   Files: tracking.ts
-
-3. Frontend email-first gate (MarketplacePage + NewsletterGateModal)
-   Why third: Independent of tracking but builds on the same useNltrStore.
-   After this ships, email is captured earlier — tracking enrichment (step 2) now
-   applies from the very first page interaction, not just post "View Full Profile".
-   Files: MarketplacePage.tsx, NewsletterGateModal.tsx
-
-4. Backend lead-timeline email query update
-   Why fourth: Depends on step 1 (email column must exist). More useful after
-   steps 2-3 have populated some email-enriched events in user_events.
-   Files: app/routers/admin/leads.py
-
-5. Admin "See All" pages + OverviewPage links
-   Why fifth: Fully independent of steps 1-4. Can be built at any point.
-   Placed last to allow tracking/gate work to stabilize first.
-   Files: TopExpertsPage.tsx, TopSearchesPage.tsx, OverviewPage.tsx, AdminApp.tsx router
+**Cache invalidation trigger:**
+```
+admin POST /experts/delete-bulk
+      ↓
+delete_experts_bulk() soft-deletes
+      ↓
+_explore_cache.clear()   ← add this line
+      ↓
+FAISS rebuild in background thread
 ```
 
 ---
 
-## Existing Contracts That Must Not Break
+## Build Order (Recommended — 1 Day Constraint)
 
-| Contract | Used By | Risk if Changed |
-|----------|---------|-----------------|
-| `useNltrStore` localStorage key `'tinrate-newsletter-v1'` | All returning visitors | LOCKED — changing it forces re-gate for all existing subscribers |
-| `useNltrStore` shape `{ subscribed, email }` | MarketplacePage, ExpertCard, tracking.ts (after v5.2) | No shape change needed |
-| `POST /api/newsletter/subscribe` body `{email, source?, session_id?}` | MarketplacePage.handleSubscribe | No change needed |
-| `POST /api/events` body `{session_id, event_type, payload}` | tracking.ts (all call sites) | Adding optional `email` is backward-compatible; existing payloads without email still valid |
-| `TopExpertsCard` and `TopQueriesCard` `days` prop from `OverviewPage` | OverviewPage period toggle | Not changing; `days` still passed as prop; link encodes it in URL |
-| `lead_clicks` POST at `/api/admin/lead-clicks` | ExpertCard._fireLeadClick | No change — this remains the primary identified-click path |
-| `ExpertCard` `onViewProfile` prop signature | ExpertGrid, ExpertList | Prop still required; implementation in MarketplacePage changes (removes gate check) |
+Ordered by: dependencies first, then highest risk/impact, then polish.
 
----
+### Phase 1: Backend Foundation (no frontend impact, safe to ship first)
 
-## Anti-Patterns to Avoid
+1. **Admin /experts pagination** — isolated change to experts.py, fixes existing Sentry alert. No frontend change required yet (ExpertsPage still works with old response; pagination just adds more fields). Zero risk.
 
-### Anti-Pattern 1: Dual Gate Enforcement
+2. **Health check enhancement** — isolated change to health.py. Backward-compatible response shape. Admin OverviewPage handles new `"degraded"` status if frontend handles it gracefully.
 
-**What people do:** Leave the "View Full Profile" gate check inside `handleViewProfile` alongside the new mount-time gate.
-**Why it's wrong:** Users who bypass localStorage (private browsing) see the gate twice — once on mount and once on click. Returning visitors who somehow clear storage mid-session see inconsistent behavior.
-**Do this instead:** After the mount-time gate is confirmed working, remove the gate check from `handleViewProfile` entirely. The mount gate is the single enforcement point.
+3. **Event batching — backend** — change events.py to accept `BatchEventRequest | EventRequest` union. Fully backward-compatible: existing single-event format still works. Deploy this first so backend is ready before frontend sends batches.
 
-### Anti-Pattern 2: Email in payload JSON blob instead of a dedicated column
+### Phase 2: Frontend Performance (no new dependencies)
 
-**What people do:** Include `email` inside the `payload` dict in `user_events` rather than adding a column.
-**Why it's wrong:** Requires `json_extract(payload, '$.email')` in every admin query. No index possible. The `get_lead_timeline()` join becomes a full table scan.
-**Do this instead:** Dedicated `email TEXT` column with an index. One `ALTER TABLE` migration.
+4. **Event batching — frontend** — update tracking.ts queue + flush logic. Depends on Phase 1.3 (backend must accept batch). No UI changes. Add beforeunload handler.
 
-### Anti-Pattern 3: Calling useNltrStore as a React hook inside tracking.ts
+5. **Bundle chunk splitting** — update vite.config.ts with motion + react-virtuoso chunks. Zero behavior change, build-time only. Run `npm run build` locally to verify chunk sizes before shipping.
 
-**What people do:** Try to call `const { email } = useNltrStore()` inside `trackEvent()`.
-**Why it's wrong:** `tracking.ts` is a module function, not a React component. React hooks are illegal outside component render context — this throws "Invalid hook call".
-**Do this instead:** `useNltrStore.getState().email` — Zustand's static `.getState()` works in any context. The identical pattern already exists in `ExpertCard._fireLeadClick`.
+6. **Response caching** — update explore.py with TTL cache + cache invalidation in delete/import handlers. Depends on nothing. Pure backend, no frontend change.
 
-### Anti-Pattern 4: Hard-coding limit: 5 in "See All" pages
+### Phase 3: Resilience and SEO (visible user-facing changes)
 
-**What people do:** Copy `TopExpertsCard` fetch logic into `TopExpertsPage` but forget to remove the `.slice(0, 5)` or `limit: 5`.
-**Why it's wrong:** "See All" page shows the same 5 rows as the overview card — useless.
-**Do this instead:** `adminFetch('/events/exposure', { days })` with no limit param (endpoint returns all rows); `adminFetch('/analytics/top-queries', { days, limit: 100 })`.
+7. **Error boundaries** — new ErrorBoundary.tsx + wrap main.tsx and MarketplacePage.tsx grid area. Zero behavior change for happy path. Test by temporarily throwing in ExpertCard.
 
-### Anti-Pattern 5: Blocking ExpertGrid with a loading spinner instead of null
+8. **SEO meta tags + JSON-LD** — update index.html. Static, zero risk. Verify with browser DevTools (Elements > head) and Google's Rich Results Test.
 
-**What people do:** Show a full-page spinner while waiting for gate, then animate the grid in.
-**Why it's wrong:** Creates a confusing "loading" state when the page is actually waiting for user input, not data.
-**Do this instead:** Render `null` for the grid area while the gate modal is open. The gate modal IS the content. No spinner needed.
+### Phase 4: Analytics Hardening (final, lowest risk)
+
+9. **Speed Insights for Explorer** — add `<SpeedInsights />` to MarketplacePage.tsx.
+
+10. **Verify GA4 + Clarity exclusions** — no code change, manual QA. Confirm admin routes not tracked in GA4 real-time report. Confirm Clarity sessions only on Explorer.
 
 ---
 
 ## Scaling Considerations
 
-At current scale (hundreds of leads, single Railway instance), all three features are low-risk additions.
+| Concern | Current (530 experts, single Railway) | At 10k concurrent users |
+|---------|---------------------------------------|------------------------|
+| Event writes | 1 DB write per user action → write storm | Batching reduces to ~1/10 writes; WAL serializes writers |
+| /api/explore cold calls | Each request hits FAISS + SQLAlchemy | 30s TTL cache means ~2 requests/30s per unique param set |
+| Admin /experts payload | 2-3 MB full dump | Pagination to 50/page reduces to ~200 KB |
+| SQLite WAL | Handles concurrent reads well | Single writer limit; batching helps; true bottleneck is embedding API |
+| Google embed API | 60s TTL cache in embedder.py (PERF-01) | Cache hits prevent quota exhaustion for repeated queries |
+| FAISS in-memory | Loaded once at startup, read-only at query time | Thread-safe reads; asyncio.Lock only on rebuild |
 
-| Concern | At Current Scale | At Scale |
-|---------|-----------------|----------|
-| `user_events.email` index | Zero risk — nullable index on a modest table | Fine to 10M rows with this index |
-| `get_lead_timeline()` merge-sort | Fine — per-lead data volumes are small | Would need materialized table at 100k+ leads |
-| "See All" pages | Zero risk — same queries as overview cards, just without limit | Same as today |
-| Email-first gate UX | Negligible impact — one synchronous localStorage read | N/A — client-side only |
+**First bottleneck at 10k users:** The Google GenAI embedding API — quota limits before SQLite becomes a problem. Embedder TTL cache (60s) is already in place. Second bottleneck: SQLite WAL single-writer for user_events. Batching directly addresses this.
+
+**Not a bottleneck (verify before over-engineering):** FAISS search is nanosecond-range for 530 vectors. SQLAlchemy pre-filter on indexed columns (tags via expert_tags join table, rate via float column) is fast. The explore.py run_in_executor offloads to thread pool — FastAPI stays non-blocking.
+
+---
+
+## Anti-Patterns to Avoid
+
+### Anti-Pattern 1: Cache at the Zustand / React layer
+
+**What people do:** Cache `/api/explore` responses in Zustand store and skip the fetch if results exist.
+**Why it's wrong:** Filter state changes trigger refetches. Stale results appear when filters change. The server-side TTL cache handles identical param sets — let React re-fetch, backend serves from cache.
+**Do this instead:** Cache on the server (explore.py module-level dict). Frontend always fetches, backend absorbs duplicates.
+
+### Anti-Pattern 2: Many fine-grained error boundaries
+
+**What people do:** Wrap every component in its own ErrorBoundary.
+**Why it's wrong:** 15 boundaries is maintenance overhead. One at app level + one at feature level is sufficient for a single-page SPA.
+**Do this instead:** Two boundaries: router-level (main.tsx) + grid-level (MarketplacePage.tsx).
+
+### Anti-Pattern 3: Flush event queue on every user interaction
+
+**What people do:** Add a flush call after every important action ("card click is important, send immediately").
+**Why it's wrong:** Defeats the purpose of batching. Under load, immediate flushes = the problem we're solving.
+**Do this instead:** Trust the 10-event threshold + 3s timer. Only flush on beforeunload for navigation safety.
+
+### Anti-Pattern 4: Redis or external cache for this scale
+
+**What people do:** Reach for Redis for any caching requirement.
+**Why it's wrong:** Railway single instance, 530 experts, Python dict with TTL is 20 lines and zero ops. Redis adds network hop, Railway add-on cost, and connection pooling complexity.
+**Do this instead:** Module-level Python dict with TTL eviction — same pattern as embedder.py (already proven in production).
+
+### Anti-Pattern 5: Dynamic meta tags via React for a single-route SPA
+
+**What people do:** Add react-helmet or @tanstack/react-head for SEO meta management.
+**Why it's wrong:** The app has one public route (`/`). Dynamic meta is for multi-route apps where each page has different titles/descriptions. A dependency for one static `<meta>` tag is waste.
+**Do this instead:** Edit index.html directly. Static, zero JS, parsed by crawlers before React hydrates.
+
+---
+
+## Integration Points
+
+### External Services
+
+| Service | Integration Point | Notes |
+|---------|------------------|-------|
+| GA4 | `index.html` IIFE + `analytics.tsx` | No change in v5.4; verify admin exclusion in QA |
+| Microsoft Clarity | `index.html` IIFE | No change; admin exclusion via pathname check at init |
+| Vercel Speed Insights | `MarketplacePage.tsx` (add) + `App.tsx` (keep) | Add to Explorer; existing chat instance unchanged |
+| Sentry | `instrument.ts` + `vite.config.ts` | ErrorBoundary `componentDidCatch` auto-reports via existing Sentry setup |
+| Google GenAI | `app/services/embedder.py` | No change; 60s TTL cache already in place |
+| Intercom | `main.tsx` IntercomProvider + `IntercomIdentity.tsx` | No change in v5.4 |
+| Railway health check | `/api/health` (enhanced) | Point Railway's health check URL here if not already configured |
+
+### Internal Boundaries
+
+| Boundary | Communication | Change |
+|----------|--------------|--------|
+| tracking.ts → /api/events | HTTP POST batch | Queue + timer; backend union type |
+| explore.py → _explore_cache | Module dict | TTL cache + invalidation hooks |
+| admin/experts.py → ExpertsPage | HTTP GET paginated | page/per_page params + pagination response shape |
+| MarketplacePage → ErrorBoundary | React children | Wrap grid area only |
+| main.tsx → ErrorBoundary | React children | Wrap RouterProvider |
+| health.py → SessionLocal | Direct DB probe | SELECT 1 with latency timing |
 
 ---
 
 ## Sources
 
-- Direct codebase inspection at `/Users/sebastianhamers/Documents/TCS` (v5.1)
-- `app/models.py`, `app/routers/events.py`, `app/routers/newsletter.py`
-- `app/routers/admin/leads.py`, `app/routers/admin/analytics.py`, `app/routers/admin/events.py`, `app/routers/admin/__init__.py`
-- `frontend/src/tracking.ts`, `frontend/src/store/nltrStore.ts`, `frontend/src/hooks/useEmailGate.ts`
-- `frontend/src/pages/MarketplacePage.tsx`, `frontend/src/components/marketplace/ExpertCard.tsx`
-- `frontend/src/components/marketplace/NewsletterGateModal.tsx`, `frontend/src/components/marketplace/ProfileGateModal.tsx`
-- `frontend/src/admin/pages/OverviewPage.tsx`, `frontend/src/admin/hooks/useAdminData.ts`
-- `frontend/src/admin/pages/LeadsPage.tsx`
-- Confidence: HIGH — all conclusions drawn from actual running v5.1 code
+- Direct codebase inspection: `app/routers/events.py`, `app/routers/health.py`, `app/routers/explore.py`, `app/routers/admin/experts.py`, `app/services/embedder.py`, `frontend/src/tracking.ts`, `frontend/src/main.tsx`, `frontend/src/pages/MarketplacePage.tsx`, `frontend/src/layouts/RootLayout.tsx`, `frontend/vite.config.ts`, `frontend/index.html`, `frontend/package.json` (HIGH confidence — ground truth)
+- `.planning/PROJECT.md` — feature history and key decisions (HIGH confidence)
+- SQLite WAL documentation — single-writer behavior at scale (MEDIUM confidence — known constraint)
+- Schema.org WebSite + SearchAction JSON-LD spec — verified pattern for marketplace search (MEDIUM confidence)
 
 ---
 
-*Architecture research for: v5.2 Email-First Gate, Admin See-All, Email-Based Tracking*
-*Researched: 2026-03-04*
+*Architecture research for: v5.4 Launch Hardening — Expert Marketplace SPA*
+*Researched: 2026-03-05*

@@ -1,313 +1,229 @@
 # Feature Research
 
-**Domain:** Expert marketplace — email-first gate, admin "See All" expansion, email-based tracking
-**Milestone:** v5.2 Email-First Gate & Admin See-All
-**Researched:** 2026-03-04
-**Confidence:** HIGH overall — codebase fully inspected; patterns verified against current sources
+**Domain:** Launch hardening — FastAPI + React + SQLite marketplace at 10k concurrent users
+**Milestone:** v5.4 Launch Hardening
+**Researched:** 2026-03-05
+**Confidence:** HIGH (all categories grounded in official docs + verified sources)
 
 ---
 
 ## Context: What Already Exists (do NOT re-implement)
 
-This is an additive milestone on a shipped v5.1 product. All research below is scoped to the
-three new feature areas only.
+This is a subsequent milestone on a fully shipped v5.3 product. The following are already present
+and explicitly out of scope for this milestone:
 
 | Existing Baseline | Status |
 |-------------------|--------|
-| `useEmailGate` hook — `localStorage` key `tcs_gate_email`, lazy initializer, fire-and-forget backend call | Live — reuse, do NOT rewrite |
-| `ProfileGateModal` — AnimatePresence modal wrapping `EmailGate` form, triggered on "View Full Profile" click | Live — keep as fallback for direct-link users who bypass page entry |
-| `POST /api/email-capture` — idempotent SQLite upsert, Loops sync, returns `{status: "ok"}` | Live — no changes needed |
-| `email_leads` table — `id`, `email` (unique), `created_at` | Live — the identity anchor for v5.2 |
-| `user_events` table — `session_id` (anonymous), `event_type`, `payload`, `created_at` | Live — will gain `email` column for direct attribution |
-| `lead_clicks` table — `email`, `expert_username`, `search_query`, `created_at` | Live — already email-keyed; model for new tracking approach |
-| `OverviewPage` — `TopExpertsCard` (shows 5), `TopQueriesCard` (shows 5), period toggle | Live — add "See All" links/buttons to both cards |
-| Admin `TopExpertsCard` fetches `GET /events/exposure?days=X` (returns full list, sliced to 5 on frontend) | Live — data already available; only the UI cap needs changing |
-| Admin `TopQueriesCard` fetches `GET /analytics/top-queries?days=X&limit=5` | Live — `limit` param exists; change to `limit=50` or remove cap |
-| `trackEvent()` module function — fire-and-forget `POST /api/events` with `session_id` | Live — extend to optionally include `email` |
-| Lead journey timeline — expandable rows in `LeadsPage` with chronological search/click history | Live — will benefit from richer email-attributed data |
+| GA4 (G-0T526W3E1Z) + Microsoft Clarity (vph5o95n6c) + Vercel Speed Insights | Live — do not re-add |
+| SQLite WAL mode + 5000ms `busy_timeout` | Live since v4.0 |
+| React.lazy + Suspense on all 11 admin routes | Live since v4.0 |
+| Embedding cache (60s TTL), settings/feedback cache (30s TTL) | Live since v5.0 |
+| ExpertTag join table (55x speedup over LIKE on JSON) | Live since v5.0 |
+| API error state with retry button on Explorer | Live since v4.0 |
+| bcrypt + JWT admin auth + slowapi rate limiting (3/min) | Live since v4.0 |
+| FTS5 safety nets (`_safe_fts_query()` + try/except) | Live since v3.1 |
+| Photo proxy 404 (not 502) on upstream failure | Live since v3.1 |
+| `trackEvent()` with `keepalive: true` fire-and-forget | Live since v2.3 |
+| OG meta tags (added in v5.0 for social sharing) | Live — verify completeness |
 
 ---
 
 ## Feature Landscape
 
-### Table Stakes (Users Expect These)
+### Table Stakes (Platform and Launch Require These)
 
-These are the behaviors users and admins expect without being told. Missing them = confusion or
-data gaps that erode trust in the product.
+Features where missing = broken experience, invisible product, or platform instability at launch.
 
 | Feature | Why Expected | Complexity | Notes |
 |---------|--------------|------------|-------|
-| Email gate fires on page entry | Any gated marketplace gates before browsing. Users expect to identify themselves upfront — not be surprised mid-session. Gating on "View Full Profile" means the admin captures leads only after users browse, leaving early-exit visitors untracked. | LOW | New `EntryGateModal` component; shown when `!isUnlocked` on first render of `ExplorerPage`. Reuses existing `EmailGate` form + `useEmailGate` hook. Returning visitors bypass instantly via `localStorage` check (no flash). |
-| "See All" on Top Experts card | Admin cards that cap a ranked list at 5 must link to the full list. Without it, the admin cannot act on data beyond rank 5 — the card is informational only, not actionable. | LOW | Inline expansion toggle (show all rows in-card) OR a `Link` to a dedicated full-list view. The data already comes back as a full list from the API; the cap is a frontend `.slice(0, 5)`. |
-| "See All" on Top Searches card | Same rationale as Top Experts. The `limit=5` passed to `GET /analytics/top-queries` must be increased or removed to expose the full ranked list. | LOW | Same pattern as Top Experts — either expand in-card or link to full list. Backend `limit` param already supports arbitrary values. |
-| Email identity on tracked events | When a user has submitted their email, all subsequent `user_events` rows should carry that email for direct attribution. Without it, the admin cannot correlate "who searched for X" with a known lead — the session_id is anonymous and not reliably linkable to email. | MEDIUM | Add `email: string \| null` to `EventRequest` Pydantic model and `UserEvent` table. Frontend passes `useEmailGate().email` at call sites in `trackEvent()`. SQLite `ALTER TABLE` migration at startup. |
+| React error boundaries on Explorer + ExpertGrid | Blank page on any JS render error causes ~80% user abandonment; currently there is no catch between a component throw and the white screen | LOW | `react-error-boundary` wraps `ExplorerPage` and `ExpertGrid`; fallback shows user-friendly "Something went wrong — Reload" CTA; admin routes already have one Suspense boundary but no error boundary |
+| `/api/health` endpoint (Railway restart policy) | Railway health check needs a dedicated endpoint to detect process hangs and trigger restarts; uptime monitors (UptimeRobot, Betterstack) and the admin OverviewPage health widget both need it; currently absent | LOW | Returns `{"status": "ok", "db": "ok", "experts": N}`; performs SQLite read + row count; no auth; 200ms timeout on DB check to avoid blocking |
+| `<title>` + `<meta description>` per route | Every route currently inherits a bare `<title>Tinrate</title>`; GA4 page titles all read "Tinrate"; social share previews show no description | LOW | Install `react-helmet-async` once; Explorer gets primary tags; admin gets `<meta name="robots" content="noindex">` to prevent crawler indexing; one-time setup covering all routes |
+| Open Graph tags for social sharing | Launch = Twitter/LinkedIn/WhatsApp shares; without `og:title`, `og:description`, `og:image`, the unfurled card is blank or shows raw URL | LOW | Static `og:image` (1200x630 PNG) served from Vercel `public/`; `og:url` reflects canonical `/`; `og:type: website`; these depend on `react-helmet-async` being installed |
+| Admin experts endpoint pagination | PROJECT.md explicitly calls out a Sentry large payload warning on the experts endpoint; sending all experts in one JSON response will blow up at 1k+ experts and already causes noise | LOW | Add `?page=` + `?limit=` query params to `GET /api/admin/experts`; default page size 50; `AdminPagination` component already exists from v5.0 and can be reused |
+| `Cache-Control` on photo proxy endpoint | Photos are re-fetched on every component mount without cache headers; 10k users = 10k redundant upstream calls per session to the external photo host | LOW | Add `Cache-Control: public, max-age=86400` on `/api/experts/{id}/photo`; the proxy already fetches from upstream and has a 24h in-process cache — the HTTP header just tells the browser and Vercel CDN to cache it too |
+| `robots.txt` + `sitemap.xml` as static files | Without `robots.txt`, crawlers may index `/admin` auth pages; without `sitemap.xml`, the Explorer page is not discoverable; both are expected baseline for any production web property | LOW | `robots.txt`: `Disallow: /admin`; `sitemap.xml`: lists `/` with lastmod; both served as static files from Vercel `public/` directory; no build changes needed |
+| JSON-LD structured data for search engines | Pure SPA with no SSR is invisible to search crawlers; JSON-LD is the lightest fix that gives search engines context about the product without migrating to Next.js | LOW | `WebSite` + `ItemList` schema blocks injected via `<script type="application/ld+json">` in `index.html` `<head>`; static content — no dynamic injection; covers the launch SEO baseline |
 
-### Differentiators (Competitive Advantage)
+### Differentiators (Measurably Better Reliability at Launch)
 
-These are the features that make v5.2 meaningfully better, not just technically complete.
+Features that separate a hardened launch from a fragile one. All are practical within a 1-day window.
 
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| Dismissible entry gate with hard skip option | A mandatory no-dismiss gate converts better for serious users but frustrates casual visitors who want to browse before committing. An optional "Skip for now — gate resurfaces on 'View Full Profile'" path reduces bounce while still capturing high-intent leads. Research: fullscreen welcome gates with an alternative exit path outperform mandatory-only gates (OptinMonster, 2025). | LOW | Add a "Skip for now" link below the CTA. On skip: do not set `localStorage`; gate re-triggers on "View Full Profile" click (existing behavior). This is a single `onDismiss` prop already present on `ProfileGateModal` — wire the same behavior to the entry modal. |
-| In-card expansion (not redirect) for "See All" | Navigating away from Overview to see rank 6–50 breaks the admin's mental context (they are reviewing the period snapshot). Expanding in-card keeps the period toggle active and the full dashboard visible. Standard pattern in SaaS admin dashboards (Vercel, Linear, Stripe): overflow items hidden behind an expand toggle, not a page navigation. | LOW | `useState<boolean>(expanded)` in `TopExpertsCard` and `TopQueriesCard`; toggle renders full list vs `.slice(0, 5)`. "Show fewer" collapses back. No new route needed. |
-| Email-attributed search tracking for lead timeline | The existing lead journey timeline in `LeadsPage` shows search/click history, but only when a lead's email was already on the `Conversation` table (chat flow) or `lead_clicks` table. Explorer search queries tracked via `user_events` are currently anonymous. Email-attributed `search_query` events would extend the timeline to Explorer sessions, making it a complete picture of what each lead searched for. | MEDIUM | Requires email column on `user_events` + passing email in `trackEvent()` at the `search_query` call site in `useExplore.ts`. The timeline query in the admin then joins on `user_events.email = lead.email` for `search_query` events. |
+| Backend event write queue (asyncio.Queue) | `/api/events` is fire-and-forget on the frontend but currently a synchronous SQLite write on the backend; at 10k concurrent users, card clicks, filter changes, and search events create write contention on SQLite's single-writer; batching 50 events every 2 seconds reduces write transactions by ~95% while preserving all data | MEDIUM | `asyncio.Queue` in FastAPI `lifespan` context (already used for FAISS init); background consumer flushes with `executemany`; no external dependency; Railway single instance means no cross-worker coordination needed; confirm memory safe at queue max=1000 |
+| Uvicorn 2-worker tuning | Default Railway deploy runs 1 Uvicorn worker; Google GenAI embedding calls (~200ms) block the event loop per request; 2 workers doubles effective concurrency for I/O-bound traffic at minimal memory cost | LOW | Set `--workers 2` in Procfile or Railway start command; validate Railway plan memory limit first (512MB baseline for Hobby plan); with 2 workers, each has its own asyncio.Queue (acceptable — events are partitioned, not lost) |
+| `<link rel="preconnect">` to Railway API origin | Browser opens a fresh TCP + TLS handshake on the first API call; for users on cold sessions this adds ~150–250ms before any expert data loads; preconnect eliminates this from the critical path | LOW | Single `<link rel="preconnect" href="https://[railway-app].up.railway.app">` in `index.html`; zero runtime cost; no build changes |
+| Vite bundle analysis + targeted chunk split | Current public bundle is ~711 kB (already halved from 1.26 MB in v4.0); production target is <500 kB gzipped initial load; `rollup-plugin-visualizer` identifies the largest chunks before deciding what to split | LOW | Run `npx rollup-plugin-visualizer` or add to `vite.config.ts`; assess Framer Motion (~30 kB gzipped), Recharts (admin only, already lazy-loaded), and lucide-react (tree-shaken); apply `build.rollupOptions.output.manualChunks` only where analysis shows clear wins |
+| GA4 Beacon API + `transport_type: 'beacon'` | In 2026, client-side-only GA4 loses 20–40% of events to ad blockers and browser restrictions; current `trackEvent()` already uses `keepalive: true` (correct for custom events); GA4 gtag itself should use Beacon transport to minimize data loss | LOW | Add `transport_type: 'beacon'` to `gtag('config', ...)` in the GA4 initialization; verify that `navigator.sendBeacon` is used for hits; this is a single config line change |
 
-### Anti-Features (Commonly Requested, Often Problematic)
+### Anti-Features (Tempting But Wrong for This 1-Day Window)
 
 | Feature | Why Requested | Why Problematic | Alternative |
 |---------|---------------|-----------------|-------------|
-| Mandatory non-dismissible entry gate | "Capture email from every visitor, no exceptions" | Blocks all casual traffic, including shareable links passed around in sales contexts. A prospect receiving a link from a Tinrate rep who cannot browse without emailing is a friction point — not a conversion. Also: Google penalizes intrusive interstitials that block content on mobile (Core Web Vitals). | Dismissible gate with "Skip for now" link. Gate resurfaces on "View Full Profile" click (existing behavior). High-intent users email; casual browsers proceed. |
-| Full-page entry gate (replaces router render) | "Prevent any rendering before email" | Breaks shareable filtered URLs — the URL params are loaded by the store but the grid never renders. Also prevents SEO indexing of the explorer surface (no content visible to crawlers). | Overlay modal on top of rendered content. Content is visible but blurred/pointer-events:none while modal is open, or simply obscured by modal backdrop. Store and filters load normally beneath. |
-| Tie ALL existing `user_events` session_ids to emails retrospectively | "We want to know who did what before v5.2" | `user_events.session_id` is a random client-generated string with no persistent identity. There is no reliable way to correlate existing anonymous events to emails — the join does not exist in the data model. Any retrospective attribution would be guesswork. | Accept the data gap. Email attribution starts from v5.2 forward. Document the cutoff date in admin. |
-| Replace `session_id` with email as the primary event identifier | "Email is more useful than session_id for analytics" | `session_id` serves anonymous pre-gate tracking (before the user emails). Removing it would create a gap where filter changes and card clicks before email submission are unrecorded. | Keep `session_id` on `UserEvent`. Add `email` as a nullable column that is populated once the gate is submitted. Both fields coexist — one for anonymous sessions, one for identified sessions. |
-| Dedicated "See All" page routes (`/admin/top-experts`, `/admin/top-searches`) | "Cleaner UX to have a dedicated page" | Adds 2 new routes, 2 new components, 2 new sidebar entries (or hidden routes), and breaks the period toggle context (new page must re-implement the same toggle). Implementation cost is 5x the in-card expansion approach with no user-facing benefit. | In-card expansion toggle. "Show all / Show fewer" within the existing card. Data already available from the API. |
+| Migrate SQLite to PostgreSQL | SQLite single-writer is a genuine concern at 10k concurrent write events | Railway volume migration has real data loss risk; full milestone scope, not 1-day work; WAL mode + event batching extends SQLite viability comfortably through this launch | Event write queue batching reduces SQLite write contention by ~95%; defer Postgres migration to v6.0 if write latency becomes measurable in Railway metrics |
+| Server-side rendering (Next.js migration) | SSR fixes SPA SEO fundamentally and improves Largest Contentful Paint | Rewriting React app in Next.js takes weeks; all GA4, Clarity, and Intercom integrations need re-wiring; out of scope for 1-day window | JSON-LD + react-helmet-async delivers ~80% of the SEO benefit at ~5% of the effort; revisit SSR migration if SEO becomes a measurable growth channel |
+| Redis caching layer | Eliminates repeated DB reads; standard recommendation at 10k+ users | Adds a Railway service ($7+/mo); adds infrastructure complexity; existing 60s embedding cache and 30s settings TTL already cover the hot read paths | Add Redis in v6.0 if DB query latency appears in Railway monitoring; not needed for the primarily read-heavy Explorer traffic |
+| External task queue (Celery + RabbitMQ) | Fully decouples event writes from the request lifecycle; industry standard for event ingestion at scale | Massive ops complexity for a single Railway instance; overkill when one process handles all traffic; asyncio.Queue achieves the same write-batching result in-process with zero infrastructure | In-process asyncio.Queue covers the launch window; revisit if event volume exceeds 100k events/day |
+| Sentry full integration | Gives production error visibility; commonly added at launch | PROJECT.md notes Sentry is already generating noise from the large experts payload; adding Sentry without fixing the root cause (large payload) amplifies the noise | Fix admin experts pagination (table stakes) first, which eliminates the known Sentry noise source; add Sentry in v6.0 once the signal-to-noise ratio is acceptable |
+| Prerender.io / React Snap pre-rendering | Makes SPA content visible to crawlers via pre-rendered HTML snapshots | Adds a separate CI step; pre-rendered snapshots can diverge from live content; deployment complexity; maintenance burden | JSON-LD structured data + descriptive meta tags satisfy the launch SEO baseline without pre-rendering infrastructure |
+| HTTP/2 push or server-sent events | Further reduces API latency via multiplexed streams | Railway does not expose HTTP/2 configuration at the app layer; Uvicorn + Railway handles transport transparently; the gains are marginal for an Explorer with pagination | `<link rel="preconnect">` achieves equivalent first-load gains at zero complexity |
+| Rate limiting on public Explorer API | Prevents abuse of `/api/explore` and `/api/events` | Adds false-positive risk for legitimate users sharing IP (NAT, offices, Intercom); slowapi is already on `/api/admin/auth`; Explorer is read-heavy and stateless | Monitor Railway CPU/memory during launch; add rate limiting reactively if abuse is observed rather than preemptively blocking legitimate traffic |
 
 ---
 
 ## Feature Dependencies
 
 ```
-[Entry gate modal on page load]
-    └──reuses──> [useEmailGate hook] (already built, STORAGE_KEY unchanged)
-    └──reuses──> [EmailGate form component] (already built)
-    └──reuses──> [AnimatePresence from motion/react] (already in codebase)
-    └──renders over──> [ExplorerPage] (page loads normally beneath)
-    └──bypasses on──> [localStorage STORAGE_KEY present] (returning visitors)
-    └──skip path────> [onDismiss: no localStorage write → gate resurfaces on "View Full Profile"]
-    └──note: ProfileGateModal stays in codebase for users who somehow reach the page
-             while unlocked=false (e.g. a direct link after clearing storage)
+[react-helmet-async]
+    required-by --> [<title> + <meta description> per route]
+    required-by --> [Open Graph tags]
+    required-by --> [<meta name="robots" noindex> on /admin]
+    install once, use in three places
 
-["See All" expansion on TopExpertsCard]
-    └──requires no API change──> [GET /events/exposure already returns full list]
-    └──frontend change only──> [remove .slice(0, 5) behind useState(expanded) toggle]
-    └──independent of all other v5.2 features]
+[Open Graph tags]
+    requires --> [react-helmet-async]
+    requires --> [Static OG image (1200x630) in Vercel public/]
+    enhances --> [robots.txt + sitemap.xml] (crawlers find the page, social shares convert)
 
-["See All" expansion on TopQueriesCard]
-    └──requires minor API change──> [GET /analytics/top-queries?limit=5 → remove limit cap or increase to 50]
-    └──frontend change──> [remove .slice behind expanded toggle]
-    └──independent of all other v5.2 features]
+[Admin experts pagination]
+    requires --> [Backend page/limit query params on GET /api/admin/experts]
+    requires --> [AdminPagination component (already exists in v5.0)]
+    resolves --> [Sentry large payload warning]
+    independent of all other v5.4 features
 
-[Email-attributed event tracking]
-    └──requires──> [email column on user_events table (SQLite ALTER TABLE nullable)]
-    └──requires──> [email field on EventRequest Pydantic model (optional, default null)]
-    └──requires──> [trackEvent() accepts optional email param]
-    └──requires──> [call sites pass useEmailGate().email — ExpertCard, useExplore, RateSlider, TagMultiSelect]
-    └──enhances──> [lead journey timeline in LeadsPage — can now include Explorer search events]
-    └──note: no change to session_id — it stays as the anonymous identifier pre-gate]
-    └──note: email column is nullable — events before gate submission have email=null]
+[/api/health endpoint]
+    requires --> [SQLite read check + row count query]
+    independent of all other v5.4 features
+    enables --> Railway health check restart policy
 
-[Entry gate modal] ──enables──> [Email-attributed event tracking]
-    (email is set in localStorage/state after gate submit; subsequent events carry it)
+[Backend event write queue]
+    requires --> [asyncio.Queue in FastAPI lifespan context]
+    enhances --> [SQLite WAL mode (already present)]
+    note: with 2 Uvicorn workers, each worker has its own queue instance;
+          this is acceptable — events are batched per-worker, not globally
+
+[Uvicorn 2-worker tuning]
+    requires --> [Railway memory limit verified before deploy]
+    affects --> [Backend event write queue] (queue is per-worker, not shared)
+
+[Vite bundle analysis]
+    independent of all backend features
+    may --> [manualChunks config in vite.config.ts] if analysis shows clear wins
+    assessment-first: run visualizer before deciding what to split
+
+[<link rel="preconnect">]
+    independent of all features
+    single HTML tag in index.html — ship with meta tags phase
+
+[Cache-Control on photo proxy]
+    independent of all features
+    single header on existing FastAPI endpoint
 ```
 
 ### Dependency Notes
 
-- **Entry gate is independent of email attribution:** The gate can ship and capture emails
-  without the events table change. Attribution is additive and ships in the same milestone.
-- **"See All" is fully independent:** No backend changes for TopExpertsCard; one query param
-  change for TopQueriesCard. These are low-risk, ship first.
-- **Email attribution requires a startup migration:** `ALTER TABLE user_events ADD COLUMN email
-  TEXT NULL` is idempotent and safe on SQLite. Match the existing startup migration pattern
-  (`idempotent_startup_migration`).
-- **No breaking change to existing `trackEvent()` callers:** Email is an optional param with
-  default `null`. All existing call sites work without modification; only the 4-5 relevant
-  call sites need updating.
-- **`lead_clicks` table already uses email as key:** The pattern is proven in the codebase.
-  `user_events` adopts the same identity model for email-known sessions.
+- **react-helmet-async is a shared dependency.** Install once; apply to title, meta description, OG tags, and admin noindex. All four features block on this single install.
+- **Event write queue requires lifespan context.** FastAPI's `lifespan` async context manager is already used for FAISS initialization — extend the same block to start the asyncio.Queue consumer. No new pattern needed.
+- **Admin experts pagination reuses existing infrastructure.** `AdminPagination` component from v5.0 handles page/limit UI. Only the backend endpoint needs query param support added.
+- **OG image is a new static asset.** Must be created (1200x630 PNG) and committed to `frontend/public/` before the OG tags can resolve. Block social sharing tags on this asset being available.
+- **Uvicorn worker count affects queue architecture.** With 2 workers, each worker maintains its own asyncio.Queue. Events are not shared across workers. This is fine — each worker flushes its own batch every 2 seconds. No data loss risk.
 
 ---
 
 ## MVP Definition
 
-### Launch With (v5.2 — the three agreed features)
+### Launch With (must ship before marketing launch)
 
-- [ ] "See All" expansion on TopExpertsCard — independent, lowest risk, ship first
-- [ ] "See All" expansion on TopQueriesCard — same pattern, ship together
-- [ ] Entry gate modal on page load — reuses existing components, returning visitor bypass built in
-- [ ] Email attribution on `user_events` — `email` column + optional param in `trackEvent()`
+These are non-negotiable for a 10k-user launch. Missing any one = visible failure mode.
 
-### Add After Validation (v5.x)
+- [ ] React error boundaries on ExplorerPage + ExpertGrid — blank screen on JS error loses users permanently at launch
+- [ ] `/api/health` endpoint — Railway needs this for restart policy; without it, process hangs go undetected
+- [ ] `<title>` + `<meta description>` per route via react-helmet-async — every social share from the launch goes out with these
+- [ ] Open Graph tags (og:title, og:description, og:image, og:url) — launch = Twitter/LinkedIn shares; blank unfurl cards hurt credibility
+- [ ] `robots.txt` (disallow /admin) + `sitemap.xml` (list /) — crawler hygiene before launch traffic generates backlinks
+- [ ] JSON-LD structured data (WebSite + ItemList) — baseline for search engine discoverability
+- [ ] Admin experts endpoint pagination — fixes known Sentry payload issue before expert pool grows further
+- [ ] `Cache-Control: public, max-age=86400` on photo proxy — prevents upstream hammering at launch scale
 
-- [ ] Email-attributed search events in lead journey timeline — requires joining
-  `user_events WHERE event_type='search_query' AND email=lead.email`; ship once v5.2
-  attribution data has accumulated (a few days of production data confirms the column
-  is being populated correctly)
-- [ ] "Show fewer" collapse on expanded cards — QoL; ship with the expansion feature or
-  immediately after if the expanded list feels overwhelming
+### Add Within Same Milestone (after P1 items verified)
 
-### Future Consideration (v6+)
+- [ ] Backend event write queue (asyncio.Queue) — reduces SQLite write contention; validate P1 deploy first, then ship
+- [ ] Uvicorn 2-worker tuning — verify Railway memory headroom; ship with event queue
+- [ ] `<link rel="preconnect">` to Railway API origin — 1 HTML tag; ship with meta tags phase
+- [ ] Vite bundle analysis + targeted chunk split — run visualizer; apply only if clear wins exist
+- [ ] GA4 `transport_type: 'beacon'` — single config line; ship with any frontend deploy
 
-- [ ] Rate-limit gate re-triggers for skip users (e.g. show entry gate again after 3 sessions
-  without submitting) — requires session counting, not in scope
-- [ ] Entry gate A/B test (mandatory vs dismissible) — requires a feature flag system
+### Future Consideration (v6.0+)
+
+- [ ] PostgreSQL migration — when SQLite write latency becomes measurable in Railway metrics under real load
+- [ ] Redis caching layer — when DB query times appear as a bottleneck after v5.4 observability data
+- [ ] Sentry full integration — after known large-payload noise source is resolved by pagination fix
+- [ ] SSR / Next.js migration — if SEO becomes a measurable growth channel, not just launch hygiene
+- [ ] CDN for API responses (Cloudflare Workers) — if Railway origin latency becomes a bottleneck
 
 ---
 
 ## Feature Prioritization Matrix
 
-| Feature | User/Admin Value | Implementation Cost | Priority |
-|---------|-----------------|---------------------|----------|
-| "See All" — TopExpertsCard | HIGH (admin can act on data beyond rank 5) | LOW (frontend only) | P1 |
-| "See All" — TopQueriesCard | HIGH (same rationale) | LOW (one query param + frontend toggle) | P1 |
-| Entry gate on page load | HIGH (captures leads who browse and exit without clicking a profile) | LOW (reuses all existing components) | P1 |
-| Email attribution on user_events | MEDIUM (enriches lead timeline; unlocks search attribution) | MEDIUM (DB migration + 4-5 call site updates) | P1 |
-| "Show fewer" collapse on cards | LOW (nice-to-have polish) | LOW | P2 |
-| Email events in lead timeline join | MEDIUM (more complete lead journey) | LOW (query change in admin endpoint) | P2 |
+| Feature | User/Platform Value | Implementation Cost | Priority |
+|---------|---------------------|---------------------|----------|
+| React error boundaries | HIGH (prevents blank screen = abandonment) | LOW (1 install, 2 boundaries) | P1 |
+| /api/health endpoint | HIGH (Railway restarts on hangs) | LOW (10 lines Python) | P1 |
+| title + meta description | HIGH (GA4 clarity + social) | LOW (react-helmet-async) | P1 |
+| Open Graph tags + OG image | HIGH (launch social shares) | LOW (static image + tags) | P1 |
+| robots.txt + sitemap.xml | MEDIUM (crawler hygiene) | LOW (static files) | P1 |
+| JSON-LD structured data | MEDIUM (search discoverability) | LOW (index.html block) | P1 |
+| Admin experts pagination | HIGH (fixes known Sentry issue) | LOW (query params + existing component) | P1 |
+| Cache-Control photo proxy | MEDIUM (prevents upstream hammering) | LOW (single header) | P1 |
+| Backend event write queue | HIGH (SQLite write bottleneck under load) | MEDIUM (asyncio.Queue pattern) | P2 |
+| Uvicorn 2-worker tuning | MEDIUM (I/O concurrency improvement) | LOW (Procfile change) | P2 |
+| preconnect hint | LOW-MEDIUM (removes TCP handshake latency) | LOW (1 HTML tag) | P2 |
+| Vite bundle trim | MEDIUM (LCP improvement) | LOW-MEDIUM (analysis first) | P2 |
+| GA4 Beacon transport | LOW-MEDIUM (analytics data quality) | LOW (1 config line) | P2 |
 
 **Priority key:**
-- P1: Must have for v5.2 milestone
-- P2: Add once v5.2 data has been validated in production
-- P3: Defer to later milestone
+- P1: Must ship before marketing launch goes live
+- P2: Ship within same v5.4 milestone, after P1 items are deployed and verified
+- P3: Defer to v6.0
 
 ---
 
-## Per-Feature Implementation Notes
+## Infrastructure Reality Check
 
-### 1. Entry Gate Modal on Page Load
+Hard constraints that bound all feature decisions in this milestone:
 
-**Current state:** `ProfileGateModal` is triggered on "View Full Profile" click in `ExpertCard`.
-`useEmailGate()` returns `isUnlocked` (from `localStorage`). Returning visitors are immediately
-unlocked with no flash.
-
-**Target state:** `ExplorerPage` (or `App.tsx` root) checks `isUnlocked` on mount. If false,
-renders a full-screen `EntryGateModal` over the page. The page content loads normally beneath —
-grid renders, filters work, store hydrates — but the modal backdrop covers it visually.
-
-**Key design decisions:**
-- Do NOT block rendering. Page loads behind the modal so the first interaction after email submit
-  feels instant (grid is already loaded).
-- Include a "Skip for now" dismiss path. On skip: no `localStorage` write; modal closes; gate
-  returns on "View Full Profile" click (existing `ProfileGateModal` behavior unchanged).
-- The `EntryGateModal` is a new thin wrapper component — it calls `useEmailGate().submitEmail`
-  on submit, same as `ProfileGateModal`. No changes to `useEmailGate`, `EmailGate`, or
-  `POST /api/email-capture`.
-- Returning visitors: `isUnlocked=true` on first render (lazy `localStorage` read). Modal never
-  mounts. Zero flash.
-
-**Component:**
-```tsx
-// EntryGateModal.tsx — wraps EmailGate with entry-specific copy + optional dismiss
-function EntryGateModal({ onSubmit, onSkip }: { onSubmit: ..., onSkip: () => void }) {
-  // AnimatePresence wrapper (same as ProfileGateModal)
-  // Headline: "Meet the experts" / body: "Enter your email to browse full profiles"
-  // EmailGate form (reused)
-  // "Skip for now" text link below CTA (calls onSkip)
-}
-```
-
-**ExplorerPage usage:**
-```tsx
-const { isUnlocked, submitEmail } = useEmailGate()
-const [skipped, setSkipped] = useState(false)
-
-{!isUnlocked && !skipped && (
-  <EntryGateModal onSubmit={submitEmail} onSkip={() => setSkipped(true)} />
-)}
-```
-
-**Confidence:** HIGH — pure component composition over existing hooks and components.
-
----
-
-### 2. "See All" Expansion on Admin Overview Cards
-
-**Current state:** `TopExpertsCard` calls `.slice(0, 5)` on the full `exposure` array returned
-by the API. `TopQueriesCard` passes `limit: 5` as a query param to
-`GET /analytics/top-queries`.
-
-**Target state:** Both cards have an expanded/collapsed state. Collapsed shows 5 rows (default).
-Expanded shows all rows. Toggle button below the list: "Show all X" / "Show fewer".
-
-**TopExpertsCard change (frontend only):**
-```tsx
-const [expanded, setExpanded] = useState(false)
-const rows = expanded ? (data?.exposure ?? []) : (data?.exposure ?? []).slice(0, 5)
-// Add below list:
-{(data?.exposure ?? []).length > 5 && (
-  <button onClick={() => setExpanded(e => !e)}>
-    {expanded ? 'Show fewer' : `Show all ${data.exposure.length}`}
-  </button>
-)}
-```
-
-**TopQueriesCard change (frontend + minor backend):**
-- Change `adminFetch<TopQueriesResponse>('/analytics/top-queries', { days, limit: 5 })` to
-  `limit: 50` (or omit limit entirely if the backend supports it).
-- Check `GET /analytics/top-queries` backend: if `limit` is required, set default=50 in the
-  query param handler.
-- Same expanded/collapsed toggle pattern as TopExpertsCard.
-
-**Confidence:** HIGH — additive state toggle, no new components, data already available.
-
----
-
-### 3. Email Attribution on User Events
-
-**Current state:** `UserEvent` has `session_id` (anonymous, required) but no `email` column.
-`trackEvent()` sends `{session_id, event_type, payload}`. Email is captured separately in
-`email_leads` with no link to `user_events`.
-
-**Target state:** `user_events` gains a nullable `email` column. After the entry gate is
-submitted (or after any gate submit), `trackEvent()` includes the email in the payload.
-Events before gate submit have `email=null`. Events after submit have `email=<submitted>`.
-
-**Backend changes:**
-1. Startup migration: `ALTER TABLE user_events ADD COLUMN email TEXT NULL`
-2. `EventRequest` Pydantic model: `email: str | None = None`
-3. `UserEvent` model: `email: Mapped[str | None] = mapped_column(String(320), nullable=True)`
-4. `record_event` endpoint: pass `email=body.email` to `UserEvent(...)` constructor
-
-**Frontend changes:**
-1. `trackEvent()` signature: `trackEvent(event_type, payload, email?: string | null)`
-2. `tracking.ts` internal: include `email` in the fetch body (or null if not provided)
-3. Call sites to update (pass `useEmailGate().email`):
-   - `useExplore.ts` — `search_query` events (most valuable for lead timeline)
-   - `ExpertCard.tsx` — `card_click` events
-   - `useHeaderSearch.ts` — `filter_change` events
-   - `RateSlider.tsx` — `filter_change` events
-   - `TagMultiSelect.tsx` — `filter_change` events
-
-**Note on call site access:** These components do not currently call `useEmailGate()`.
-Options:
-- a) Add `useEmailGate()` hook call at each call site — clean, self-contained.
-- b) Store `email` in Zustand (e.g. a `userSlice`) and read from store — removes hook
-  coupling at individual components. Recommended if more than 5 call sites need it.
-- c) Pass email as a param from parent component — adds prop-drilling, not preferred.
-
-**Recommendation:** Add a `userSlice` to Zustand with `email: string | null` set on gate submit.
-`trackEvent()` reads from `useExplorerStore.getState().email` (module-level call — avoids
-React hook constraints). This is the cleanest extension of the existing pattern.
-
-**Confidence:** HIGH for schema change (proven pattern from `lead_clicks` table). MEDIUM for
-Zustand user slice (new, but simple). LOW for retrospective attribution (explicitly not in scope).
-
----
-
-## Competitor Feature Analysis
-
-| Feature | Standard Pattern | Our v5.2 Approach |
-|---------|-----------------|-------------------|
-| Email gate timing | Entry gate (before browse) OR action gate (before key action). Entry gate is standard for lead-gen-first products (Clearbit, Bombora). Action gate is standard for product-led products (Figma community). | Move to entry gate — Tinrate is lead-gen-first; every visitor is a potential qualified lead. |
-| Gate dismiss option | Most welcome gates provide an exit option (close button or "No thanks" link). Mandatory-only gates see higher immediate bounce. | "Skip for now" link — captures high-intent visitors, reduces friction for casual browsers. |
-| Admin card "See All" | Vercel/Linear/Stripe pattern: top-N items visible, "Show all" expansion in-card. Dedicated page for full history. | In-card expansion — keeps period toggle context intact, lower implementation cost. |
-| Event identity model | Most analytics tools use both anonymous ID + identified ID. Identify call links them: `analytics.identify(userId, {email})`. | Retain session_id (anonymous pre-gate), add email column (identified post-gate). Same dual-identity pattern used by Segment/Amplitude. |
+| Constraint | Implication | Response |
+|------------|-------------|----------|
+| Railway single instance (no horizontal scaling) | All 10k concurrent users hit one process | 2 Uvicorn workers + asyncio.Queue; no Redis/Celery coordination needed |
+| SQLite single-writer (even with WAL) | Concurrent writes queue; sustained write bursts cause latency spikes | Event batching with `executemany` reduces write transactions by ~95% |
+| Vercel CDN fronts all static assets globally | JS, CSS, images served from edge — zero origin load for static content | Leverage: serve OG image from `public/`; apply `Cache-Control` on API photo proxy |
+| Pure SPA (no SSR) | Crawler sees empty HTML shell without JS execution | JSON-LD + meta tags is the practical fix; Next.js migration is weeks, not hours |
+| GA4 client-side only | Ad blockers drop 20–40% of events regardless of implementation quality | Beacon API (`transport_type: 'beacon'`) is the best mitigation short of server-side proxy |
+| react-virtuoso infinite scroll | Virtualized DOM means minimal nodes in memory; grid performance is not a bottleneck | No changes needed to virtualization layer |
+| Framer Motion in bundle | `motion/react` adds ~30 kB gzipped; scoped to FAB + modals only | Run bundle visualizer before deciding; likely not the primary target |
+| Railway Hobby plan (512MB RAM baseline) | 2 Uvicorn workers + FAISS in-memory (~4 MB) + SQLite = ~300–350 MB estimated | Verify Railway memory metrics before bumping workers; 2 is safe estimate |
 
 ---
 
 ## Sources
 
-- **Codebase inspection (HIGH confidence):** `frontend/src/hooks/useEmailGate.ts`,
-  `frontend/src/components/EmailGate.tsx`, `frontend/src/components/marketplace/ProfileGateModal.tsx`,
-  `frontend/src/admin/pages/OverviewPage.tsx`, `app/models.py`, `app/routers/events.py`,
-  `app/routers/email_capture.py`, `frontend/src/tracking.ts`
-- [Email Capture Best Practices 2026 — OptiMonk](https://www.optimonk.com/email-capture-best-practices/) — MEDIUM confidence
-- [Mastering Modal UX Best Practices — Eleken](https://www.eleken.co/blog-posts/modal-ux) — MEDIUM confidence
-- [Modal UX Design for SaaS 2026 — Userpilot](https://userpilot.com/blog/modal-ux-design/) — MEDIUM confidence
-- [Gated Content Strategy — ProductLed](https://productled.com/blog/when-you-should-ungate-content) — MEDIUM confidence
-- [Welcome Gate Best Practices — Intercom](https://www.intercom.com/blog/welcome-page/) — MEDIUM confidence
-- Internal codebase patterns: `lead_clicks` table (email-keyed), `newsletter_subscribers.session_id` (cross-identity linking precedent)
+- [Designing a FastAPI + LLM System for 10K Concurrent Users](https://medium.com/algomart/designing-a-fastapi-llm-system-for-10k-concurrent-users-and-scaling-rag-to-100k-daily-users-c54be7acd865) — MEDIUM confidence (community article, Feb 2026)
+- [FastAPI Best Practices for Production 2026](https://fastlaunchapi.dev/blog/fastapi-best-practices-production-2026) — MEDIUM confidence
+- [FastAPI Background Tasks (official docs)](https://fastapi.tiangolo.com/tutorial/background-tasks/) — HIGH confidence
+- [SQLite Write Concurrency — The Write Stuff](https://oldmoe.blog/2024/07/08/the-write-stuff-concurrent-write-transactions-in-sqlite/) — HIGH confidence
+- [SQLite WAL Mode Concurrent Reads — Hacker News](https://news.ycombinator.com/item?id=32579866) — HIGH confidence
+- [GA4 Event Batching Guide](https://assertionhub.com/blog/ga4-event-batching-guide) — MEDIUM confidence (20–40% event loss figure corroborated by multiple 2026 sources)
+- [GA4 in 2026: The Post-Cookie Era Guide](https://ankitnagarsheth.medium.com/doing-ga4-in-2026-the-definitive-guide-to-google-analytics-in-the-post-cookie-era-c717faed2033) — MEDIUM confidence
+- [Vercel CDN Cache Documentation](https://vercel.com/docs/cdn-cache) — HIGH confidence (official)
+- [Vercel Cache-Control Headers](https://vercel.com/docs/headers/cache-control-headers) — HIGH confidence (official)
+- [React Error Boundaries 2026](https://oneuptime.com/blog/post/2026-02-20-react-error-boundaries/view) — MEDIUM confidence
+- [Vite Build Options (official docs)](https://vite.dev/config/build-options) — HIGH confidence (official)
+- [SEO for React Applications 2026](https://www.linkgraph.com/blog/seo-for-react-applications/) — MEDIUM confidence
+- [Railway Health Check Endpoint](https://station.railway.com/questions/health-check-endpoint-af9640dc) — HIGH confidence (official Railway)
+- [Optimizing React Builds with Vite (Feb 2026)](https://medium.com/@salvinodsa/optimizing-react-builds-with-vite-practical-techniques-for-faster-apps-063d4952e67d) — MEDIUM confidence
 
 ---
 
-*Feature research for: Tinrate Expert Marketplace v5.2 Email-First Gate & Admin See-All*
-*Researched: 2026-03-04*
+*Feature research for: Tinrate Expert Marketplace v5.4 Launch Hardening*
+*Researched: 2026-03-05*
