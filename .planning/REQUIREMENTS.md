@@ -87,37 +87,37 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| BPERF-01 | — | Pending |
-| BPERF-02 | — | Pending |
-| BPERF-03 | — | Pending |
-| BPERF-04 | — | Pending |
-| BPERF-05 | — | Pending |
-| BPERF-06 | — | Pending |
-| BPERF-07 | — | Pending |
-| BPERF-08 | — | Pending |
-| RAIL-01 | — | Pending |
-| RAIL-02 | — | Pending |
-| RAIL-03 | — | Pending |
-| FPERF-01 | — | Pending |
-| FPERF-02 | — | Pending |
-| FPERF-03 | — | Pending |
-| VCFG-01 | — | Pending |
-| VCFG-02 | — | Pending |
-| RSIL-01 | — | Pending |
-| RSIL-02 | — | Pending |
-| SEO-01 | — | Pending |
-| SEO-02 | — | Pending |
-| SEO-03 | — | Pending |
-| ANLT-01 | — | Pending |
-| ANLT-02 | — | Pending |
-| ANLT-03 | — | Pending |
-| ANLT-04 | — | Pending |
+| BPERF-01 | Phase 71 | Pending |
+| BPERF-02 | Phase 71 | Pending |
+| BPERF-03 | Phase 71 | Pending |
+| BPERF-04 | Phase 71 | Pending |
+| BPERF-05 | Phase 71 | Pending |
+| BPERF-06 | Phase 71 | Pending |
+| BPERF-07 | Phase 71 | Pending |
+| BPERF-08 | Phase 71 | Pending |
+| RAIL-01 | Phase 71 | Pending |
+| RAIL-02 | Phase 71 | Pending |
+| RAIL-03 | Phase 71 | Pending |
+| FPERF-01 | Phase 72 | Pending |
+| FPERF-02 | Phase 72 | Pending |
+| FPERF-03 | Phase 72 | Pending |
+| VCFG-01 | Phase 72 | Pending |
+| VCFG-02 | Phase 72 | Pending |
+| RSIL-01 | Phase 73 | Pending |
+| RSIL-02 | Phase 73 | Pending |
+| SEO-01 | Phase 73 | Pending |
+| SEO-02 | Phase 73 | Pending |
+| SEO-03 | Phase 73 | Pending |
+| ANLT-01 | Phase 74 | Pending |
+| ANLT-02 | Phase 74 | Pending |
+| ANLT-03 | Phase 74 | Pending |
+| ANLT-04 | Phase 74 | Pending |
 
 **Coverage:**
 - v5.4 requirements: 25 total
-- Mapped to phases: 0
-- Unmapped: 25 ⚠️
+- Mapped to phases: 25
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-03-05*
-*Last updated: 2026-03-05 after initial definition*
+*Last updated: 2026-03-05 after roadmap creation*
