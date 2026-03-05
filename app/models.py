@@ -115,6 +115,7 @@ class Expert(Base):
     findability_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     photo_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     industry_tags: Mapped[str | None] = mapped_column(Text, nullable=True)
+    manual_tags: Mapped[str | None] = mapped_column(Text, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="1")
     created_at: Mapped[datetime.datetime] = mapped_column(
         DateTime, default=datetime.datetime.utcnow, nullable=False
@@ -200,6 +201,16 @@ class ExpertTag(Base):
     expert_id: Mapped[int] = mapped_column(nullable=False)
     tag: Mapped[str] = mapped_column(String(200), nullable=False)
     tag_type: Mapped[str] = mapped_column(String(20), nullable=False, default="skill")
+
+
+class TagCatalog(Base):
+    """Admin-managed predefined tag list (Phase 69.2). Seeded from existing AI skill tags on first access."""
+    __tablename__ = "tag_catalog"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    tag: Mapped[str] = mapped_column(String(200), unique=True, nullable=False, index=True)
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime, default=datetime.datetime.utcnow, nullable=False
+    )
 
 
 class AppSetting(Base):

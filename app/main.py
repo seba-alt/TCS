@@ -167,6 +167,18 @@ async def lifespan(app: FastAPI):
                 pass  # Column already exists — idempotent
     log.info("startup: expert industry_tags column migrated/verified")
 
+    # Phase 69.2: manual_tags column for admin-assigned tags
+    with engine.connect() as _conn:
+        for _col_ddl in [
+            "ALTER TABLE experts ADD COLUMN manual_tags TEXT",
+        ]:
+            try:
+                _conn.execute(_text(_col_ddl))
+                _conn.commit()
+            except Exception:
+                pass  # Column already exists
+    log.info("startup: expert manual_tags column migrated/verified")
+
     # Phase 62.2: session_id on newsletter_subscribers for lead timeline linking
     with engine.connect() as _conn:
         for _col_ddl in [
