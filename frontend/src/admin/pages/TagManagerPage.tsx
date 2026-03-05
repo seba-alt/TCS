@@ -146,7 +146,7 @@ export default function TagManagerPage() {
             <button onClick={deselectAllExperts} className="text-xs text-slate-500 hover:text-slate-400">Deselect all</button>
             <span className="text-xs text-slate-600 ml-auto">{selectedExperts.size} selected</span>
           </div>
-          <div className="space-y-1 max-h-[500px] overflow-y-auto">
+          <div className="space-y-1 max-h-[70vh] overflow-y-auto">
             {filteredExperts.map(e => {
               const tags = manualTagsMap.get(e.username) ?? []
               return (
