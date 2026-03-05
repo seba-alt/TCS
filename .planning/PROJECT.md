@@ -139,19 +139,18 @@ A user can search for experts that help them solve any problem or question or gi
 - ✓ CSV upload full sync with soft-delete, preview with per-field diffs, cherry-pick exclusion, and FAISS rebuild — v5.3
 - ✓ Admin tag manager with predefined catalog, bulk assignment, manual tags in FAISS search — v5.3
 
+- ✓ Backend launch hardening — asyncio event batch queue, SQLite PRAGMA tuning, GZipMiddleware, explore cache (5min TTL), connection pool, health check endpoint — v5.4
+- ✓ Railway production config — europe-west4 region, healthcheck endpoint, ON_FAILURE restart, Uvicorn keep-alive tuning — v5.4
+- ✓ Admin experts pagination — server-side page/limit/search (default 50), Sentry large-payload alert eliminated — v5.4
+- ✓ Frontend performance — client-side event batch queue, Vite vendor chunk splitting (6 chunks), preconnect hint — v5.4
+- ✓ Vercel cache headers — immutable assets (1yr), static images (24h + stale-while-revalidate) — v5.4
+- ✓ React error boundaries — app + page level with Sentry reporting, global unhandled rejection handler — v5.4
+- ✓ SEO — meta description, robots.txt (Disallow /admin), sitemap.xml with lastmod — v5.4
+- ✓ Analytics hardened — GA4 beacon transport, offline guard, sendBeacon fallback, defensive send_page_view comment — v5.4
+
 ### Active
 
-## Current Milestone: v5.4 Launch Hardening
-
-**Goal:** Harden the platform for a 10k-concurrent-user marketing launch — performance, resilience, SEO, and analytics reliability.
-
-**Target features:**
-- Frontend performance optimization (bundle, caching, preload)
-- Backend performance optimization (event batching, WAL tuning, API caching)
-- Resilience and fault tolerance (error boundaries, graceful degradation, health check)
-- SEO and meta tags (structured data, social sharing, page titles)
-- Analytics hardening (GA4, Clarity, event tracking under load)
-- Admin experts endpoint pagination (fix Sentry large payload)
+(No active milestone)
 
 ### Out of Scope
 
@@ -166,6 +165,17 @@ A user can search for experts that help them solve any problem or question or gi
 - Custom analytics dashboard — GA4 dashboard is sufficient for launch
 
 ## Shipped Versions
+
+### v5.4 Launch Hardening — Shipped 2026-03-05
+- Backend hardened for 10k-user launch — asyncio event batch queue, SQLite PRAGMA tuning, GZipMiddleware, explore cache (5min TTL), connection pool (5+10)
+- Railway production config — europe-west4 region, healthcheck with DB diagnostics, ON_FAILURE restart, Uvicorn keep-alive tuning
+- Admin experts pagination — server-side page/limit/search (default 50), Sentry large-payload alerts eliminated
+- Frontend performance — client-side event batch queue, Vite vendor chunk splitting (6 separate chunks), Vercel immutable cache headers, preconnect hint
+- Resilience — React error boundaries (app + page level) with Sentry reporting, global unhandled rejection handler
+- SEO — meta description, robots.txt (Disallow /admin), sitemap.xml with lastmod
+- Analytics hardened — GA4 beacon transport, offline guard, sendBeacon fallback, defensive send_page_view comment
+- All 25 requirements verified across 4 phases
+- Archive: `.planning/milestones/v5.4-ROADMAP.md`
 
 ### v5.3 UX Polish & Admin Saved Insights — Shipped 2026-03-05
 - Email gate polished — dark charcoal overlay, dark-bg logo, minimal copy, auto-focus email input, post-gate search bar focus
@@ -291,7 +301,7 @@ A user can search for experts that help them solve any problem or question or gi
 
 ## Current State
 
-**Deployed version:** v5.3 (Railway + Vercel, auto-deploys on push to main)
+**Deployed version:** v5.4 (Railway + Vercel, auto-deploys on push to main)
 **Expert pool:** experts (growing weekly) (data/metadata.json), all AI-tagged with domain + industry tags + manual admin tags; FAISS index includes manual tags for semantic search; profile photos via proxy endpoint; expert email PII purged; soft-delete support (is_active flag)
 **Search intelligence:** Three-stage hybrid pipeline live; HyDE + feedback re-ranking toggled via admin steering panel; FTS5 autocomplete suggestions with tag-first ranking; dynamic rate slider max from API; embedding cache (60s TTL) prevents duplicate Google API calls; manual tags included in FAISS embedding text
 **Explorer:** Single-page aurora-aesthetic marketplace at `/` with glassmorphic Command Center header, autofocused search with tag-first autocomplete, responsive cards (mobile photo-centric / desktop photo-left) in grid or list view, animated tag cloud (18 domain tags + industry tags), inline mobile filters (simplified — clear-all only when filters active), seeded random initial ordering, bookmarks with purple visual treatment and filter-independent saved view, Intercom no-results CTA, anonymous search tracking, mandatory email entry gate, API error states with retry. Search results tier-sorted (Top Match → Good Match → rest). Currency symbols on all rate displays. Dark-overlay email gate with auto-focus behaviors.
@@ -299,8 +309,8 @@ A user can search for experts that help them solve any problem or question or gi
 **Admin panel:** Secured with bcrypt+JWT + rate limiting; 10-module router package; URL-based routing with shared components (AdminCard, AdminInput, AdminPagination, AdminPageHeader). Overview with period toggle (Today/7d/30d/All) + active tag chips + ranked insight cards (Top Experts, Top Searches, Unmet Demand, Top Saved Experts). Unified Data page (merged Searches/Marketplace) with shared date picker. Experts page with name search + deletion. Leads page with expandable timeline (chronological search/click/save history with time gap labels), click count column + Click Activity table + CSV export. Tag Manager page for manual expert tagging with predefined catalog and bulk assignment. CSV import with full sync (soft-delete, preview with per-field diffs, cherry-pick exclusion). Settings/feedback caching (30s TTL).
 **Analytics:** GA4 (G-0T526W3E1Z) + Microsoft Clarity (vph5o95n6c) + Vercel Speed Insights tracking all page views with SPA route change support
 
-**Last milestone completed:** v5.3 UX Polish & Admin Saved Insights (shipped 2026-03-05)
-**Current milestone:** v5.4 Launch Hardening (started 2026-03-05)
+**Last milestone completed:** v5.4 Launch Hardening (shipped 2026-03-05)
+**Current milestone:** None
 
 ## Context
 
@@ -399,4 +409,4 @@ A user can search for experts that help them solve any problem or question or gi
 | TAG-04 dual-mode superseded | Single Expert→Tags flow per UAT decision — simpler UX | ✓ Good — user-validated design |
 
 ---
-*Last updated: 2026-03-05 after v5.4 milestone start*
+*Last updated: 2026-03-05 after v5.4 milestone complete*

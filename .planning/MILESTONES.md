@@ -302,3 +302,26 @@
 
 ---
 
+
+## v5.4 Launch Hardening (Shipped: 2026-03-05)
+
+**Phases completed:** 4 phases (71-74), 8 plans
+**Timeline:** 1 day (2026-03-05)
+**Requirements:** 25/25 satisfied
+**Audit:** PASSED (25/25 requirements, 6/6 E2E flows, 25/25 integration paths)
+
+**Key accomplishments:**
+1. Backend performance hardened — asyncio event batch queue (flush 10/2s), SQLite PRAGMA tuning (WAL, 32MB cache, 128MB mmap), GZipMiddleware (500B min), explore endpoint TTL cache (5min) with mutation invalidation, connection pool (5+10)
+2. Railway production config — europe-west4 region, healthcheck endpoint with DB diagnostics, ON_FAILURE restart policy, Uvicorn keep-alive tuning
+3. Admin experts pagination — server-side page/limit/search params (default 50), Sentry large-payload alerts eliminated
+4. Frontend performance — client-side event batch queue matching backend, Vite vendor chunk splitting (6 separate chunks), Vercel immutable cache headers for assets, preconnect hint to Railway API
+5. Resilience — React error boundaries (app + page level) with Sentry reporting, global unhandled rejection handler, SEO meta description + robots.txt + sitemap.xml
+6. Analytics hardened — GA4 beacon transport, navigator.onLine offline guard, sendBeacon fallback on page unload, Sentry filter for analytics noise, defensive send_page_view comment
+
+**Archive:**
+- Roadmap: `.planning/milestones/v5.4-ROADMAP.md`
+- Requirements: `.planning/milestones/v5.4-REQUIREMENTS.md`
+- Audit: `.planning/milestones/v5.4-MILESTONE-AUDIT.md`
+
+---
+
