@@ -17,6 +17,7 @@ from app.routers.admin import exports
 from app.routers.admin import imports
 from app.routers.admin import leads
 from app.routers.admin import settings
+from app.routers.admin import tags
 
 router.include_router(analytics.router)
 router.include_router(compare.router)
@@ -26,3 +27,4 @@ router.include_router(exports.router)
 router.include_router(imports.router)
 router.include_router(leads.router)
 router.include_router(settings.router)
+router.include_router(tags.router)
