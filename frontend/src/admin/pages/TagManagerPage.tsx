@@ -20,8 +20,14 @@ export default function TagManagerPage() {
   const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set())
   const [assignError, setAssignError] = useState<string | null>(null)
   const [assignLoading, setAssignLoading] = useState(false)
+  const [tagSearch, setTagSearch] = useState('')
 
   const catalog = catalogData?.tags ?? []
+  const filteredCatalog = useMemo(() => {
+    if (!tagSearch.trim()) return catalog
+    const q = tagSearch.toLowerCase()
+    return catalog.filter(t => t.tag.toLowerCase().includes(q))
+  }, [catalog, tagSearch])
   const assignments = assignData?.assignments ?? EMPTY_ASSIGNMENTS
   const experts = expertsData?.experts ?? EMPTY_EXPERTS
 
@@ -190,12 +196,18 @@ export default function TagManagerPage() {
 
           {/* Tag picker */}
           <div className="mb-4">
-            <p className="text-slate-400 text-xs mb-2">Click tags to select, then assign:</p>
+            <input
+              type="text"
+              value={tagSearch}
+              onChange={e => setTagSearch(e.target.value)}
+              placeholder="Search tags..."
+              className="w-full bg-slate-800 border border-slate-700 text-white placeholder-slate-500 rounded-lg px-3 py-2 text-sm mb-3 focus:outline-none focus:ring-1 focus:ring-purple-500"
+            />
             {catalogLoading ? (
               <p className="text-slate-500 text-sm mb-3">Loading tags...</p>
             ) : (
               <div className="flex flex-wrap gap-2 mb-3">
-                {catalog.map(t => (
+                {filteredCatalog.map(t => (
                   <button
                     key={t.id}
                     onClick={() => toggleTag(t.tag)}
