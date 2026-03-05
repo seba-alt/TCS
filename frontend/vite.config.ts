@@ -18,8 +18,13 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (id.includes('node_modules')) {
-            if (id.includes('recharts')) return 'vendor-charts'
+            if (id.includes('recharts'))              return 'vendor-charts'
             if (id.includes('@tanstack/react-table')) return 'vendor-table'
+            if (id.includes('motion'))                return 'vendor-motion'
+            if (id.includes('react-virtuoso'))        return 'vendor-virtuoso'
+            if (id.includes('lucide-react'))          return 'vendor-icons'
+            if (id.includes('react-use-intercom'))    return 'vendor-intercom'
+            if (id.includes('react-router'))          return 'vendor-router'
           }
         },
       },
