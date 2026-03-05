@@ -6,7 +6,7 @@ A professional Expert Marketplace for the Tinrate platform. Users discover vette
 
 ## Core Value
 
-A user describes any problem and instantly gets expertly matched professionals they can browse, filter, and contact — no searching, no guesswork.
+A user can search for experts that help them solve any problem or question or give advices and instantly gets expertly matched professionals they can browse, filter, and contact.
 
 ## Requirements
 
