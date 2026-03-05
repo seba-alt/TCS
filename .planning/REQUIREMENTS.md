@@ -28,7 +28,7 @@ Requirements for milestone v5.3 UX Polish & Admin Saved Insights.
 - [x] **TAG-01**: Admin can manage a predefined tag catalog (view, add, delete tags) seeded from existing AI skill tags
 - [x] **TAG-02**: Admin can assign manual domain expertise tags to experts via dedicated tag manager page with bulk support
 - [x] **TAG-03**: Manual tags survive AI re-tagging, appear in FAISS semantic search, and are filterable/browsable on the public site
-- [x] **TAG-04**: Tag manager page has two navigation modes: Expert-to-Tags and Tag-to-Experts
+- [x] ~~**TAG-04**: Tag manager page has two navigation modes: Expert-to-Tags and Tag-to-Experts~~ *(Superseded: dual-mode removed during UAT — single Expert→Tags flow per user decision 2026-03-05)*
 
 ## Future Requirements
 
@@ -47,21 +47,22 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| GATE-01 | Phase 67 | Complete |
-| GATE-02 | Phase 67 | Complete |
-| GATE-03 | Phase 67 | Complete |
-| FIX-01 | Phase 67 | Complete |
+| GATE-01 | Phase 67 → 70 | Pending (verification gap) |
+| GATE-02 | Phase 67 → 70 | Pending (verification gap) |
+| GATE-03 | Phase 67 → 70 | Pending (verification gap) |
+| FIX-01 | Phase 67 → 70 | Pending (verification gap) |
 | SAVE-01 | Phase 68 | Complete |
-| SAVE-02 | Phase 69 | Complete |
-| SAVE-03 | Phase 69 | Complete |
+| SAVE-02 | Phase 69 → 70 | Pending (verification gap) |
+| SAVE-03 | Phase 69 → 70 | Pending (verification gap) |
 | TAG-01 | Phase 69.2 | Complete |
 | TAG-02 | Phase 69.2 | Complete |
 | TAG-03 | Phase 69.2 | Complete |
-| TAG-04 | Phase 69.2 | Complete |
+| TAG-04 | Phase 69.2 | Superseded |
 
 **Coverage:**
-- v5.3 requirements: 11 total
+- v5.3 requirements: 11 total (1 superseded)
 - Mapped to phases: 11
+- Pending (gap closure): 6
 - Unmapped: 0
 
 ---

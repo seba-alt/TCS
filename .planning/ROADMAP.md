@@ -142,6 +142,7 @@ See `.planning/milestones/v5.2-ROADMAP.md`
 - [x] **Phase 67: Email Gate Polish & List View Fix** — Cleaner gate UI, auto-focus behaviors, list view save button (completed 2026-03-04)
 - [x] **Phase 68: Save Event Tracking** — Backend save/unsave event instrumentation (completed 2026-03-04)
 - [x] **Phase 69: Admin Saved Insights** — Top Saved Experts card and lead timeline save events (completed 2026-03-04)
+- [ ] **Phase 70: Audit Gap Closure** — Generate missing verification docs, update TAG-04 requirement **Gap Closure**
 
 ## Phase Details
 
@@ -190,6 +191,7 @@ Plans:
 | 67. Email Gate Polish & List View Fix | 2/2 | Complete   | 2026-03-04 |
 | 68. Save Event Tracking | 1/1 | Complete    | 2026-03-04 |
 | 69. Admin Saved Insights | 1/1 | Complete   | 2026-03-04 |
+| 70. Audit Gap Closure | 0/1 | Pending    | — |
 
 ### Phase 69.2: Admin expert tagging for improved search and findability (INSERTED)
 
@@ -213,3 +215,14 @@ Plans:
 - [ ] 69.1-01-PLAN.md — Soft-delete infrastructure (is_active flag + public query filters)
 - [ ] 69.1-02-PLAN.md — Sync preview and apply endpoints with cherry-pick support
 - [ ] 69.1-03-PLAN.md — Frontend sync preview UI with categorized changes and deletion cherry-pick
+
+### Phase 70: Audit Gap Closure
+**Goal**: Close verification gaps from v5.3 milestone audit — generate missing VERIFICATION.md for phases 67 and 69, update TAG-04 requirement (superseded by UAT design decision)
+**Depends on**: Phase 69.2
+**Requirements**: GATE-01, GATE-02, GATE-03, FIX-01, SAVE-02, SAVE-03
+**Gap Closure:** Closes gaps from v5.3 audit
+**Success Criteria** (what must be TRUE):
+  1. Phase 67 VERIFICATION.md exists and confirms GATE-01, GATE-02, GATE-03, FIX-01 are satisfied
+  2. Phase 69 VERIFICATION.md exists and confirms SAVE-02, SAVE-03 are satisfied
+  3. REQUIREMENTS.md reflects TAG-04 as superseded (dual-mode removed by design)
+**Plans**: 1 plan
