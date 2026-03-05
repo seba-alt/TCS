@@ -198,11 +198,11 @@ Plans:
   3. `<meta name="description">` is present in the page source at the Explorer route — search engines can generate SERP snippets
   4. `GET /robots.txt` returns `Disallow: /admin` — admin routes excluded from crawlers
   5. `GET /sitemap.xml` lists the root URL with a `lastmod` date — crawler hygiene before launch backlinks are generated
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 73-01: React error boundaries (ExplorerPage + ExpertGrid) + global unhandledrejection handler
-- [ ] 73-02: SEO tags (meta description, robots.txt, sitemap.xml)
+- [ ] 73-01-PLAN.md — React error boundaries + global unhandledrejection handler (Wave 1)
+- [ ] 73-02-PLAN.md — SEO meta description + robots.txt + sitemap.xml (Wave 1)
 
 ### Phase 74: Analytics Hardening
 **Goal**: GA4 event delivery is maximized under ad-blocker and mobile conditions, offline errors are silenced, and the send_page_view configuration is documented to prevent accidental double-counting at launch
