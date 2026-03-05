@@ -1,5 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { AnimatePresence } from 'motion/react'
+import { ErrorBoundary } from 'react-error-boundary'
+import * as Sentry from '@sentry/react'
 import { Bookmark, LayoutGrid, List } from 'lucide-react'
 import { useExplorerStore, useFilterSlice } from '../store'
 import { useExplore } from '../hooks/useExplore'
@@ -13,6 +15,7 @@ import { ExpertGrid } from '../components/marketplace/ExpertGrid'
 import { ExpertList } from '../components/marketplace/ExpertList'
 import { MobileInlineFilters } from '../components/marketplace/MobileInlineFilters'
 import { EmailEntryGate } from '../components/marketplace/EmailEntryGate'
+import { ErrorFallback } from '../components/ErrorFallback'
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
 
@@ -81,6 +84,15 @@ export default function MarketplacePage() {
 
   return (
     <AuroraBackground>
+      <ErrorBoundary
+        fallbackRender={(props) => <ErrorFallback {...props} />}
+        onError={(error, info) => {
+          Sentry.captureException(error, { extra: { componentStack: info.componentStack } })
+        }}
+        onReset={() => {
+          window.location.reload()
+        }}
+      >
       {/* Email entry gate — blocks Explorer for new visitors (GATE-01/02) */}
       <AnimatePresence>
         {!subscribed && <EmailEntryGate onSubmit={handleGateSubmit} />}
@@ -183,6 +195,7 @@ export default function MarketplacePage() {
           </main>
         </div>
       </div>
+      </ErrorBoundary>
     </AuroraBackground>
   )
 }

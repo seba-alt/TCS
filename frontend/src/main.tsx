@@ -2,10 +2,20 @@ import "./instrument";
 import { StrictMode, lazy, Suspense, useEffect } from 'react'
 import { createRoot } from 'react-dom/client'
 import { createBrowserRouter, RouterProvider, Navigate, useSearchParams, useNavigate } from 'react-router-dom'
+import { ErrorBoundary } from 'react-error-boundary'
+import * as Sentry from '@sentry/react'
 import { IntercomProvider } from 'react-use-intercom'
 import './index.css'
 import RootLayout from './layouts/RootLayout.tsx'
 import MarketplacePage from './pages/MarketplacePage.tsx'
+import { ErrorFallback } from './components/ErrorFallback'
+
+// RSIL-02: Catch unhandled promise rejections to prevent silent blank screens.
+// Sentry's browserTracingIntegration already captures these; this ensures they
+// are logged to console and never silently swallowed.
+window.addEventListener('unhandledrejection', (event) => {
+  console.error('[TCS] Unhandled promise rejection:', event.reason)
+})
 
 const INTERCOM_APP_ID = import.meta.env.VITE_INTERCOM_APP_ID ?? 'o9v3tocw'
 
@@ -134,6 +144,16 @@ const router = createBrowserRouter([
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <RouterProvider router={router} />
+    <ErrorBoundary
+      fallbackRender={(props) => <ErrorFallback {...props} />}
+      onError={(error, info) => {
+        Sentry.captureException(error, { extra: { componentStack: info.componentStack } })
+      }}
+      onReset={() => {
+        window.location.href = '/'
+      }}
+    >
+      <RouterProvider router={router} />
+    </ErrorBoundary>
   </StrictMode>,
 )
