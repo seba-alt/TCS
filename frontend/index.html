@@ -24,7 +24,10 @@
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
-      gtag('config', 'G-0T526W3E1Z', { send_page_view: false });
+      gtag('config', 'G-0T526W3E1Z', {
+        send_page_view: false, // SPA: Router handles page_view events — do not set to true
+        transport_type: 'beacon'
+      });
     </script>
     <!-- Microsoft Clarity -->
     <script>

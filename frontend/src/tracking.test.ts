@@ -25,12 +25,19 @@ vi.stubGlobal('localStorage', localStorageMock)
 const addEventListenerMock = vi.fn()
 vi.stubGlobal('window', { addEventListener: addEventListenerMock })
 
+// Mock navigator with onLine and sendBeacon (Phase 74)
+const sendBeaconMock = vi.fn(() => true)
+vi.stubGlobal('navigator', { onLine: true, sendBeacon: sendBeaconMock })
+
 beforeEach(() => {
   store = {}
   fetchMock.mockClear()
   localStorageMock.getItem.mockClear()
   localStorageMock.setItem.mockClear()
   addEventListenerMock.mockClear()
+  sendBeaconMock.mockClear()
+  // Reset navigator.onLine to true (default for most tests)
+  Object.defineProperty(navigator, 'onLine', { value: true, writable: true, configurable: true })
   vi.useFakeTimers()
 })
 
