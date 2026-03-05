@@ -23,6 +23,13 @@ Requirements for milestone v5.3 UX Polish & Admin Saved Insights.
 
 - [x] **FIX-01**: List view renders a save/bookmark button for each expert (matching grid view behavior)
 
+### Admin Expert Tagging (Phase 69.2 — Inserted)
+
+- [ ] **TAG-01**: Admin can manage a predefined tag catalog (view, add, delete tags) seeded from existing AI skill tags
+- [ ] **TAG-02**: Admin can assign manual domain expertise tags to experts via dedicated tag manager page with bulk support
+- [ ] **TAG-03**: Manual tags survive AI re-tagging, appear in FAISS semantic search, and are filterable/browsable on the public site
+- [ ] **TAG-04**: Tag manager page has two navigation modes: Expert-to-Tags and Tag-to-Experts
+
 ## Future Requirements
 
 None deferred.
@@ -47,12 +54,16 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SAVE-01 | Phase 68 | Complete |
 | SAVE-02 | Phase 69 | Complete |
 | SAVE-03 | Phase 69 | Complete |
+| TAG-01 | Phase 69.2 | Planned |
+| TAG-02 | Phase 69.2 | Planned |
+| TAG-03 | Phase 69.2 | Planned |
+| TAG-04 | Phase 69.2 | Planned |
 
 **Coverage:**
-- v5.3 requirements: 7 total
-- Mapped to phases: 7
-- Unmapped: 0 ✓
+- v5.3 requirements: 11 total
+- Mapped to phases: 11
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-04*
-*Last updated: 2026-03-04 after Phase 69 completion*
+*Last updated: 2026-03-05 after Phase 69.2 planning*

@@ -191,6 +191,18 @@ Plans:
 | 68. Save Event Tracking | 1/1 | Complete    | 2026-03-04 |
 | 69. Admin Saved Insights | 1/1 | Complete   | 2026-03-04 |
 
+### Phase 69.2: Admin expert tagging for improved search and findability (INSERTED)
+
+**Goal:** Add dedicated admin tag manager with predefined catalog, dual-mode assignment (Expert->Tags and Tag->Experts), bulk operations, and search integration for improved expert findability
+**Depends on:** Phase 69
+**Requirements:** TAG-01, TAG-02, TAG-03, TAG-04
+**Plans:** 3 plans
+
+Plans:
+- [ ] 69.2-01-PLAN.md — Backend data model, sync, ingest, and search infrastructure for manual tags
+- [ ] 69.2-02-PLAN.md — Tag catalog CRUD and bulk assignment API endpoints
+- [ ] 69.2-03-PLAN.md — Frontend tag manager page with dual-mode UI
+
 ### Phase 69.1: CSV upload sync: remove deleted experts and update existing fields (INSERTED)
 
 **Goal:** Upgrade CSV upload from upsert-only to full sync with soft-delete, empty-field protection, preview with cherry-pick, and automatic FAISS rebuild
