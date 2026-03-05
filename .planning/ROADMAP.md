@@ -226,3 +226,6 @@ Plans:
   2. Phase 69 VERIFICATION.md exists and confirms SAVE-02, SAVE-03 are satisfied
   3. REQUIREMENTS.md reflects TAG-04 as superseded (dual-mode removed by design)
 **Plans**: 1 plan
+
+Plans:
+- [ ] 70-01-PLAN.md — Generate missing VERIFICATION.md for phases 67 and 69, update REQUIREMENTS.md traceability
