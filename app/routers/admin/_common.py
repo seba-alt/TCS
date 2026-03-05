@@ -126,6 +126,11 @@ def _run_ingest_job(app) -> None:
         with SessionLocal() as _tag_db:
             sync_all_expert_tags(_tag_db)
 
+        # Phase 71.02: invalidate explore cache after FAISS rebuild so next query is fresh
+        from app.services.explore_cache import invalidate_explore_cache  # noqa: PLC0415
+        invalidate_explore_cache()
+        log.info("explore_cache.invalidated_after_ingest")
+
         _ingest["last_rebuild_at"] = time.time()
         _ingest["expert_count_at_rebuild"] = len(app.state.metadata)
         _ingest["status"] = "done"

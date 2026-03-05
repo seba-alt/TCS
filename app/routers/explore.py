@@ -4,6 +4,10 @@ Thin FastAPI router for GET /api/explore.
 Delegates all search logic to app.services.explorer.run_explore().
 Offloads the synchronous pipeline (SQLAlchemy + FAISS + FTS5 + numpy)
 to a thread pool via run_in_executor, keeping the FastAPI event loop unblocked.
+
+Phase 71.02: Results cached for 5 minutes (300s TTL, max 200 entries).
+Seeded queries (seed > 0) bypass the cache — they are randomized per request.
+Cache is invalidated on expert add, delete, bulk delete, and ingest completion.
 """
 
 import asyncio
@@ -12,6 +16,7 @@ from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.services.explore_cache import get_cached, set_cached
 from app.services.explorer import ExploreResponse, run_explore
 
 router = APIRouter()
@@ -35,12 +40,27 @@ async def explore(
     Hybrid search: SQLAlchemy pre-filter → FAISS IDSelectorBatch → FTS5 BM25 → fused rank.
     When query is empty, returns experts sorted by findability_score (pure filter mode).
     Rate range: inclusive on both ends. Tags: comma-separated, AND logic (expert must have ALL).
+
+    Results are cached for 5 minutes for deterministic (seed=0) queries. Seeded queries
+    are randomized and always bypass the cache.
     """
     tag_list = [t.strip() for t in tags.split(",") if t.strip()]
     industry_tag_list = [t.strip() for t in industry_tags.split(",") if t.strip()]
     username_list = [u.strip() for u in usernames.split(",") if u.strip()]
+
+    # Only cache deterministic (non-seeded) results
+    if seed == 0:
+        cache_key = (
+            f"{query}|{rate_min}|{rate_max}|{sorted(tag_list)}"
+            f"|{sorted(industry_tag_list)}|{limit}|{cursor}|{seed}"
+            f"|{sorted(username_list) if username_list else ''}"
+        )
+        cached = get_cached(cache_key)
+        if cached is not None:
+            return cached
+
     loop = asyncio.get_event_loop()
-    return await loop.run_in_executor(
+    result = await loop.run_in_executor(
         None,
         lambda: run_explore(
             query=query,
@@ -56,3 +76,9 @@ async def explore(
             usernames=username_list if username_list else None,
         ),
     )
+
+    # Cache only deterministic results
+    if seed == 0:
+        set_cached(cache_key, result)
+
+    return result
