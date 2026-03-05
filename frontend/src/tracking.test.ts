@@ -204,3 +204,88 @@ describe('trackEvent batch queue', () => {
     expect(body.events[2].event_type).toBe('save')
   })
 })
+
+// --- Phase 74: Analytics Hardening tests ---
+
+describe('ANLT-02: offline guard', () => {
+  it('drops events silently when navigator.onLine is false', async () => {
+    Object.defineProperty(navigator, 'onLine', { value: false, configurable: true })
+
+    const { trackEvent, flush } = await import('./tracking')
+    trackEvent('card_click', { test: true })
+    flush()
+
+    // Event was dropped before queuing — neither fetch nor sendBeacon called
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(sendBeaconMock).not.toHaveBeenCalled()
+  })
+
+  it('queues events normally when navigator.onLine is true', async () => {
+    Object.defineProperty(navigator, 'onLine', { value: true, configurable: true })
+
+    const { trackEvent, flush } = await import('./tracking')
+    trackEvent('card_click', { test: true })
+    flush()
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('ANLT-03: sendBeacon fallback', () => {
+  it('uses sendBeacon when flush(true) is called', async () => {
+    const { trackEvent, flush } = await import('./tracking')
+    trackEvent('card_click', { test: true })
+    flush(true)
+
+    expect(sendBeaconMock).toHaveBeenCalledTimes(1)
+    const [url, blob] = sendBeaconMock.mock.calls[0]
+    expect(url).toContain('/api/events/batch')
+    expect(blob).toBeInstanceOf(Blob)
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('falls back to fetch when flush(false) is called', async () => {
+    const { trackEvent, flush } = await import('./tracking')
+    trackEvent('card_click', { test: true })
+    flush(false)
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(sendBeaconMock).not.toHaveBeenCalled()
+  })
+
+  it('uses fetch when sendBeacon is not available and flush(true) is called', async () => {
+    // Temporarily remove sendBeacon
+    const original = navigator.sendBeacon
+    Object.defineProperty(navigator, 'sendBeacon', { value: undefined, configurable: true })
+
+    const { trackEvent, flush } = await import('./tracking')
+    trackEvent('card_click', { test: true })
+    flush(true)
+
+    // Falls back to fetch gracefully
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+
+    // Restore sendBeacon
+    Object.defineProperty(navigator, 'sendBeacon', { value: original, configurable: true })
+  })
+
+  it('sendBeacon sends Blob with application/json content type', async () => {
+    const { trackEvent, flush } = await import('./tracking')
+    trackEvent('card_click', { test: true })
+    flush(true)
+
+    expect(sendBeaconMock).toHaveBeenCalledTimes(1)
+    const blob = sendBeaconMock.mock.calls[0][1] as Blob
+    expect(blob).toBeInstanceOf(Blob)
+    expect(blob.type).toBe('application/json')
+  })
+
+  it('default flush() uses fetch, not sendBeacon', async () => {
+    const { trackEvent, flush } = await import('./tracking')
+    trackEvent('card_click', { test: true })
+    flush()
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(sendBeaconMock).not.toHaveBeenCalled()
+  })
+})
