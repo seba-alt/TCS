@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v5.4
 milestone_name: Launch Hardening
 status: planning
-stopped_at: Completed 71-02-PLAN.md
-last_updated: "2026-03-05T12:20:35.293Z"
+stopped_at: Completed 71-01-PLAN.md
+last_updated: "2026-03-05T12:23:18.764Z"
 last_activity: 2026-03-05 — Roadmap created, all 25 requirements mapped to 4 phases
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 3
-  completed_plans: 1
-  percent: 0
+  completed_plans: 2
+  percent: 67
 ---
 
 # Project State
@@ -26,27 +26,28 @@ See: .planning/PROJECT.md (updated 2026-03-05)
 ## Current Position
 
 Phase: 71 of 74 (Backend Performance & Railway Config)
-Plan: — (not started)
-Status: Ready to plan
-Last activity: 2026-03-05 — Roadmap created, all 25 requirements mapped to 4 phases
+Plan: 01 complete (Plans 01-02 done, Plan 03 remaining)
+Status: In Progress
+Last activity: 2026-03-05 — Plans 71-01 and 71-02 complete
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [███████░░░] 67%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 0 (this milestone)
-- Average duration: — (no data yet)
-- Total execution time: —
+- Total plans completed: 2 (this milestone)
+- Average duration: ~20 min
+- Total execution time: ~40 min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| - | - | - | - |
+| 71-backend-performance-railway-config | 2/3 | ~40 min | ~20 min |
 
 ## Accumulated Context
 | Phase 71-backend-performance-railway-config P02 | 3 | 2 tasks | 7 files |
+| Phase 71-backend-performance-railway-config P01 | 20 | 2 tasks | 7 files |
 
 ### Decisions
 
@@ -56,6 +57,8 @@ Progress: [░░░░░░░░░░] 0%
 - CRITICAL: `send_page_view: false` in index.html is intentional SPA pattern — never remove without DebugView verification
 - [Phase 71-backend-performance-railway-config]: Event queue in own module (app/event_queue.py) avoids circular import between main.py lifespan and events.py route handler
 - [Phase 71-backend-performance-railway-config]: Explore cache TTL is 300s (5min) per CONTEXT.md user decision, overriding BPERF-07 30s spec; seeded queries bypass cache
+- [Phase 71-backend-performance-railway-config]: Two-tier health design: /api/health stays minimal for Railway, /api/admin/health provides full diagnostics (DB latency, expert count, FAISS vectors, uptime)
+- [Phase 71-backend-performance-railway-config]: Admin experts pagination: 0-indexed page/limit/search; default sort A-Z first name; useAdminExperts hook kept intact for SettingsPage/TagManagerPage
 
 ### Pending Todos
 
@@ -68,6 +71,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-05T12:20:35.289Z
-Stopped at: Completed 71-02-PLAN.md
+Last session: 2026-03-05T12:23:18.760Z
+Stopped at: Completed 71-01-PLAN.md
 Resume: Run `/gsd:plan-phase 71`

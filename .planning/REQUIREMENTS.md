@@ -9,9 +9,9 @@ Requirements for launch hardening. Preparing for 10k concurrent users from marke
 
 ### Backend Performance
 
-- [ ] **BPERF-01**: Health check endpoint returns DB status, expert count, and latency metric
-- [ ] **BPERF-02**: Admin experts endpoint supports pagination (page/limit query params, default 50)
-- [ ] **BPERF-03**: Photo proxy endpoint returns Cache-Control header (public, max-age=86400)
+- [x] **BPERF-01**: Health check endpoint returns DB status, expert count, and latency metric
+- [x] **BPERF-02**: Admin experts endpoint supports pagination (page/limit query params, default 50)
+- [x] **BPERF-03**: Photo proxy endpoint returns Cache-Control header (public, max-age=86400)
 - [x] **BPERF-04**: Event writes batched via asyncio queue (flush every 2-3s or 10 items, executemany commit)
 - [x] **BPERF-05**: SQLite PRAGMAs tuned (synchronous=NORMAL, cache_size=-32000, temp_store=MEMORY, mmap_size=128MB, wal_autocheckpoint=1000)
 - [x] **BPERF-06**: GZipMiddleware compresses API responses over 500 bytes
@@ -87,9 +87,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| BPERF-01 | Phase 71 | Pending |
-| BPERF-02 | Phase 71 | Pending |
-| BPERF-03 | Phase 71 | Pending |
+| BPERF-01 | Phase 71 | Complete |
+| BPERF-02 | Phase 71 | Complete |
+| BPERF-03 | Phase 71 | Complete |
 | BPERF-04 | Phase 71 | Complete |
 | BPERF-05 | Phase 71 | Complete |
 | BPERF-06 | Phase 71 | Complete |
