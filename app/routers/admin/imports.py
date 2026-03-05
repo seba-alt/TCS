@@ -11,7 +11,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import Expert, Conversation
+from app.models import Expert
 from app.services.tag_sync import sync_expert_tags
 from app.routers.admin._common import _auto_categorize, _auto_industry_tags, _ingest, _run_ingest_job
 

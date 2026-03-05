@@ -134,7 +134,7 @@ def get_tag_assignments(db: Session = Depends(get_db)):
     experts = db.scalars(
         select(Expert).where(
             Expert.manual_tags.isnot(None),
-            Expert.is_active == True,
+            Expert.is_active.is_(True),
         )
     ).all()
     return {

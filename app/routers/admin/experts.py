@@ -14,7 +14,6 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 
-from app.config import METADATA_PATH
 from app.database import get_db, SessionLocal
 from app.models import Expert, Feedback
 from app.services.tagging import compute_findability_score, tag_expert_sync
@@ -42,7 +41,7 @@ def get_experts(
     """Return all experts from the experts DB table. Optionally filter to active-only."""
     stmt = select(Expert).order_by(Expert.findability_score.asc().nulls_first())
     if active_only:
-        stmt = stmt.where(Expert.is_active == True)
+        stmt = stmt.where(Expert.is_active.is_(True))
     experts = db.scalars(stmt).all()
     return {"experts": [_serialize_expert(e) for e in experts]}
 

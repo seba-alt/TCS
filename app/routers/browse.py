@@ -54,7 +54,7 @@ def _build_browse_data(db: Session, per_row: int) -> dict:
     # 1. Category rows: categories with 3+ experts, ordered by count descending
     category_counts = db.execute(
         select(Expert.category, func.count().label("cnt"))
-        .where(Expert.category.is_not(None), Expert.is_active == True)
+        .where(Expert.category.is_not(None), Expert.is_active.is_(True))
         .group_by(Expert.category)
         .having(func.count() >= 3)
         .order_by(func.count().desc())
@@ -66,7 +66,7 @@ def _build_browse_data(db: Session, per_row: int) -> dict:
 
         experts = db.scalars(
             select(Expert)
-            .where(Expert.category == category, Expert.is_active == True)
+            .where(Expert.category == category, Expert.is_active.is_(True))
             .order_by(Expert.findability_score.desc().nulls_last())
             .limit(per_row)
         ).all()
@@ -80,12 +80,12 @@ def _build_browse_data(db: Session, per_row: int) -> dict:
 
     # 2. Special cross-category row: "Recently Added"
     recently_added_total = db.scalar(
-        select(func.count()).select_from(Expert).where(Expert.is_active == True)
+        select(func.count()).select_from(Expert).where(Expert.is_active.is_(True))
     ) or 0
 
     recently_added = db.scalars(
         select(Expert)
-        .where(Expert.is_active == True)
+        .where(Expert.is_active.is_(True))
         .order_by(Expert.created_at.desc())
         .limit(per_row)
     ).all()
@@ -102,12 +102,12 @@ def _build_browse_data(db: Session, per_row: int) -> dict:
     has_category_rows = any(r["slug"] != "recently-added" for r in rows)
     if not has_category_rows:
         all_total = db.scalar(
-            select(func.count()).select_from(Expert).where(Expert.is_active == True)
+            select(func.count()).select_from(Expert).where(Expert.is_active.is_(True))
         ) or 0
 
         all_experts = db.scalars(
             select(Expert)
-            .where(Expert.is_active == True)
+            .where(Expert.is_active.is_(True))
             .order_by(Expert.findability_score.desc().nulls_last())
             .limit(per_row)
         ).all()
@@ -122,7 +122,7 @@ def _build_browse_data(db: Session, per_row: int) -> dict:
     # 4. Featured: top 5 experts overall by findability_score
     featured_experts = db.scalars(
         select(Expert)
-        .where(Expert.is_active == True)
+        .where(Expert.is_active.is_(True))
         .order_by(Expert.findability_score.desc().nulls_last())
         .limit(5)
     ).all()
