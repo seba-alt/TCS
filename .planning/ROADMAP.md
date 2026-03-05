@@ -15,7 +15,7 @@
 - ✅ **v5.0 Platform Polish & Admin Overhaul** — Phases 55-59 (shipped 2026-03-03)
 - ✅ **v5.1 Lead Insights & Overview** — Phases 60-62 (shipped 2026-03-03)
 - ✅ **v5.2 Email-First Gate & Admin See-All** — Phases 63-66 (shipped 2026-03-04)
-- 🚧 **v5.3 UX Polish & Admin Saved Insights** — Phases 67-69 (in progress)
+- ✅ **v5.3 UX Polish & Admin Saved Insights** — Phases 67-70 (shipped 2026-03-05)
 
 ## Phases
 
@@ -135,97 +135,16 @@ See `.planning/milestones/v5.2-ROADMAP.md`
 
 </details>
 
-### 🚧 v5.3 UX Polish & Admin Saved Insights (In Progress)
+<details>
+<summary>✅ v5.3 UX Polish & Admin Saved Insights (Phases 67-70) — SHIPPED 2026-03-05</summary>
 
-**Milestone Goal:** Improve email gate UX, fix list-view save button bug, track save events, and surface saved-expert analytics in admin
+See `.planning/milestones/v5.3-ROADMAP.md`
 
-- [x] **Phase 67: Email Gate Polish & List View Fix** — Cleaner gate UI, auto-focus behaviors, list view save button (completed 2026-03-04)
-- [x] **Phase 68: Save Event Tracking** — Backend save/unsave event instrumentation (completed 2026-03-04)
-- [x] **Phase 69: Admin Saved Insights** — Top Saved Experts card and lead timeline save events (completed 2026-03-04)
-- [x] **Phase 70: Audit Gap Closure** — Generate missing verification docs, update TAG-04 requirement **Gap Closure** (completed 2026-03-05)
+- [x] Phase 67: Email Gate Polish & List View Fix (2/2 plans) — completed 2026-03-04
+- [x] Phase 68: Save Event Tracking (1/1 plan) — completed 2026-03-04
+- [x] Phase 69: Admin Saved Insights (1/1 plan) — completed 2026-03-04
+- [x] Phase 69.1: CSV Upload Sync (3/3 plans) — completed 2026-03-05 (INSERTED)
+- [x] Phase 69.2: Admin Expert Tagging (3/3 plans) — completed 2026-03-05 (INSERTED)
+- [x] Phase 70: Audit Gap Closure (1/1 plan) — completed 2026-03-05
 
-## Phase Details
-
-### Phase 67: Email Gate Polish & List View Fix
-**Goal**: Users experience a cleaner, more focused email gate and save experts from list view
-**Depends on**: Phase 66
-**Requirements**: GATE-01, GATE-02, GATE-03, FIX-01
-**Success Criteria** (what must be TRUE):
-  1. Email gate displays dark background logo and minimal layout with less text
-  2. Email input is auto-focused when gate is active; search bar cannot be interacted with
-  3. After gate submission, search bar receives focus automatically
-  4. List view expert cards each render a save/bookmark button matching grid view behavior
-**Plans**: 2 plans
-Plans:
-- [ ] 67-01-PLAN.md — Email gate dark overlay polish + auto-focus behaviors
-- [ ] 67-02-PLAN.md — List view bookmark button parity fix
-
-### Phase 68: Save Event Tracking
-**Goal**: Save and unsave actions are recorded as backend events for analytics
-**Depends on**: Phase 67
-**Requirements**: SAVE-01
-**Success Criteria** (what must be TRUE):
-  1. Bookmarking an expert fires a trackEvent() call with expert_id and action: "save"
-  2. Unbookmarking an expert fires a trackEvent() call with expert_id and action: "unsave"
-  3. Events appear in the user_events table and are attributed to the visitor's email when known
-**Plans**: 1 plan
-Plans:
-- [ ] 68-01-PLAN.md — Backend save event type + frontend trackEvent on bookmark toggle
-
-### Phase 69: Admin Saved Insights
-**Goal**: Admin can see which experts are most saved and see save events in lead timelines
-**Depends on**: Phase 68
-**Requirements**: SAVE-02, SAVE-03
-**Success Criteria** (what must be TRUE):
-  1. Admin overview shows a "Top Saved Experts" ranked card following the same pattern as Top Experts/Top Searches
-  2. Top Saved card responds to the period toggle (Today / 7d / 30d / All)
-  3. Lead timeline rows display save and unsave events with distinct icons alongside searches and clicks
-**Plans**: 1 plan
-Plans:
-- [ ] 69-01-PLAN.md — Top Saved Experts card + save/unsave events in lead timeline
-
-## Progress
-
-| Phase | Plans Complete | Status | Completed |
-|-------|----------------|--------|-----------|
-| 67. Email Gate Polish & List View Fix | 2/2 | Complete   | 2026-03-04 |
-| 68. Save Event Tracking | 1/1 | Complete    | 2026-03-04 |
-| 69. Admin Saved Insights | 1/1 | Complete   | 2026-03-04 |
-| 70. Audit Gap Closure | 1/1 | Complete    | 2026-03-05 |
-
-### Phase 69.2: Admin expert tagging for improved search and findability (INSERTED)
-
-**Goal:** Add dedicated admin tag manager with predefined catalog, dual-mode assignment (Expert->Tags and Tag->Experts), bulk operations, and search integration for improved expert findability
-**Depends on:** Phase 69
-**Requirements:** TAG-01, TAG-02, TAG-03, TAG-04
-**Plans:** 3/3 plans complete
-
-Plans:
-- [ ] 69.2-01-PLAN.md — Backend data model, sync, ingest, and search infrastructure for manual tags
-- [ ] 69.2-02-PLAN.md — Tag catalog CRUD and bulk assignment API endpoints
-- [ ] 69.2-03-PLAN.md — Frontend tag manager page with dual-mode UI
-
-### Phase 69.1: CSV upload sync: remove deleted experts and update existing fields (INSERTED)
-
-**Goal:** Upgrade CSV upload from upsert-only to full sync with soft-delete, empty-field protection, preview with cherry-pick, and automatic FAISS rebuild
-**Depends on:** Phase 69
-**Plans:** 3/3 plans complete
-
-Plans:
-- [ ] 69.1-01-PLAN.md — Soft-delete infrastructure (is_active flag + public query filters)
-- [ ] 69.1-02-PLAN.md — Sync preview and apply endpoints with cherry-pick support
-- [ ] 69.1-03-PLAN.md — Frontend sync preview UI with categorized changes and deletion cherry-pick
-
-### Phase 70: Audit Gap Closure
-**Goal**: Close verification gaps from v5.3 milestone audit — generate missing VERIFICATION.md for phases 67 and 69, update TAG-04 requirement (superseded by UAT design decision)
-**Depends on**: Phase 69.2
-**Requirements**: GATE-01, GATE-02, GATE-03, FIX-01, SAVE-02, SAVE-03
-**Gap Closure:** Closes gaps from v5.3 audit
-**Success Criteria** (what must be TRUE):
-  1. Phase 67 VERIFICATION.md exists and confirms GATE-01, GATE-02, GATE-03, FIX-01 are satisfied
-  2. Phase 69 VERIFICATION.md exists and confirms SAVE-02, SAVE-03 are satisfied
-  3. REQUIREMENTS.md reflects TAG-04 as superseded (dual-mode removed by design)
-**Plans**: 1 plan
-
-Plans:
-- [ ] 70-01-PLAN.md — Generate missing VERIFICATION.md for phases 67 and 69, update REQUIREMENTS.md traceability
+</details>

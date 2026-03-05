@@ -279,3 +279,26 @@
 
 ---
 
+
+## v5.3 UX Polish & Admin Saved Insights (Shipped: 2026-03-05)
+
+**Phases completed:** 6 phases (67-70, including 69.1 and 69.2 inserts), 11 plans
+**Timeline:** 2 days (2026-03-04 → 2026-03-05)
+**Files modified:** 30 (+1,706 / -174)
+**Git range:** docs(67)..docs(phase-70)
+
+**Key accomplishments:**
+1. Email gate polished — dark charcoal overlay with dark-bg logo, minimal copy, auto-focus on email input, post-gate search bar focus via forwardRef imperative handle
+2. Save/unsave event tracking — backend `save` event type with expert_id + action payload, frontend `trackEvent('save')` on every bookmark toggle, fire-and-forget instrumentation
+3. Admin saved insights — Top Saved Experts ranked card (amber bookmark icon, period toggle) on overview, save/unsave events with distinct icons in lead timeline
+4. CSV upload upgraded to full sync — soft-delete infrastructure (is_active flag), sync-preview with per-field diffs, sync-apply with cherry-pick exclusion, automatic FAISS rebuild
+5. Admin tag manager — predefined tag catalog seeded from AI skill tags, bulk tag assignment, manual tags in FAISS search, Tag Manager page with expert search and inline assignment
+6. All 11 requirements verified (10 complete + 1 superseded TAG-04) with formal VERIFICATION.md artifacts
+
+**Archive:**
+- Roadmap: `.planning/milestones/v5.3-ROADMAP.md`
+- Requirements: `.planning/milestones/v5.3-REQUIREMENTS.md`
+- Audit: `.planning/milestones/v5.3-MILESTONE-AUDIT.md`
+
+---
+

@@ -2,7 +2,7 @@
 
 ## What This Is
 
-A professional Expert Marketplace for the Tinrate platform. Users discover vetted experts via an immersive aurora-aesthetic Explorer — glassmorphic Command Center header with autocomplete search (debounced suggestions for job titles, companies, and tags) and spring expert count; animated aurora mesh background; bento-style expert cards with profile photos and monogram fallback in grid or list view; animated claymorphic tag cloud with 18 domain tags plus industry-level tags (Finance, Healthcare, Tech, etc.) and proximity-based scaling. Mobile-optimized with inline filter controls (tag picker, sort, active chip row) and full-width search bar. Expert bookmarking with localStorage persistence. User behavior (card clicks, filter changes) is tracked for marketplace intelligence. GA4 analytics + Microsoft Clarity track every page view with SPA route change support. Expert email PII has been purged from all data stores. A newsletter gate captures leads on "View Full Profile". Intercom live chat provides real-time support. Admin panel secured with bcrypt+JWT authentication and rate limiting; streamlined sidebar with overview dashboard (stat cards, recent leads/searches), lead export CSV, bulk expert CSV import, and marketplace intelligence. Playful users can trigger barrel rolls and a "tinrate" header tilt easter egg.
+A professional Expert Marketplace for the Tinrate platform. Users discover vetted experts via an immersive aurora-aesthetic Explorer — glassmorphic Command Center header with autocomplete search (debounced suggestions for job titles, companies, and tags) and spring expert count; animated aurora mesh background; bento-style expert cards with profile photos and monogram fallback in grid or list view; animated claymorphic tag cloud with 18 domain tags plus industry-level tags (Finance, Healthcare, Tech, etc.) and proximity-based scaling. Mobile-optimized with inline filter controls (tag picker, sort, active chip row) and full-width search bar. Expert bookmarking with localStorage persistence and save/unsave event tracking. Mandatory email entry gate on page load captures leads before any browsing. User behavior (card clicks, filter changes, saves) is tracked for marketplace intelligence. GA4 analytics + Microsoft Clarity + Vercel Speed Insights track every page view with SPA route change support. Expert email PII has been purged from all data stores. Intercom live chat provides real-time support. Admin panel secured with bcrypt+JWT authentication and rate limiting; streamlined sidebar with overview dashboard (Top Experts, Top Searches, Unmet Demand, Top Saved Experts cards with period toggle), lead timeline with email-attributed search/click/save events, lead export CSV, bulk expert CSV import with full sync (soft-delete, preview, cherry-pick), and tag manager for manual expert tagging with FAISS search integration. Playful users can trigger barrel rolls and a "tinrate" header tilt easter egg.
 
 ## Core Value
 
@@ -131,17 +131,17 @@ A user describes any problem and instantly gets expertly matched professionals t
 - ✓ Admin overview accordion expansion on Top Experts and Top Searches cards (up to 50 items) — v5.2
 - ✓ Vercel Speed Insights active on frontend — v5.2
 
+- ✓ Email gate dark overlay with dark-bg logo, minimal copy, auto-focus, and post-gate search bar focus — v5.3
+- ✓ Save/unsave event tracking with backend event type and frontend trackEvent integration — v5.3
+- ✓ Admin Top Saved Experts ranked card with period toggle on overview dashboard — v5.3
+- ✓ Save/unsave events with distinct icons in admin lead timeline — v5.3
+- ✓ List view bookmark button parity with grid view — v5.3
+- ✓ CSV upload full sync with soft-delete, preview with per-field diffs, cherry-pick exclusion, and FAISS rebuild — v5.3
+- ✓ Admin tag manager with predefined catalog, bulk assignment, manual tags in FAISS search — v5.3
+
 ### Active
 
-## Current Milestone: v5.3 UX Polish & Admin Saved Insights
-
-**Goal:** Improve email gate UX, surface saved-expert analytics in admin, and fix list-view save button bug
-
-**Target features:**
-- Email gate UX/UI improvements
-- Admin: Top saved experts ranking
-- Admin: Lead-to-saved-expert mapping on leads page
-- Fix: Save button missing in list view
+(None — planning next milestone)
 
 ### Out of Scope
 
@@ -156,6 +156,15 @@ A user describes any problem and instantly gets expertly matched professionals t
 - Custom analytics dashboard — GA4 dashboard is sufficient for launch
 
 ## Shipped Versions
+
+### v5.3 UX Polish & Admin Saved Insights — Shipped 2026-03-05
+- Email gate polished — dark charcoal overlay, dark-bg logo, minimal copy, auto-focus email input, post-gate search bar focus
+- Save/unsave event tracking — backend save event type, frontend trackEvent on bookmark toggle
+- Admin saved insights — Top Saved Experts ranked card on overview, save/unsave events in lead timeline
+- CSV upload full sync — soft-delete infrastructure, sync-preview with per-field diffs, cherry-pick exclusion, automatic FAISS rebuild
+- Admin tag manager — predefined catalog seeded from AI skill tags, bulk assignment, manual tags in FAISS search
+- All 11 requirements verified (10 complete + 1 superseded) across 6 phases
+- Archive: `.planning/milestones/v5.3-ROADMAP.md`
 
 ### v5.2 Email-First Gate & Admin See-All — Shipped 2026-03-04
 - Email gate moved to page entry — mandatory full-screen gate blocks Explorer until email submitted; returning subscribers bypass instantly via synchronous Zustand persist check
@@ -272,21 +281,21 @@ A user describes any problem and instantly gets expertly matched professionals t
 
 ## Current State
 
-**Deployed version:** v5.2 (Railway + Vercel, auto-deploys on push to main)
-**Expert pool:** experts (growing weekly) (data/metadata.json), all AI-tagged with domain + industry tags; FAISS index at vectors (grows with expert pool); profile photos via proxy endpoint; expert email PII purged
-**Search intelligence:** Three-stage hybrid pipeline live; HyDE + feedback re-ranking toggled via admin steering panel; FTS5 autocomplete suggestions with tag-first ranking; dynamic rate slider max from API; embedding cache (60s TTL) prevents duplicate Google API calls
-**Explorer:** Single-page aurora-aesthetic marketplace at `/` with glassmorphic Command Center header, autofocused search with tag-first autocomplete, responsive cards (mobile photo-centric / desktop photo-left) in grid or list view, animated tag cloud (18 domain tags + industry tags), inline mobile filters (simplified — clear-all only when filters active), seeded random initial ordering, bookmarks with purple visual treatment and filter-independent saved view, Intercom no-results CTA, anonymous search tracking, newsletter gate, API error states with retry. Search results tier-sorted (Top Match → Good Match → rest). Currency symbols on all rate displays.
+**Deployed version:** v5.3 (Railway + Vercel, auto-deploys on push to main)
+**Expert pool:** experts (growing weekly) (data/metadata.json), all AI-tagged with domain + industry tags + manual admin tags; FAISS index includes manual tags for semantic search; profile photos via proxy endpoint; expert email PII purged; soft-delete support (is_active flag)
+**Search intelligence:** Three-stage hybrid pipeline live; HyDE + feedback re-ranking toggled via admin steering panel; FTS5 autocomplete suggestions with tag-first ranking; dynamic rate slider max from API; embedding cache (60s TTL) prevents duplicate Google API calls; manual tags included in FAISS embedding text
+**Explorer:** Single-page aurora-aesthetic marketplace at `/` with glassmorphic Command Center header, autofocused search with tag-first autocomplete, responsive cards (mobile photo-centric / desktop photo-left) in grid or list view, animated tag cloud (18 domain tags + industry tags), inline mobile filters (simplified — clear-all only when filters active), seeded random initial ordering, bookmarks with purple visual treatment and filter-independent saved view, Intercom no-results CTA, anonymous search tracking, mandatory email entry gate, API error states with retry. Search results tier-sorted (Top Match → Good Match → rest). Currency symbols on all rate displays. Dark-overlay email gate with auto-focus behaviors.
 **Live chat:** Intercom (replaces Sage AI co-pilot, removed in phase 50.3)
-**Admin panel:** Secured with bcrypt+JWT + rate limiting; 10-module router package; URL-based routing with shared components (AdminCard, AdminInput, AdminPagination, AdminPageHeader). Overview with period toggle (Today/7d/30d/All) + active tag chips + ranked insight cards (Top Experts, Top Searches, Unmet Demand). Unified Data page (merged Searches/Marketplace) with shared date picker. Experts page with name search + deletion. Leads page with expandable timeline (chronological search/click history with time gap labels), click count column + Click Activity table + CSV export. Settings/feedback caching (30s TTL).
+**Admin panel:** Secured with bcrypt+JWT + rate limiting; 10-module router package; URL-based routing with shared components (AdminCard, AdminInput, AdminPagination, AdminPageHeader). Overview with period toggle (Today/7d/30d/All) + active tag chips + ranked insight cards (Top Experts, Top Searches, Unmet Demand, Top Saved Experts). Unified Data page (merged Searches/Marketplace) with shared date picker. Experts page with name search + deletion. Leads page with expandable timeline (chronological search/click/save history with time gap labels), click count column + Click Activity table + CSV export. Tag Manager page for manual expert tagging with predefined catalog and bulk assignment. CSV import with full sync (soft-delete, preview with per-field diffs, cherry-pick exclusion). Settings/feedback caching (30s TTL).
 **Analytics:** GA4 (G-0T526W3E1Z) + Microsoft Clarity (vph5o95n6c) + Vercel Speed Insights tracking all page views with SPA route change support
 
-**Current milestone:** v5.3 UX Polish & Admin Saved Insights (started 2026-03-04)
+**Last milestone completed:** v5.3 UX Polish & Admin Saved Insights (shipped 2026-03-05)
 
 ## Context
 
 - **Expert data:** SQLite table with profiles (growing weekly) (email PII purged); FAISS index at 530 tag-enriched vectors; all experts AI-tagged with 3–8 domain tags + findability scores
 - **AI stack:** Google GenAI (gemini-embedding-001) for embeddings, Gemini 2.5 Flash for generation + Sage function calling, Gemini 2.5-flash-lite for Dutch detection
-- **Codebase:** ~15,910 LOC TypeScript/TSX + Python
+- **Codebase:** ~16,727 LOC TypeScript/TSX + Python
 - **Deployed:** Railway (FastAPI + SQLite + FAISS) + Vercel (React/Vite/Tailwind v3)
 - **Live since:** 2026-02-20
 - **Behavior tracking:** `user_events` table with card_click, sage_query, filter_change events; fire-and-forget frontend instrumentation
@@ -368,6 +377,15 @@ A user describes any problem and instantly gets expertly matched professionals t
 | Email on user_events column | Dedicated indexed column vs payload JSON blob — queryable, filterable | ✓ Good — clean admin timeline queries |
 | Single expandedCard accordion | One state slot — expanding one card collapses the other | ✓ Good — clean UX, simple state |
 | 3s delayed Loops subscribe | Bundles first search event with subscribe call | ✓ Good — richer lead context |
+| forwardRef + useImperativeHandle for Header focus | Exposes focusSearchBar() to parent — clean imperative handle for post-gate focus | ✓ Good — reliable focus management |
+| Save ranking counts saves only (not unsave) | Total save event count per expert — unsaves don't reduce ranking | ✓ Good — reflects interest signal |
+| TopSavedCard as amber bookmark icon | Distinct visual from blue click/green search cards on overview | ✓ Good — clear card identity |
+| Soft-delete over hard-delete for experts | is_active=False preserves historical data while hiding from public | ✓ Good — data integrity preserved |
+| server_default='1' for is_active | SQLite compatibility — no migration script needed for existing rows | ✓ Good — zero-downtime deploy |
+| Sync-preview excludes inactive experts from to_delete | Prevents idempotency issues on repeated CSV uploads | ✓ Good — robust sync behavior |
+| Manual tags in FAISS embedding text | Expert.manual_tags included in embedding string for semantic search | ✓ Good — manual tags findable via search |
+| Lazy seed catalog from AI skill tags | TagCatalog auto-populated on first access from existing ExpertTag skill tags | ✓ Good — zero manual setup |
+| TAG-04 dual-mode superseded | Single Expert→Tags flow per UAT decision — simpler UX | ✓ Good — user-validated design |
 
 ---
-*Last updated: 2026-03-04 after v5.3 milestone start*
+*Last updated: 2026-03-05 after v5.3 milestone*
