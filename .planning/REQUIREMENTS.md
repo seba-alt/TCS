@@ -48,10 +48,10 @@ Requirements for launch hardening. Preparing for 10k concurrent users from marke
 
 ### Analytics
 
-- [ ] **ANLT-01**: GA4 transport_type set to beacon in gtag config
-- [ ] **ANLT-02**: navigator.onLine guard in trackEvent() prevents offline error noise
-- [ ] **ANLT-03**: navigator.sendBeacon fallback in trackEvent() for iOS Safari keepalive edge case
-- [ ] **ANLT-04**: Defensive inline comment on send_page_view: false in index.html
+- [x] **ANLT-01**: GA4 transport_type set to beacon in gtag config
+- [x] **ANLT-02**: navigator.onLine guard in trackEvent() prevents offline error noise
+- [x] **ANLT-03**: navigator.sendBeacon fallback in trackEvent() for iOS Safari keepalive edge case
+- [x] **ANLT-04**: Defensive inline comment on send_page_view: false in index.html
 
 ## Future Requirements
 
@@ -108,10 +108,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SEO-01 | Phase 73 | Complete |
 | SEO-02 | Phase 73 | Complete |
 | SEO-03 | Phase 73 | Complete |
-| ANLT-01 | Phase 74 | Pending |
-| ANLT-02 | Phase 74 | Pending |
-| ANLT-03 | Phase 74 | Pending |
-| ANLT-04 | Phase 74 | Pending |
+| ANLT-01 | Phase 74 | Complete |
+| ANLT-02 | Phase 74 | Complete |
+| ANLT-03 | Phase 74 | Complete |
+| ANLT-04 | Phase 74 | Complete |
 
 **Coverage:**
 - v5.4 requirements: 25 total
