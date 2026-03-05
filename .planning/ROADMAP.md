@@ -166,12 +166,12 @@ See `.planning/milestones/v5.3-ROADMAP.md`
   3. Photo proxy response includes `Cache-Control: public, max-age=86400` — verified in browser network tab
   4. A burst of 10+ concurrent `POST /api/events` requests completes without 500 errors — SQLite write contention eliminated via asyncio batch queue
   5. Railway deployment targets europe-west4 with keep-alive tuning and ON_FAILURE restart policy active
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 71-01: Health endpoint enhancement + admin experts pagination + photo proxy cache header
-- [ ] 71-02: Asyncio event batch queue + SQLite PRAGMA tuning + GZipMiddleware + explore cache
-- [ ] 71-03: Railway config (railway.json region + Uvicorn flags + healthcheck policy)
+- [ ] 71-01-PLAN.md — Two-tier health endpoints + admin experts pagination + photo proxy verification (Wave 1)
+- [ ] 71-02-PLAN.md — Event batch queue + SQLite PRAGMA tuning + GZipMiddleware + explore cache + connection pool (Wave 1)
+- [ ] 71-03-PLAN.md — Railway config: region, Uvicorn flags, healthcheck timeout, restart policy (Wave 2)
 
 ### Phase 72: Frontend Performance & Vercel Config
 **Goal**: The public bundle is split for maximum cache reuse, event tracking is batched client-side to match the backend queue, and Vercel serves static assets with optimal cache headers
@@ -224,7 +224,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 71. Backend Performance & Railway Config | 0/3 | Not started | - |
+| 71. Backend Performance & Railway Config | 0/3 | Planned | - |
 | 72. Frontend Performance & Vercel Config | 0/2 | Not started | - |
 | 73. Resilience & SEO | 0/2 | Not started | - |
 | 74. Analytics Hardening | 0/1 | Not started | - |
