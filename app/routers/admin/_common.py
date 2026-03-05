@@ -235,6 +235,16 @@ def _auto_categorize(job_title: str) -> Optional[str]:
 
 
 def _serialize_expert(e: Expert) -> dict:
+    ai_tags = json.loads(e.tags or "[]")
+    manual_tags_raw = json.loads(e.manual_tags or "[]")
+    # Merge and deduplicate: AI tags first, then manual-only tags (preserve original casing)
+    seen: set[str] = set()
+    merged: list[str] = []
+    for t in ai_tags + manual_tags_raw:
+        key = t.lower().strip()
+        if key and key not in seen:
+            seen.add(key)
+            merged.append(t)
     return {
         "username": e.username,
         "first_name": e.first_name,
@@ -245,7 +255,8 @@ def _serialize_expert(e: Expert) -> dict:
         "hourly_rate": e.hourly_rate,
         "profile_url": e.profile_url,
         "category": e.category,
-        "tags": json.loads(e.tags or "[]"),
+        "tags": merged,
+        "manual_tags": manual_tags_raw,
         "findability_score": e.findability_score,
         "photo_url": e.photo_url,
         "industry_tags": json.loads(e.industry_tags) if e.industry_tags else [],

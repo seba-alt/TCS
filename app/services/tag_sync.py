@@ -22,11 +22,12 @@ def sync_expert_tags(
     expert_id: int,
     tags: list[str],
     industry_tags: list[str],
+    manual_tags: list[str] | None = None,
 ) -> None:
     """
     Delete and re-insert expert_tags rows for one expert.
 
-    Call this after any update to Expert.tags or Expert.industry_tags.
+    Call this after any update to Expert.tags, Expert.industry_tags, or Expert.manual_tags.
     Does NOT commit — caller handles the transaction.
 
     Args:
@@ -34,6 +35,7 @@ def sync_expert_tags(
         expert_id: The expert's primary key.
         tags: List of skill tags (lowercased on insert).
         industry_tags: List of industry tags (as-is — controlled vocabulary).
+        manual_tags: List of admin-assigned manual tags (Phase 69.2).
     """
     db.execute(delete(ExpertTag).where(ExpertTag.expert_id == expert_id))
     rows = [
@@ -42,6 +44,9 @@ def sync_expert_tags(
     ] + [
         ExpertTag(expert_id=expert_id, tag=t.strip(), tag_type="industry")
         for t in industry_tags if t and t.strip()
+    ] + [
+        ExpertTag(expert_id=expert_id, tag=t.lower().strip(), tag_type="manual")
+        for t in (manual_tags or []) if t and t.strip()
     ]
     if rows:
         db.bulk_save_objects(rows)
@@ -58,9 +63,9 @@ def sync_all_expert_tags(db: Session) -> None:
     # Delete all existing rows
     db.execute(delete(ExpertTag))
 
-    # Query all experts with tags or industry_tags
+    # Query all experts with tags, industry_tags, or manual_tags
     experts = db.query(Expert).filter(
-        (Expert.tags != None) | (Expert.industry_tags != None)  # noqa: E711
+        (Expert.tags != None) | (Expert.industry_tags != None) | (Expert.manual_tags != None)  # noqa: E711
     ).all()
 
     total_rows = 0
@@ -98,6 +103,22 @@ def sync_all_expert_tags(db: Session) -> None:
                     )
             except (json.JSONDecodeError, TypeError):
                 pass  # Skip malformed JSON
+
+        # Manual tags (Phase 69.2)
+        if expert.manual_tags:
+            try:
+                man_tags = json.loads(expert.manual_tags)
+                if isinstance(man_tags, list):
+                    rows.extend(
+                        ExpertTag(
+                            expert_id=expert.id,
+                            tag=t.lower().strip(),
+                            tag_type="manual",
+                        )
+                        for t in man_tags if t and isinstance(t, str) and t.strip()
+                    )
+            except (json.JSONDecodeError, TypeError):
+                pass
 
         if rows:
             db.bulk_save_objects(rows)

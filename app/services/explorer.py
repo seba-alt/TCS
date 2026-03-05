@@ -218,12 +218,13 @@ def run_explore(
         )
     )
     # AND logic: expert must have ALL selected tags — uses indexed ExpertTag join table (PERF-02)
+    # Phase 69.2: match both AI skill tags and admin-assigned manual tags
     for tag in tags:
         stmt = stmt.where(
             exists().where(
                 ExpertTag.expert_id == Expert.id,
                 ExpertTag.tag == tag.lower(),
-                ExpertTag.tag_type == "skill",
+                ExpertTag.tag_type.in_(["skill", "manual"]),
             )
         )
 

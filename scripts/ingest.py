@@ -74,6 +74,7 @@ def load_tagged_experts() -> list[dict]:
                 "Profile URL": e.profile_url,
                 "Profile URL with UTM": e.profile_url_utm,
                 "tags": json.loads(e.tags or "[]"),
+                "manual_tags": json.loads(e.manual_tags or "[]"),
                 "findability_score": e.findability_score,
                 "photo_url": e.photo_url,
                 "category": e.category,
@@ -94,6 +95,10 @@ def expert_to_text(expert: dict) -> str:
     company = str(expert.get("Company") or "").strip()
     bio = str(expert.get("Bio") or "").strip()
     tags: list[str] = expert.get("tags") or []
+    manual_tags: list[str] = expert.get("manual_tags") or []
+    # Merge and deduplicate: manual tags that already exist in AI tags appear once
+    seen_lower = {t.lower() for t in tags}
+    all_tags = tags + [t for t in manual_tags if t.lower() not in seen_lower]
 
     parts = []
     if name:
@@ -106,8 +111,8 @@ def expert_to_text(expert: dict) -> str:
         parts.append(f"Works at {company}.")
     if bio:
         parts.append(bio)
-    if tags:
-        parts.append(f"Domains: {', '.join(tags)}.")
+    if all_tags:
+        parts.append(f"Domains: {', '.join(all_tags)}.")
 
     return " ".join(parts) if parts else name or expert.get("username", "Unknown expert")
 
