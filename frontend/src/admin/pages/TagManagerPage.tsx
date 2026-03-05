@@ -3,6 +3,9 @@ import { useTagCatalog, useTagAssignments, useAdminExperts, adminPost, adminDele
 
 type Mode = 'expert-to-tags' | 'tag-to-experts'
 
+const EMPTY_ASSIGNMENTS: { username: string; first_name: string; last_name: string; manual_tags: string[] }[] = []
+const EMPTY_EXPERTS: { username: string; first_name: string; last_name: string; job_title: string }[] = []
+
 export default function TagManagerPage() {
   const [mode, setMode] = useState<Mode>('expert-to-tags')
 
@@ -28,8 +31,8 @@ export default function TagManagerPage() {
   const [showAddExperts, setShowAddExperts] = useState(false)
 
   const catalog = catalogData?.tags ?? []
-  const assignments = assignData?.assignments ?? []
-  const experts = expertsData?.experts ?? []
+  const assignments = assignData?.assignments ?? EMPTY_ASSIGNMENTS
+  const experts = expertsData?.experts ?? EMPTY_EXPERTS
 
   // Expert search filter (client-side)
   const filteredExperts = useMemo(() => {
