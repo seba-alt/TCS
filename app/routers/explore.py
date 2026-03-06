@@ -12,10 +12,9 @@ Cache is invalidated on expert add, delete, bulk delete, and ingest completion.
 
 import asyncio
 
-from fastapi import APIRouter, Depends, Query, Request
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Query, Request
 
-from app.database import get_db
+from app.database import SessionLocal
 from app.services.explore_cache import get_cached, set_cached
 from app.services.explorer import ExploreResponse, run_explore
 
@@ -25,7 +24,6 @@ router = APIRouter()
 @router.get("/api/explore", response_model=ExploreResponse)
 async def explore(
     request: Request,
-    db: Session = Depends(get_db),
     query: str = Query(default="", max_length=500),
     rate_min: float = Query(default=0.0, ge=0),
     rate_max: float = Query(default=10000.0, le=10000),
@@ -59,23 +57,29 @@ async def explore(
         if cached is not None:
             return cached
 
+    app_state = request.app.state
     loop = asyncio.get_event_loop()
-    result = await loop.run_in_executor(
-        None,
-        lambda: run_explore(
-            query=query,
-            rate_min=rate_min,
-            rate_max=rate_max,
-            tags=tag_list,
-            industry_tags=industry_tag_list,
-            limit=limit,
-            cursor=cursor,
-            db=db,
-            app_state=request.app.state,
-            seed=seed if seed > 0 else None,
-            usernames=username_list if username_list else None,
-        ),
-    )
+
+    def _run():
+        db = SessionLocal()
+        try:
+            return run_explore(
+                query=query,
+                rate_min=rate_min,
+                rate_max=rate_max,
+                tags=tag_list,
+                industry_tags=industry_tag_list,
+                limit=limit,
+                cursor=cursor,
+                db=db,
+                app_state=app_state,
+                seed=seed if seed > 0 else None,
+                usernames=username_list if username_list else None,
+            )
+        finally:
+            db.close()
+
+    result = await loop.run_in_executor(None, _run)
 
     # Cache only deterministic results
     if seed == 0:
