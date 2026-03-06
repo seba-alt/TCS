@@ -118,7 +118,7 @@ export function ExpertCard({ expert, onViewProfile, context = 'grid', rank }: Ex
         <div className="mt-3 mb-1.5">
           {showPhoto ? (
             <img
-              src={`${API_BASE}${expert.photo_url!}`}
+              src={expert.photo_url!.startsWith('http') ? expert.photo_url! : `${API_BASE}${expert.photo_url!}`}
               alt=""
               className="w-20 h-20 rounded-full object-cover shrink-0"
               loading="lazy"
@@ -154,7 +154,7 @@ export function ExpertCard({ expert, onViewProfile, context = 'grid', rank }: Ex
       <div className="hidden md:flex shrink-0">
         {showPhoto ? (
           <img
-            src={`${API_BASE}${expert.photo_url!}`}
+            src={expert.photo_url!.startsWith('http') ? expert.photo_url! : `${API_BASE}${expert.photo_url!}`}
             alt=""
             className="w-16 h-16 rounded-full object-cover shrink-0"
             loading="lazy"

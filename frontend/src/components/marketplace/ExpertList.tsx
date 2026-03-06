@@ -98,7 +98,7 @@ export function ExpertList({ experts, loading, isFetchingMore, onEndReached, onV
               {expert.photo_url ? (
                 <div className="w-12 h-12 rounded-full shrink-0 relative">
                   <img
-                    src={`${API_BASE}${expert.photo_url}`}
+                    src={expert.photo_url.startsWith('http') ? expert.photo_url : `${API_BASE}${expert.photo_url}`}
                     alt=""
                     className="w-12 h-12 rounded-full object-cover"
                     loading="lazy"

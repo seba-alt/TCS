@@ -22,6 +22,14 @@ from app.models import Expert
 router = APIRouter()
 
 
+def _safe_photo_url(raw: str | None) -> str | None:
+    if not raw:
+        return None
+    if raw.startswith("http://"):
+        return "https://" + raw[7:]
+    return raw
+
+
 def _serialize_browse_card(expert: Expert) -> dict:
     """Serialize an Expert ORM object into a browse card dict for the frontend."""
     return {
@@ -33,7 +41,7 @@ def _serialize_browse_card(expert: Expert) -> dict:
         "hourly_rate": expert.hourly_rate,
         "category": expert.category,
         "tags": json.loads(expert.tags or "[]"),
-        "photo_url": f"/api/photos/{expert.username}" if expert.photo_url else None,
+        "photo_url": _safe_photo_url(expert.photo_url),
         "profile_url": expert.profile_url,
     }
 
@@ -151,7 +159,7 @@ async def browse(
     )
 
 
-@router.get("/api/photos/{username}")
+@router.get("/api/photos/{username}", deprecated=True)
 async def photo_proxy(
     username: str,
     db: Session = Depends(get_db),

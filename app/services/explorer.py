@@ -46,7 +46,7 @@ class ExpertCard(BaseModel):
     hourly_rate: float
     currency: str
     profile_url: str          # profile_url_utm preferred; fallback to profile_url
-    photo_url: str | None     # /api/photos/{username} or None
+    photo_url: str | None     # direct S3 URL or None
     tags: list[str]
     findability_score: float | None
     category: str | None
@@ -133,6 +133,14 @@ def _build_match_reason(expert: Expert, tags: list[str], query: str) -> Optional
     return None
 
 
+def _safe_photo_url(raw: str | None) -> str | None:
+    if not raw:
+        return None
+    if raw.startswith("http://"):
+        return "https://" + raw[7:]
+    return raw
+
+
 def _build_card(
     expert: Expert,
     faiss_score: Optional[float],
@@ -143,8 +151,7 @@ def _build_card(
     """Build an ExpertCard from an Expert ORM object and computed scores."""
     tags = json.loads(expert.tags or "[]")
     match_reason = _build_match_reason(expert, tags, query) if query.strip() else None
-    # Build photo proxy URL if expert has a photo stored
-    photo_url = f"/api/photos/{expert.username}" if expert.photo_url else None
+    photo_url = _safe_photo_url(expert.photo_url)
 
     return ExpertCard(
         username=expert.username,
