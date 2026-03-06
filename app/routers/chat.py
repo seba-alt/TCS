@@ -22,12 +22,11 @@ import asyncio
 import json
 
 import structlog
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, EmailStr, Field
-from sqlalchemy.orm import Session
 
-from app.database import get_db
+from app.database import SessionLocal
 from app.models import Conversation
 from app.services.llm import generate_response
 from app.services.search_intelligence import retrieve_with_intelligence
@@ -52,7 +51,7 @@ def _sse(data: dict) -> str:
     return f"data: {json.dumps(data)}\n\n"
 
 
-async def _stream_chat(body: ChatRequest, request: Request, db: Session):
+async def _stream_chat(body: ChatRequest, request: Request):
     """
     Async generator yielding SSE events.
 
@@ -70,17 +69,23 @@ async def _stream_chat(body: ChatRequest, request: Request, db: Session):
 
     try:
         # Retrieve candidates (sync — run in thread pool)
+        # DB session created and closed within executor to avoid holding connections
         history_dicts = [{"role": h.role, "content": h.content} for h in body.history]
-        candidates, intelligence = await asyncio.wait_for(
-            loop.run_in_executor(
-                None,
-                lambda: retrieve_with_intelligence(
+
+        def _retrieve():
+            db = SessionLocal()
+            try:
+                return retrieve_with_intelligence(
                     query=body.query,
                     faiss_index=request.app.state.faiss_index,
                     metadata=request.app.state.metadata,
                     db=db,
-                ),
-            ),
+                )
+            finally:
+                db.close()
+
+        candidates, intelligence = await asyncio.wait_for(
+            loop.run_in_executor(None, _retrieve),
             timeout=12.0,  # 5s HyDE LLM + 2s embed + safety margin; overall request must not hang
         )
         log.info(
@@ -124,30 +129,38 @@ async def _stream_chat(body: ChatRequest, request: Request, db: Session):
             for e in llm_response.experts
         ]
 
-        # Log conversation to DB
-        conversation = Conversation(
-            email=str(body.email),
-            query=body.query,
-            history=json.dumps(history_dicts),
-            response_type=llm_response.type,
-            response_narrative=llm_response.narrative,
-            response_experts=json.dumps(experts_payload),
-            top_match_score=top_score,
-            hyde_triggered=bool(intelligence.get("hyde_triggered", False)),
-            feedback_applied=bool(intelligence.get("feedback_applied", False)),
-            hyde_bio=intelligence.get("hyde_bio"),
-            otr_at_k=otr_at_k,
-            source="chat",
-        )
-        db.add(conversation)
-        db.commit()
-        log.info("chat.logged", conversation_id=conversation.id)
+        # Log conversation to DB — separate short-lived session
+        def _log_conversation():
+            db = SessionLocal()
+            try:
+                conversation = Conversation(
+                    email=str(body.email),
+                    query=body.query,
+                    history=json.dumps(history_dicts),
+                    response_type=llm_response.type,
+                    response_narrative=llm_response.narrative,
+                    response_experts=json.dumps(experts_payload),
+                    top_match_score=top_score,
+                    hyde_triggered=bool(intelligence.get("hyde_triggered", False)),
+                    feedback_applied=bool(intelligence.get("feedback_applied", False)),
+                    hyde_bio=intelligence.get("hyde_bio"),
+                    otr_at_k=otr_at_k,
+                    source="chat",
+                )
+                db.add(conversation)
+                db.commit()
+                return conversation.id
+            finally:
+                db.close()
+
+        conversation_id = await loop.run_in_executor(None, _log_conversation)
+        log.info("chat.logged", conversation_id=conversation_id)
         yield _sse({
             "event": "result",
             "type": llm_response.type,
             "narrative": llm_response.narrative,
             "experts": experts_payload,
-            "conversation_id": conversation.id,
+            "conversation_id": conversation_id,
             "intelligence": intelligence,  # Admin Test Lab: hyde_triggered, hyde_bio, feedback_applied
         })
 
@@ -164,7 +177,6 @@ async def _stream_chat(body: ChatRequest, request: Request, db: Session):
 async def chat(
     body: ChatRequest,
     request: Request,
-    db: Session = Depends(get_db),
 ) -> StreamingResponse:
     """
     Stream expert recommendations as Server-Sent Events.
@@ -173,7 +185,7 @@ async def chat(
     invalid requests return 422 before any SSE events are emitted.
     """
     return StreamingResponse(
-        _stream_chat(body, request, db),
+        _stream_chat(body, request),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
