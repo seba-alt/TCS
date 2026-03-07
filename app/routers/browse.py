@@ -11,12 +11,12 @@ import json
 import re
 
 import httpx
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.database import SessionLocal
+from app.database import get_db
 from app.models import Expert
 
 router = APIRouter()
@@ -143,6 +143,7 @@ def _build_browse_data(db: Session, per_row: int) -> dict:
 
 @router.get("/api/browse")
 async def browse(
+    db: Session = Depends(get_db),
     per_row: int = Query(default=10, ge=1, le=30),
 ):
     """
@@ -152,19 +153,17 @@ async def browse(
     Falls back to a single "All Experts" row when no categories meet the threshold.
     """
     loop = asyncio.get_event_loop()
-
-    def _run():
-        db = SessionLocal()
-        try:
-            return _build_browse_data(db, per_row)
-        finally:
-            db.close()
-
-    return await loop.run_in_executor(None, _run)
+    return await loop.run_in_executor(
+        None,
+        lambda: _build_browse_data(db, per_row),
+    )
 
 
-@router.get("/api/photos/{username}")
-async def photo_proxy(username: str):
+@router.get("/api/photos/{username}", deprecated=True)
+async def photo_proxy(
+    username: str,
+    db: Session = Depends(get_db),
+):
     """
     Proxy an expert's photo from the stored URL.
 
@@ -172,32 +171,25 @@ async def photo_proxy(username: str):
     Enforces HTTPS on upstream URLs. Returns 404 if expert or photo not found,
     502 if upstream is unavailable.
     """
-    # Look up expert in executor thread — connection released immediately after query
+    # Look up expert in executor thread (sync SQLAlchemy)
     loop = asyncio.get_event_loop()
+    expert = await loop.run_in_executor(
+        None,
+        lambda: db.scalar(select(Expert).where(Expert.username == username)),
+    )
 
-    def _lookup():
-        db = SessionLocal()
-        try:
-            expert = db.scalar(select(Expert).where(Expert.username == username))
-            if not expert or not expert.photo_url:
-                return None
-            return expert.photo_url
-        finally:
-            db.close()
-
-    photo_url = await loop.run_in_executor(None, _lookup)
-
-    if not photo_url:
+    if not expert or not expert.photo_url:
         raise HTTPException(status_code=404, detail="Photo not found")
 
     # HTTPS enforcement: rewrite http:// to https://
-    if photo_url.startswith("http://"):
-        photo_url = "https://" + photo_url[7:]
+    upstream_url = expert.photo_url
+    if upstream_url.startswith("http://"):
+        upstream_url = "https://" + upstream_url[7:]
 
-    # Fetch upstream image — no DB connection held during this network call
+    # Fetch upstream image
     async with httpx.AsyncClient() as client:
         try:
-            upstream_resp = await client.get(photo_url, timeout=5.0)
+            upstream_resp = await client.get(upstream_url, timeout=5.0)
         except httpx.RequestError:
             raise HTTPException(status_code=404, detail="Photo not found")
 
