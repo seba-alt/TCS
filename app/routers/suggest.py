@@ -12,11 +12,11 @@ import json
 import re
 
 import structlog
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 
-from app.database import get_db
+from app.database import SessionLocal
 
 log = structlog.get_logger()
 
@@ -113,7 +113,6 @@ def _run_suggest_multi(q: str, db: Session) -> list[str]:
 @router.get("/api/suggest", response_model=list[str])
 async def suggest(
     q: str = Query(default="", max_length=200),
-    db: Session = Depends(get_db),
 ) -> list[str]:
     """
     Search suggestions from FTS5 prefix matching on job_title and company fields.
@@ -122,4 +121,12 @@ async def suggest(
     if len(q.strip()) < 2:
         return []
     loop = asyncio.get_event_loop()
-    return await loop.run_in_executor(None, lambda: _run_suggest_multi(q, db))
+
+    def _run():
+        db = SessionLocal()
+        try:
+            return _run_suggest_multi(q, db)
+        finally:
+            db.close()
+
+    return await loop.run_in_executor(None, _run)
